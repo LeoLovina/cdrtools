@@ -1,7 +1,7 @@
-/* @(#)getav0.c	1.9 99/09/11 Copyright 1985 J. Schilling */
+/* @(#)getav0.c	1.10 00/05/07 Copyright 1985 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getav0.c	1.9 99/09/11 Copyright 1985 J. Schilling";
+	"@(#)getav0.c	1.10 00/05/07 Copyright 1985 J. Schilling";
 #endif
 /*
  *	Get arg vector by scanning the stack
@@ -28,6 +28,7 @@ static	char sccsid[] =
 #include <sigblk.h>
 #include <avoffset.h>
 #include <standard.h>
+#include <schily.h>
 
 #if	!defined(AV_OFFSET) || !defined(FP_INDIR)
 #	ifdef	HAVE_SCANSTACK

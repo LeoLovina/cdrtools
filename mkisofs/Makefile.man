@@ -1,4 +1,4 @@
-#ident @(#)Makefile.man	1.2 99/11/01 
+#ident %W% %E% %Q%
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@ RULESDIR=	RULES
 include		$(SRCROOT)/$(RULESDIR)/rules.top
 ###########################################################################
 
-#INSMODE=	0644
 MANDIR=		man
 TARGETMAN=	mkisofs
 MANSECT=	$(MANSECT_ADMIN)

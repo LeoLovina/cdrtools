@@ -1,7 +1,7 @@
-/* @(#)cdrecord.c	1.100 00/04/26 Copyright 1995-2000 J. Schilling */
+/* @(#)cdrecord.c	1.105 00/07/20 Copyright 1995-2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdrecord.c	1.100 00/04/26 Copyright 1995-2000 J. Schilling";
+	"@(#)cdrecord.c	1.105 00/07/20 Copyright 1995-2000 J. Schilling";
 #endif
 /*
  *	Record data on a CD/CVD-Recorder
@@ -45,6 +45,7 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <intcvt.h>
 #include <signal.h>
+#include <schily.h>
 
 #include <scg/scsireg.h>	/* XXX wegen SC_NOT_READY */
 #include <scg/scsitransp.h>
@@ -54,7 +55,7 @@ static	char sccsid[] =
 #include "auheader.h"
 #include "cdrecord.h"
 
-char	cdr_version[] = "1.8.1";
+char	cdr_version[] = "1.9";
 
 /*
  * Map toc/track types into names.
@@ -162,7 +163,7 @@ LOCAL	int	checkfiles	__PR((int, track_t *));
 LOCAL	void	setpregaps	__PR((int, track_t *));
 LOCAL	long	checktsize	__PR((int, track_t *));
 LOCAL	void	checksize	__PR((track_t *));
-LOCAL	BOOL	checkdsize	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp, long tsize));
+LOCAL	BOOL	checkdsize	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp, long tsize, int flags));
 LOCAL	void	raise_fdlim	__PR((void));
 LOCAL	void	gargs		__PR((int, char **, int *, track_t *, char **,
 					int *, cdr_t **,
@@ -292,6 +293,7 @@ main(ac, av)
 	scgp->verbose = scsi_verbose;
 	scgp->debug = debug;
 	scgp->cap->c_bsize = 2048;
+
 
 	if ((flags & F_MSINFO) == 0 || lverbose) {
 		char	*vers;
@@ -502,7 +504,7 @@ do_cue(tracks, track, 0);
 	 * Dirty hack!
 	 * At least MMC drives will not return the next writable
 	 * address we expect when the drive's write mode is set
-	 * tp DAO/SAO. We need this address for mkisofs and thus
+	 * to DAO/SAO. We need this address for mkisofs and thus
 	 * it must be the first user accessible sector and not the
 	 * first sector of the pregap. Set_speed_dummy() witha a
 	 * 'speedp' f 0 sets the write mode to TAO on MMC drives.
@@ -536,7 +538,7 @@ do_cue(tracks, track, 0);
 			errmsgno(EX_BAD,
 			"WARNING: Track size unknown. Data may not fit on disk.\n");
 		}
-	} else if (!checkdsize(scgp, dp, &ds, tsize) && (flags & (F_IGNSIZE|F_FORCE)) == 0) {
+	} else if (!checkdsize(scgp, dp, &ds, tsize, flags)) {
 		exscsi(EX_BAD, &exargs);
 		exit(EX_BAD);
 	}
@@ -843,6 +845,8 @@ usage(excode)
 	error("\t-pad		Pad data tracks with %d zeroed sectors\n", PAD_SECS);
 	error("\t		Pad audio tracks to a multiple of %d bytes\n", AUDIO_SEC_SIZE);
 	error("\t-nopad		Do not pad data tracks (default)\n");
+	error("\t-shorttrack	Subsequent tracks may be non Red Book < 4 seconds if in DAO mode\n");
+	error("\t-noshorttrack	Subsequent tracks must be >= 4 seconds\n");
 	error("\t-swab		Audio data source is byte-swapped (little-endian/Intel)\n");
 	error("The type of the first track is used for the toc type.\n");
 	error("Currently only form 1 tracks are supported.\n");
@@ -1044,7 +1048,13 @@ int oper = -1;
 		bytes_read += count;
 		if (tracksize >= 0 && bytes_read >= tracksize) {
 			count -= bytes_read - tracksize;
-			if (trackp->padsize == 0 && (bytes_read/secsize) >= 300)
+			/*
+			 * Paranoia: tracksize is known (trackp->tracksize >= 0)
+			 * At this point, trackp->padsize should alway be set
+			 * if the tracksize is less than 300 sectors.
+			 */
+			if (trackp->padsize == 0 &&
+			    (is_shorttrk(trackp) || (bytes_read/secsize) >= 300))
 				islast = TRUE;
 		}
 
@@ -1066,7 +1076,13 @@ int oper = -1;
 			}
 			bytespt = count;
 			secspt = count / secsize;
-			if (trackp->padsize == 0 && (bytes_read/secsize) >= 300)
+			/*
+			 * If tracksize is not known (trackp->tracksize < 0)
+			 * we may need to set trackp->padsize 
+			 * if the tracksize is less than 300 sectors.
+			 */
+			if (trackp->padsize == 0 &&
+			    (is_shorttrk(trackp) || (bytes_read/secsize) >= 300))
 				islast = TRUE;
 		}
 
@@ -1117,7 +1133,13 @@ again:
 #endif
 	} while (tracksize < 0 || bytes_read < tracksize);
 
-	if ((bytes / secsize) < 300) {
+	if (!is_shorttrk(trackp) && (bytes / secsize) < 300) {
+		/*
+		 * If tracksize is not known (trackp->tracksize < 0) or 
+		 * for some strange reason we did not set padsize properly
+		 * we may need to modify trackp->padsize if
+		 * tracksize+padsize is less than 300 sectors.
+		 */
 		amount = roundup(trackp->padsize, secsize);
 		if (((bytes+amount) / secsize) < 300)
 			trackp->padsize = 300 * secsize - bytes;
@@ -1359,7 +1381,8 @@ checkfile(track, trackp)
 {
 	if (trackp->tracksize > 0 &&
 			is_audio(trackp) &&
-			((trackp->tracksize < 300L*trackp->secsize) ||
+			( (!is_shorttrk(trackp) &&
+			  (trackp->tracksize < 300L*trackp->secsize)) ||
 			(trackp->tracksize % trackp->secsize)) &&
 						!is_pad(trackp)) {
 		errmsgno(EX_BAD, "Bad audio track size %ld for track %02d.\n",
@@ -1454,8 +1477,10 @@ checktsize(tracks, trackp)
 		if (tp->tracksize >= 0) {
 			curr = (tp->tracksize + (tp->secsize-1)) / tp->secsize;
 			curr += (tp->padsize + (tp->secsize-1)) / tp->secsize;
-
-			if (curr < 300)		/* Minimum track size is 4s */
+			/*
+			 * Minimum track size is 4s
+			 */
+			if (!is_shorttrk(tp) && curr < 300)
 				curr = 300;
 			if (is_tao(tp) && !is_audio(tp)) {
 				curr += 2;
@@ -1519,11 +1544,12 @@ checksize(trackp)
 }
 
 LOCAL BOOL
-checkdsize(scgp, dp, dsp, tsize)
+checkdsize(scgp, dp, dsp, tsize, flags)
 	SCSI	*scgp;
 	cdr_t	*dp;
 	dstat_t	*dsp;
 	long	tsize;
+	int	flags;
 {
 	long	startsec = 0L;
 	long	endsec = 0L;
@@ -1542,6 +1568,21 @@ checkdsize(scgp, dp, dsp, tsize)
 	if (startsec < 0)
 		startsec = 0;
 
+	/*
+	 * Size limitations for CD's:
+	 *
+	 *		404850 == 90 min	Red book calls this the
+	 *					first negative time
+	 *					allows lead out start up to
+	 *					block 404700
+	 *
+	 *		449850 == 100 min	This is the first time that
+	 *					is no more representable
+	 *					in a two digit BCD number.
+	 *					allows lead out start up to
+	 *					block 449700
+	 */
+
 	endsec = startsec + tsize;
 
 	if (dsp->ds_maxblocks > 0) {
@@ -1556,7 +1597,7 @@ checkdsize(scgp, dp, dsp, tsize)
 			"WARNING: Data may not fit on current disk.\n");
 
 			/* XXX Check for flags & CDR_NO_LOLIMIT */
-/*			return (FALSE);*/
+/*			goto toolarge;*/
 		}
 		if (lverbose && dsp->ds_maxrblocks > 0)
 			printf("RBlocks total: %ld RBlocks current: %ld RBlocks remaining: %ld\n",
@@ -1566,19 +1607,53 @@ checkdsize(scgp, dp, dsp, tsize)
 		if (dsp->ds_maxrblocks > 0 && endsec > dsp->ds_maxrblocks) {
 			errmsgno(EX_BAD,
 			"Data does not fit on current disk.\n");
-			return (FALSE);
+			goto toolarge;
+		}
+		if ((endsec > 404700) ||
+		    (dsp->ds_maxrblocks > 404700 && 449850 > dsp->ds_maxrblocks)) {
+			/*
+			 * Assume that this must be a CD and not a DVD.
+			 * So this is a non Red Book compliant CD with a
+			 * capacity between 90 and 99 minutes.
+			 */
+			if (dsp->ds_maxrblocks > 404700)
+				printf("RedBook total: %ld RedBook current: %ld RedBook remaining: %ld\n",
+					404700L,
+					404700L - startsec,
+					404700L - endsec);
+			if (endsec > 404700) {
+				if ((flags & (F_IGNSIZE|F_FORCE)) == 0)
+					errmsgno(EX_BAD,
+					"Notice: Most recorders cannot write CD's >= 90 minutes.\n");
+					errmsgno(EX_BAD,
+					"Notice: Use -ignsize option to allow >= 90 minutes.\n");
+				goto toolarge;
+			}
 		}
 	} else {
-		if (endsec >= (405000-301)) {			/*<90 min disk*/
+		if (endsec >= (405000-300)) {			/*<90 min disk*/
 			errmsgno(EX_BAD,
 				"Data will not fit on any disk.\n");
-			return (FALSE);
+			goto toolarge;
 		} else if (endsec >= (333000-150)) {		/* 74 min disk*/
 			errmsgno(EX_BAD,
 			"WARNING: Data may not fit on standard 74min disk.\n");
 		}
 	}
 	return (TRUE);
+toolarge:
+	if (dsp->ds_maxblocks < 449850) {
+		/*
+		 * Assume that this must be a CD and not a DVD.
+		 */
+		if (endsec > 449700) {
+			errmsgno(EX_BAD, "Cannot write CD's >= 100 minutes.\n");
+			return (FALSE);
+		}
+	}
+	if ((flags & (F_IGNSIZE|F_FORCE)) != 0)
+		return (TRUE);
+	return (FALSE);
 }
 
 LOCAL void
@@ -1603,7 +1678,7 @@ raise_fdlim()
 }
 
 char	*opts =
-"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,useinfo,dev*,timeout#,driver*,driveropts*,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,atip,multi,fix,nofix,waiti,debug,v+,V+,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose,force,dao,scms,isrc*,mcn*,index*";
+"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,useinfo,dev*,timeout#,driver*,driveropts*,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,atip,multi,fix,nofix,waiti,debug,v+,V+,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose,force,dao,scms,isrc*,mcn*,index*,shorttrack,noshorttrack";
 
 LOCAL void
 gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, blankp)
@@ -1671,6 +1746,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 	int	pad = 0;
 	int	bswab = 0;
 	int	nopad;
+	int	shorttrack = 0;
+	int	noshorttrack;
 	int	flags;
 	int	tracks = *tracksp;
 	int	tracktype = TOC_ROM;
@@ -1689,7 +1766,7 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 		padsize = (Llong)0L;
 		pregapsize = defpregap;
 		audio = data = mode2 = xa1 = xa2 = cdi = 0;
-		isize = nopreemp = nopad = 0;
+		isize = nopreemp = nopad = noshorttrack = 0;
 		pktsize = 0;
 		isrc = NULL;
 		tindex = NULL;
@@ -1714,7 +1791,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 				getbltype, &bltype, &pktsize,
 				&ispacket, &noclose, &force,
 				&dao, &scms,
-				&isrc, &mcn, &tindex) < 0) {
+				&isrc, &mcn, &tindex,
+				&shorttrack, &noshorttrack) < 0) {
 			errmsgno(EX_BAD, "Bad Option: %s.\n", cav[0]);
 			usage(EX_BAD);
 		}
@@ -1799,6 +1877,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 			preemp = 0;
 		if (nopad)
 			pad = 0;
+		if (noshorttrack)
+			shorttrack = 0;
 
 		if ((audio + data + mode2 + xa1 + xa2 + cdi) > 1) {
 			errmsgno(EX_BAD, "Too many types for track %d.\n", tracks+1);
@@ -1871,6 +1951,10 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 			if ((flags & TI_AUDIO) == 0 && padsize == (Llong)0L)
 				padsize = (Llong)PAD_SIZE;
 		}
+		if (shorttrack && (*flagsp & F_SAO) != 0)
+			flags |= TI_SHORT_TRACK;
+		if (noshorttrack)
+			flags &= ~TI_SHORT_TRACK;
 		if (bswab)
 			flags |= TI_SWAB;
 		if (ispacket) 
@@ -1932,7 +2016,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 		trackp[tracks].tindex = 0;
 		checksize(&trackp[tracks]);
 		tracksize = trackp[tracks].tracksize;
-		if (tracksize > 0 && (tracksize / secsize) < 300) {
+		if (!is_shorttrk(&trackp[tracks]) &&
+		    tracksize > 0 && (tracksize / secsize) < 300) {
 			tracksize = roundup(tracksize, secsize);
 			padsize = tracksize + roundup(padsize, secsize);
 			if ((padsize / secsize) < 300) {
@@ -2466,6 +2551,10 @@ raisepri(pri)
 #ifndef	INFTIM
 #define	INFTIM	(-1)
 #endif
+#endif
+
+#if	defined(HAVE_SELECT) && defined(NEED_SYS_SELECT_H)
+#include <sys/select.h>
 #endif
 
 LOCAL void

@@ -1,7 +1,7 @@
-/* @(#)scsi-wnt.c	1.17 99/09/17 Copyright 1998, 1999 J. Schilling, A.L. Faber */
+/* @(#)scsi-wnt.c	1.19 00/07/01 Copyright 1998, 1999 J. Schilling, A.L. Faber */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-wnt.c	1.17 99/09/17 Copyright 1998, 1999 J. Schilling, A.L. Faber";
+	"@(#)scsi-wnt.c	1.19 00/07/01 Copyright 1998, 1999 J. Schilling, A.L. Faber";
 #endif
 /*
  *	Interface for the Win32 ASPI library.
@@ -64,7 +64,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.17";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.19";	/* The version for this transport*/
 
 /*
  * Local defines and constants
@@ -225,8 +225,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return (MAX_DMA_WNT);
 }
@@ -236,7 +237,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp)) {
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt)) {
 		errmsgno(EX_BAD,
 			"scsi_getbuf: buffer out of range; requested size is %ld bytes\n", amt);
 		return ((void *)0);

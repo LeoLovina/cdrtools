@@ -1,7 +1,7 @@
-/* @(#)scsiopen.c	1.80 99/10/15 Copyright 1995 J. Schilling */
+/* @(#)scsiopen.c	1.82 00/06/23 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsiopen.c	1.80 99/10/15 Copyright 1995 J. Schilling";
+	"@(#)scsiopen.c	1.82 00/06/23 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -45,6 +45,8 @@ static	char sccsid[] =
 
 #include <utypes.h>
 #include <btorder.h>
+#include <schily.h>
+
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
@@ -106,6 +108,7 @@ open_scsi(scsidev, errs, slen, debug, be_verbose)
 		return ((SCSI *)0);
 	}
 	scgp->debug = debug;
+	scgp->overbose = be_verbose;
 
 	devname[0] = '\0';
 	if (scsidev != NULL) {

@@ -1,4 +1,4 @@
-/* @(#)jssnprintf.c	1.5 00/01/21 Copyright 1985 J. Schilling */
+/* @(#)jssnprintf.c	1.6 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	Copyright (c) 1985 J. Schilling
  */
@@ -24,6 +24,7 @@
 #include <stdxlib.h>		/* Try again for size_t	*/
 #include <vadefs.h>
 #include <standard.h>
+#include <schily.h>
 
 EXPORT	int js_snprintf __PR((char *, size_t maxcnt, const char *, ...));
 

@@ -1,7 +1,7 @@
-/* @(#)isodump.c	1.12 99/12/27 joerg */
+/* @(#)isodump.c	1.13 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isodump.c	1.12 99/12/27 joerg";
+	"@(#)isodump.c	1.13 00/05/07 joerg";
 #endif
 /*
  * File isodump.c - dump iso9660 directory information.
@@ -40,6 +40,7 @@ static	char sccsid[] =
 #include <termio.h>
 #endif
 #include <signal.h>
+#include <schily.h>
 
 FILE * infile;
 int file_addr;

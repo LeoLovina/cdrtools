@@ -1,4 +1,4 @@
-dnl @(#)aclocal.m4	1.2 00/01/10 Copyright 1998 J. Schilling
+dnl @(#)aclocal.m4	1.4 00/06/04 Copyright 1998 J. Schilling
 
 dnl Set VARIABLE to VALUE in C-string form, verbatim, or 1.
 dnl AC_DEFINE_STRING(VARIABLE [, VALUE])
@@ -685,5 +685,97 @@ exit (m == c);}],
                 [ac_cv_dev_minor_noncontig=no])])
 if test $ac_cv_dev_minor_noncontig = yes; then
   AC_DEFINE(DEV_MINOR_NONCONTIG)
+fi])
+
+dnl Checks if we may not define our own malloc()
+dnl Defines NO_USER_MALLOC if we cannot.
+AC_DEFUN(AC_USER_MALLOC,
+[AC_CACHE_CHECK([if we may not define our own malloc()], ac_cv_no_user_malloc,
+                [AC_TRY_LINK([
+char * malloc(x)
+	int     x; 
+{
+	return ((char *)0);
+}],
+[],
+                [ac_cv_no_user_malloc=no],
+                [ac_cv_no_user_malloc=yes])])
+if test $ac_cv_no_user_malloc = yes; then
+  AC_DEFINE(NO_USER_MALLOC)
+fi])
+
+dnl Checks if BSD-4.2 compliant getpgrp() exists
+dnl Defines HAVE_BSD_GETPGRP on success.
+AC_DEFUN(AC_FUNC_BSD_GETPGRP,
+[AC_CACHE_CHECK([for BSD compliant getpgrp], ac_cv_func_bsd_getpgrp,
+                [AC_TRY_RUN([
+main()
+{ long p;
+/*
+ * POSIX getpgrp() has void parameter...
+ */
+	p = getpgrp(-1);
+	if (p == getpgrp(1) && p == getpgrp(getpid()))
+		exit(1);
+exit(0);}],
+                [ac_cv_func_bsd_getpgrp=yes],
+                [ac_cv_func_bsd_getpgrp=no])])
+if test $ac_cv_func_bsd_getpgrp = yes; then
+  AC_DEFINE(HAVE_BSD_GETPGRP)
+fi])
+
+dnl Checks if BSD-4.2 compliant setpgrp() exists
+dnl Defines HAVE_BSD_SETPGRP on success.
+AC_DEFUN(AC_FUNC_BSD_SETPGRP,
+[AC_REQUIRE([AC_HEADER_ERRNO_DEF])dnl
+AC_CACHE_CHECK([for BSD compliant setpgrp], ac_cv_func_bsd_setpgrp,
+                [AC_TRY_RUN([
+#include <errno.h>
+#ifndef	HAVE_ERRNO_DEF
+extern	int	errno;
+#endif
+main()
+{ errno = 0;
+/*
+ * Force illegal pid on BSD
+ */
+if (setpgrp(-1, 100) < 0 && errno == ESRCH)
+	exit(0);
+exit(1);}],
+                [ac_cv_func_bsd_setpgrp=yes],
+                [ac_cv_func_bsd_setpgrp=no])])
+if test $ac_cv_func_bsd_setpgrp = yes; then
+  AC_DEFINE(HAVE_BSD_SETPGRP)
+fi])
+
+dnl Checks if select() needs more than sys/time.h & sys/types.h
+dnl Defines SELECT_NONSTD_HDR on success.
+AC_DEFUN(AC_HEADER_SELECT_NONSTD,
+[AC_CACHE_CHECK([if select needs nonstd include files], ac_cv_header_slect_nonstd_hdr,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/time.h>],
+			[fd_set rfd; FD_ZERO(&rfd); select(1, &rfd, 0, 0, 0);],
+				[ac_cv_header_slect_nonstd_hdr=no],
+				[ac_cv_header_slect_nonstd_hdr=yes])])
+if test $ac_cv_header_slect_nonstd_hdr = yes; then
+  AC_DEFINE(SELECT_NONSTD_HDR)
+fi])
+
+dnl Checks if select() needs sys/select.h
+dnl Defines NEED_SYS_SELECT_H on success.
+AC_DEFUN(AC_HEADER_SYS_SELECT,
+[AC_REQUIRE([AC_HEADER_SELECT_NONSTD])dnl
+AC_CACHE_CHECK([if sys/select.h is needed for select], ac_cv_header_need_sys_select_h,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/select.h>
+#ifndef	SELECT_NONSTD_HDR
+do not compile if we do not need nonstandard headers
+#endif],
+			[fd_set rfd; FD_ZERO(&rfd); select(1, &rfd, 0, 0, 0);],
+				[ac_cv_header_need_sys_select_h=yes],
+				[ac_cv_header_need_sys_select_h=no])])
+if test $ac_cv_header_need_sys_select_h = yes; then
+  AC_DEFINE(NEED_SYS_SELECT_H)
 fi])
 

@@ -1,7 +1,7 @@
-/* @(#)semshm.c	1.4 00/02/17 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)semshm.c	1.5 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)semshm.c	1.4 00/02/17 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)semshm.c	1.5 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #define IPCTST
@@ -50,6 +50,7 @@ static char     sccsid[] =
 #include <fctldefs.h>
 #include <errno.h>
 #include <standard.h>
+#include <schily.h>
 
 #if defined(HAVE_SEMGET) && defined(USE_SEMAPHORES)
 #include <sys/types.h>

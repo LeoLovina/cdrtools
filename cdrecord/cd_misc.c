@@ -1,7 +1,7 @@
-/* @(#)cd_misc.c	1.6 98/10/09 Copyright 1997 J. Schilling */
+/* @(#)cd_misc.c	1.8 00/07/02 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cd_misc.c	1.6 98/10/09 Copyright 1997 J. Schilling";
+	"@(#)cd_misc.c	1.8 00/07/02 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Misc CD support routines
@@ -28,12 +28,14 @@ static	char sccsid[] =
 #include <standard.h>
 #include <sys/types.h>	/* for caddr_t */
 #include <utypes.h>
+#include <stdio.h>
+#include <schily.h>
 
 #include "cdrecord.h"
 
 EXPORT	int	from_bcd		__PR((int b));
 EXPORT	int	to_bcd			__PR((int i));
-EXPORT	long	msf_to_lba		__PR((int m, int s, int f));
+EXPORT	long	msf_to_lba		__PR((int m, int s, int f, BOOL force_positive));
 EXPORT	BOOL	lba_to_msf		__PR((long lba, msf_t *mp));
 EXPORT	void	print_min_atip		__PR((long li, long lo));
 
@@ -52,16 +54,17 @@ to_bcd(i)
 }
 
 EXPORT long
-msf_to_lba(m, s, f)
+msf_to_lba(m, s, f, force_positive)
 	int	m;
 	int	s;
 	int	f;
+	BOOL	force_positive;
 {
 	long	ret = m * 60 + s;
 
 	ret *= 75;
 	ret += f;
-	if (m < 90)
+	if (m < 90 || force_positive)
 		ret -= 150;
 	else
 		ret -= 450150;
@@ -77,7 +80,11 @@ lba_to_msf(lba, mp)
 	int	s;
 	int	f;
 
+#ifdef	__follow_redbook__
 	if (lba >= -150 && lba < 405000) {	/* lba <= 404849 */
+#else
+	if (lba >= -150) {
+#endif
 		m = (lba + 150) / 60 / 75;
 		s = (lba + 150 - m*60*75)  / 75;
 		f = (lba + 150 - m*60*75 - s*75);

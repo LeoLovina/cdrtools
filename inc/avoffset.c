@@ -1,7 +1,7 @@
-/* @(#)avoffset.c	1.14 00/02/09 Copyright 1987 J. Schilling */
+/* @(#)avoffset.c	1.15 00/05/07 Copyright 1987 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)avoffset.c	1.14 00/02/09 Copyright 1987 J. Schilling";
+	"@(#)avoffset.c	1.15 00/05/07 Copyright 1987 J. Schilling";
 #endif
 /*
  * This program is a tool to generate the file "avoffset.h".
@@ -33,6 +33,7 @@ static	char sccsid[] =
 #include <mconfig.h>
 #include <stdio.h>
 #include <standard.h>
+#include <schily.h>
 #include <stdxlib.h>
 #include <signal.h>
 

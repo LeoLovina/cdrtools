@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.41 00/02/06 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.52 00/07/03 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.41 00/02/06 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.52 00/07/03 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -17,7 +17,21 @@ static	char __sccsid[] =
  *	-	cannot get number of bytes valid in auto sense data
  *	-	to few data in auto sense (CCS/SCSI-2/SCSI-3 needs >= 18)
  *
- *	This code contains support for the sg driver version 2
+ *	This code contains support for the sg driver version 2 by
+ *		H. Eißfeld & J. Schilling
+ *	Although this enhanced version has been announced to Linus and Alan,
+ *	there was no reaction at all.
+ *
+ *	About half a year later there occured a version in the official
+ *	Linux that was also called version 2. The interface of this version
+ *	looks like a playground - the enhancements from this version are
+ *	more or less useless for a portable real-world program.
+ *
+ *	With Linux 2.4 the official version of the sg driver is called 3.x
+ *	and seems to be usable again. The main problem now is the curious
+ *	interface that is provided to raise the DMA limit from 32 kB to a
+ *	more reasonable value. To do this in a reliable way, a lot of actions
+ *	are required.
  *
  *	Warning: you may change this source, but if you do that
  *	you need to change the _scg_version and _scg_auth* string below.
@@ -73,7 +87,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.41";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.52";	/* The version for this transport*/
 
 #ifndef	SCSI_IOCTL_GET_BUS_NUMBER
 #define SCSI_IOCTL_GET_BUS_NUMBER 0x5386
@@ -125,6 +139,10 @@ struct scg_local {
 	short	buscookies[MAX_SCG];
 	int	pgbus;
 	int	pack_id;		/* Should be a random number	*/
+	int	drvers;
+	int	isold;
+	long	xbufsize;
+	char	*xbuf;
 	char	*SCSIbuf;
 };
 #define scglocal(p)	((struct scg_local *)((p)->local)) 
@@ -153,6 +171,9 @@ struct scg_local {
 LOCAL	int	scsi_getint	__PR((int *ip));
 #endif
 LOCAL	int	scsi_send	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
+#ifdef	SG_IO
+LOCAL	int	scsi_rwsend	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
+#endif
 LOCAL	BOOL	sg_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
 LOCAL	void	sg_initdev	__PR((SCSI *scgp, int f));
 LOCAL	int	sg_mapbus	__PR((SCSI *scgp, int busno, int ino));
@@ -222,6 +243,10 @@ scsi_open(scgp, device, busno, tgt, tlun)
 		scglocal(scgp)->pgbus = -2;
 		scglocal(scgp)->SCSIbuf = (char *)-1;
 		scglocal(scgp)->pack_id = 5;
+		scglocal(scgp)->drvers = -1;
+		scglocal(scgp)->isold = -1;
+		scglocal(scgp)->xbufsize = 0L;
+		scglocal(scgp)->xbuf = NULL;
 
 		for (b=0; b < MAX_SCG; b++) {
 			scglocal(scgp)->buscookies[b] = (short)-1;
@@ -274,6 +299,14 @@ openbydev:
 		f = open(device, 2);
 		if (f < 0 && errno == ENOENT)
 			goto openpg;
+
+		if (f < 0) {
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+					"Cannot open '%s'",
+					device);
+			return (0);
+		}
 
 		if (!sg_mapdev(scgp, f, &busno, &tgt, &tlun, 0, 0)) {
 			close(f);
@@ -331,6 +364,11 @@ scsi_close(scgp)
 			}
 		}
 	}
+	if (scglocal(scgp)->xbuf != NULL) {
+		free(scglocal(scgp)->xbuf);
+		scglocal(scgp)->xbufsize = 0L;
+		scglocal(scgp)->xbuf = NULL;
+	}
 #ifdef	USE_PG
 	pg_close(scgp);
 #endif
@@ -353,7 +391,17 @@ sg_setup(scgp, f, busno, tgt, tlun)
 	int	Lun;
 	BOOL	onetarget = FALSE;
 
-
+#ifdef	SG_GET_VERSION_NUM
+	if (scglocal(scgp)->drvers < 0) {
+		scglocal(scgp)->drvers = 0;
+		if (ioctl(f, SG_GET_VERSION_NUM, &n) >= 0) {
+			scglocal(scgp)->drvers = n;
+			if (scgp->overbose)
+				printf("Linux sg driver version: %d.%d.%d\n",
+        				n/10000, (n%10000)/100, n%100);
+		}
+	}
+#endif
 	if (scgp->scsibus >= 0 && scgp->target >= 0 && scgp->lun >= 0)
 		onetarget = TRUE;
 
@@ -504,34 +552,133 @@ sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop)
 	return (TRUE);
 }
 
+#if defined(SG_SET_RESERVED_SIZE) && defined(SG_GET_RESERVED_SIZE)
+/*
+ * The way Linux does DMA resouce management is a bit curious.
+ * It totally deviates from all other OS and forces long ugly code.
+ * If we are opening all drivers for a SCSI bus scan operation, we need
+ * to set the limit for all open devices.
+ * This may use up all kernel memory ... so do the job carefully.
+ *
+ * A big problem is that SG_SET_RESERVED_SIZE does not return any hint
+ * on whether the request did fail. The only way to find if it worked
+ * is to use SG_GET_RESERVED_SIZE to read back the current values.
+ */
 LOCAL long
-scsi_maxdma(scgp)
+scsi_raisedma(scgp, newmax)
 	SCSI	*scgp;
+	long	newmax;
+{
+	register int	b;
+	register int	t;
+	register int	l;
+	register int	f;
+		 int	val;
+		 int	old;
+
+	/*
+	 * First try to raise the DMA limit to a moderate value that
+	 * most likely does not use up all kernel memory.
+	 */
+	val = 126*1024;
+
+	if (val > MAX_DMA_LINUX) {
+		for (b=0; b < MAX_SCG; b++) {
+			for (t=0; t < MAX_TGT; t++) {
+				for (l=0; l < MAX_LUN ; l++) {
+					if ((f = scsi_fileno(scgp, b, t, l)) < 0)
+						continue;
+					old = 0;
+					if (ioctl(f, SG_GET_RESERVED_SIZE, &old) < 0)
+						continue;
+					if (val > old)
+						ioctl(f, SG_SET_RESERVED_SIZE, &val);
+				}
+			}
+		}
+	}
+
+	/*
+	 * Now to raise the DMA limit to what we really need.
+	 */
+	if (newmax > val) {
+		val = newmax;
+		for (b=0; b < MAX_SCG; b++) {
+			for (t=0; t < MAX_TGT; t++) {
+				for (l=0; l < MAX_LUN ; l++) {
+					if ((f = scsi_fileno(scgp, b, t, l)) < 0)
+						continue;
+					old = 0;
+					if (ioctl(f, SG_GET_RESERVED_SIZE, &old) < 0)
+						continue;
+					if (val > old)
+						ioctl(f, SG_SET_RESERVED_SIZE, &val);
+				}
+			}
+		}
+	}
+
+	/*
+	 * To make sure we did not fail (the ioctl does not report errors)
+	 * we need to check the DMA limits. We return the smallest value.
+	 */
+	for (b=0; b < MAX_SCG; b++) {
+		for (t=0; t < MAX_TGT; t++) {
+			for (l=0; l < MAX_LUN ; l++) {
+				if ((f = scsi_fileno(scgp, b, t, l)) < 0)
+					continue;
+				if (ioctl(f, SG_GET_RESERVED_SIZE, &val) < 0)
+					continue;
+				if (scgp->debug)
+					printf("Target (%d,%d,%d): DMA max %d old max: %ld\n",
+							b, t, l, val, newmax);
+				if (val < newmax)
+					newmax = val;
+			}
+		}
+	}
+	return ((long)newmax);
+}
+#endif
+
+LOCAL long
+scsi_maxdma(scgp, amt)
+	SCSI	*scgp;
+	long	amt;
 {
 	long maxdma = MAX_DMA_LINUX;
 
+#if defined(SG_SET_RESERVED_SIZE) && defined(SG_GET_RESERVED_SIZE)
+	/*
+	 * Use the curious new kernel interface found on Linux >= 2.2.10
+	 * This interface first appeared in 2.2.6 but it was not working.
+	 */
+	if (scglocal(scgp)->drvers >= 20134)
+		maxdma = scsi_raisedma(scgp, amt);
+#endif
 #ifdef	SG_GET_BUFSIZE
 	/*
 	 * We assume that all /dev/sg instances use the same
 	 * maximum buffer size.
 	 */
-	if ((maxdma = ioctl(scglocal(scgp)->scgfile, SG_GET_BUFSIZE, 0)) < 0) {
+	maxdma = ioctl(scglocal(scgp)->scgfile, SG_GET_BUFSIZE, 0);
+#endif
+	if (maxdma < 0) {
 #ifdef	USE_PG
 		/*
 		 * If we only have a Parallel port, just return PP maxdma.
 		 */
 		if (scglocal(scgp)->pgbus == 0)
-			return (pg_maxdma(scgp));
+			return (pg_maxdma(scgp, amt));
 #endif
 		if (scglocal(scgp)->scgfile >= 0)
 			maxdma = MAX_DMA_LINUX;
 	}
-#endif
 #ifdef	USE_PG
 	if (scgp->scsibus == scglocal(scgp)->pgbus)
-		return (pg_maxdma(scgp));
-	if ((scgp->scsibus < 0) && (pg_maxdma(scgp) < maxdma))
-		return (pg_maxdma(scgp));
+		return (pg_maxdma(scgp, amt));
+	if ((scgp->scsibus < 0) && (pg_maxdma(scgp, amt) < maxdma))
+		return (pg_maxdma(scgp, amt));
 #endif
 	return (maxdma);
 }
@@ -543,7 +690,7 @@ scsi_getbuf(scgp, amt)
 {
 	char	*ret;
 
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);
@@ -647,6 +794,10 @@ EXPORT
 int scsireset(scgp)
 	SCSI	*scgp;
 {
+#ifdef	SG_SCSI_RESET
+	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
+	int	func = 0;
+#endif
 #ifdef	USE_PG
 	if (scgp->scsibus == scglocal(scgp)->pgbus)
 		return (pg_reset(scgp));
@@ -654,6 +805,26 @@ int scsireset(scgp)
 	/*
 	 * Do we have a SCSI reset in the Linux sg driver?
 	 */
+#ifdef	SG_SCSI_RESET
+	/*
+	 * Newer Linux sg driver seem to finally implement it...
+	 */
+#ifdef	SG_SCSI_RESET_NOTHING
+	func = SG_SCSI_RESET_NOTHING;
+	if (ioctl(f, SG_SCSI_RESET, &func) >= 0) {
+#ifdef	SG_SCSI_RESET_DEVICE
+		func = SG_SCSI_RESET_DEVICE;
+		if (ioctl(f, SG_SCSI_RESET, &func) >= 0)
+			return (0);
+#endif
+#ifdef	SG_SCSI_RESET_BUS
+		func = SG_SCSI_RESET_BUS;
+		if (ioctl(f, SG_SCSI_RESET, &func) >= 0)
+			return (0);
+#endif
+	}
+#endif
+#endif
 	return (-1);
 }
 
@@ -696,8 +867,105 @@ scsi_getint(ip)
 #define	GETINT(a)	(a)
 #endif
 
+#ifdef	SG_IO
 LOCAL int
 scsi_send(scgp, f, sp)
+	SCSI		*scgp;
+	int		f;
+	struct scg_cmd	*sp;
+{
+	int		ret;
+	sg_io_hdr_t	sg_io;
+
+	if (f < 0) {
+		sp->error = SCG_FATAL;
+		sp->ux_errno = EIO;
+		return (0);
+	}
+	if (scglocal(scgp)->isold > 0) {
+		return (scsi_rwsend(scgp, f, sp));
+	}
+	fillbytes((caddr_t)&sg_io, sizeof(sg_io), '\0');
+
+	sg_io.interface_id = 'S';
+
+	if (sp->flags & SCG_RECV_DATA) {
+		sg_io.dxfer_direction = SG_DXFER_FROM_DEV;
+	} else if (sp->size > 0) {
+		sg_io.dxfer_direction = SG_DXFER_TO_DEV;
+	} else {
+		sg_io.dxfer_direction = SG_DXFER_NONE;
+	}
+	sg_io.cmd_len = sp->cdb_len;
+	if (sp->sense_len > SG_MAX_SENSE)
+		sg_io.mx_sb_len = SG_MAX_SENSE;
+	else
+		sg_io.mx_sb_len = sp->sense_len;
+	sg_io.dxfer_len = sp->size;
+	sg_io.dxferp = sp->addr;
+	sg_io.cmdp = sp->cdb.cmd_cdb;
+	sg_io.sbp = sp->u_sense.cmd_sense;
+	sg_io.timeout = sp->timeout*1000;
+	sg_io.flags |= SG_FLAG_DIRECT_IO;
+
+	ret = ioctl(f, SG_IO, &sg_io);
+	if (scgp->debug)
+		printf("ioctl ret: %d\n", ret);
+
+	if (ret < 0) {
+		sp->ux_errno = geterrno();
+		/*
+		 * Check if SCSI command cound not be send at all.
+		 */
+		if (sp->ux_errno == EINVAL && scglocal(scgp)->isold < 0) {
+			scglocal(scgp)->isold = 1;
+			return (scsi_rwsend(scgp, f, sp));
+		}
+		if (sp->ux_errno == ENOTTY || sp->ux_errno == ENXIO ||
+		    sp->ux_errno == EINVAL || sp->ux_errno == EACCES) {
+			return (-1);
+		}
+	}
+
+	sp->u_scb.cmd_scb[0] = sg_io.status;
+	sp->sense_count = sg_io.sb_len_wr;
+
+	if (scgp->debug)
+		printf("host_status: %02X driver_status: %02X\n",
+				sg_io.host_status, sg_io.driver_status);
+
+	switch (sg_io.host_status) {
+
+	case DID_OK:
+			if ((sg_io.driver_status & DRIVER_SENSE) != 0)
+				sp->error = SCG_RETRYABLE;
+			break;
+
+	case DID_NO_CONNECT:	/* Arbitration won, retry NO_CONNECT? */
+	case DID_BAD_TARGET:
+			sp->error = SCG_FATAL;
+			break;
+	
+	case DID_TIME_OUT:
+			sp->error = SCG_TIMEOUT;
+			break;
+
+	default:
+			sp->error = SCG_RETRYABLE;
+			break;
+	}
+	if (sp->error && sp->ux_errno == 0)
+		sp->ux_errno = EIO;
+
+	sp->resid = sg_io.resid;
+	return (0);
+}
+#else
+#	define	scsi_rwsend	scsi_send
+#endif
+
+LOCAL int
+scsi_rwsend(scgp, f, sp)
 	SCSI		*scgp;
 	int		f;
 	struct scg_cmd	*sp;
@@ -721,6 +989,7 @@ scsi_send(scgp, f, sp)
 
 	if (f < 0) {
 		sp->error = SCG_FATAL;
+		sp->ux_errno = EIO;
 		return (0);
 	}
 #ifdef	USE_PG
@@ -743,8 +1012,25 @@ scsi_send(scgp, f, sp)
 				(long)sp->addr, sp->size);
 		}
 		if (sp->size > (int)(sizeof(sg_rq.buf) - SCG_MAX_CMD)) {
-			errno = ENOMEM;
-			return (-1);
+
+			if (scglocal(scgp)->xbuf == NULL) {
+				scglocal(scgp)->xbufsize = scgp->maxbuf;
+				scglocal(scgp)->xbuf =
+					malloc(scglocal(scgp)->xbufsize +
+						SCG_MAX_CMD +
+						sizeof(struct sg_header));
+				if (scgp->debug) {
+					printf("Allocted DMA copy buffer, addr: 0x%8.8lX size: %ld\n",
+						(long)scglocal(scgp)->xbuf,
+						scgp->maxbuf);
+				}
+			}
+			if (scglocal(scgp)->xbuf == NULL ||
+				sp->size > scglocal(scgp)->xbufsize) {
+				errno = ENOMEM;
+				return (-1);
+			}
+			sgp2 = sgp = (struct sg_rq *)scglocal(scgp)->xbuf;
 		}
 	}
 

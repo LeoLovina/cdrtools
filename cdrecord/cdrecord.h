@@ -1,4 +1,4 @@
-/* @(#)cdrecord.h	1.60 00/04/26 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.h	1.62 00/07/02 Copyright 1995 J. Schilling */
 /*
  *	Definitions for cdrecord
  *
@@ -98,22 +98,23 @@ typedef struct track {
 /*
  * Defines for flags
  */
-#define	TI_AUDIO	0x0001	/* File is an audio track		*/
-#define	TI_PREEMP	0x0002	/* Audio track recorded w/preemphasis	*/
-#define	TI_MIX		0x0004	/* This is a mixed mode track		*/
-#define	TI_RAW		0x0008	/* Write this track in raw mode		*/
-#define	TI_PAD		0x0010	/* Pad data track			*/
-#define	TI_SWAB		0x0020	/* Swab audio data			*/
-#define	TI_ISOSIZE	0x0040	/* Use iso size for track		*/
-#define	TI_NOAUHDR	0x0080	/* Don't look for audio header		*/
-#define	TI_FIRST	0x0100	/* This is the first track		*/
-#define	TI_LAST		0x0200	/* This is the last track		*/
-#define	TI_PACKET	0x0400	/* Fixed- or variable-packet track	*/
-#define	TI_NOCLOSE	0x0800	/* Don't close the track after writing	*/
-#define	TI_TAO		0x1000	/* This track is written in TAO mode	*/
-#define	TI_PREGAP	0x2000	/* Prev. track incl. pregap of this tr. */
-#define	TI_SCMS		0x4000	/* Force to follow the SCMS rules	*/
-#define	TI_COPY		0x8000	/* Allow digital copy			*/
+#define	TI_AUDIO	0x00001	/* File is an audio track		*/
+#define	TI_PREEMP	0x00002	/* Audio track recorded w/preemphasis	*/
+#define	TI_MIX		0x00004	/* This is a mixed mode track		*/
+#define	TI_RAW		0x00008	/* Write this track in raw mode		*/
+#define	TI_PAD		0x00010	/* Pad data track			*/
+#define	TI_SWAB		0x00020	/* Swab audio data			*/
+#define	TI_ISOSIZE	0x00040	/* Use iso size for track		*/
+#define	TI_NOAUHDR	0x00080	/* Don't look for audio header		*/
+#define	TI_FIRST	0x00100	/* This is the first track		*/
+#define	TI_LAST		0x00200	/* This is the last track		*/
+#define	TI_PACKET	0x00400	/* Fixed- or variable-packet track	*/
+#define	TI_NOCLOSE	0x00800	/* Don't close the track after writing	*/
+#define	TI_TAO		0x01000	/* This track is written in TAO mode	*/
+#define	TI_PREGAP	0x02000	/* Prev. track incl. pregap of this tr. */
+#define	TI_SCMS		0x04000	/* Force to follow the SCMS rules	*/
+#define	TI_COPY		0x08000	/* Allow digital copy			*/
+#define	TI_SHORT_TRACK	0x10000	/* Ignore min 4 second Red Book	std.	*/
 
 #define	is_audio(tp)	(((tp)->flags & TI_AUDIO) != 0)
 #define	is_preemp(tp)	(((tp)->flags & TI_PREEMP) != 0)
@@ -127,6 +128,7 @@ typedef struct track {
 #define	is_pregap(tp)	(((tp)->flags & TI_PREGAP) != 0)
 #define	is_scms(tp)	(((tp)->flags & TI_SCMS) != 0)
 #define	is_copy(tp)	(((tp)->flags & TI_COPY) != 0)
+#define	is_shorttrk(tp)	(((tp)->flags & TI_SHORT_TRACK) != 0)
 
 /*
  * Defines for toc type / track type
@@ -425,7 +427,7 @@ extern	void	cdr_defaults	__PR((char **devp, int *speedp, long *fsp));
  */
 extern	int	from_bcd	__PR((int b));
 extern	int	to_bcd		__PR((int i));
-extern	long	msf_to_lba	__PR((int m, int s, int f));
+extern	long	msf_to_lba	__PR((int m, int s, int f, BOOL force_positive));
 extern	BOOL	lba_to_msf	__PR((long lba, msf_t *mp));
 extern	void	print_min_atip	__PR((long li, long lo));
 

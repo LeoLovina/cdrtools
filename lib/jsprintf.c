@@ -1,4 +1,4 @@
-/* @(#)jsprintf.c	1.12 99/08/30 Copyright 1985 J. Schilling */
+/* @(#)jsprintf.c	1.13 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	Copyright (c) 1985 J. Schilling
  */
@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <vadefs.h>
 #include <standard.h>
+#include <schily.h>
 
 #define BFSIZ	256
 

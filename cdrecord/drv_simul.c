@@ -1,7 +1,7 @@
-/* @(#)drv_simul.c	1.14 00/04/16 Copyright 1998 J. Schilling */
+/* @(#)drv_simul.c	1.15 00/05/07 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_simul.c	1.14 00/04/16 Copyright 1998 J. Schilling";
+	"@(#)drv_simul.c	1.15 00/05/07 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Simulation device driver
@@ -38,6 +38,8 @@ static	char sccsid[] =
 #include <sys/time.h>
 #include <utypes.h>
 #include <btorder.h>
+#include <schily.h>
+
 /*#include <scgio.h>*/
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>

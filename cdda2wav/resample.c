@@ -1,7 +1,7 @@
-/* @(#)resample.c	1.8 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)resample.c	1.9 00/05/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)resample.c	1.8 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)resample.c	1.9 00/05/02 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 
 #endif
@@ -966,7 +966,7 @@ none__missing:
       }
     }
     {
-      char * p2 = (char *)pStart;
+      unsigned char * p2 = pStart;
 
       todo = outlen;
       while (todo != 0) {

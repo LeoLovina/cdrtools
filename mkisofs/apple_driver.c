@@ -25,9 +25,16 @@
 #include <config.h>
 #include <mkisofs.h>
 #include <mac_label.h>
+#include <standard.h>
+#include <schily.h>
 
-int
-get_732(char *p)
+EXPORT	int	get_732	__PR((char *p));
+EXPORT	int	get_722	__PR((char *p));
+EXPORT	int	main	__PR((int argc, char **argv));
+
+EXPORT int
+get_732(p)
+	char	*p;
 {
 	return ((p[3] & 0xff)
 	     | ((p[2] & 0xff) << 8)
@@ -35,15 +42,18 @@ get_732(char *p)
 	     | ((p[0] & 0xff) << 24));
 }
 
-int
-get_722(char *p)
+EXPORT int
+get_722(p)
+	char	*p;
 {
 	return ((p[1] & 0xff)
 	     | ((p[0] & 0xff) << 8));
 }
 
-
-main(int argc, char **argv)
+EXPORT int
+main(argc, argv)
+	int	argc;
+	char	**argv;
 {
 	FILE		*fp;
 	MacLabel	*mac_label;
@@ -61,52 +71,54 @@ main(int argc, char **argv)
 	int		i, j;
 
 
+	save_args(argc, argv);
+
 	if (argc != 2)
-	    perr(argv[0], "Usage: %s device-path", argv[0]);
+	    comerrno(EX_BAD, "Usage: %s device-path", argv[0]);
 
 	if ((fp = fopen(argv[1], "rb")) == NULL)
-	    perr(argv[0], "can't open %s", argv[1]);
+	    comerr("Can't open '%s'.", argv[1]);
 
 	if (fread(Block0, 1, HFS_BLOCKSZ, fp) != HFS_BLOCKSZ)
-	    perr(argv[0], "can't read %s", argv[1]);
+	    comerr("Can't read '%s'.", argv[1]);
 
 	mac_label = (MacLabel *)Block0;
 	mac_part = (MacPart *)block;
 	
-	sbBlkSize = get_722(mac_label->sbBlkSize);
+	sbBlkSize = get_722((char *)mac_label->sbBlkSize);
 
 	if (! IS_MAC_LABEL(mac_label) || sbBlkSize != SECTOR_SIZE)
-	    perr(argv[0], "%s is not a bootable Mac disk", argv[1]);
+	    comerrno(EX_BAD, "%s is not a bootable Mac disk", argv[1]);
 
 	i = 1;
 	do {
 	    if (fseek(fp, i * HFS_BLOCKSZ, 0) != 0)
-		perr(argv[0], "can't seek %s", argv[1]);
+		comerr("Ccan't seek %s", argv[1]);
 
 	    if (fread(block, 1, HFS_BLOCKSZ, fp) != HFS_BLOCKSZ)
-		perr(argv[0], "can't read %s", argv[1]);
+		comerr("Can't read '%s'.", argv[1]);
 
-	    pmMapBlkCnt = get_732(mac_part->pmMapBlkCnt);
+	    pmMapBlkCnt = get_732((char *)mac_part->pmMapBlkCnt);
 
-	    if (!have_boot && !strncmp(mac_part->pmPartType, pmPartType_2, 12)) {
-		hfs_start = get_732(mac_part->pmPyPartStart);
+	    if (!have_boot && !strncmp((char *)mac_part->pmPartType, pmPartType_2, 12)) {
+		hfs_start = get_732((char *)mac_part->pmPyPartStart);
 
 		fprintf(stderr, "%s: found 512 driver partition (at block %d)\n", argv[0], hfs_start);
 		memcpy(pmBlock512, block, HFS_BLOCKSZ);
 		have_boot = 1;
 	    }
 
-	    if (!have_hfs && !strncmp(mac_part->pmPartType, pmPartType_4, 9)) {
+	    if (!have_hfs && !strncmp((char *)mac_part->pmPartType, pmPartType_4, 9)) {
 
-		hfs_start = get_732(mac_part->pmPyPartStart);
+		hfs_start = get_732((char *)mac_part->pmPyPartStart);
 
 		if (fseek(fp, hfs_start*HFS_BLOCKSZ, 0) != 0)
-		    perr(argv[0], "can't seek %s", argv[1]);
+		    comerr("Can't seek '%s'.", argv[1]);
 
 		if (fread(bootb, 2, HFS_BLOCKSZ, fp) != HFS_BLOCKSZ)
-		    perr(argv[0], "can't read %s", argv[1]);
+		    comerr("Can't read '%s'.", argv[1]);
 
-		if (get_722(bootb) == 0x4c4b) {
+		if (get_722((char *)bootb) == 0x4c4b) {
 
 		    fprintf(stderr, "%s: found HFS partition (at blk %d)\n", argv[0], hfs_start);
 		    have_hfs = 1;
@@ -115,26 +127,26 @@ main(int argc, char **argv)
 	} while (i++ < pmMapBlkCnt);
 
 	if (!have_hfs || !have_boot)
-	    perr(argv[0], "%s is not a bootable Mac disk", argv[1]);
+	    comerrno(EX_BAD, "%s is not a bootable Mac disk", argv[1]);
 
 	i = 1;
 
 	do {
 	    if (fseek(fp, i*sbBlkSize, 0) != 0)
-		perr(argv[0], "can't seek %s", argv[1]);
+		comerr("Can't seek '%s'.", argv[1]);
 
 	    if (fread(block, 1, HFS_BLOCKSZ, fp) != HFS_BLOCKSZ)
-		perr(argv[0], "can't read %s", argv[1]);
+		comerr("Can't read '%s'.", argv[1]);
 
-	    pmMapBlkCnt = get_732(mac_part->pmMapBlkCnt);
+	    pmMapBlkCnt = get_732((char *)mac_part->pmMapBlkCnt);
 
-	    if (!strncmp(mac_part->pmPartType, pmPartType_2, 12)) {
+	    if (!strncmp((char *)mac_part->pmPartType, pmPartType_2, 12)) {
 
 		int	start, num;
 
 		fprintf(stderr, "%s: extracting %s ", argv[0], mac_part->pmPartType);
-		start = get_732(mac_part->pmPyPartStart);
-		num = get_732(mac_part->pmPartBlkCnt);
+		start = get_732((char *)mac_part->pmPyPartStart);
+		num = get_732((char *)mac_part->pmPartBlkCnt);
 		fwrite(Block0, 1, HFS_BLOCKSZ, stdout);
 		fwrite(block, 1, HFS_BLOCKSZ, stdout);
 		fwrite(pmBlock512, 1, HFS_BLOCKSZ, stdout);
@@ -142,11 +154,11 @@ main(int argc, char **argv)
 		fwrite(block, 1, HFS_BLOCKSZ, stdout);
 
 		if (fseek(fp, start*sbBlkSize, 0) != 0)
-		    perr(argv[0], "can't seek %s", argv[1]);
+		    comerr("Can't seek '%s'.", argv[1]);
 
 		for (j=0;j<num;j++) {
 		    if (fread(block, 1, sbBlkSize, fp) != sbBlkSize)
-			perr(argv[0], "can't read %s", argv[1]);
+			comerr("Can't read '%s'.", argv[1]);
 
 		    fwrite(block, 1, sbBlkSize, stdout);
 		    fprintf(stderr, ".");
@@ -159,17 +171,9 @@ main(int argc, char **argv)
 	    }
 
 	    if (! IS_MAC_PART(mac_part) )
-		perr(argv[0], "unable to find boot partition", 0);
+		comerrno(EX_BAD, "Unable to find boot partition", 0);
 
 	} while (i++ < pmMapBlkCnt);
 
-
-}
-
-perr(char *a, char *b, char *c)
-{
-	fprintf(stderr, "%s: ", a);
-	fprintf(stderr, b, c);
-	fprintf(stderr, "\n");
-	exit (1);
+	return (0);
 }

@@ -1,7 +1,7 @@
-/* @(#)dump.c	1.9 99/12/27 joerg */
+/* @(#)dump.c	1.10 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)dump.c	1.9 99/12/27 joerg";
+	"@(#)dump.c	1.10 00/05/07 joerg";
 #endif
 /*
  * File dump.c - dump a file/device both in hex and in ASCII.
@@ -39,6 +39,7 @@ static	char sccsid[] =
 #include <termio.h>
 #endif
 #include <signal.h>
+#include <schily.h>
 
 FILE * infile;
 int file_addr;

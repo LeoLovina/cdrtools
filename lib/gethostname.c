@@ -1,7 +1,7 @@
-/* @(#)gethostname.c	1.13 99/08/30 Copyright 1995 J. Schilling */
+/* %Z%%M%	%I% %E% Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)gethostname.c	1.13 99/08/30 Copyright 1995 J. Schilling";
+	"%Z%%M%	%I% %E% Copyright 1995 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1995 J. Schilling
@@ -32,10 +32,9 @@ static	char sccsid[] =
 
 #ifndef	HAVE_GETHOSTNAME
 EXPORT	int	gethostname	__PR((char *name, int namelen));
-#endif
 
 
-#if	!defined(HAVE_GETHOSTNAME) && defined(SI_HOSTNAME)
+#ifdef	SI_HOSTNAME
 
 EXPORT int
 gethostname(name, namelen)
@@ -47,3 +46,5 @@ gethostname(name, namelen)
 	return (0);
 }
 #endif
+
+#endif	/* HAVE_GETHOSTNAME */

@@ -71,7 +71,7 @@ The argument of -C is the output of cdrecord -msinfo
 	CD-R device with the same notation as for cdrecord dev=xxx,yyy .
 
 
-If you want to check, whether mkisofs make evething right, you should create 
+If you want to check, whether mkisofs make everything right, you should create 
 another image by using the following command line.
 
 On Linux:
@@ -89,11 +89,13 @@ On Linux type:
 On SunOS type:
 	mount -r -F fbk -o type=hsfs /dev/fbk0:isoimage_3.raw /mnt
 
+For Solaris 8 and later you may also use the Sun lofi driver (see README.sun-lofi)
+
 If you list /mnt, you should see all directories that have been in the first 
 session and the directory "second_dir". If you try to read a file from the
 first session, you will get an I/O error or bad data (depending on the
 block address), don't worry about that. If you try to read a file from
-the secons session, you will see everything correctly.
+the second session, you will see everything correctly.
 
 To write the second session to CD, call:
 

@@ -1,4 +1,4 @@
-/* @(#)sprintf.c	1.12 98/09/05 Copyright 1985 J. Schilling */
+/* @(#)sprintf.c	1.13 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	Copyright (c) 1985 J. Schilling
  */
@@ -21,6 +21,7 @@
 #include <mconfig.h>
 #include <vadefs.h>
 #include <standard.h>
+#include <schily.h>
 
 /*
  * Do not include stdio.h, BSD systems define sprintf the wrong way!

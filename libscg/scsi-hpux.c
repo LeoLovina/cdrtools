@@ -1,7 +1,7 @@
-/* @(#)scsi-hpux.c	1.18 00/02/06 Copyright 1997 J. Schilling */
+/* @(#)scsi-hpux.c	1.20 00/07/01 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-hpux.c	1.18 00/02/06 Copyright 1997 J. Schilling";
+	"@(#)scsi-hpux.c	1.20 00/07/01 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the HP-UX generic SCSI implementation.
@@ -40,7 +40,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-hpux.c-1.18";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-hpux.c-1.20";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -186,8 +186,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return	(MAX_DMA_HP);
 }
@@ -197,7 +198,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

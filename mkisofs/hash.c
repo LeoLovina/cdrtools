@@ -1,7 +1,7 @@
-/* @(#)hash.c	1.11 00/04/16 joerg */
+/* @(#)hash.c	1.12 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)hash.c	1.11 00/04/16 joerg";
+	"@(#)hash.c	1.12 00/05/07 joerg";
 
 #endif
 /*
@@ -34,6 +34,7 @@ static	char sccsid[] =
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 
 #define NR_HASH 1024

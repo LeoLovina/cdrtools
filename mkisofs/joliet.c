@@ -1,7 +1,7 @@
-/* @(#)joliet.c	1.23 00/04/16 joerg */
+/* @(#)joliet.c	1.24 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)joliet.c	1.23 00/04/16 joerg";
+	"@(#)joliet.c	1.24 00/05/07 joerg";
 #endif
 /*
  * File joliet.c - handle Win95/WinNT long file/unicode extensions for iso9660.
@@ -92,6 +92,7 @@ static	char sccsid[] =
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 #include <utypes.h>
 #include <intcvt.h>

@@ -35,4 +35,11 @@ entry.
 To be able to use 'make' 'as' and 'ld' you need to make sure that 
 /usr/ccs/bin is in your path.
 
+Make sure - even if you use GCC - you don't use GNU as, GNU ld 
+and GNU tsort/lorder.
+
 For CD-Recording please read the README.volmgt too.
+
+On Solaris you need to stop the volume management if you like to use the USCSI
+fallback SCSI transport code. Even things like cdrecord -scanbus
+will not work if the volume management is running.

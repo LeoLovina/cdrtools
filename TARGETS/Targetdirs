@@ -1,5 +1,5 @@
 #ident %W% %E% %Q%
 ###########################################################################
 DIRS=		patches conf inc lib libdeflt libscg libhfs_iso libfile libunls \
-		cdrecord mkisofs mkisofs/diag mkhybrid cdda2wav misc man
+		cdrecord mkisofs mkisofs/diag cdda2wav misc man
 ###########################################################################

@@ -1,4 +1,4 @@
-/* @(#)jssprintf.c	1.13 99/08/30 Copyright 1985 J. Schilling */
+/* @(#)jssprintf.c	1.14 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	Copyright (c) 1985 J. Schilling
  */
@@ -21,6 +21,7 @@
 #include <mconfig.h>
 #include <vadefs.h>
 #include <standard.h>
+#include <schily.h>
 
 /*
  * Do not include stdio.h, BSD systems define sprintf the wrong way!

@@ -9,3 +9,6 @@ You do this on Solaris permanently by editing /etc/vold.conf
 NeXT-Step/Apple Rhapsody will only work correctly if you reboot while
 the CD-R drive is powered off.
 
+On Solaris you need to stop the volume management if you like to use the USCSI
+fallback SCSI transport code. Even things like cdrecord -scanbus
+will not work if the volume management is running.

@@ -1,7 +1,7 @@
-/* @(#)scsierrs.c	2.21 99/05/13 Copyright 1987-1996 J. Schilling */
+/* @(#)scsierrs.c	2.22 00/05/07 Copyright 1987-1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsierrs.c	2.21 99/05/13 Copyright 1987-1996 J. Schilling";
+	"@(#)scsierrs.c	2.22 00/05/07 Copyright 1987-1996 J. Schilling";
 #endif
 /*
  *	Error printing for scsitransp.c
@@ -28,6 +28,7 @@ static	char sccsid[] =
 
 #include <stdio.h>
 #include <standard.h>
+#include <schily.h>
 
 #include <scg/scsireg.h>
 #include <scg/scsidefs.h>

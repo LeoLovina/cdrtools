@@ -1,7 +1,7 @@
-/* @(#)mac_label.c	1.1 00/03/18 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)mac_label.c	1.2 00/07/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)mac_label.c	1.1 00/03/18 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)mac_label.c	1.2 00/07/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -201,7 +201,8 @@ gen_mac_label(mac_boot)
 	mpm[mpc].ntype = PM4;
 	mpm[mpc].type = pmPartType_4;
 	mpm[mpc].start = session_start + hce->hfs_map_size / HFS_BLK_CONV;
-	mpm[mpc].size = last_extent - mpm[mpc].start;
+	mpm[mpc].size = last_extent - mpm[mpc].start -
+			(ISO_ROUND_UP(mac_boot->size) / SECTOR_SIZE);
 	mpm[mpc].name = volume_id;
 
 	mpc++;

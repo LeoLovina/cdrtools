@@ -1,7 +1,7 @@
-/* @(#)rock.c	1.24 00/04/27 joerg */
+/* @(#)rock.c	1.25 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)rock.c	1.24 00/04/27 joerg";
+	"@(#)rock.c	1.25 00/05/07 joerg";
 #endif
 /*
  * File rock.c - generate RRIP  records for iso9660 filesystems.
@@ -35,6 +35,7 @@ static	char sccsid[] =
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 
 #define SU_VERSION 1

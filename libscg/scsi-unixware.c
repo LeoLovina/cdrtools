@@ -1,7 +1,7 @@
-/* @(#)scsi-unixware.c	1.12 00/01/26 Copyright 1998 J. Schilling, Santa Cruz Operation */
+/* @(#)scsi-unixware.c	1.14 00/07/01 Copyright 1998 J. Schilling, Santa Cruz Operation */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-unixware.c	1.12 00/01/26 Copyright 1998 J. Schilling, Santa Cruz Operation";
+	"@(#)scsi-unixware.c	1.14 00/07/01 Copyright 1998 J. Schilling, Santa Cruz Operation";
 #endif
 /*
  *	Interface for the SCO UnixWare SCSI implementation.
@@ -46,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.12";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.14";	/* The version for this transport*/
 
 /* Max. number of scg scsibusses.  The real limit would be           */
 /* MAX_HBA * MAX_BUS (which would be 32 * 8 on UnixWare 2.1/7.x),    */
@@ -462,8 +462,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return (MAX_DMA);
 }
@@ -474,7 +475,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

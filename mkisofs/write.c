@@ -1,7 +1,7 @@
-/* @(#)write.c	1.41 00/04/21 joerg */
+/* @(#)write.c	1.44 00/06/05 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)write.c	1.41 00/04/21 joerg";
+	"@(#)write.c	1.44 00/06/05 joerg";
 #endif
 /*
  * Program write.c - dump memory  structures to  file for iso9660 filesystem.
@@ -46,6 +46,7 @@ static	char sccsid[] =
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 
 #ifdef __SVR4
@@ -374,7 +375,15 @@ write_one_file(filename, size, outfile)
 	FILE		*outfile;
 #endif	/* APPLE_HYB */
 {
-	char		buffer[SECTOR_SIZE * NSECT];
+	/*
+	 * It seems that there are still stone age C-compilers
+	 * around.
+	 * The Metrowerks C found on BeOS/PPC does not allow
+	 * more than 32kB of local vars.
+	 * As we do not need to call write_one_file() recursively
+	 * we make buffer static.
+	 */
+static	char		buffer[SECTOR_SIZE * NSECT];
 	FILE		*infile;
 	int		remain;
 	int	use;
@@ -429,8 +438,15 @@ write_one_file(filename, size, outfile)
 			time(&now);
 			frac = last_extent_written / (1.0 * last_extent);
 			the_end = begun + (now - begun) / frac;
+#ifndef NO_FLOATINGPOINT
 			fprintf(stderr, "%6.2f%% done, estimate finish %s",
 				frac * 100., ctime(&the_end));
+#else
+			fprintf(stderr, "%3d.%-02d%% done, estimate finish %s",
+				(int)(frac * 100.),
+				(int)((frac+.00005) * 10000.)%100,
+                                ctime(&the_end));
+#endif
 			fflush(stderr);
 		}
 #endif

@@ -1,7 +1,7 @@
-/* @(#)scsi-next.c	1.16 99/09/17 Copyright 1997 J. Schilling */
+/* @(#)scsi-next.c	1.20 00/07/01 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-next.c	1.16 99/09/17 Copyright 1997 J. Schilling";
+	"@(#)scsi-next.c	1.20 00/07/01 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the NeXT Step generic SCSI implementation.
@@ -42,7 +42,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-next.c-1.16";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-next.c-1.20";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -155,7 +155,7 @@ scsi_open(scgp, device, busno, tgt, tlun)
 		}
 		if (scgp->debug)
 			printf("maxbus: %d\n", scglocal(scgp)->max_scsibus);
-		if (max_scsibus <= 0) {
+		if (scglocal(scgp)->max_scsibus <= 0) {
 			scglocal(scgp)->max_scsibus = 1;
 			scglocal(scgp)->cur_scsibus = 0;
 		}
@@ -165,6 +165,9 @@ scsi_open(scgp, device, busno, tgt, tlun)
 			scsi_setup(scgp, busno, tgt, tlun, TRUE);
 		return(1);
 	}
+	if (scgp->errstr)
+		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+			"Cannot open '/dev/sg*'");
 	return (0);
 }
 
@@ -224,8 +227,9 @@ scsi_setup(scgp, busno, tgt, tlun, ex)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	long maxdma = MAX_DMA_NEXT;
 #ifdef	SGIOCMAXDMA
@@ -253,7 +257,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

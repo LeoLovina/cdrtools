@@ -1,4 +1,4 @@
-# @(#)README	1.19 00/04/27 Copyright 1996 J. Schilling
+# @(#)README	1.21 00/05/28 Copyright 1996 J. Schilling
 
 This is Version 1.8.1 of cdrecord
 
@@ -118,7 +118,7 @@ them to be identical to working drives:
 
 	ACER CR-1420C
 	ACER CDRW 6206A
-	AOPEN CRW9420 (Re-writeable)
+	AOPEN CRW9420 (Re-writable)
 	BTC BCE 621E
 	COMPRO CW-7502
 	Dysan CR-622 ???? See Wearnes 622
@@ -267,7 +267,7 @@ The following drives will never be supported by cdrecord because they are too ol
 	Pinnacle Micro RCD-202
 	Ricoh RS-9200CD
 
-The following dries are curently not supported because I don't get specs:
+The following drives are currently not supported because I don't get specs:
 (some of them may partially work: see above)
 
 	Creative Labs CDR 4210
@@ -293,7 +293,7 @@ Solaris only:
 	SCHILYscg.i386.tar.Z	The scg driver in pkgadd format (x86).
 	SCHILYfbk.i386.tar.Z	The fbk driver in pkgadd format (x86).
 
-Note that the fbk driver packet is for Solaris 2.4 and not system independant.
+Note that the fbk driver packet is for Solaris 2.4 and not system independent.
 
 All Systems:
 	cdrecord-1.6.1.tar.gz	The cdrecord for source distribution.
@@ -343,7 +343,7 @@ NOTE:
 	and vice versa. You will get a corrupt system.
 
 	You need to be root because you need access to /dev/scg? and to be
-	able to put cdrecord into the realtime scheduling class.
+	able to put cdrecord into the real-time scheduling class.
 
 All Systems:
 

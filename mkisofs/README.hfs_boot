@@ -1,5 +1,13 @@
 Making HFS bootable CDs
 
+*******
+The HFS boot code in mkisofs/mkhybrid is now very out of date ...
+it does not support booting from IDE CDROMS, and probably won't work on
+"newer" Macs.
+
+The HFS boot code will be updated at some point in the future
+*******
+
 It *may* be possible to make the hybrid CD bootable on a Mac. As I do not
 have easy access to a CD-R (nor a Mac) at the moment, I have not actually
 created and written a bootable hybrid to CD - however, I *think* it will work!
@@ -63,4 +71,4 @@ is based on code from "mkisofs 1.05 PLUS" by Andy Polyakov
 Any comments, bug reports/fixes to the address below
 
 James Pearson (j.pearson@ge.ucl.ac.uk)
-18/5/98
+19-Jul-2000

@@ -1,7 +1,7 @@
-/* @(#)multi.c	1.38 00/04/20 joerg */
+/* @(#)multi.c	1.40 00/05/28 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)multi.c	1.38 00/04/20 joerg";
+	"@(#)multi.c	1.40 00/05/28 joerg";
 #endif
 /*
  * File multi.c - scan existing iso9660 image and merge into
@@ -48,6 +48,7 @@ extern char    *strdup(const char *);
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 
 #include <standard.h>			/* Needed for scsitransp.h	*/
@@ -1522,8 +1523,11 @@ match_cl_re_entries()
 				/* set link to that place */
 				re->de->parent_rec = cl->de;
 				re->de->filedir = cl->de->filedir;
-				/* see if it is in rr_moved */
-				{
+
+				/*
+				 * see if it is in rr_moved
+				 */
+				if (reloc_dir != NULL) {
 					struct directory_entry *rr_moved_e = reloc_dir->contents;
 
 					for (; rr_moved_e; rr_moved_e = rr_moved_e->next) {

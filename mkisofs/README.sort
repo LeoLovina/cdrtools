@@ -7,7 +7,7 @@ mkisofs -o cdimage.iso -sort sort_file [other_options] cd_dir
 
 The file 'sort_file' contains two columns of:
 
-	filename		weight
+	filename	weight
 
 where filename is the whole name of a file/directory as mkisofs will see it
 and weight is a whole number between +/- 2147483647
@@ -24,10 +24,17 @@ If the directory 'cd_dir' contains two directories called 'dir1' and 'dir2'
 with files 'A', 'B' and 'C' in dir1 and 'X', 'Y' and 'Z', the the file
 'sort_file' could look something like:
 
-	cd_dir/dir2		1000
-	cd_dir/dir2/Y		2000
-	cd_dir/dir1/B		-2000
-	cd_dir/dir1/A		-8000
+	cd_dir/dir2	1000
+	cd_dir/dir2/Y	2000
+	cd_dir/dir1/B	-2000
+	cd_dir/dir1/A	-8000
+
+Note: There must be only one space or tab character between the filename and
+the weight and the weight must be the last characters on a line. The filename
+is taken to include all the characters up to, but not including the last
+space or tab character on a line. This is to allow for space characters to be
+in, or at the end of a filename.
+
 
 The command:
 

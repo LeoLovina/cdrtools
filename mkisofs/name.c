@@ -1,7 +1,7 @@
-/* @(#)name.c	1.19 00/04/21 joerg */
+/* @(#)name.c	1.20 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)name.c	1.19 00/04/21 joerg";
+	"@(#)name.c	1.20 00/05/07 joerg";
 
 #endif
 /*
@@ -36,6 +36,7 @@ static	char sccsid[] =
 #include <ctype.h>
 
 #include <standard.h>
+#include <schily.h>
 
 void	iso9660_check		__PR((struct iso_directory_record *idr,	struct directory_entry *ndr));
 int	iso9660_file_length	__PR((const char *name,

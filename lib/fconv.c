@@ -1,4 +1,4 @@
-/* @(#)fconv.c	1.27 00/04/21 Copyright 1985 J. Schilling */
+/* @(#)fconv.c	1.28 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	Convert floating point numbers to strings for format.c
  *	Should rather use the MT-safe routines [efg]convert()
@@ -27,6 +27,7 @@
 #include <stdxlib.h>
 #include <standard.h>
 #include <strdefs.h>
+#include <schily.h>
 
 #if	!defined(HAVE_STDLIB_H) || defined(HAVE_DTOA)
 extern	char	*ecvt __PR((double, int, int *, int *));

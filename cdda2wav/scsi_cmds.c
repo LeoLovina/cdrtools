@@ -1,7 +1,7 @@
-/* @(#)scsi_cmds.c	1.3 00/02/17 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)scsi_cmds.c	1.5 00/06/02 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)scsi_cmds.c	1.3 00/02/17 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)scsi_cmds.c	1.5 00/06/02 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /* file for all SCSI commands
@@ -14,6 +14,7 @@ static char     sccsid[] =
 #include <standard.h>
 #include <stdlib.h>
 #include <strdefs.h>
+#include <schily.h>
 
 #include <btorder.h>
 
@@ -39,6 +40,19 @@ static char     sccsid[] =
 unsigned char *bufferTOC;
 subq_chnl *SubQbuffer;
 unsigned char *cmd;
+
+int myscsierr(scgp)
+	SCSI	*scgp;
+{
+        register struct scg_cmd *cp = scgp->scmd;
+
+        if(cp->error != SCG_NO_ERROR ||
+                                cp->ux_errno != 0 ||
+                                *(u_char *)&cp->scb != 0 ||
+                                cp->u_sense.cmd_sense[0] != 0)  /* Paranioa */
+                return (1);
+        return (0);
+}
 
 int SCSI_emulated_ATAPI_on(scgp)
 	SCSI *scgp;
@@ -510,7 +524,7 @@ unsigned ReadTocSCSI ( scgp, toc )
 
 /* Read max. SectorBurst of cdda sectors to buffer
    via standard SCSI-2 Read(10) command */
-void ReadStandard (scgp, p, lSector, SectorBurstVal )
+int ReadStandard (scgp, p, lSector, SectorBurstVal )
 	SCSI *scgp;
 	UINT4 *p;
 	unsigned lSector;
@@ -536,13 +550,15 @@ void ReadStandard (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "ReadStandard10";
 
-	if (scsicmd(scgp) < 0)
-		FatalError ("Read CD-ROM10 failed\n");
+	if (scsicmd(scgp)) return 0;
+
+	/* has all or something been read? */
+	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read max. SectorBurst of cdda sectors to buffer
    via vendor-specific ReadCdda(10) command */
-void ReadCdda10 (scgp, p, lSector, SectorBurstVal )
+int ReadCdda10 (scgp, p, lSector, SectorBurstVal )
 	SCSI *scgp;
 	UINT4 *p;
 	unsigned lSector;
@@ -568,15 +584,16 @@ void ReadCdda10 (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "Read10 NEC";
 
-	if (scsicmd(scgp) < 0)
-		FatalError ("Read CD-ROM10 (NEC) failed\n");
+	if (scsicmd(scgp)) return 0;
 
+	/* has all or something been read? */
+	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 
 /* Read max. SectorBurst of cdda sectors to buffer
    via vendor-specific ReadCdda(12) command */
-void ReadCdda12 (scgp, p, lSector, SectorBurstVal )
+int ReadCdda12 (scgp, p, lSector, SectorBurstVal )
 	SCSI *scgp;
 	UINT4 *p;
 	unsigned lSector;
@@ -601,9 +618,10 @@ void ReadCdda12 (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "Read12";
 
-	if (scsicmd(scgp) < 0)
-		FatalError ("Read CD-ROM12 failed\n");
+	if (scsicmd(scgp)) return 0;
 
+	/* has all or something been read? */
+	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read max. SectorBurst of cdda sectors to buffer
@@ -613,7 +631,7 @@ void ReadCdda12 (scgp, p, lSector, SectorBurstVal )
 > normal and the number of sectors is coded in Byte 8 and 9 (begining with 0).
 */
 
-void ReadCdda12Matsushita (scgp, p, lSector, SectorBurstVal )
+int ReadCdda12Matsushita (scgp, p, lSector, SectorBurstVal )
 	SCSI *scgp;
 	UINT4 *p;
 	unsigned lSector;
@@ -638,22 +656,21 @@ void ReadCdda12Matsushita (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "Read12Matsushita";
 
-	if (scsicmd(scgp) < 0)
-		FatalError ("Read CD-ROM12 (Matsushita) failed\n");
+	if (scsicmd(scgp)) return 0;
 
+	/* has all or something been read? */
+	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read max. SectorBurst of cdda sectors to buffer
    via MMC standard READ CD command */
-void ReadCddaMMC12 (scgp, p, lSector, SectorBurstVal )
+int ReadCddaMMC12 (scgp, p, lSector, SectorBurstVal )
 	SCSI *scgp;
 	UINT4 *p;
 	unsigned lSector;
 	unsigned SectorBurstVal;
 {
 	register struct	scg_cmd	*scmd;
-	int i;
-  for (i = 5; i > 0; i--) {	
 	scmd = scgp->scmd;
 
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
@@ -674,10 +691,10 @@ void ReadCddaMMC12 (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "ReadCD MMC 12";
 
-	if (scsicmd(scgp) >= 0)
-		break;
-  }
-  if (i == 0) FatalError("ReadCD MMC 12 failed");
+	if (scsicmd(scgp)) return 0;
+
+	/* has all or something been read? */
+	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read the Sub-Q-Channel to SubQbuffer. This is the method for

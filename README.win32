@@ -91,7 +91,7 @@ to write the image at speed 4 in TAO mode, or
 to write the image in DAO mode.
 
 If you don't like to create the image file 'hsfs.iso' you may use a PIPE
-to connect mkisofs's output to cdrecord's inout by calling:
+to connect mkisofs's output to cdrecord's input by calling:
 
 	mkisofs -J -R /cdrom/subdir dir1 /a | cdrecord dev=6,0 -v speed=4 -
 
@@ -147,7 +147,7 @@ reason.
 			IMPORTANT
 
 In order to avoid damaging CD blanks because Win is trying to access
-the drive while cdecord writes to it, you definitely should edit
+the drive while cdrecord writes to it, you definitely should edit
 your registry and set the value of
 
 HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Cdrom\Autorun

@@ -1,7 +1,7 @@
-/* @(#)aifc.c	1.3 00/03/26 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)aifc.c	1.4 00/06/02 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)aifc.c	1.3 00/03/26 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)aifc.c	1.4 00/06/02 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /***
@@ -18,11 +18,10 @@ static char     sccsid[] =
 #include "mytype.h"
 #include <stdio.h>
 #include <standard.h>
-#if defined (HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
 #include <sys/types.h>
-#include <unistd.h>
-#endif
-#include <string.h>
+#include <unixstd.h>
+#include <strdefs.h>
+#include <schily.h>
 #include "byteorder.h"
 #include "sndfile.h"
 

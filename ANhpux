@@ -3,12 +3,12 @@ A first release of cdrecord has been released for HP-UX.
 HP-UX has a userland SCSI ioctl(2) that is very similar to my /dev/scg* design
 that I made in 1986 for SunOS/Solaris.
 
-Note that there are no device nodes for userand SCSI on HP-UX,
+Note that there are no device nodes for userland SCSI on HP-UX,
 you have to call the included shell script MKNOD.hpux first.
 
 This cdrecord distribution contains a mkisofs release that runs on HP-UX
 and allows you to read a filesystem from a CD-R device with 2048 bytes 
-sector size regarless if it identifies as CD-ROM or WORM. 
+sector size regardless if it identifies as CD-ROM or WORM. 
 This is done with the SCSI user level library.
 
 I would be happy to get test reports ...

@@ -1,4 +1,4 @@
-/* @(#)schily.h	1.26 00/01/21 Copyright 1985 J. Schilling */
+/* @(#)schily.h	1.27 00/05/28 Copyright 1985 J. Schilling */
 /*
  *	Definitions for libschily
  *
@@ -144,7 +144,9 @@ extern	void	raisecond __PR((const char *, long));
  * We currently cannot define this here because there IXIX has a definition
  * than violates the standard.
  */
-/*extern	int	snprintf __PR((char *, size_t, const char *, ...));*/
+#ifndef	HAVE_SNPRINTF
+extern	int	snprintf __PR((char *, size_t, const char *, ...));
+#endif
 #endif
 /*extern	int	sprintf __PR((char *, const char *, ...)); ist woanders falsch deklariert !!!*/
 extern	char	*strcatl __PR((char *, ...));

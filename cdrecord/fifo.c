@@ -1,7 +1,7 @@
-/* @(#)fifo.c	1.21 99/12/29 Copyright 1989,1997 J. Schilling */
+/* @(#)fifo.c	1.22 00/05/07 Copyright 1989,1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)fifo.c	1.21 99/12/29 Copyright 1989,1997 J. Schilling";
+	"@(#)fifo.c	1.22 00/05/07 Copyright 1989,1997 J. Schilling";
 #endif
 /*
  *	A "fifo" that uses shared memory between two processes
@@ -66,6 +66,7 @@ static	char sccsid[] =
 #include <errno.h>
 #include <signal.h>
 #include <libport.h>
+#include <schily.h>
 
 #include "cdrecord.h"
 

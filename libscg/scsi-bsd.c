@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd.c	1.27 00/02/06 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd.c	1.31 00/07/01 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd.c	1.27 00/02/06 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd.c	1.31 00/07/01 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the NetBSD/FreeBSD/OpenBSD generic SCSI implementation.
@@ -48,7 +48,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.27";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.31";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -74,7 +74,12 @@ struct scg_local {
 #define	SADDR_TARGET(a)	(SADDR_ISSCSI(a)?(a).addr.scsi.target:(a).addr.atapi.atbus*2+(a).addr.atapi.drive)
 #define	SADDR_LUN(a)	(SADDR_ISSCSI(a)?(a).addr.scsi.lun:0)
 #else
+
+#if	defined(__OpenBSD__) && defined(TYPE_ATAPI)
+#define	SADDR_ISSCSI(a)	((a).type == TYPE_SCSI)
+#else
 #define	SADDR_ISSCSI(a)	(1)
+#endif
 
 #define	SADDR_BUS(a)	(a).scbus
 #define	SADDR_TARGET(a)	(a).target
@@ -196,8 +201,13 @@ openbydev:
 		if (device == NULL || device[0] == '\0')
 			return (0);
 		f = open(device, O_RDWR);
-		if (f < 0)
+		if (f < 0) {
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+					"Cannot open '%s'",
+					device);
 			return (0);
+		}
 		if (tgt == -2) {
 			if (ioctl(f, SCIOCIDENTIFY, &saddr) < 0) {
 				close(f);
@@ -293,8 +303,9 @@ scsi_setup(scgp, f, busno, tgt, tlun)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	long maxdma = MAX_DMA_BSD;
 
@@ -306,7 +317,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);
@@ -529,7 +540,7 @@ scsi_send(scgp, f, sp)
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.27";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.31";	/* The version for this transport*/
 
 #define CAM_MAXDEVS	128
 struct scg_local {
@@ -770,8 +781,9 @@ scsi_close(scgp)
 }
 
 LOCAL
-long scsi_maxdma(scgp)
+long scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 #ifdef	DFLTPHYS
 	return (DFLTPHYS);
@@ -785,7 +797,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

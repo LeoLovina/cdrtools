@@ -1,0 +1,240 @@
+NEW features of cdrecord-1.9:
+
+We are now only a few releases away from the final libscg that includes
+SCSI low level command transport.
+
+Late changes:
+
+-	New Media manufacturer: "Grand Advance Technology LTD."
+
+-	Readcd.c now correctly initializes the filename in write (-w) mode.
+
+-	Mkisofs: apple_driver.c small bug fix from James.
+
+All:
+
+-	Fallback code to use the USCSI interface on Solaris
+	This should add ATAPI support on Solaris 8 sparc.
+	Solaris 8 x86 does support ATAPI with the scg driver
+	as Sun fixed the structural bug for thw Intel version.
+
+	Warning: The USCI interface has several drawbacks:
+
+	-	Only finds disk type devices with -scanbus
+
+	-	Cannot open devices that are currently attached
+		to the volume management system
+
+	-	The Goldstar ATAPI CD-ROM in a U-10 transfers data
+		but the DMA residual count shows that there has
+		been no transfer at all.
+
+	Facit: Test by your own if this interface is usable.
+	Please report problems!
+
+	To check the difference:
+
+	cdrecord -scanbus 		uses the scg driver
+	cdrecord -scanbus dev=USCSI	uses the USCSI interface
+	cdrecord -toc	 dev=1,6,0	uses the scg driver
+	cdrecord -toc	dev=USCSI:1,6,0	uses the USCSI interface
+
+	NOTE: If you are using the USCSI interface you will need 
+		to shut down the volume management for the drives
+		you like to use.
+
+-	Linux code in libscg now tries to use new features of the
+	Linus sg driver:
+
+	-	Trying to use more then 32 kB for DMA
+		The interface for raising the DMA limit from 32 kB
+		is a real pain. It needs a lot of code to adopt
+		the interface to libscg.
+
+	-	Trying to use the new ioctl() interface if present.
+		This interface now supports:
+
+		-	SCSI CDB sizes for vendor unique commands
+
+		-	SCSI status byte
+
+		-	SCSI command transport status
+
+		-	More than 16 bytes of sense data
+			(not yet working!)
+
+		-	DMA residual count
+			(not yet working!)
+
+		-	Arbitrary DMA address pointers !!!
+
+	-	Trying to use the new RESET ioctl()
+		(not yet working!)
+
+	All items marked (not yet working!) will turn funtional
+	after the Linux kernel starts to support them.
+
+	It seems that my shouting for a better SCSI interface succeeded.
+	Linux-2.4 supports or at least includes an interface that may support
+	the needed things in future.
+
+	As from now it is unclear whether the code will expose
+	any portability problems, please test on different Linux
+	versions from 2.0 ... 2.4 if available and report problems.
+
+
+-	README.macosX added (needed to know how to compile).
+	As Apple deliveres an inconsistent OS, you need to follow the
+	instuctions in this README file before you may compile
+	cdrtools on Mac OS X.
+
+TODO:
+
+-	Better BeOS integration
+
+Cdrecord:
+
+-	include sys/select.h if needed (AIX)
+
+-	Support for Ricoh 9060 CD-RW/DVD-ROM drive
+
+-	Support for Plextor PX-W1210TA (with BURN-Proof)
+
+-	Printing of new features added to -prcap function
+
+-	New Disk manufacturers:
+
+		"WEALTH FAIR INVESTMENT LIMITE"
+		"General Magnetics Ld"
+		"MPO"
+
+-	DAO now should work with pregapsize == 0 when
+	using Sony or Goldstar drives.
+
+	Cdrecord retries with pregaps set to 1
+
+-	New options -shorttrack & -noshorttrack
+	will allow to copy CD's with supershort tracks
+	in DAO mode if the drive supports it.
+
+-	Fix for a buffer overflow with cdrecord dev=
+	This problem did not exist on sparc systems,
+	for this reason it has not been detected before.
+
+-	ATIP Decoder now decodes disk sub type for High speed CD-RW
+
+-	Support for 99 minute CD's.
+
+-	Force the user to use -ignsize to allow >= 90 Minutes on CD even
+	when the current CD is not in the blank capacity database.
+
+Cdda2wav:
+
+-	support for cds with illegal leadout (like HIM-CD)
+
+-	bugfix for cd-text detection with plextor/Sony command sets
+
+-	should compile and run under Mac-OS-X now
+
+-	bugfix with the -q (quiet) option
+
+-	bugfix use extra libs (like lossaudio for NetBSD)
+
+-	bugfix use the correct sound device for Solaris
+
+-	hardened cdda2wav against illegal ISRC codes
+
+-	more diagnostics for illegal ISRCs
+
+-	use setpriority in favor of nice
+
+-	updated cdda2mp3 script for lame usage (alpha)
+
+Readcd:
+
+-	minor bugfixes with timing
+
+-	New options -noerror & retries=#
+
+-	restructured to be more flexible
+
+-	Support for C2 error pointer scan with MMC drives & 
+	the Plextor U-Plex 40 CD-ROM
+
+
+Mkisofs:
+
+-	Now mkhybrid code is completely integrated into mkisofs.	
+	There is only one binary. To help users of mkhybrid, 
+	make install creates a hard link from mkhybroid to mkisofs.
+
+-	man page cleaned up.
+
+-	Now mkhybrid code is completely integrated into mkisofs.	
+	There is only one binary. To help users of mkhybrid, 
+	make install creates a hard link from mkhybroid to mkisofs.
+
+-	New Option -eltorito-alt-boot allows to specify more
+	than one Al Torito boot image (up to 63).
+	Thanks to Egor Duda (deo@logos-m.ru).
+
+-	fixed a core dump problem in multi.c
+
+-	write.c now uses static buffer to circumvent a problem
+	with the stone age Metrowerks C found on BeOS/PPC
+
+-	Allow printing of percentage ready without floatingpoint code
+	in printf.
+
+-	apple_driver now compiles, but need to call 
+	make -f apple_driver.mk 
+	by hand
+
+-	graft pointers are now really usable:
+
+	-	Graft points are now disabled by default
+
+	-	To enable, specify the -graft-point option
+
+		dir=dir only works if the '=' is not escaped by '\'
+		'\\' and '=' must be escaped by a '\\' if
+		-graft-points has been specified.
+
+-	Now there is no more a need to specify a command line arg
+	if -path-list has been specified.
+
+TODO:
+	-	better Rock Rodge recognition for multi-session
+
+	-	read Joliet filenames with multi-session if no TRANS.TBL
+		or RR is present. I am looking for a volouteer for this task:
+		Peter Berendi <berendi2@webdesign.hu> announced that he likes
+		to be the volounteer for this task.
+
+	-	implement Yellow book compliant XA extended dir attributes
+
+	-	add libecc/edc for CDI and similar.
+
+	-	add UDF support
+
+CYGWIN NT-4.0 NOTES:
+
+To compile on Cygwin32, get Cygwin32-beta20 and install it.
+then create a symlink from /bin to the .../bin directory where bash is located.
+Now run 'make' ...
+For more information read README.win32
+
+The files are located on:
+
+ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/alpha ...
+
+NOTE:	These tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
+	tar may get some minor trouble.
+
+WARNING: Do not use 'mc' to extract the tar file!
+	All mc versions before 4.0.14 cannot extract symbolic links correctly.
+
+WARNING: Do not use 'winzip' to extract the tar file!
+	Winzip cannot extract symbolic links correctly.
+
+Joerg

@@ -1,7 +1,7 @@
-/* @(#)getargs.c	2.26 99/12/25 Copyright 1985, 1988, 1995 J. Schilling */
+/* @(#)getargs.c	2.28 00/05/20 Copyright 1985, 1988, 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getargs.c	2.26 99/12/25 Copyright 1985, 1988, 1995 J. Schilling";
+	"@(#)getargs.c	2.28 00/05/20 Copyright 1985, 1988, 1995 J. Schilling";
 #endif
 #define	NEW
 /*
@@ -41,6 +41,7 @@ static	char sccsid[] =
 #include <ctype.h>
 #include <vadefs.h>
 #include <strdefs.h>
+#include <schily.h>
 
 #define	NOARGS		  0	/* No more args			*/
 #define	NOTAFLAG	  1	/* Not a flag type argument	*/
@@ -477,6 +478,14 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, oargs)
 			 */
 			if (*argp != '\0')
 				goto nextchance;
+			/*
+			 * If *fmt is '+' and we are on the beginning
+			 * of the format desciptor that is currently
+			 * checked, this cannot be an inc type flag.
+			 */
+			if (fmt == sfmt || fmt[-1] == ',')
+				goto nextchance;
+
 			if (fmt[1] == 'l' || fmt[1] == 'L') {
 				if (setargs)
 					*((long *)curarg) += 1;

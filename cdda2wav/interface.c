@@ -1,7 +1,7 @@
-/* @(#)interface.c	1.10 00/03/21 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)interface.c	1.11 00/06/02 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)interface.c	1.10 00/03/21 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)interface.c	1.11 00/06/02 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /***
@@ -35,13 +35,14 @@ static char     sccsid[] =
 #include "config.h"
 #include <stdio.h>
 #include <standard.h>
-#include <stdlib.h>
+#include <stdxlib.h>
 #include <unixstd.h>
 #include <strdefs.h>
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <schily.h>
 
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -91,8 +92,8 @@ void     (*EnableCdda) __PR((SCSI *, int Switch));
 unsigned (*ReadToc) __PR(( SCSI *scgp, TOC *ptoc ));
 void	 (*ReadTocText) __PR(( SCSI *scgp ));
 unsigned (*ReadLastAudio) __PR(( SCSI *scgp, unsigned tracks ));
-void     (*ReadCdRom) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
-void     (*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p, unsigned lSector, unsigned SectorBurstVal ));
+int      (*ReadCdRom) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
+int      (*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p, unsigned lSector, unsigned SectorBurstVal ));
 subq_chnl *(*ReadSubQ) __PR(( SCSI *scgp, unsigned char sq_format, unsigned char track ));
 void     (*SelectSpeed) __PR(( SCSI *scgp, unsigned speed ));
 int	(*Play_at) __PR(( SCSI *scgp, unsigned int from_sector, unsigned int sectors));
@@ -203,7 +204,7 @@ static void SetupSCSI( )
     accepts_fua_bit = -1;
     EnableCdda = (void (*) __PR((SCSI *, int)))Dummy;
     ReadCdRom = ReadCdda12;
-    ReadCdRomData = (void (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadStandard;
+    ReadCdRomData = (int (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadStandard;
     ReadLastAudio = ReadFirstSessionTOCSony;
     SelectSpeed = SpeedSelectSCSISony;
     Play_at = Play_atSCSI;
@@ -549,14 +550,9 @@ static int OpenCdRom ( pdev_name )
          exit(1);
       }
 #endif
-      if (global.scsi_verbose) {
-	scgp = (SCSI *) malloc(sizeof(* scgp));
-	if (scgp == NULL) {
-	  fprintf(stderr,"No memory for lowlevel debugging.\n");
-	} else {
-	  scgp->verbose = global.scsi_verbose;
+	if (global.scsi_verbose) {
+		scgp->verbose = global.scsi_verbose;
 	}
-      }
   }
   return retval;
 }
@@ -570,8 +566,8 @@ static unsigned long sim_pos=0;
 /* read 'SectorBurst' adjacent sectors of audio sectors 
  * to Buffer '*p' beginning at sector 'lSector'
  */
-static void ReadCdRom_sim __PR(( SCSI *x, UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
-static void ReadCdRom_sim (x, p, lSector, SectorBurstVal )
+static int ReadCdRom_sim __PR(( SCSI *x, UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
+static int ReadCdRom_sim (x, p, lSector, SectorBurstVal )
 	SCSI *x;
 	UINT4 *p;
 	unsigned lSector;
@@ -607,6 +603,7 @@ static void ReadCdRom_sim (x, p, lSector, SectorBurstVal )
           p, q, SectorBurstVal*CD_FRAMESAMPLES, *last_buffer);
 #endif
   sim_pos = (lSector+SectorBurstVal)*CD_FRAMESAMPLES + joffset; 
+  return SectorBurstVal;
 }
 
 static int Play_at_sim __PR(( SCSI *x, unsigned int from_sector, unsigned int sectors));
@@ -765,7 +762,7 @@ static void SetupSimCd()
 {
     EnableCdda = (void (*) __PR((SCSI *, int)))Dummy;
     ReadCdRom = ReadCdRom_sim;
-    ReadCdRomData = (void (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadCdRom_sim;
+    ReadCdRomData = (int (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadCdRom_sim;
     ReadToc = ReadToc_sim;
     ReadTocText = NULL;
     ReadSubQ = ReadSubQ_sim;
@@ -806,6 +803,11 @@ void SetupInterface( )
     }
 
 #if	defined SIM_CD
+    scgp = (SCSI *) malloc(sizeof(* scgp));
+    if (scgp == NULL) {
+	FatalError("No memory for SCSI structure.\n");
+    }
+    scgp->silent = 0;
     SetupSimCd();
 #else
     /* if drive is of type scsi, get vendor name */
@@ -828,6 +830,11 @@ void SetupInterface( )
 
 #if defined (HAVE_IOCTL_INTERFACE)
     } else {
+	scgp = (SCSI *) malloc(sizeof(* scgp));
+	if (scgp == NULL) {
+		FatalError("No memory for SCSI structure.\n");
+	}
+	scgp->silent = 0;
 	SetupCookedIoctl( global.dev_name );
 #endif
     }

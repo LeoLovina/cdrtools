@@ -1,7 +1,7 @@
-/* @(#)mkisofs.c	1.62 00/04/27 joerg */
+/* @(#)mkisofs.c	1.70 00/07/20 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)mkisofs.c	1.62 00/04/27 joerg";
+	"@(#)mkisofs.c	1.70 00/07/20 joerg";
 #endif
 /*
  * Program mkisofs.c - generate iso9660 filesystem  based upon directory
@@ -66,17 +66,12 @@ static	char sccsid[] =
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 
 struct directory *root = NULL;
 
-#ifndef APPLE_HYB
-char	version_string[] = "mkisofs 1.12.1";
-
-#else
-char	version_string[] = "mkhybrid 1.12.1a10";
-
-#endif
+char	version_string[] = "mkisofs 1.13";
 
 char		*outfile;
 FILE		*discimage;
@@ -138,6 +133,10 @@ char	*genboot_image = BOOT_IMAGE_DEFAULT;
 int	ucs_level = 3;		/* We now have Unicode tables so use level 3 */
 int	volume_set_size = 1;
 int	volume_sequence_number = 1;
+
+struct eltorito_boot_entry_info *first_boot_entry = NULL;
+struct eltorito_boot_entry_info *last_boot_entry = NULL;
+struct eltorito_boot_entry_info *current_boot_entry = NULL;
 
 int	jhide_trans_tbl;	/* Hide TRANS.TBL from Joliet tree */
 int	hide_rr_moved;		/* Name RR_MOVED .rr_moved in Rock Ridge tree */
@@ -301,6 +300,8 @@ struct ld_option {
 #define OPTION_ALLOW_MULTIDOT		195
 #define OPTION_USE_FILEVERSION		196
 #define OPTION_MAX_FILENAMES		197
+#define OPTION_ALT_BOOT			198
+#define OPTION_USE_GRAFT		199
 
 #ifdef APPLE_HYB
 #define OPTION_CAP			200
@@ -344,6 +345,8 @@ struct ld_option {
 
 #endif	/* APPLE_HYB */
 
+static int	save_pname = 0;
+
 static const struct ld_option ld_options[] =
 {
 	{{"nobak", no_argument, NULL, OPTION_NOBAK},
@@ -362,6 +365,8 @@ static const struct ld_option ld_options[] =
 	'\0', "FILE", "Set Copyright filename", ONE_DASH},
 	{{"eltorito-boot", required_argument, NULL, 'b'},
 	'b', "FILE", "Set El Torito boot image name", ONE_DASH},
+	{{"eltorito-alt-boot", no_argument, NULL, OPTION_ALT_BOOT},
+	'\0', NULL, "Start specifying alternative El Torito boot parameters", ONE_DASH},
 	{{"sparc-boot", required_argument, NULL, 'B'},
 	'B', "FILES", "Set sparc boot image names", ONE_DASH},
 	{{"generic-boot", required_argument, NULL, 'G'},
@@ -378,6 +383,8 @@ static const struct ld_option ld_options[] =
 	'D', NULL, "Disable deep directory relocation (violates ISO9660)", ONE_DASH},
 	{{"follow-links", no_argument, NULL, 'f'},
 	'f', NULL, "Follow symbolic links", ONE_DASH},
+	{{"graft-points", no_argument, NULL, OPTION_USE_GRAFT},
+	'\0', NULL, "Allow to use graft points for filenames", ONE_DASH},
 	{{"help", no_argument, NULL, OPTION_HELP},
 	'\0', NULL, "Print option help", ONE_DASH},
 	{{"hide", required_argument, NULL, OPTION_I_HIDE},
@@ -587,6 +594,8 @@ static	void	hide_reloc_dir	__PR((void));
 static	char *	get_pnames	__PR((int argc, char **argv, int opt,
 					char *pname, int pnsize, FILE * fp));
 	int	main		__PR((int argc, char **argv));
+	char *	findequal	__PR((char *s));
+	char *	escstrcpy	__PR((char *to, char *from));
 	void *	e_malloc	__PR((size_t size));
 
 #if defined(ultrix) || defined(_AUX_SOURCE)
@@ -950,6 +959,12 @@ get_pnames(argc, argv, opt, pname, pnsize, fp)
 	int	pnsize;
 	FILE	*fp;
 {
+	/* we may of already read the first line from the pathnames file */
+	if (save_pname) {
+		save_pname = 0;
+		return (pname);
+	}
+
 	if (opt < argc)
 		return (argv[opt]);
 
@@ -991,8 +1006,11 @@ main(argc, argv)
 	FILE		*pfp = NULL;
 	char		pname[1024],
 			*arg;
+	char		nodename[1024];
+	int		use_graft_ptrs = 0;
 	int		no_path_names = 1;
 	int		warn_violate = 0;
+	int		have_cmd_line_pathspec = 0;
 
 #ifdef APPLE_HYB
 	char		*afpfile = "";	/* mapping file for TYPE/CREATOR */
@@ -1068,7 +1086,12 @@ main(argc, argv)
 		case 1:
 			/* A filename that we take as input. */
 			optind--;
+			have_cmd_line_pathspec = 1;
 			goto parse_input_files;
+
+		case OPTION_USE_GRAFT:
+			use_graft_ptrs = 1;
+			break;
 		case 'C':
 			/*
 			 * This is a temporary hack until cdrecord gets the
@@ -1089,21 +1112,19 @@ main(argc, argv)
 			break;
 		case OPTION_ISO_LEVEL:
 			iso9660_level = atoi(optarg);
-#ifdef	APPLE_HYB
-			set_iso_level:
-#endif
+
 			switch (iso9660_level) {
 
 			case 1:
 				/*
-				 * Only on file section (no associated files)
+				 * Only on file section
 				 * 8.3 d or d1 characters for files
 				 * 8   d or d1 characters for directories
 				 */
 				break;
 			case 2:
 				/*
-				 * Only on file section (no associated files)
+				 * Only on file section
 				 */
 				break;
 			case 3:
@@ -1141,6 +1162,14 @@ main(argc, argv)
 				exit(1);
 #endif
 			}
+			get_boot_entry();
+			current_boot_entry->boot_image = boot_image;
+			break;
+		case OPTION_ALT_BOOT:
+			/*
+			 * Start new boot entry parameter list.
+			 */
+			new_boot_entry();
 			break;
 		case 'B':
 			use_sparcboot++;
@@ -1511,14 +1540,20 @@ main(argc, argv)
 		case OPTION_HARD_DISK_BOOT:
 			use_eltorito++;
 			hard_disk_boot++;
+			get_boot_entry();
+			current_boot_entry->hard_disk_boot = 1;
 			break;
 		case OPTION_NO_EMUL_BOOT:
 			use_eltorito++;
 			no_emul_boot++;
+			get_boot_entry();
+			current_boot_entry->no_emul_boot = 1;
 			break;
 		case OPTION_NO_BOOT:
 			use_eltorito++;
 			not_bootable++;
+			get_boot_entry();
+			current_boot_entry->not_bootable = 1;
 			break;
 		case OPTION_BOOT_LOAD_ADDR:
 			use_eltorito++;
@@ -1537,6 +1572,8 @@ main(argc, argv)
 				}
 				load_addr = val;
 			}
+			get_boot_entry();
+			current_boot_entry->load_addr = load_addr;
 			break;
 		case OPTION_BOOT_LOAD_SIZE:
 			use_eltorito++;
@@ -1557,10 +1594,14 @@ main(argc, argv)
 				}
 				load_size = val;
 			}
+			get_boot_entry();
+			current_boot_entry->load_size = load_size;
 			break;
 		case OPTION_BOOT_INFO_TABLE:
 			use_eltorito++;
 			boot_info_table++;
+			get_boot_entry();
+			current_boot_entry->boot_info_table = 1;
 			break;
 #ifdef APPLE_HYB
 		case OPTION_HFS_TYPE:
@@ -1597,17 +1638,9 @@ main(argc, argv)
 			break;
 		case 'h':
 			apple_hyb = 1;
-			if (iso9660_level < 3) {
-				iso9660_level = 3; /* Allow associated file */
-				goto set_iso_level;
-			}
 			break;
 		case 'g':
 			apple_ext = 1;
-			if (iso9660_level < 3) {
-				iso9660_level = 3; /* Allow associated file */
-				goto set_iso_level;
-			}
 			break;
 		case OPTION_PROBE:
 			probe = 1;
@@ -1952,14 +1985,46 @@ parse_input_files:
 	}
 #endif	/* APPLE_HYB */
 
+	/*
+	 * see if we have a list of pathnames to process
+	 */
+	if (pathnames) {
+		/* "-" means take list from the standard input */
+		if (strcmp(pathnames, "-")) {
+			if ((pfp = fopen(pathnames, "r")) == NULL) {
+#ifdef	USE_LIBSCHILY
+				comerr("Unable to open pathname list %s.\n",
+								pathnames);
+#else
+				fprintf(stderr,
+					"Unable to open pathname list %s.\n",
+								pathnames);
+				exit(1);
+#endif
+			}
+		} else
+			pfp = stdin;
+	}
+
 	/* The first step is to scan the directory tree, and take some notes */
 
-	if (!argv[optind]) {
+	if ((arg = get_pnames(argc, argv, optind, pname,
+						sizeof(pname), pfp)) == NULL) {
 #ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD, "Missing pathspec.\n");
 #endif
 		usage(1);
 	}
+
+	/*
+	 * if we don't have a pathspec, then save the pathspec found
+	 * in the pathnames file (stored in pname) - we don't want
+	 * to skip this pathspec when we read the pathnames file again
+	 */
+	if (!have_cmd_line_pathspec) {
+		save_pname = 1;
+	}
+
 	if (use_RockRidge) {
 #if 1
 		extension_record = generate_rr_extension_record("RRIP_1991A",
@@ -2011,11 +2076,17 @@ parse_input_files:
 		}
 	}
 	/* Find name of root directory. */
-	node = strchr(argv[optind], '=');
+	node = findequal(arg);
+	if (!use_graft_ptrs)
+		node = NULL;
 	if (node == NULL) {
-		node = argv[optind];
+		node = arg;
 	} else {
-		++node;
+		/*
+		 * Remove '\\' escape chars which are located
+		 * before '\\' and '=' chars
+		 */
+		node = escstrcpy(nodename, ++node);
 	}
 
 	/*
@@ -2072,26 +2143,6 @@ parse_input_files:
 #endif /* APPLE_HYB */
 
 	/*
-	 * see if we have a list of pathnames to process
-	 */
-	if (pathnames) {
-		/* "-" means take list from the standard input */
-		if (strcmp(pathnames, "-")) {
-			if ((pfp = fopen(pathnames, "r")) == NULL) {
-#ifdef	USE_LIBSCHILY
-				comerr("Unable to open pathname list %s.\n",
-								pathnames);
-#else
-				fprintf(stderr,
-					"Unable to open pathname list %s.\n",
-								pathnames);
-				exit(1);
-#endif
-			}
-		} else
-			pfp = stdin;
-	}
-	/*
 	 * Scan the actual directory (and any we find below it) for files to
 	 * write out to the output image.  Note - we take multiple source
 	 * directories and keep merging them onto the image.
@@ -2126,7 +2177,14 @@ parse_input_files:
 		 * The default will be that the file is injected at the root of
 		 * the image tree.
 		 */
-		node = strchr(arg, '=');
+		node = findequal(arg);
+		if (!use_graft_ptrs)
+			node = NULL;
+		/*
+		 * Remove '\\' escape chars which are located
+		 * before '\\' and '=' chars ---> below in escstrcpy()
+		 */
+
 		short_name = NULL;
 
 		if (node != NULL) {
@@ -2134,9 +2192,10 @@ parse_input_files:
 			char		*xpnt;
 
 			*node = '\0';
-			strcpy(graft_point, arg);
+			escstrcpy(graft_point, arg);
 			*node = '=';
-			node++;
+
+			node = escstrcpy(nodename, ++node);
 
 			graft_dir = root;
 			xpnt = graft_point;
@@ -2481,6 +2540,46 @@ parse_input_files:
 #else
 	return 0;
 #endif
+}
+
+/*
+ * Find unescaped equal sign in string.
+ */
+char *
+findequal(s)
+	char	*s;
+{
+	char	*p = s;
+
+	while ((p = strchr(p, '=')) != NULL) {
+		if (p > s && p[-1] != '\\')
+			return (p);
+		p++;
+	}
+	return (NULL);
+}
+
+/*
+ * Find unescaped equal sign in string.
+ */
+char *
+escstrcpy(to, from)
+	char	*to;
+	char	*from;
+{
+	char	*p = to;
+
+	while ((*p = *from++) != '\0') {
+		if (*p == '\\' || *p == '=') {
+			if (p[-1] == '\\') {
+				--p;
+				p[0] = p[1];
+			}
+
+		}
+		p++;
+	}
+	return (to);
 }
 
 void *

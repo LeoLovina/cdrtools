@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.25 00/01/22 Copyright 1997 J. Schilling */
+/* @(#)scsihack.c	1.28 00/06/30 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.25 00/01/22 Copyright 1997 J. Schilling";
+	"@(#)scsihack.c	1.28 00/06/30 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -23,23 +23,16 @@ static	char _sccsid[] =
  *
  *	Copyright (c) 1997 J. Schilling
  */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+/*@@C@@*/
 
 LOCAL	int	scsi_send	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
+
+#if defined(sun) || defined(__sun) || defined(__sun__)
+#define	SCSI_IMPL		/* We have a SCSI implementation for Sun */
+
+#include "scsi-sun.c"
+
+#endif	/* Sun */
 
 
 #ifdef	linux
@@ -98,12 +91,12 @@ LOCAL	int	scsi_send	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
 
 #endif	/* AIX */
 
-#if	defined(__NeXT__)
-#define	SCSI_IMPL		/* We have a SCSI implementation for NextStep */
+#if	defined(__NeXT__) || defined(IS_MACOS_X)
+#define	SCSI_IMPL		/* We have a SCSI implementation for NextStep and Mac OS X */
 
 #include "scsi-next.c"
 
-#endif	/* NEXT */
+#endif	/* NEXT / Mac OS X */
 
 #if	defined(__osf__)
 #define	SCSI_IMPL		/* We have a SCSI implementation for OSF/1 */
@@ -172,7 +165,7 @@ LOCAL	int	scsi_send	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsihack.c-1.25";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsihack.c-1.28";	/* The version for this transport*/
 
 /*
  * Return version information for the low level SCSI transport code.
@@ -222,8 +215,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return	(0L);
 }

@@ -1,7 +1,7 @@
-/* @(#)modes.c	1.13 99/06/06 Copyright 1988 J. Schilling */
+/* @(#)modes.c	1.14 00/05/07 Copyright 1988 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)modes.c	1.13 99/06/06 Copyright 1988 J. Schilling";
+	"@(#)modes.c	1.14 00/05/07 Copyright 1988 J. Schilling";
 #endif
 /*
  *	SCSI mode page handling
@@ -27,6 +27,7 @@ static	char sccsid[] =
 #include <mconfig.h>
 #include <sys/types.h>
 #include <standard.h>
+#include <schily.h>
 #include <scg/scgcmd.h>
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>

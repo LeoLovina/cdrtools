@@ -1,7 +1,7 @@
-/* @(#)diskid.c	1.23 00/04/27 Copyright 1998 J. Schilling */
+/* @(#)diskid.c	1.28 00/07/20 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)diskid.c	1.23 00/04/27 Copyright 1998 J. Schilling";
+	"@(#)diskid.c	1.28 00/07/20 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Disk Idientification Method
@@ -34,6 +34,7 @@ static	char sccsid[] =
 #include "cdrecord.h"
 
 EXPORT	void	pr_manufacturer		__PR((msf_t *mp, BOOL rw, BOOL audio));
+LOCAL	struct disk_man * man_ptr	__PR((msf_t *mp));
 EXPORT	int	manufacturer_id		__PR((msf_t *mp));
 EXPORT	long	disk_rcap		__PR((msf_t *mp, long maxblock, BOOL rw, BOOL audio));
 
@@ -80,13 +81,17 @@ LOCAL	char	m_ritek[]	= "Ritek Co.";
 /*
  * Tentative codes.
  */
+LOCAL	char	m_grandadvance[]= "Grand Advance Technology LTD.";
+LOCAL	char	m_bestdisk[]	= "Bestdisc Technology Corporation";
+LOCAL	char	m_wealth_fair[]	= "WEALTH FAIR INVESTMENT LIMITE";
+LOCAL	char	m_general_mag[]	= "General Magnetics Ld";
+LOCAL	char	m_mpo[]		= "MPO";
 LOCAL	char	m_jvc[]		= "VICTOR COMPANY OF JAPAN, LIMITED";
 LOCAL	char	m_vivistar[]	= "VIVASTAR AG";
 LOCAL	char	m_taroko[]	= "TAROKO INTERNATIONAL CO.,LTD.";
 LOCAL	char	m_unidisc[]	= "UNIDISC TECHNOLOGY CO.,LTD";
 LOCAL	char	m_hokodig[]	= "Hong Kong Digital Technology Co., Ltd.";
 LOCAL	char	m_viva[]	= "VIVA MAGNETICS LIMITED";
-
 LOCAL	char	m_hile[]	= "Hile Optical Disc Technology Corp.";
 LOCAL	char	m_friendly[]	= "Friendly CD-Tek Co.";
 LOCAL	char	m_soundsound[]	= "Sound Sound Multi-Media Development Limited";
@@ -128,6 +133,8 @@ LOCAL	char	m_mmmm[]	= "Multi Media Masters & Machinary SA";
  */
 /*LOCAL	char	m_seantram[]	= "Seantram Technology Inc.";*/
 
+LOCAL	struct disk_man notable =
+	{{00, 00, 00},  -1, "unknown (not in table)" };
 
 /*
  * Old (illegal) code table. It lists single specific codes (97:xx:yy).
@@ -144,7 +151,7 @@ LOCAL	struct disk_man odman[] = {
 	{{97, 33, 00}, 82, "ILLEGAL OLD CODE: Old CDA Datenträger Albrechts GmbH." },
 	{{97, 35, 44},  0, m_ill },
 	{{97, 39, 00},  0, m_ill },
-	{{97, 45, 36},  0, "ILLEGAL OLD CODE: Old Kodak Photo CD" },
+	{{97, 45, 36}, 83, "ILLEGAL OLD CODE: Old Kodak Photo CD" },
 	{{97, 47, 00},  0, m_ill },
 	{{97, 47, 30},  0, m_ill },
 	{{97, 48, 14},  0, m_ill },
@@ -227,10 +234,14 @@ LOCAL	struct disk_man dman[] = {
 	/*
 	 * Tentative codes.
 	 */
+	{{97, 16, 30}, 68, m_grandadvance },
+	{{97, 21, 30}, 67, m_bestdisk },
+	{{97, 18, 10}, 66, m_wealth_fair },
+	{{97, 29, 50}, 65, m_general_mag },
+	{{97, 25, 00}, 64, m_mpo },		/* in reality 25/01    */
 	{{97, 49, 40}, 63, m_jvc },
 	{{97, 23, 40}, 63, m_jvc },
 	{{97, 25, 40}, 62, m_vivistar },
-
 	{{97, 18, 60}, 61, m_taroko },
 	{{97, 29, 20}, 60, m_unidisc },
 	{{97, 46, 10}, 59, m_hokodig },		/* XXX was m_sony */
@@ -292,6 +303,43 @@ LOCAL	struct disk_man dman[] = {
 	{{00, 00, 00},  0, NULL },
 };
 
+LOCAL struct disk_man *
+man_ptr(mp)
+	msf_t	*mp;
+{
+	struct disk_man * dp;
+	int	frame;
+	int	type;
+
+	type = mp->msf_frame % 10;
+	frame = mp->msf_frame - type;
+
+	dp = odman;
+	while (dp->mi_msf.msf_min != 0) {
+		if (mp->msf_min == dp->mi_msf.msf_min &&
+				mp->msf_sec == dp->mi_msf.msf_sec &&
+				mp->msf_frame == dp->mi_msf.msf_frame) {
+			return (dp);
+		}
+		dp++;
+	}
+	dp = dman;
+	while (dp->mi_msf.msf_min != 0) {
+		if (mp->msf_min == dp->mi_msf.msf_min &&
+				mp->msf_sec == dp->mi_msf.msf_sec &&
+				frame == dp->mi_msf.msf_frame) {
+			/*
+			 * Note that dp->mi_msf.msf_frame is always rounded
+			 * down to 0 even for media that has 97:27/01 in the
+			 * official table.
+			 */
+			return (dp);
+		}
+		dp++;
+	}
+	return (NULL);
+}
+
 EXPORT void
 pr_manufacturer(mp, rw, audio)
 	msf_t	*mp;
@@ -300,62 +348,40 @@ pr_manufacturer(mp, rw, audio)
 {
 	struct disk_man * dp;
 	struct disk_man xdman;
-	int	frame;
 	int	type;
 	char	*tname;
 
 /*	printf("pr_manufacturer rw: %d audio: %d\n", rw, audio);*/
 
 	type = mp->msf_frame % 10;
-	frame = mp->msf_frame - type;
 	if (type < 5) {
 		tname = "Long strategy type (Cyanine, AZO or similar)";
 	} else {
 		tname = "Short strategy type (Phthalocyanine or similar)";
 	}
+	if (rw) {
+		tname = "Phase change";
+	}
 
-	dp = odman;
-	while (dp->mi_msf.msf_min != 0) {
-		if (mp->msf_min == dp->mi_msf.msf_min &&
-				mp->msf_sec == dp->mi_msf.msf_sec &&
-				mp->msf_frame == dp->mi_msf.msf_frame) {
-			/*
-			 * Note that dp->mi_msf.msf_frame is always rounded
-			 * down to 0 even for media that has 97:27/01 in the
-			 * official table.
-			 */
+	dp = man_ptr(mp);
+	if (dp != NULL) {
+		if (dp->mi_num == 0 || dp->mi_num >= 80) {
 			if (!rw) {
-				printf("Disk type unknown\n");
+				tname = "unknown";
 			} else {
-				printf("Disk type: phase change\n");
 				xdman = *dp;
 				dp = &xdman;
 				dp->mi_num = 0;
 				dp->mi_name = m_illrw;
 			}
-			printf("Manuf. index: %d\n", dp->mi_num);
-			printf("Manufacturer: %s\n", dp->mi_name);
-			return;
 		}
-		dp++;
+	} else {
+		tname = "unknown";
+		dp = &notable;
 	}
-	dp = dman;
-	while (dp->mi_msf.msf_min != 0) {
-		if (mp->msf_min == dp->mi_msf.msf_min &&
-				mp->msf_sec == dp->mi_msf.msf_sec &&
-				frame == dp->mi_msf.msf_frame) {
-			if (!rw)
-				printf("Disk type: %s\n", tname);
-			else
-				printf("Disk type: phase change\n");
-			printf("Manuf. index: %d\n", dp->mi_num);
-			printf("Manufacturer: %s\n", dp->mi_name);
-			return;
-		}
-		dp++;
-	}
-	printf("Disk type unknown\n");
-	printf("Manufacturer unknown (not in table)\n");
+	printf("Disk type:    %s\n", tname);
+	printf("Manuf. index: %d\n", dp->mi_num);
+	printf("Manufacturer: %s\n", dp->mi_name);
 }
 
 EXPORT int
@@ -363,46 +389,25 @@ manufacturer_id(mp)
 	msf_t	*mp;
 {
 	struct disk_man * dp;
-	int	frame;
-	int	type;
 
-	type = mp->msf_frame % 10;
-	frame = mp->msf_frame - type;
-
-	dp = odman;
-	while (dp->mi_msf.msf_min != 0) {
-		if (mp->msf_min == dp->mi_msf.msf_min &&
-				mp->msf_sec == dp->mi_msf.msf_sec &&
-				mp->msf_frame == dp->mi_msf.msf_frame) {
-			return (dp->mi_num);
-		}
-		dp++;
-	}
-	dp = dman;
-	while (dp->mi_msf.msf_min != 0) {
-		if (mp->msf_min == dp->mi_msf.msf_min &&
-				mp->msf_sec == dp->mi_msf.msf_sec &&
-				frame == dp->mi_msf.msf_frame) {
-			/*
-			 * Note that dp->mi_msf.msf_frame is always rounded
-			 * down to 0 even for media that has 97:27/01 in the
-			 * official table.
-			 */
-			return (dp->mi_num);
-		}
-		dp++;
-	}
+	dp = man_ptr(mp);
+	if (dp != NULL)
+		return (dp->mi_num);
 	return (-1);
 }
 
 struct disk_rcap {
-	msf_t	ci_msf;
-	long	ci_cap;
-	long	ci_rcap;
+	msf_t	ci_msf;				/* Lead in start time	     */
+	long	ci_cap;				/* Lead out start time	     */
+	long	ci_rcap;			/* Abs max lead out start    */
 };
 
 LOCAL	struct disk_rcap rcap[] = {
 
+#ifdef	__redbook_only__
+	{{97, 35, 44}, 359849, 404700 },	/*! Unknown 99 min (89:58/00)*/
+#endif
+	{{97, 35, 44}, 359849, 449700 },	/*! Unknown 99 min (99:58/00)*/
 	{{97, 31, 00}, 359849, 368923 },	/*! Arita CD-R 80	     */
 	{{97, 26, 50}, 359849, 369096 },	/*! Lead Data CD-R 80	     */
 	{{97, 26, 12}, 359849, 368000 },	/*X POSTECH 80 Min	     */

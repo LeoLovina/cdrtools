@@ -1,18 +1,18 @@
-/* @(#)scsitransp.c	1.48 99/11/12 Copyright 1988,1995 J. Schilling */
+/* @(#)scsitransp.c	1.53 00/07/01 Copyright 1988,1995,2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.48 99/11/12 Copyright 1988,1995 J. Schilling";
+	"@(#)scsitransp.c	1.53 00/07/01 Copyright 1988,1995,2000 J. Schilling";
 #endif
 /*
- *	SCSI user level command transport routines for
- *	the SCSI general driver 'scg'.
+ *	SCSI user level command transport routines (generic part).
  *
  *	Warning: you may change this source, but if you do that
  *	you need to change the _scg_version and _scg_auth* string below.
+ *	You may not return "schily" for an SCG_AUTHOR request anymore.
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1988,1995 J. Schilling
+ *	Copyright (c) 1988,1995,2000 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -43,14 +43,11 @@ static	char sccsid[] =
 #include <timedefs.h>
 #include <sys/ioctl.h>
 #include <fctldefs.h>
+#include <schily.h>
 
-#include <scg/scgio.h>
+#include <scg/scgcmd.h>
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
-
-#ifdef	sun
-#	define	HAVE_SCG	/* Currently only on SunOS/Solaris */
-#endif
 
 /*
  *	Warning: you may change this source, but if you do that
@@ -59,41 +56,16 @@ static	char sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_version[] = "0.1";			/* The global libscg version	*/
-LOCAL	char	_scg_auth_schily[] = "schily";		/* The author for this module	*/
-#ifdef	HAVE_SCG
-LOCAL	char	_scg_trans_version[] = "scg-1.48";	/* The version for /dev/scg	*/
-#endif
+LOCAL	char	_scg_version[]		= "0.1";	/* The global libscg version	*/
+LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 #define	DEFTIMEOUT	20	/* Default timeout for SCSI command transport */
-
-/*
- * Need to move this into an scg driver ioctl.
- */
-/*#define	MAX_DMA_SUN4M	(1024*1024)*/
-#define	MAX_DMA_SUN4M	(124*1024)	/* Currently max working size */
-/*#define	MAX_DMA_SUN4C	(126*1024)*/
-#define	MAX_DMA_SUN4C	(124*1024)	/* Currently max working size */
-#define	MAX_DMA_SUN3	(63*1024)
-#define	MAX_DMA_SUN386	(56*1024)
-#define	MAX_DMA_OTHER	(32*1024)
-
-#define	ARCH_MASK	0xF0
-#define	ARCH_SUN2	0x00
-#define	ARCH_SUN3	0x10
-#define	ARCH_SUN4	0x20
-#define	ARCH_SUN386	0x30
-#define	ARCH_SUN3X	0x40
-#define	ARCH_SUN4C	0x50
-#define	ARCH_SUN4E	0x60
-#define	ARCH_SUN4M	0x70
-#define	ARCH_SUNX	0x80
 
 EXPORT	char	*scg_version	__PR((SCSI *scgp, int what));
 EXPORT	char	*scg__version	__PR((SCSI *scgp, int what));
 EXPORT	int	scsi_open	__PR((SCSI *scgp, char *device, int busno, int tgt, int tlun));
 EXPORT	int	scsi_close	__PR((SCSI *scgp));
-LOCAL	long	scsi_maxdma	__PR((SCSI *scgp));
+LOCAL	long	scsi_maxdma	__PR((SCSI *scgp, long amt));
 EXPORT	BOOL	scsi_havebus	__PR((SCSI *scgp, int));
 EXPORT	int	scsi_fileno	__PR((SCSI *scgp, int, int, int));
 EXPORT	int	scsi_initiator_id __PR((SCSI *scgp));
@@ -125,45 +97,11 @@ EXPORT	int	scsi_sense_code	__PR((SCSI *scgp));
 EXPORT	int	scsi_sense_qual	__PR((SCSI *scgp));
 EXPORT	void	scsiprintdev	__PR((struct scsi_inquiry *));
 
-#ifdef	HAVE_SCG
-#	include	<libport.h>		/* Needed for gethostid() */
-#ifdef	sun
-#ifdef	HAVE_SUN_DKIO_H
-#	include <sun/dkio.h>
-
-#	define	dk_cinfo	dk_conf
-#	define	dki_slave	dkc_slave
-#	define	DKIO_GETCINFO	DKIOCGCONF
-#endif
-#ifdef	HAVE_SYS_DKIO_H
-#	include <sys/dkio.h>
-
-#	define	DKIO_GETCINFO	DKIOCINFO
-#endif
-
-#define	TARGET(slave)	((slave >> 3) & 07)
-
-#endif	/* sun */
 /*
- * We are using a "real" /dev/scg?
- */
-#	define	scsi_send(scgp, f, cmdp)	ioctl((f), SCGIO_CMD, (cmdp))
-#	define	MAX_SCG		16	/* Max # of SCSI controllers */
-
-struct scg_local {
-	int	scgfiles[MAX_SCG];
-};
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
-#define scgfiles(p)	((int *)((p)->local)) 
-
-#else
-/*
- * We are emulating the functionality of /dev/scg? with the local
+ * Emulate the functionality of /dev/scg? with the local
  * SCSI user land implementation.
  */
-#	include	"scsihack.c"
-
-#endif	/* HAVE_SCG */
+#include "scsihack.c"
 
 /*
  * Return version information for the SCSI transport code.
@@ -198,234 +136,6 @@ scg_version(scgp, what)
 	return (scg__version(scgp, what));
 }
 
-#ifdef	HAVE_SCG
-
-/*
- * Return version information for the low level SCSI transport code.
- * This has been introduced to make it easier to trace down problems
- * in applications.
- */
-EXPORT char *
-scg__version(scgp, what)
-	SCSI	*scgp;
-	int	what;
-{
-	if (scgp != (SCSI *)0) {
-		switch (what) {
-
-		case SCG_VERSION:
-			return (_scg_trans_version);
-		/*
-		 * If you changed this source, you are not allowed to
-		 * return "schily" for the SCG_AUTHOR request.
-		 */
-		case SCG_AUTHOR:
-			return (_scg_auth_schily);
-		case SCG_SCCS_ID:
-			return (sccsid);
-		}
-	}
-	return ((char *)0);
-}
-
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
-	SCSI	*scgp;
-	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
-{
-	register int	f;
-	register int	i;
-	register int	nopen = 0;
-	char		devname[32];
-
-	if (busno >= MAX_SCG) {
-		errno = EINVAL;
-		if (scgp->errstr)
-			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-				"Illegal value for busno '%d'", busno);
-		return (-1);
-	}
-
-	if ((device != NULL && *device != '\0') || (busno == -2 && tgt == -2)) {
-		errno = EINVAL;
-		if (scgp->errstr)
-			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-				"Open by 'devname' not supported on this OS");
-		return (-1);
-	}
-
-	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
-		if (scgp->local == NULL) {
-			if (scgp->errstr)
-				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE, "No memory for scg_local");
-			return (0);
-		}
-
-		for (i=0; i < MAX_SCG; i++) {
-			scgfiles(scgp)[i] = -1;
-		}
-	}
-
-
-	for (i=0; i < MAX_SCG; i++) {
-		sprintf(devname, "/dev/scg%d", i);
-		f = open(devname, 2);
-		if (f < 0) {
-			if (errno != ENOENT && errno != ENXIO) {
-				if (scgp->errstr)
-					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-						"Cannot open '%s'", devname);
-				return (-1);
-			}
-		} else {
-			nopen++;
-		}
-		scgfiles(scgp)[i] = f;
-	}
-	return (nopen);
-}
-
-EXPORT int
-scsi_close(scgp)
-	SCSI	*scgp;
-{
-	register int	i;
-
-	if (scgfiles(scgp) == NULL)
-		return (-1);
-
-	for (i=0; i < MAX_SCG; i++) {
-		if (scgfiles(scgp)[i] >= 0)
-			close(scgfiles(scgp)[i]);
-		scgfiles(scgp)[i] = -1;
-	}
-	return (0);
-}
-
-LOCAL long
-scsi_maxdma(scgp)
-	SCSI	*scgp;
-{
-	long	maxdma = 0L;
-
-#ifdef	sun
-#if	defined(__i386_) || defined(i386)
-		return (MAX_DMA_SUN386);
-#else
-	int	cpu_type = gethostid() >> 24;
-
-	switch (cpu_type & ARCH_MASK) {
-
-	case ARCH_SUN4C:
-	case ARCH_SUN4E:
-		maxdma = MAX_DMA_SUN4C;
-		break;
-
-	case ARCH_SUN4M:
-	case ARCH_SUNX:
-		maxdma = MAX_DMA_SUN4M;
-		break;
-
-	default:
-		maxdma = MAX_DMA_SUN3;
-	}
-#endif	/* sun */
-#else
-	maxdma = MAX_DMA_OTHER;
-#endif
-
-#ifndef	__SVR4
-	/*
-	 * SunOS 4.x allows esp hardware on VME boards and thus
-	 * limits DMA on esp to 64k-1
-	 */
-	if (maxdma > MAX_DMA_SUN3)
-		maxdma = MAX_DMA_SUN3;
-#endif
-	return (maxdma);
-}
-
-EXPORT
-BOOL scsi_havebus(scgp, busno)
-	SCSI	*scgp;
-	int	busno;
-{
-	if (scgfiles(scgp) == NULL)
-		return (FALSE);
-	return (busno < 0 || busno >= MAX_SCG) ? FALSE : (scgfiles(scgp)[busno] >= 0);
-}
-
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
-	SCSI	*scgp;
-	int	busno;
-	int	tgt;
-	int	tlun;
-{
-	if (scgfiles(scgp) == NULL)
-		return (-1);
-	return (busno < 0 || busno >= MAX_SCG) ? -1 : scgfiles(scgp)[busno];
-}
-
-EXPORT int
-scsi_initiator_id(scgp)
-	SCSI	*scgp;
-{
-	int		f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
-	int		id = -1;
-#ifdef	DKIO_GETCINFO
-	struct dk_cinfo	conf;
-
-	if (ioctl(f, DKIO_GETCINFO, &conf) < 0)
-		return (id);
-	if (TARGET(conf.dki_slave) != -1)
-		id = TARGET(conf.dki_slave);
-#endif
-	return (id);
-}
-
-EXPORT
-int scsi_isatapi(scgp)
-	SCSI	*scgp;
-{
-	return (FALSE);
-}
-
-EXPORT
-int scsireset(scgp)
-	SCSI	*scgp;
-{
-	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
-
-	return (ioctl(f, SCGIORESET, 0));
-}
-
-EXPORT void *
-scsi_getbuf(scgp, amt)
-	SCSI	*scgp;
-	long	amt;
-{
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
-		return ((void *)0);
-	scgp->bufbase = (void *)valloc((size_t)amt);
-	return (scgp->bufbase);
-}
-
-EXPORT void
-scsi_freebuf(scgp)
-	SCSI	*scgp;
-{
-	if (scgp->bufbase)
-		free(scgp->bufbase);
-	scgp->bufbase = NULL;
-}
-
-#endif	/* HAVE_SCG */
-
 EXPORT long
 scsi_bufsize(scgp, amt)
 	SCSI	*scgp;
@@ -433,10 +143,13 @@ scsi_bufsize(scgp, amt)
 {
 	long	maxdma;
 
-	maxdma = scsi_maxdma(scgp);
-
+	maxdma = scsi_maxdma(scgp, amt);
 	if (amt <= 0 || amt > maxdma)
-		return (maxdma);
+		amt = maxdma;
+
+	scgp->maxdma = maxdma;
+	scgp->maxbuf = amt;
+
 	return (amt);
 }
 

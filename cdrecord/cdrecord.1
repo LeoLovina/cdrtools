@@ -1,4 +1,4 @@
-.\" @(#)cdrecord.1	1.48 00/04/27 Copyright 1996 J. Schilling
+.\" @(#)cdrecord.1	1.51 00/07/20 Copyright 1996 J. Schilling
 .\" 
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -257,7 +257,8 @@ decode and print the manufacturer info from the media.
 .B \-fix
 The disk will only be fixated (i.e. a TOC for a CD-Reader will be written). 
 This may be used, if for some reason the disk has been written but not
-fixated. This option currently does not work with TEAC drives.
+fixated. This option currently does not work with old TEAC drives (CD-R50S and
+CD-R55S).
 .TP
 .B \-nofix
 Do not fixate the disk after writing the tracks. This may be used
@@ -796,6 +797,17 @@ this option may be used to create a disk that is entirely made of padding.
 .B \-nopad
 Do not pad the following tracks \- the default.
 .TP
+.B \-shorttrack
+Allow all subsequent tracks to violate the Read Book track length standard
+which requires a minimum track length of 4 seconds.
+This option is only useful when used in DAO mode.
+Not all drives support this feature. The drive must be accept the
+resulting CUE sheet.
+.TP
+.B \-noshorttrack
+Re-enforce the Red Book track lenght standard. Tracks must be
+at least 4 seconds.
+.TP
 .BR pregap =#
 Set the  pre-gap size for the next track.
 This option currently only makes sense with the TEAC drive when
@@ -1028,6 +1040,12 @@ default speed and the default FIFO size.
 .BR fbk (7).
 
 .SH NOTES
+.PP
+On Solaris you need to stop the volume management if you like to use the USCSI
+fallback SCSI transport code. Even things like 
+.B "cdrecord -scanbus
+will not work if the volume management is running.
+.PP
 Disks made in 
 .B "Track At Once 
 mode are not suitable as a master for direct mass production by CD manufacturers.

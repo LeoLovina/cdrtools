@@ -19,7 +19,7 @@ that I hope to integrate in the near future.
 To make a decent release, I need access to a recent AIX
 system. I currently only have non-root access to an old system without man
 pages, so I cannot test. To include error handling, I need to know some things
-abount what is happening on special error situations.
+about what is happening on special error situations.
 
 To compile with the AIX cc use ./Gmake or smake from my makefiles 
 distribution.

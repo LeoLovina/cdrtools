@@ -1,3 +1,6 @@
+improved Indexscan
+C2 Ptr
+
 stabilization:
 new sound support for Windows95/98, completely broken for WinNT
 new ioctl support for Solaris, FreeBSD-3.x, FreeBSD-4.x

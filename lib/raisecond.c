@@ -1,4 +1,4 @@
-/* @(#)raisecond.c	1.11 99/09/11 Copyright 1985 J. Schilling */
+/* @(#)raisecond.c	1.12 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	raise a condition (software signal)
  */
@@ -33,6 +33,7 @@
 #include <stdxlib.h>
 #include <strdefs.h>
 #include <avoffset.h>
+#include <schily.h>
 
 #if	!defined(AV_OFFSET) || !defined(FP_INDIR)
 #	ifdef	HAVE_SCANSTACK

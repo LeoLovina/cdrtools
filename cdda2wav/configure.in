@@ -1,3 +1,4 @@
+dnl @(#)configure.in	1.2 00/06/02	Copyright 1998-2000 Heiko Eiﬂfeldt
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(cdda2wav.c)
 AC_CONFIG_HEADER(lconfig.h)
@@ -16,6 +17,10 @@ AC_CHECK_LIB(posix4, sched_get_priority_max)
 ;;
 esac
 AC_CHECK_LIB(ossaudio, _oss_ioctl)
+
+EXTRALIBS="$LIBS"
+
+AC_SUBST(EXTRALIBS)
 
 dnl check header files
 AC_CHECK_HEADERS(sys/cdio.h)

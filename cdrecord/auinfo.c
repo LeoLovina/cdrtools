@@ -1,7 +1,7 @@
-/* @(#)auinfo.c	1.3 99/10/16 Copyright 1999 J. Schilling */
+/* @(#)auinfo.c	1.5 00/06/02 Copyright 1999 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)auinfo.c	1.3 99/10/16 Copyright 1999 J. Schilling";
+	"@(#)auinfo.c	1.5 00/06/02 Copyright 1999 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -28,8 +28,9 @@ static	char sccsid[] =
 #include <standard.h>
 #include <strdefs.h>
 #include <deflts.h>
-
 #include <utypes.h>
+#include <schily.h>
+
 #include "cdrecord.h"
 
 extern	int	debug;
@@ -68,7 +69,7 @@ auinfo(name, track, trackp)
 	strncpy(infname, name, sizeof(infname)-1);
 	infname[sizeof(infname)-1] = '\0';
 	p = strrchr(infname, '.');
-	if (p != 0) {
+	if (p != 0 && &p[4] < &name[sizeof(infname)]) {
 		strcpy(&p[1], "inf");
 	}
 

@@ -12,6 +12,7 @@ CFILES_STDIO=	cvmod.c dat.c \
 
 CFILES_REST=	astoi.c \
 		comerr.c \
+		cmpbytes.c \
 		error.c \
 		fconv.c \
 		fillbytes.c \

@@ -1,7 +1,7 @@
-/* @(#)match.c	1.9 00/04/16 joerg */
+/* @(#)match.c	1.11 00/06/27 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)match.c	1.9 00/04/16 joerg";
+	"@(#)match.c	1.11 00/06/27 joerg";
 #endif
 /*
  * 27-Mar-96: Jan-Piet Mens <jpm@mens.de>
@@ -20,7 +20,10 @@ static	char sccsid[] =
 #include "match.h"
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
+
+static	int	add_sort_match	__PR((char *fn, int val));
 
 struct match {
 	struct match *next;
@@ -94,7 +97,8 @@ add_sort_list(file)
 	char	*file;
 {
 	FILE	*fp;
-	char	name[1024];
+	char	name[4096];
+	char	*p;
 	int	val;
 
 	if ((fp = fopen(file, "r")) == NULL) {
@@ -106,7 +110,23 @@ add_sort_list(file)
 #endif
 	}
 
-	while (fscanf(fp, "%s%d", name, &val) != EOF) {
+	while (fgets(name, sizeof(name), fp) != NULL) {
+		/*
+		 * look for the last space or tab character
+		 */
+		if ((p = strrchr(name, ' ')) == NULL)
+			p = strrchr(name, '\t');
+		if (p == NULL) {
+#ifdef	USE_LIBSCHILY
+			comerrno(EX_BAD, "Incorrect sort file format\n\t%s", name);
+#else
+			fprintf(stderr, "Incorrect sort file format\n\t%s", name);
+#endif
+			continue;
+		} else {
+			*p = '\0';
+			val = atoi(++p);
+		}
 		if (!add_sort_match(name, val)) {
 			fclose(fp);
 			return;
@@ -193,7 +213,7 @@ gen_add_list(file, n)
 	int	n;
 {
 	FILE	*fp;
-	char	name[1024];
+	char	name[4096];
 
 	if ((fp = fopen(file, "r")) == NULL) {
 #ifdef	USE_LIBSCHILY
@@ -204,7 +224,11 @@ gen_add_list(file, n)
 #endif
 	}
 
-	while (fscanf(fp, "%s", name) != EOF) {
+	while (fgets(name, sizeof(name), fp) != NULL) {
+		/*
+		 * strip of '\n'
+		*/
+		name[strlen(name) - 1] = '\0';
 		if (!gen_add_match(name, n)) {
 			fclose(fp);
 			return;

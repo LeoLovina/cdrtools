@@ -1,7 +1,7 @@
-/* @(#)scsi-beos.c	1.9 99/10/15 Copyright 1998 J. Schilling */
+/* @(#)scsi-beos.c	1.11 00/07/01 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-beos.c	1.9 99/10/15 Copyright 1998 J. Schilling";
+	"@(#)scsi-beos.c	1.11 00/07/01 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for the BeOS user-land raw SCSI implementation.
@@ -56,7 +56,7 @@ typedef unsigned short			ushort;
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.9";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.11";	/* The version for this transport*/
 
 /*-------------------------------------------------------------*/
 /*----- Shorthand type formats --------------------------------*/
@@ -202,8 +202,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return (256*1024);
 }
@@ -213,7 +214,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

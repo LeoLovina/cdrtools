@@ -1,4 +1,4 @@
-/* @(#)mkisofs.h	1.49 00/04/27 joerg */
+/* @(#)mkisofs.h	1.50 00/05/28 joerg */
 /*
  * Header file mkisofs.h - assorted structure definitions and typecasts.
 
@@ -265,6 +265,17 @@ struct deferred_write {
 	unsigned int    off;
 };
 
+struct eltorito_boot_entry_info {
+	struct eltorito_boot_entry_info *next; 
+	char		*boot_image;
+	int		not_bootable;
+	int		no_emul_boot;
+	int		hard_disk_boot;
+	int		boot_info_table;
+	int		load_size;
+	int		load_addr;
+};
+
 extern int      goof;
 extern struct directory *root;
 extern struct directory *reloc_dir;
@@ -397,8 +408,9 @@ extern struct stat fstatbuf;
 
 /* eltorito.c */
 extern void init_boot_catalog __PR((const char *path));
-extern void get_torito_desc __PR((struct eltorito_boot_descriptor * path));
 extern void insert_boot_cat __PR((void));
+extern void get_boot_entry	__PR((void));
+extern void new_boot_entry	__PR((void));
 
 /* boot.c */
 extern void sparc_boot_label __PR((char *label));
@@ -574,8 +586,11 @@ extern int	ucs_level;
 extern int      volume_set_size;
 extern int      volume_sequence_number;
 
-extern void    *e_malloc __PR((size_t));
+extern struct eltorito_boot_entry_info *first_boot_entry;
+extern struct eltorito_boot_entry_info *last_boot_entry;
+extern struct eltorito_boot_entry_info *current_boot_entry;
 
+extern void    *e_malloc __PR((size_t));
 
 #define SECTOR_SIZE	(2048)
 #define ISO_ROUND_UP(X)	((X + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1))

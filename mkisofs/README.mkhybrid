@@ -1,5 +1,5 @@
 
-	mkhybrid v1.12.1a10 - make ISO9660/HFS shared hybrid CD volume
+mkhybrid v1.13 has now merged with, and is a part of mkisofs v1.13
 
 HFS hybrid code Copyright (C) James Pearson 1997, 1998, 1999, 2000
 libhfs code Copyright (C) 1996, 1997 Robert Leslie
@@ -9,18 +9,18 @@ mkisofs code Copyright 1993 Yggdrasil Computing, Incorporated
 
 *** NEWS ***
 
-mkhybrid v1.12.1 is now merged with the cdrecord v1.8.1 package.
+Macs can now read Joliet CDs - see http://www.tempel.org/joliet/
 
 ***
 
 *** IMPORTANT ***
 
 The meaning of some of the HFS command line options has changed since
-version 1.12b5.2. This change is to make the way mkhybrid decodes the 
+version 1.12b5.2. This change is to make the way mkisofs decodes the 
 various Apple/Unix file formats (CAP, AppleDouble, MacBinary etc.) less
 confusing and more logical. To decode one or more of the Apple/Unix files,
 then the corresponding "double dash" option must be given (i.e. --cap, 
---double, --macbin etc.) mkhybrid can search for all known Apple/Unix files
+--double, --macbin etc.) mkisofs can search for all known Apple/Unix files
 by using the -probe option.
 
 The options that have changed are:
@@ -53,39 +53,7 @@ Option		old meaning			new meaning
 Most of the HFS features work fine, however, some are not fully tested.
 These are marked as "Alpha" in the man page.
 
-This code is based on mkisofs v1.12.1 that is part of the cdrecord v1.8.1
-package, available from ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/
-
-Please read the man page (mkhybrid.8, or mkhybrid_man.html) for information
-on how to use mkhybrid.
-
-Also see "ChangeLog.mkhybrid" for any minor changes/bug fixes
-
-DESCRIPTION
-
-mkhybrid is a pre-mastering utility that creates ISO9660/ROCKRIDGE/JOLIET/HFS
-hybrid CDROM images. You will have to use some other CD-R package to write
-the image to a CD.
-
-INSTALLATION
-
-Obtain and install the cdrecord v1.8 package from:
-ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/
-
-To build cdrecord, see the file README.compile that is part of the package.
-
-Once cdrecord has been built, unpack mkhybrid in the cdrecord directory
-and make e.g.:
-
-cd cdrecord-1.8
-gzcat mkhybrid-1.12bX.Y.tar.gz | tar xvf -
-cd mkhybrid-1.12bX.Y
-make (or gmake)
-
-See README.compile for further info.
-
-This has been tested with gcc on Solaris 2.6, gcc on Linux (Redhat v6.X),
-cc on IRIX 6.5 and gcc on Win95/WinNT4 using Cygnus' cygwin (see README.win32)
+See "ChangeLog.mkhybrid" for any minor changes/bug fixes
 
 If you are using SunOS 4.1.[34], then you need the following patches
 to read CDs with associated files:
@@ -100,25 +68,25 @@ EXAMPLES
 To create a HFS hybrid CD with the Joliet and Rock Ridge extensions of
 the source directory cd_dir:
 
-% mkhybrid -o cd.iso -r -J -hfs cd_dir
+% mkisofs -o cd.iso -r -J -hfs cd_dir
 
 To create a HFS hybrid CD from the source directory cd_dir that contains
 Netatalk Apple/Unix files:
 
-% mkhybrid -o cd.iso --netatalk cd_dir
+% mkisofs -o cd.iso --netatalk cd_dir
 
 To create a HFS hybrid CD from the source directory cd_dir, giving all files
 CREATOR and TYPES based on just their filename extensions listed in the file 
 "mapping".:
 
-% mkhybrid -o cd.iso -map mapping cd_dir
+% mkisofs -o cd.iso -map mapping cd_dir
 
 To create a CD with the 'Apple Extensions to ISO9660', from the source
 direcories cd_dir and another_dir. Files in all the known Apple/Unix format
 are decoded and any other files are given CREATOR and TYPE based on their
 magic number given in the file "magic":
 
-% mkhybird -o cd.iso -apple -magic magic -probe cd_dir another_dir
+% mkisofs -o cd.iso -apple -magic magic -probe cd_dir another_dir
 
 The following example puts different files on the CD that all have
 the name README, but have different contents when seen as a
@@ -133,7 +101,7 @@ The following command puts the contents of the directory "cd_dir" on the
 CD along with the three README files - but only one will be seen from
 each of the three filesystems:
 
-% mkhybrid -o cd.iso -hfs -J -r \
+% mkisofs -o cd.iso -hfs -J -r \
         -hide README.hfs -hide README.joliet \
         -hide-joliet README.hfs -hide-joliet README.unix \
         -hide-hfs README.joliet -hide-hfs README.unix \
@@ -148,7 +116,8 @@ There are probably all sorts of stange results possible with
 combinations of the hide options ...
 
 
-Any comments, bug reports/fixes to the address below.
+Any comments, bug reports/fixes about the HFS parts of mkisofs to the
+address below.
 
 Please state the version, platform and command line used when submitting
 a bug report - the output from "-log-file -v" would help.

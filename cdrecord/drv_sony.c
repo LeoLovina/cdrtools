@@ -1,7 +1,7 @@
-/* @(#)drv_sony.c	1.39 00/04/16 Copyright 1997 J. Schilling */
+/* @(#)drv_sony.c	1.41 00/07/02 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_sony.c	1.39 00/04/16 Copyright 1997 J. Schilling";
+	"@(#)drv_sony.c	1.41 00/07/02 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -38,6 +38,8 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <btorder.h>
 #include <intcvt.h>
+#include <schily.h>
+
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
@@ -424,21 +426,21 @@ getdisktype_sony(scgp, dp, dsp)
 		msf.msf_min = xp->lead_in_start[1];
 		msf.msf_sec = xp->lead_in_start[2];
 		msf.msf_frame = xp->lead_in_start[3];
-		lst = msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame);
+		lst = msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame, FALSE);
 		if (lst  < -150) {
 			/*
 			 * The Sony CDU 920 seems to deliver 00:00/00 for
 			 * lead-in start time, dont use it.
 			 */
 			printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
-				msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame),
+				msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame, FALSE),
 				msf.msf_min, msf.msf_sec, msf.msf_frame);
 		}
 		msf.msf_min = xp->last_start_time[1];
 		msf.msf_sec = xp->last_start_time[2];
 		msf.msf_frame = xp->last_start_time[3];
 		printf("  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
-			msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame),
+			msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame, TRUE),
 			msf.msf_min, msf.msf_sec, msf.msf_frame);
 		if (lst  < -150) {
 			/*
@@ -478,7 +480,7 @@ di_to_dstat_sony(dip, dsp)
 
 	dsp->ds_maxblocks = msf_to_lba(dip->last_start_time[1],
 					dip->last_start_time[2],
-					dip->last_start_time[3]);
+					dip->last_start_time[3], TRUE);
 	/*
 	 * Check for 0xFF:0xFF/0xFF which is an indicator for a complete disk
 	 */
@@ -488,7 +490,7 @@ di_to_dstat_sony(dip, dsp)
 	if (dsp->ds_first_leadin == 0) {
 		dsp->ds_first_leadin = msf_to_lba(dip->lead_in_start[1],
 						dip->lead_in_start[2],
-						dip->lead_in_start[3]);
+						dip->lead_in_start[3], FALSE);
 		/*
 		 * Check for illegal values (> 0)
 		 * or for empty field (-150) with CDU-920.

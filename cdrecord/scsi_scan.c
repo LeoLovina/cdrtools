@@ -1,7 +1,7 @@
-/* @(#)scsi_scan.c	1.7 00/01/26 Copyright 1997 J. Schilling */
+/* @(#)scsi_scan.c	1.8 00/05/07 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_scan.c	1.7 00/01/26 Copyright 1997 J. Schilling";
+	"@(#)scsi_scan.c	1.8 00/05/07 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Scan SCSI Bus.
@@ -30,6 +30,8 @@ static	char sccsid[] =
 #include <standard.h>
 #include <btorder.h>
 #include <errno.h>
+#include <schily.h>
+
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>

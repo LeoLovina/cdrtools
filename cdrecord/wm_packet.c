@@ -1,7 +1,7 @@
-/* @(#)wm_packet.c	1.11 99/01/31 Copyright 1995, 1997 J. Schilling */
+/* @(#)wm_packet.c	1.12 00/05/07 Copyright 1995, 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)wm_packet.c	1.11 99/01/31 Copyright 1995, 1997 J. Schilling";
+	"@(#)wm_packet.c	1.12 00/05/07 Copyright 1995, 1997 J. Schilling";
 #endif
 /*
  *	CDR write method abtraction layer
@@ -33,6 +33,7 @@ static	char sccsid[] =
 /*#include <string.h>*/
 #include <sys/types.h>
 #include <utypes.h>
+#include <schily.h>
 
 #include <scg/scsitransp.h>
 #include "cdrecord.h"

@@ -1,7 +1,7 @@
-/* @(#)eltorito.c	1.15 00/04/08 joerg */
+/* @(#)eltorito.c	1.17 00/05/28 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)eltorito.c	1.15 00/04/08 joerg";
+	"@(#)eltorito.c	1.17 00/05/28 joerg";
 
 #endif
 /*
@@ -43,6 +43,7 @@ static	char sccsid[] =
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 #include <utypes.h>
 #include <intcvt.h>
@@ -51,14 +52,17 @@ static	char sccsid[] =
 #define MIN(a, b) (((a) < (b))? (a): (b))
 
 static struct eltorito_validation_entry valid_desc;
-static struct eltorito_defaultboot_entry default_desc;
 static struct eltorito_boot_descriptor gboot_desc;
 static struct disk_master_boot_record disk_mbr;
 static unsigned int bcat_de_flags;
 
 	void	init_boot_catalog	__PR((const char *path));
 	void	insert_boot_cat		__PR((void));
-	void	get_torito_desc		__PR((struct eltorito_boot_descriptor *boot_desc));
+static	void	get_torito_desc		__PR((struct eltorito_boot_descriptor *boot_desc));
+static	void	fill_boot_desc		__PR((struct eltorito_defaultboot_entry *boot_desc_entry,
+						struct eltorito_boot_entry_info *boot_entry));
+	void	get_boot_entry		__PR((void));
+	void	new_boot_entry		__PR((void));
 static	int	tvd_write		__PR((FILE * outfile));
 
 
@@ -236,18 +240,16 @@ insert_boot_cat()
 	}
 }
 
-void
+static void
 get_torito_desc(boot_desc)
 	struct eltorito_boot_descriptor	*boot_desc;
 {
-	int             bootmbr;
 	int             checksum;
 	unsigned char  *checksum_ptr;
-	struct directory_entry *de;	/* Boot file */
 	struct directory_entry *de2;	/* Boot catalog */
-	int             i;
-	int             nsectors;
-	int             geosec;
+	int		i;
+	int		offset;
+	struct eltorito_defaultboot_entry boot_desc_record;
 
 	memset(boot_desc, 0, sizeof(*boot_desc));
 	boot_desc->type[0] = 0;
@@ -260,7 +262,7 @@ get_torito_desc(boot_desc)
 	 * search from root of iso fs to find boot catalog
 	 * - we already know where the boot catalog is
 	 * - we created it above - but lets search for it anyway
-    	 * - good sanity check!
+	 * - good sanity check!
 	 */
 	de2 = search_tree_file(root, boot_catalog);
 	if (!de2 || !(de2->de_flags & MEMORY_FILE)) {
@@ -276,18 +278,6 @@ get_torito_desc(boot_desc)
 	set_731(boot_desc->bootcat_ptr,
 		(unsigned int) get_733(de2->isorec.extent));
 
-	/* now adjust boot catalog lets find boot image first */
-	de = search_tree_file(root, boot_image);
-	if (!de) {
-#ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD, "Uh oh, I cant find the boot image '%s' !\n",
-							boot_image);
-#else
-		fprintf(stderr, "Uh oh, I cant find the boot image '%s' !\n",
-							boot_image);
-		exit(1);
-#endif
-	}
 	/*
 	 * we have the boot image, so write boot catalog information
 	 * Next we write out the primary descriptor for the disc
@@ -321,25 +311,75 @@ get_torito_desc(boot_desc)
 	checksum = -checksum;
 	set_721(valid_desc.cksum, (unsigned int) checksum);
 
+	/* now write it to the virtual boot catalog */
+	memcpy(de2->table, &valid_desc, 32);
+
+	for (current_boot_entry = first_boot_entry,offset = sizeof(valid_desc);
+	     current_boot_entry != NULL;
+	     current_boot_entry = current_boot_entry->next,
+	     offset += sizeof(boot_desc_record)) {
+
+		if (offset >= SECTOR_SIZE) {
+#ifdef	USE_LIBSCHILY
+			comerrno(EX_BAD,
+			"Too many El Torito boot entries\n");
+#else
+			fprintf(stderr,
+			"Too many El Torito boot entries\n");
+			exit(1);
+#endif
+		}
+		fill_boot_desc (&boot_desc_record, current_boot_entry);
+		memcpy(de2->table + offset, &boot_desc_record,
+					sizeof(boot_desc_record));
+	}
+}/* get_torito_desc(... */
+
+static void
+fill_boot_desc(boot_desc_entry, boot_entry)
+	struct eltorito_defaultboot_entry *boot_desc_entry;
+	struct eltorito_boot_entry_info *boot_entry;
+{
+	struct directory_entry *de;	/* Boot file */
+	int             bootmbr;
+	int             i;
+	int             nsectors;
+	int             geosec;
+
+	if (!boot_desc_entry || !boot_entry)
+		return;
+
+	/* now adjust boot catalog lets find boot image first */
+	de = search_tree_file(root, boot_entry->boot_image);
+	if (!de) {
+#ifdef	USE_LIBSCHILY
+		comerrno(EX_BAD, "Uh oh, I cant find the boot image '%s' !\n",
+							boot_entry->boot_image);
+#else
+		fprintf(stderr, "Uh oh, I cant find the boot image '%s' !\n",
+							boot_entry->boot_image);
+		exit(1);
+#endif
+	}
 	/* now make the initial/default entry for boot catalog */
-	memset(&default_desc, 0, sizeof(default_desc));
-	default_desc.boot_id[0] = (char) not_bootable ?
+	memset(boot_desc_entry, 0, sizeof(*boot_desc_entry));
+	boot_desc_entry->boot_id[0] = (char) boot_entry->not_bootable ?
 				EL_TORITO_NOT_BOOTABLE : EL_TORITO_BOOTABLE;
 
 	/* use default BIOS loadpnt */
-	set_721(default_desc.loadseg, load_addr);
+	set_721(boot_desc_entry->loadseg, boot_entry->load_addr);
 
 	/*
 	 * figure out size of boot image in 512-byte sectors.
 	 * However, round up to the nearest integral CD (2048-byte) sector.
 	 * This is only used for no-emulation booting.
 	 */
-	nsectors = load_size ? load_size : ((de->size + 2047) / 2048) * 4;
+	nsectors = boot_entry->load_size ? boot_entry->load_size : ((de->size + 2047) / 2048) * 4;
 	fprintf(stderr, "\nSize of boot image is %d sectors -> ", nsectors);
 
-	if (hard_disk_boot) {
+	if (boot_entry->hard_disk_boot) {
 		/* sanity test hard disk boot image */
-		default_desc.boot_media[0] = EL_TORITO_MEDIA_HD;
+		boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_HD;
 		fprintf(stderr, "Emulating a hard disk\n");
 
 		/* read MBR */
@@ -381,7 +421,7 @@ get_torito_desc(boot_desc)
 #endif
 		}
 		/* find partition type */
-		default_desc.sys_type[0] = PARTITION_UNUSED;
+		boot_desc_entry->sys_type[0] = PARTITION_UNUSED;
 		for (i = 0; i < PARTITION_COUNT; ++i) {
 			int             s_cyl_sec;
 			int             e_cyl_sec;
@@ -392,7 +432,7 @@ get_torito_desc(boot_desc)
 			la_to_u_2_byte(disk_mbr.partition[i].e_cyl_sec);
 
 			if (disk_mbr.partition[i].type != PARTITION_UNUSED) {
-				if (default_desc.sys_type[0] !=
+				if (boot_desc_entry->sys_type[0] !=
 							PARTITION_UNUSED) {
 #ifdef	USE_LIBSCHILY
 					comerrno(EX_BAD,
@@ -405,11 +445,11 @@ get_torito_desc(boot_desc)
 					exit(1);
 #endif
 				}
-				default_desc.sys_type[0] =
+				boot_desc_entry->sys_type[0] =
 						disk_mbr.partition[i].type;
 
-			/* a few simple sanity warnings */
-				if (!not_bootable &&
+				/* a few simple sanity warnings */
+				if (!boot_entry->not_bootable &&
 				    disk_mbr.partition[i].status !=
 							PARTITION_ACTIVE) {
 					fprintf(stderr,
@@ -441,7 +481,7 @@ get_torito_desc(boot_desc)
 #endif
 			}
 		}
-		if (default_desc.sys_type[0] == PARTITION_UNUSED) {
+		if (boot_desc_entry->sys_type[0] == PARTITION_UNUSED) {
 #ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 					"Boot image '%s' has no partitions.\n",
@@ -455,31 +495,31 @@ get_torito_desc(boot_desc)
 		}
 #ifdef DEBUG_TORITO
 		fprintf(stderr, "Partition type %u\n",
-						default_desc.sys_type[0]);
+						boot_desc_entry->sys_type[0]);
 #endif
 	/* load single boot sector, in this case the MBR */
 		nsectors = 1;
 
-	} else if (no_emul_boot) {
+	} else if (boot_entry->no_emul_boot) {
 		/*
 		 * no emulation is a simple image boot of all the sectors
 		 * in the boot image
 		 */
-		default_desc.boot_media[0] = EL_TORITO_MEDIA_NOEMUL;
+		boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_NOEMUL;
 		fprintf(stderr, "No emulation\n");
 
 	} else {
 		/* choose size of emulated floppy based on boot image size */
 		if (nsectors == 2880) {
-			default_desc.boot_media[0] = EL_TORITO_MEDIA_144FLOP;
+			boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_144FLOP;
 			fprintf(stderr, "Emulating a 1.44 meg floppy\n");
 
 		} else if (nsectors == 5760) {
-			default_desc.boot_media[0] = EL_TORITO_MEDIA_288FLOP;
+			boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_288FLOP;
 			fprintf(stderr, "Emulating a 2.88 meg floppy\n");
 
 		} else if (nsectors == 2400) {
-			default_desc.boot_media[0] = EL_TORITO_MEDIA_12FLOP;
+			boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_12FLOP;
 			fprintf(stderr, "Emulating a 1.2 meg floppy\n");
 
 		} else {
@@ -505,17 +545,13 @@ get_torito_desc(boot_desc)
 	fprintf(stderr, "Extent of boot images is %d\n",
 				get_733(de->isorec.extent));
 #endif
-	set_721(default_desc.nsect, (unsigned int) nsectors);
-	set_731(default_desc.bootoff,
+	set_721(boot_desc_entry->nsect, (unsigned int) nsectors);
+	set_731(boot_desc_entry->bootoff,
 		(unsigned int) get_733(de->isorec.extent));
-
-	/* now write it to the virtual boot catalog */
-	memcpy(de2->table, &valid_desc, 32);
-	memcpy(de2->table + 32, &default_desc, 32);
 
 
 	/* If the user has asked for it, patch the boot image */
-	if (boot_info_table) {
+	if (boot_entry->boot_info_table) {
 		int             bootimage;
 		unsigned int    bi_checksum,
 		                total_len;
@@ -586,7 +622,32 @@ get_torito_desc(boot_desc)
 		write(bootimage, &bi_table, sizeof(bi_table));
 		close(bootimage);
 	}
-}/* get_torito_desc(... */
+}/* fill_boot_desc(... */
+
+void
+get_boot_entry()
+{
+	if (current_boot_entry)
+		return;
+
+	current_boot_entry = (struct eltorito_boot_entry_info*)
+			e_malloc(sizeof(struct eltorito_boot_entry_info));
+	memset(current_boot_entry, 0, sizeof(*current_boot_entry));
+
+	if (!first_boot_entry) {
+		first_boot_entry = current_boot_entry;
+		last_boot_entry = current_boot_entry;
+	} else {
+		last_boot_entry->next = current_boot_entry;
+		last_boot_entry = current_boot_entry;
+	}
+}
+
+void
+new_boot_entry()
+{
+	current_boot_entry = NULL;
+}
 
 /*
  * Function to write the EVD for the disc.

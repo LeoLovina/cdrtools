@@ -1,4 +1,4 @@
-/* @(#)mycdrom.h	1.3 00/03/29 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)mycdrom.h	1.4 00/06/15 Copyright 1998,1999 Heiko Eissfeldt */
 #if defined(__linux__)
 # include <linux/cdrom.h>
 #else
@@ -51,13 +51,11 @@ All subcode only
 */
 
 #   endif
-#  else
-#   undef HAVE_IOCTL_INTERFACE
-#  endif
-#  if defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
-#   if !defined CDIOCREADAUDIO
-#    undef HAVE_IOCTL_INTERFACE
-#   else
+#  else /* Sun SVR4 */
+#   if defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
+#    if !defined CDIOCREADAUDIO
+#     undef HAVE_IOCTL_INTERFACE
+#    else
 
 #define CDROM_LBA	CD_LBA_FORMAT
 #define CDROM_MSF	CD_MSF_FORMAT
@@ -109,9 +107,12 @@ All subcode only
 #define cdsc_ind	data->what.position.index_number
 #define cdsc_absaddr	data->what.position.absaddr
 #define cdsc_reladdr	data->what.position.reladdr
+#    endif
+#   else /* *BSD */
+#    undef HAVE_IOCTL_INTERFACE
 #   endif
-#  endif
-# else
+#  endif /* not SUN SVR4 */
+# else /* HAVE_SYS_CDIO_H */
 #  if defined HAVE_SUNDEV_SRREG_H
 #   include <sundev/srreg.h>
 #   if !defined CDROMCDDA

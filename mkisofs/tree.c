@@ -1,7 +1,7 @@
-/* @(#)tree.c	1.52 00/04/27 joerg */
+/* @(#)tree.c	1.53 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)tree.c	1.52 00/04/27 joerg";
+	"@(#)tree.c	1.53 00/05/07 joerg";
 #endif
 /*
  * File tree.c - scan directory  tree and build memory structures for iso9660
@@ -63,6 +63,7 @@ extern char	*strdup	__PR((const char *));
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
+#include <schily.h>
 #endif
 
 #ifdef __SVR4

@@ -1,4 +1,4 @@
-dnl @(#)configure.in	1.5 00/03/29 Copyright 1998 J. Schilling
+dnl @(#)configure.in	1.8 00/06/03 Copyright 1998 J. Schilling
 dnl Process this file with autoconf to produce a configure script.
 AC_REVISION($Revision$)dnl
 
@@ -20,6 +20,7 @@ AC_HEADER_DIRENT
 AC_HEADER_STAT
 AC_HEADER_TIME
 AC_HEADER_SYS_WAIT
+AC_HEADER_SYS_SELECT
 AC_CHECK_HEADERS(varargs.h stdarg.h stdlib.h string.h strings.h unistd.h fcntl.h)
 AC_CHECK_HEADERS(getopt.h)
 AC_CHECK_HEADERS(limits.h)
@@ -32,7 +33,7 @@ AC_CHECK_HEADERS(wait.h sys/resource.h sys/procfs.h)
 AC_CHECK_HEADERS(sys/utsname.h sys/priocntl.h sys/rtpriocntl.h)
 AC_CHECK_HEADERS(sys/mtio.h sys/mman.h linux/pg.h camlib.h)
 AC_CHECK_HEADERS(sys/dkio.h sys/dklabel.h sun/dkio.h sun/dklabel.h)
-AC_CHECK_HEADERS(poll.h sys/poll.h)
+AC_CHECK_HEADERS(poll.h sys/poll.h sys/select.h)
 AC_CHECK_HEADERS(ieeefp.h fp.h)
 AC_CHECK_HEADERS(values.h float.h)
 
@@ -57,6 +58,7 @@ AC_TYPE_SIGNAL
 AC_TYPE_GETGROUPS
 AC_TYPE_LONGLONG
 AC_TYPE_PROTOTYPES
+AC_USER_MALLOC
 
 AC_TYPE_UID_T
 AC_TYPE_SIZE_T
@@ -109,11 +111,15 @@ AC_FUNC_QUOTAIOCTL
 AC_FUNC_UNAME
 AC_FUNC_VFORK
 AC_FUNC_SYS_SIGLIST
+AC_FUNC_BSD_GETPGRP
+AC_FUNC_BSD_SETPGRP
 AC_CHECK_FUNCS(brk sbrk strerror nice memmove flock fchdir statvfs quotactl)
 AC_CHECK_FUNCS(getcwd shmat semget)
 AC_CHECK_FUNCS(lstat readlink link rename mkfifo mknod)
 AC_CHECK_FUNCS(setreuid setresuid seteuid setuid)
 AC_CHECK_FUNCS(setregid setresgid setegid setgid)
+AC_CHECK_FUNCS(getpgid setpgid)
+AC_CHECK_FUNCS(getpgrp setpgrp)
 AC_CHECK_FUNCS(sync fsync fork wait4 waitid waitpid getrusage)
 AC_CHECK_FUNCS(gethostid gethostname getdomainname getpagesize)
 AC_CHECK_FUNCS(poll select lchown utimes)
@@ -128,7 +134,7 @@ AC_CHECK_FUNCS(seekdir)
 AC_CHECK_FUNCS(strsignal str2sig sig2str)
 AC_CHECK_FUNCS(killpg sigrelse)
 AC_CHECK_FUNCS(nanosleep usleep)
-AC_CHECK_FUNCS(putenv setenv strcasecmp)
+AC_CHECK_FUNCS(putenv setenv snprintf strcasecmp)
 
 AC_DEFINE_UNQUOTED_STRING(HOST_ALIAS,$host_alias)
 AC_DEFINE_UNQUOTED_STRING(HOST_SUB,$host)

@@ -1,4 +1,4 @@
-/* @(#)movebytes.c	1.11 00/04/12 Copyright 1985 J. Schilling */
+/* @(#)movebytes.c	1.12 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	move data
  *
@@ -22,6 +22,7 @@
 
 #include <standard.h>
 #include <align.h>
+#include <schily.h>
 
 #define	DO8(a)	a;a;a;a;a;a;a;a;
 

@@ -1,7 +1,7 @@
-/* @(#)toc.c	1.11 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)toc.c	1.14 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)toc.c	1.11 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)toc.c	1.14 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /*
@@ -27,15 +27,14 @@ static char     sccsid[] =
 #include "config.h"
 #include <stdio.h>
 #include <standard.h>
-#include <stdlib.h>
+#include <stdxlib.h>
 #include <strdefs.h>
-#if defined (HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
 #include <sys/types.h>
-#include <unistd.h>		/* sleep */
-#endif
+#include <unixstd.h>		/* sleep */
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <schily.h>
 #include <sys/ioctl.h>
 
 #define CD_TEXT
@@ -217,7 +216,22 @@ long GetLastSectorOnCd( p_track )
     if ( (g_toc [i-1].bFlags & CDROM_DATA_TRACK) != 0) break;
     LastSec = GetEndSector ( g_toc [i-1].bTrack ) + 1;
   }
-  return LastSec;
+  return (global.illleadout_cd && global.reads_illleadout) ? 150+(99*60+59)*75+74 : LastSec;
+}
+
+static int can_read_illleadout __PR((void));
+
+static int can_read_illleadout()
+{
+	SCSI *scgp = get_scsi_p();
+
+	UINT4 buffer [CD_FRAMESIZE_RAW/4];
+	if (global.illleadout_cd == 0) return 0;
+
+	scgp->silent++;
+	global.reads_illleadout = ReadCdRom(scgp, buffer, g_toc[cdtracks].dwStartSector, 1);
+	scgp->silent--;
+	return global.reads_illleadout;
 }
 
 int GetTrack( sector )
@@ -298,7 +312,7 @@ int   handle_cdtext ()
 				count_fails++;
 			}
 		}
-		have_CD_text = count_fails < 3;
+		have_CD_text = len > 4 && count_fails < 3;
 	}
 
 #else
@@ -1174,19 +1188,31 @@ unsigned FixupTOC(no_tracks)
     unsigned mult_off;
     unsigned offset = 0;
 
-    /* special handling of cactus data shield pseudo-red-book-audio cds */
-    if (cdtracks > 0
-      && g_toc[cdtracks].dwStartSector < g_toc[cdtracks-1].dwStartSector) {
-	if (global.quiet == 0) {
-	  fprintf(stderr, "Cactus data shield copy protection detected!\n");
-	  fprintf(stderr, "Audio extraction will probably not work...\n");
-	  fprintf(stderr, "Switching index scan and ISRC scan off!\n");
-	}
-  	global.verbose &= ~(SHOW_ISRC | SHOW_INDICES);
-    }
-
     /* get the multisession offset in sectors */
     mult_off = is_cd_extra(no_tracks);
+
+#if 0
+    /* special test case */
+    g_toc[0].dwStartSector = 0; 
+    g_toc[1].dwStartSector = 14505; 
+    g_toc[2].dwStartSector = 30882; 
+    g_toc[3].dwStartSector = 52345; 
+    g_toc[4].dwStartSector = 68675; 
+    g_toc[5].dwStartSector = 92932; 
+    g_toc[6].dwStartSector = 104837; 
+    g_toc[7].dwStartSector = 119630; 
+    g_toc[8].dwStartSector = 137785; 
+    g_toc[9].dwStartSector = 160802; 
+    g_toc[10].dwStartSector = 180717; 
+    g_toc[11].dwStartSector = 180720; 
+    g_toc[12].dwStartSector = 180722; 
+    g_toc[13].dwStartSector = 180725; 
+    g_toc[14].dwStartSector = 180727; 
+    g_toc[15].dwStartSector = 180730; 
+    g_toc[16].dwStartSector = 180732; 
+    g_toc[17].dwStartSector = 198552; 
+    cdtracks = 17;
+#endif
 
     /* if the first track address had been the victim of an underflow,
      * set it to zero.
@@ -1848,9 +1874,19 @@ void DisplayToc ( )
   unsigned frames;
   int count_audio_trks;
 
+  /* special handling of illleadout data shield pseudo-red-book-audio cds */
+  if (cdtracks > 0
+      && g_toc[cdtracks].dwStartSector < g_toc[cdtracks-1].dwStartSector) {
+	global.illleadout_cd = 1;
+	can_read_illleadout();
+  }
+
 
   /* get total time */
-  dw = (unsigned long) g_toc[cdtracks].dwStartSector + 150;
+  if (global.illleadout_cd == 0)
+	dw = (unsigned long) g_toc[cdtracks].dwStartSector + 150;
+  else
+	dw = (unsigned long) g_toc[cdtracks-1].dwStartSector + 150;
   mins	       =       dw / ( 60*75 );
   secnds       =     ( dw % ( 60*75 ) ) / 75;
   frames	   =     ( dw %      75   );
@@ -1899,9 +1935,15 @@ void DisplayToc ( )
       }
       i++;
     }
-    fprintf ( stderr, 
+    if (global.illleadout_cd != 0 && have_CD_extra == 0) {
+      fprintf ( stderr, 
+	     "Table of Contents: total tracks:%u, (total time more than %u:%02u.%02u)\n",
+	     cdtracks, mins, secnds, frames );
+    } else {
+      fprintf ( stderr, 
 	     "Table of Contents: total tracks:%u, (total time %u:%02u.%02u)\n",
 	     cdtracks, mins, secnds, frames );
+    }
 
     for ( i = 0, ii = 0; i < cdtracks; i++ ) {
       unsigned trackbeg;
@@ -1912,8 +1954,8 @@ void DisplayToc ( )
 	dw = (unsigned long) (g_toc[i+1].dwStartSector - trackbeg /* + 150 - 150 */);
 	mins         =       dw / ( 60*75 );
 	secnds       =     ( dw % ( 60*75 )) / 75;
-    frames	     =     ( dw %      75   );
-    centi_secnds = (4* frames +1 ) /3; /* convert from 1/75 to 1/100 */
+	frames	     =     ( dw %      75   );
+	centi_secnds = (4* frames +1 ) /3; /* convert from 1/75 to 1/100 */
 	if ( (g_toc [i].bFlags & CDROM_DATA_TRACK) != 0 ) {
 		fprintf ( stderr, " %2u.[%2u:%02u.%02u]",
 			g_toc [i].bTrack,mins,secnds,frames );
@@ -2023,7 +2065,11 @@ void DisplayToc ( )
 
     count_audio_trks = 0;
     i = 0;
-    fprintf( stderr, "Tracks:%u %u:%02u.%02u\n", cdtracks, mins, secnds, frames );
+    if (global.illleadout_cd != 0 && have_CD_extra == 0) {
+      fprintf( stderr, "Tracks:%u > %u:%02u.%02u\n", cdtracks, mins, secnds, frames );
+    } else {
+      fprintf( stderr, "Tracks:%u %u:%02u.%02u\n", cdtracks, mins, secnds, frames );
+    }
     fprintf( stderr, "CDINDEX discid: %s\n", global.cdindex_id);
     fprintf( stderr, "CDDB discid: 0x%08lx\n", (unsigned long) global.cddb_id);
 
@@ -2089,6 +2135,39 @@ void DisplayToc ( )
       }
       i++;
     }
+  }
+  if (global.illleadout_cd != 0) {
+	if (global.quiet == 0) {
+		fprintf(stderr, "CD with illegal leadout position detected!\n");
+	}
+
+	if (global.reads_illleadout == 0) {
+		int cdtr = GetTrack(g_toc[cdtracks].dwStartSector);
+		g_toc[cdtr].dwStartSector = g_toc[cdtracks].dwStartSector;
+		cdtracks = cdtr;
+
+    		if (global.quiet == 0) {
+			fprintf(stderr,
+			"The cdrom drive firmware does not permit access beyond the leadout position!\n");
+		}
+		if (global.verbose & (SHOW_ISRC | SHOW_INDICES)) {
+  			global.verbose &= ~(SHOW_ISRC | SHOW_INDICES);
+			fprintf(stderr, "Switching index scan and ISRC scan off!\n");
+		}
+
+    		if (global.quiet == 0) {
+			fprintf(stderr,
+			"Audio extraction will be limited to track %d with maximal %d sectors...\n",
+			g_toc[cdtracks-1].bTrack,
+			g_toc[cdtracks].dwStartSector);
+		}
+    	} else {
+		g_toc[cdtracks].dwStartSector = 150 + (99*60+59)*75 + 74;
+    		if (global.quiet == 0) {
+			fprintf(stderr,
+			"Restrictions apply, since the size of the last track is unknown!\n");
+		}
+	}
   }
 }
 
@@ -2240,6 +2319,12 @@ void Read_MCN_ISRC()
           }
 	  fputs("", stderr);
 #endif
+#if 0
+	
+	cp[0] = cp[1] = cp[2] = cp[3] = cp[4] = 0xff;
+	cp[5] = cp[6] = cp[7] = cp[8] = cp[9] = cp[10] = cp[11] = 0xff;
+	cp[12] = cp[13] = cp[14] = 0;
+#endif
 	  /* unified format guesser:
 	   * there are 60 bits and 15 bytes available.
 	   * 5 * 6bit-items + two zero fill bits + 7 * 4bit-items
@@ -2273,15 +2358,19 @@ void Read_MCN_ISRC()
 	  }
       
 	  /* If not yet in ASCII format, do the conversion */
-	  if (cp[0] != '0' && cp[1] != '0' &&
-	      (!isupper(cp[0]) || !isupper(cp[1]))) {
+	  if (cp[0] < '0' && cp[1] < '0') {
 	    /* coding table for International Standard Recording Code */
 	    static char bin2ISRC[] = 
-	      {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-	         0,0,0,0,0,0,'@',
-	       'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-	       'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-	       'W', 'X', 'Y', 'Z'
+	      {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',	/* 10 */
+	       ':', ';', '<', '=', '>', '?', '@',			/* 17 */
+	       'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',	/* 28 */
+	       'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',	/* 39 */
+	       'W', 'X', 'Y', 'Z',					/* 43 */
+#if 1
+	       '[', '\\', ']', '^', '_', '`',				/* 49 */
+	       'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',	/* 60 */
+	       'l', 'm', 'n', 'o'					/* 64 */
+#endif
 	      };
 	
 	    /* build 6-bit vector of coded values */
@@ -2296,10 +2385,53 @@ void Read_MCN_ISRC()
 	          (cp[5] << 6) +
 	          (cp[6] << 2) +
 	          (cp[7] >> 2);
+
+	    if ((cp[7] & 3) == 3) {
+		if (global.verbose) {
+		    fprintf(stderr, "Recorder-ID encountered: ");
+		    for (bits = 0; bits < 30; bits +=6) {
+		        int binval = (ind & (ULONG_C(0x3f) << (24-bits)))
+				      >> (24-bits);
+			if ((binval < sizeof(bin2ISRC)) &&
+				(binval <= 9 || binval >= 16)) {
+		      		fprintf(stderr, "%X", bin2ISRC[binval]);
+			}
+		    }
+		    fprintf(stderr, "%.1X%.1X%.1X%.1X%.1X%.1X%.1X",
+			subq_tr->track_isrc [8] & 0x0f,
+			subq_tr->track_isrc [9] & 0x0f,
+			subq_tr->track_isrc [10] & 0x0f,
+			subq_tr->track_isrc [11] & 0x0f,
+			subq_tr->track_isrc [12] & 0x0f,
+			subq_tr->track_isrc [13] & 0x0f,
+			subq_tr->track_isrc [14] & 0x0f
+		    ); 
+		    fprintf(stderr, "\n");
+		}
+		continue;
+	    }
+	    if ((cp[7] & 3) > 0) {
+		fprintf(stderr, "unknown mode 3 entry C1=0x%02x, C2=0x%02x\n",
+			(cp[7] >> 1) & 1, cp[7] & 1);
+		continue;
+	    }
 	  
 	    /* decode ISRC due to IEC 908 */
 	    for (bits = 0; bits < 30; bits +=6) {
 	      int binval = (ind & ((unsigned long) 0x3fL << (24L-bits))) >> (24L-bits);
+	      if ((binval >= sizeof(bin2ISRC)) ||
+		  (binval > 9 && binval < 16)) {
+		/* Illegal ISRC, dump and skip */
+		int y;
+		
+     		g_toc[i].ISRC[0] = '\0';
+		fprintf(stderr, "\nIllegal ISRC for track %d, skipped: ", i+1);
+		for (y = 0; y < 15; y++) {
+			fprintf(stderr, "%02x ", cp[y]);
+		}
+		fputs("\n", stderr);
+		goto next_track;
+	      }
 	      *p++ = bin2ISRC[binval];
 	  
 	      /* insert a dash after two country characters for legibility */
@@ -2309,17 +2441,34 @@ void Read_MCN_ISRC()
 	  
 	    /* format year and serial number */
 	    sprintf ((char *)p, "-%.1X%.1X-%.1X%.1X%.1X%.1X%.1X",
-		   subq_tr->track_isrc [8],
-		   subq_tr->track_isrc [9],
-		   subq_tr->track_isrc [10],
-		   subq_tr->track_isrc [11],
-		   subq_tr->track_isrc [12],
-		   subq_tr->track_isrc [13],
-		   subq_tr->track_isrc [14]
+		   subq_tr->track_isrc [8] & 0x0f,
+		   subq_tr->track_isrc [9] & 0x0f,
+		   subq_tr->track_isrc [10] & 0x0f,
+		   subq_tr->track_isrc [11] & 0x0f,
+		   subq_tr->track_isrc [12] & 0x0f,
+		   subq_tr->track_isrc [13] & 0x0f,
+		   subq_tr->track_isrc [14] & 0x0f
 		   ); 
 	  } else {
-	    /* It is really in ASCII, surprise */
+	    /* It might be in ASCII, surprise */
 	    int ii;
+	    for (ii = 0; ii < 12; ii++) {
+		if (cp[ii] < '0' || cp[ii] > 'Z') {
+			break;
+		}
+	    }
+	    if (ii != 12) {
+		int y;
+		
+     		g_toc[i].ISRC[0] = '\0';
+		fprintf(stderr, "\nIllegal ISRC for track %d, skipped: ", i+1);
+		for (y = 0; y < 15; y++) {
+			fprintf(stderr, "%02x ", cp[y]);
+		}
+		fputs("\n", stderr);
+		goto next_track;
+	    }
+
 	    for (ii = 0; ii < 12; ii++) {
 	      if ((ii == 2 || ii == 5 || ii == 7) && cp[ii] != ' ')
 	        *p++ = '-';
@@ -2339,9 +2488,11 @@ void Read_MCN_ISRC()
         fprintf (stderr, "\rT: %2d ISRC: %15.15s\n", i+1, g_toc[i].ISRC);
         fflush(stderr); 
       }
-    }
+next_track:
+	;
+    } /* for all tracks */
   fputs("\n", stderr);
-  }
+  } /* if SHOW_ISRC */
 }
 
 
@@ -2623,7 +2774,11 @@ unsigned ScanIndices( track, cd_index, bulk )
     if ( global.verbose & SHOW_INDICES ) { 
 	fprintf( stderr, "\rindex scan: %d...", i ); 
 	fflush (stderr);
+	if (global.illleadout_cd && global.reads_illleadout && i == endtrack) {
+		fprintf(stderr, "skipped due to unknown length\n");
+	}
     }
+    if (global.illleadout_cd && global.reads_illleadout && i == endtrack) continue;
     StartSector = GetStartSector(i);
     LastIndex = ScanBackwardFrom(GetEndSector(i), StartSector, &n_0_transition, i);
 

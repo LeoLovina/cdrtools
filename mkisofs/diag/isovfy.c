@@ -1,7 +1,7 @@
-/* @(#)isovfy.c	1.13 99/12/27 joerg */
+/* @(#)isovfy.c	1.14 00/05/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isovfy.c	1.13 99/12/27 joerg";
+	"@(#)isovfy.c	1.14 00/05/07 joerg";
 #endif
 /*
  * File isovfy.c - verify consistency of iso9660 filesystem.
@@ -34,6 +34,7 @@ static	char sccsid[] =
 #include <stdio.h>
 #include <standard.h>
 #include <signal.h>
+#include <schily.h>
 
 FILE * infile;
 int blocksize;

@@ -2,10 +2,10 @@
 XXX
 SIZEOF testen !!!
 */
-/* @(#)scsi_cdr.c	1.89 00/04/26 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.93 00/07/02 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.89 00/04/26 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.93 00/07/02 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -49,6 +49,8 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <btorder.h>
 #include <intcvt.h>
+#include <schily.h>
+
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
@@ -477,7 +479,7 @@ scsi_get_speed(scgp, readspeedp, writespeedp)
 
 	val = a_to_u_2_byte(mp->cur_read_speed);
 	if (readspeedp)
-		*writespeedp = val;
+		*readspeedp = val;
 
 	val = a_to_u_2_byte(mp->cur_write_speed);
 	if (writespeedp)
@@ -1190,6 +1192,10 @@ mode_sense_sg0(scgp, dp, cnt, page, pcf)
 		return (-1);
 
 	amt = cnt - scsigetresid(scgp);
+/*
+ * For tests: Solaris 8 & LG CD-ROM always returns resid == amt
+ */
+/*	amt = cnt;*/
 	if (amt > 4)
 		movebytes(&xmode[8], &dp[4], amt-4);
 	len = a_to_u_2_byte(xmode);
@@ -1619,11 +1625,11 @@ read_B0(scgp, isbcd, b0p, lop)
 		if (isbcd) {
 			l = msf_to_lba(from_bcd(tp->amin),
 				from_bcd(tp->asec),
-				from_bcd(tp->aframe));
+				from_bcd(tp->aframe), TRUE);
 		} else {
 			l = msf_to_lba(tp->amin,
 				tp->asec,
-				tp->aframe);
+				tp->aframe, TRUE);
 		}
 		if (b0p)
 			*b0p = l;
@@ -1634,11 +1640,11 @@ read_B0(scgp, isbcd, b0p, lop)
 		if (isbcd) {
 			l = msf_to_lba(from_bcd(tp->pmin),
 				from_bcd(tp->psec),
-				from_bcd(tp->pframe));
+				from_bcd(tp->pframe), TRUE);
 		} else {
 			l = msf_to_lba(tp->pmin,
 				tp->psec,
-				tp->pframe);
+				tp->pframe, TRUE);
 		}
 
 		if (scgp->verbose)
@@ -2496,6 +2502,13 @@ mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
 	BOOL	*cdwrwp;
 	BOOL	*dvdp;
 {
+	BOOL	isdvd;				/* Any DVD drive	*/
+	BOOL	isdvd_wr;			/* DVD writer (R / RAM)	*/
+	BOOL	iscd_wr;			/* CD  writer		*/
+
+	iscd_wr = (mp->cd_r_write != 0) ||	/* SCSI-3/mmc CD-R	*/
+		  (mp->cd_rw_write != 0);	/* SCSI-3/mmc CD-RW	*/
+
 	if (cdrrp)
 		*cdrrp = (mp->cd_r_read != 0);	/* SCSI-3/mmc CD	*/
 	if (cdwrp)
@@ -2505,10 +2518,20 @@ mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
 		*cdrrwp = (mp->cd_rw_read != 0);/* SCSI-3/mmc CD	*/
 	if (cdwrwp)
 		*cdwrwp = (mp->cd_rw_write != 0);/* SCSI-3/mmc CD-RW	*/
-	if (dvdp) {
-		*dvdp = 			/* SCSI-3/mmc2 DVD 	*/
+
+	isdvd =					/* SCSI-3/mmc2 DVD 	*/
 		(mp->dvd_ram_read + mp->dvd_r_read  + mp->dvd_rom_read +
 		 mp->dvd_ram_write + mp->dvd_r_write) != 0;
+
+	isdvd_wr =				/* SCSI-3/mmc2 DVD 	*/
+		(mp->dvd_ram_write + mp->dvd_r_write) != 0;
+
+	if (dvdp) {
+		*dvdp = FALSE;
+		if (isdvd)
+			*dvdp = TRUE;
+		if (!isdvd_wr)
+			*dvdp = FALSE;
 	}
 }
 
@@ -2607,6 +2630,7 @@ static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 	DOES("read R-W subcode information", mp->rw_supported);
 	if (mp->rw_supported) 
 		DOES("return R-W subcode de-interleaved and error-corrected", mp->rw_deint_corr);
+	DOES("read raw P-W subcode data from lead in", mp->pw_in_lead_in);
 	DOES("return CD media catalog number", mp->UPC);
 	DOES("return CD ISRC information", mp->ISRC);
 	DOES("support C2 error pointers", mp->c2_pointers);
@@ -2632,6 +2656,7 @@ static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 	DOES("lock media on power up via prevent jumper", mp->prevent_jumper);
 	DOES("allow media to be locked in the drive via PREVENT/ALLOW command", mp->lock);
 	IS("currently in a media-locked state", mp->lock_state);
+	DOES("support changing side of disk", mp->side_change);
 	DOES("have load-empty-slot-in-changer feature", mp->sw_slot_sel);
 	DOES("support Individual Disk Present feature", mp->disk_present_rep);
 	printf("\n");

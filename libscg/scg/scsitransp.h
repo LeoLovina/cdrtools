@@ -1,4 +1,4 @@
-/* @(#)scsitransp.h	1.26 99/11/12 Copyright 1995 J. Schilling */
+/* @(#)scsitransp.h	1.30 00/07/01 Copyright 1995 J. Schilling */
 /*
  *	Definitions for commands that use functions from scsitransp.c
  *
@@ -33,6 +33,7 @@ typedef struct {
 	int	debug;		/* Debug value for SCSI library		*/
 	int	silent;		/* Be silent if value > 0		*/
 	int	verbose;	/* Be verbose if value > 0		*/
+	int	overbose;	/* Be verbose in open() if value > 0	*/
 	int	disre_disable;
 	int	deftimeout;
 	int	noparity;	/* Do not use SCSI parity fo next I/O	*/
@@ -43,6 +44,8 @@ typedef struct {
 	BOOL	running;
 	int	error;		/* libscg error number			*/
 
+	long	maxdma;		/* Max DMA limit for this open instance	*/
+	long	maxbuf;		/* Max DMA buffer limit for this inst.	*/
 	struct timeval	*cmdstart;
 	struct timeval	*cmdstop;
 	const char	**nonstderrs;
@@ -114,7 +117,7 @@ extern	void	scsiprintdev		__PR((struct scsi_inquiry *));
  */
 extern	const char	*scsisensemsg	__PR((int, int, int,
 						const char **, char *));
-#ifdef	_SCGIO_H
+#ifdef	_SCG_SCSISENSE_H
 extern	void		scsierrmsg	__PR((SCSI *scgp, struct scsi_sense *,
 						struct scsi_status *,
 						int, const char **));
@@ -123,7 +126,7 @@ extern	void		scsierrmsg	__PR((SCSI *scgp, struct scsi_sense *,
 /*
  * From scsiopen.c:
  */
-extern	SCSI	*open_scsi	__PR((char *scsidev, char *errs, int slen, int debug, int be_verbose));
+extern	SCSI	*open_scsi	__PR((char *scsidev, char *errs, int slen, int odebug, int be_verbose));
 extern	int	close_scsi	__PR((SCSI * scgp));
 extern	void	scsi_settimeout	__PR((SCSI * scgp, int timeout));
 extern	SCSI	*scsi_smalloc	__PR((void));

@@ -1,4 +1,4 @@
-/* @(#)xmconfig.h	1.26 00/01/14 Copyright 1995 J. Schilling */
+/* @(#)xmconfig.h	1.27 00/05/28 Copyright 1995 J. Schilling */
 /*
  *	Manual generated static definitions for machine configuration
  *
@@ -1243,7 +1243,7 @@ extern "C" {
 /*#	define	HAVE_STREAMS	*/
 /*#	define	HAVE_STRPTYS	*/
 /*#	define	HAVE_POLL   */
-/*#	define	HAVE_SELECT */
+#	define	HAVE_SELECT
 /*#	define	HAVE_TIRPC  */
 /*#	define	GID_T		gid_t	*/
 #	define	USLEEPRETURN_T	uint

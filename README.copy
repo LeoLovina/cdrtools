@@ -29,7 +29,7 @@ If you want to copy such a CD directly with cdrecord, you may call:
 But this may fail if the master gives read errors. To copy such a CD to a file
 you may use the program 'readcd' from this package
 
-Call 'readcd [target] [lun] [scsibusno]' and select funtion 11.
+Call 'readcd [target] [lun] [scsibusno]' and select function 11.
 Or call readcd -help to get alternate usage.
 To prevent readcd from reading the run-out sectors, reduce the 
 number of sectors to copy by 2.

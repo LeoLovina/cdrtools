@@ -1,7 +1,7 @@
-/* @(#)audiosize.c	1.13 99/10/17 Copyright 1998 J. Schilling */
+/* @(#)audiosize.c	1.14 00/05/07 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)audiosize.c	1.13 99/10/17 Copyright 1998 J. Schilling";
+	"@(#)audiosize.c	1.14 00/05/07 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -33,6 +33,7 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <strdefs.h>
 #include <intcvt.h>
+#include <schily.h>
 
 #include <scg/scgcmd.h>
 #include "auheader.h"

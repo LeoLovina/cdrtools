@@ -1,7 +1,7 @@
-/* @(#)defaults.c	1.3 00/04/16 Copyright 1998 J. Schilling */
+/* @(#)defaults.c	1.5 00/06/02 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)defaults.c	1.3 00/04/16 Copyright 1998 J. Schilling";
+	"@(#)defaults.c	1.5 00/06/02 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -28,8 +28,8 @@ static	char sccsid[] =
 #include <stdio.h>
 #include <standard.h>
 #include <deflts.h>
-
 #include <utypes.h>
+#include <schily.h>
 #include "cdrecord.h"
 
 EXPORT	void	cdr_defaults	__PR((char **devp, int *speedp, long *fsp));
@@ -100,7 +100,7 @@ cdr_xdefaults(devp, speedp, fsp)
 	int	*speedp;
 	long	*fsp;
 {
-	char	dname[64];
+	char	dname[256];
 	char	*p = *devp;
 	char	*x = ",:/@";
 
@@ -109,7 +109,7 @@ cdr_xdefaults(devp, speedp, fsp)
 			return;
 		x++;
 	}
-	sprintf(dname, "%s=", p);
+	js_snprintf(dname, sizeof(dname), "%s=", p);
 	if (defltopen("/etc/default/cdrecord") != 0)
 		return;
 

@@ -1,7 +1,7 @@
-/* @(#)boot.c	1.5 00/03/19 Copyright 1999 J. Schilling */
+/* @(#)boot.c	1.6 00/05/07 Copyright 1999 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)boot.c	1.5 00/03/19 Copyright 1999 J. Schilling";
+	"@(#)boot.c	1.6 00/05/07 Copyright 1999 J. Schilling";
 #endif
 /*
  *	Support for generic boot (sector 0..16)
@@ -32,6 +32,7 @@ static	char sccsid[] =
 #include <fctldefs.h>
 #include <utypes.h>
 #include <intcvt.h>
+#include <schily.h>
 #include "sunlabel.h"
 
 LOCAL struct sun_label cd_label;

@@ -1,7 +1,7 @@
-/* @(#)scsi-os2.c	1.12 99/11/27 Copyright 1998 J. Schilling, C. Wohlgemuth */
+/* @(#)scsi-os2.c	1.14 00/07/01 Copyright 1998 J. Schilling, C. Wohlgemuth */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-os2.c	1.12 99/11/27 Copyright 1998 J. Schilling, C. Wohlgemuth";
+	"@(#)scsi-os2.c	1.14 00/07/01 Copyright 1998 J. Schilling, C. Wohlgemuth";
 #endif
 /*
  *	Interface for the OS/2 ASPI-Router ASPIROUT.SYS ((c) D. Dorau).
@@ -49,7 +49,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.12";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.14";	/* The version for this transport*/
 
 #define FILE_OPEN			0x0001
 #define OPEN_SHARE_DENYREADWRITE	0x0010
@@ -177,8 +177,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	long maxdma = MAX_DMA_OS2;
 	return (maxdma);
@@ -191,7 +192,7 @@ scsi_getbuf(scgp, amt)
 {
 	ULONG rc;
 
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 #ifdef DEBUG
 	printf("scsi_getbuf: %ld bytes\n", amt);

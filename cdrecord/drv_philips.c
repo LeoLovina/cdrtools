@@ -1,7 +1,7 @@
-/* @(#)drv_philips.c	1.36 00/04/16 Copyright 1997 J. Schilling */
+/* @(#)drv_philips.c	1.37 00/05/07 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_philips.c	1.36 00/04/16 Copyright 1997 J. Schilling";
+	"@(#)drv_philips.c	1.37 00/05/07 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -30,6 +30,7 @@ static	char sccsid[] =
 #include <stdio.h>
 #include <standard.h>
 #include <intcvt.h>
+#include <schily.h>
 
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>

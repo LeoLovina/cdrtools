@@ -1,7 +1,7 @@
-/* @(#)scsi-osf.c	1.12 99/10/15 Copyright 1998 J. Schilling */
+/* @(#)scsi-osf.c	1.14 00/07/01 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-osf.c	1.12 99/10/15 Copyright 1998 J. Schilling";
+	"@(#)scsi-osf.c	1.14 00/07/01 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for Digital UNIX (OSF/1 generic SCSI implementation (/dev/cam).
@@ -46,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.12";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.14";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -233,8 +233,9 @@ scsi_checktgt(scgp, f, busno, tgt, tlun)
 
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	long maxdma = MAX_DMA_OSF_CAM;
 
@@ -246,7 +247,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

@@ -1,7 +1,7 @@
-/* @(#)ringbuff.c	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)ringbuff.c	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)ringbuff.c	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)ringbuff.c	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #include "config.h"
@@ -40,6 +40,7 @@ volatile unsigned long *total_segments_written;
 volatile int *child_waits;
 volatile int *parent_waits;
 volatile int *in_lendian;
+volatile int *eorecording;
 
 static myringbuff *previous_read_buffer;
 static unsigned int total_buffers;

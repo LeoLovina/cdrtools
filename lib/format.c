@@ -32,6 +32,7 @@
 extern	char	*gcvt __PR((double, int, char *));
 #endif
 #include <standard.h>
+#include <schily.h>
 
 /*
  * Some CPU's (e.g. PDP-11) cannot do logical shifts.

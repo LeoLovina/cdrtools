@@ -1,0 +1,20 @@
+Unfortunately, Apple does not deliver a consistent Mac OS-X system
+
+The file <bsd/dev/scsireg.h> tries to include <kern/queue.h> which cannot
+be found.
+
+To be able to compile, I suggest to create a symlink:
+
+System/Library/Frameworks/System.framework/Versions/B/Headers/kern -> kernserv
+
+To do this, chdir to:
+
+System/Library/Frameworks/System.framework/Versions/B/Headers/
+
+and call 
+
+ln -s kernserv kern
+
+as root.
+
+

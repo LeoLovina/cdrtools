@@ -1,4 +1,4 @@
-/* @(#)global.h	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)global.h	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /* Global Variables */
 
 #ifdef  MD5_SIGNATURES
@@ -60,6 +60,8 @@ typedef struct global {
   int target; /* SCSI Id to be used */
   int lun;    /* SCSI Lun to be used */
   UINT4 cddb_id;
+  int illleadout_cd;
+  int reads_illleadout;
   unsigned char *cdindex_id;
   unsigned char *creator;
   unsigned char *copyright_message;

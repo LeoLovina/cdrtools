@@ -1,4 +1,4 @@
-/* @(#)scsireg.h	1.19 99/10/17 Copyright 1987 J. Schilling */
+/* @(#)scsireg.h	1.20 00/05/28 Copyright 1987 J. Schilling */
 /*
  *	usefull definitions for dealing with CCS SCSI - devices
  *
@@ -894,7 +894,9 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	sep_chan_mute	: 1;	/* Mute controls each channel separat*/
 	Ucbit	disk_present_rep: 1;	/* Changer supports disk present rep */
 	Ucbit	sw_slot_sel	: 1;	/* Load empty slot in changer	     */
-	Ucbit	res_7		: 4;	/* Reserved			     */
+	Ucbit	side_change	: 1;	/* Side change capable		     */
+	Ucbit	pw_in_lead_in	: 1;	/* Reads raw P-W sucode from lead in */
+	Ucbit	res_7		: 2;	/* Reserved			     */
 	u_char	max_read_speed[2];	/* Max. read speed in KB/s	     */
 	u_char	num_vol_levels[2];	/* # of supported volume levels	     */
 	u_char	buffer_size[2];		/* Buffer size for the data in KB    */
@@ -951,7 +953,9 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	prevent_jumper	: 1;	/* State of prev/allow jumper 0=pres */
 	Ucbit	lock_state	: 1;	/* Lock state 0=unlocked 1=locked    */
 	Ucbit	lock		: 1;	/* PREVENT/ALLOW may lock media	     */
-	Ucbit	res_7		: 4;	/* Reserved			     */
+	Ucbit	res_7		: 2;	/* Reserved			     */
+	Ucbit	pw_in_lead_in	: 1;	/* Reads raw P-W sucode from lead in */
+	Ucbit	side_change	: 1;	/* Side change capable		     */
 	Ucbit	sw_slot_sel	: 1;	/* Load empty slot in changer	     */
 	Ucbit	disk_present_rep: 1;	/* Changer supports disk present rep */
 	Ucbit	sep_chan_mute	: 1;	/* Mute controls each channel separat*/

@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.32 00/03/25 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.33 00/05/28 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -87,6 +87,11 @@ extern "C" {
  * Some magic that cannot (yet) be figured out with autoconf.
  */
 
+#if defined(sun3) || defined(mc68000) || defined(mc68020)
+#	ifndef	HAVE_SCANSTACK
+#	define	HAVE_SCANSTACK
+#	endif
+#endif
 #ifdef sparc
 #	ifndef	HAVE_LDSTUB
 #	define	HAVE_LDSTUB
@@ -102,6 +107,13 @@ extern "C" {
 #	ifndef	HAVE_SCANSTACK
 #	define	HAVE_SCANSTACK
 #	endif
+#endif
+
+/*
+ * Use of SCANSTACK is disabled by default
+ */
+#ifndef	USE_SCANSTACK
+#	undef	HAVE_SCANSTACK
 #endif
 
 #if	defined(SOL2) || defined(SOL2) || defined(S5R4) || defined(__S5R4) \

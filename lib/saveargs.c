@@ -1,4 +1,4 @@
-/* @(#)saveargs.c	1.8 00/04/12 Copyright 1995 J. Schilling */
+/* @(#)saveargs.c	1.9 00/05/07 Copyright 1995 J. Schilling */
 /* save argc, argv for command error printing routines */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -21,6 +21,7 @@
 #include <strdefs.h>
 #include <stdxlib.h>
 #include <avoffset.h>
+#include <schily.h>
 
 #if	!defined(AV_OFFSET) || !defined(FP_INDIR)
 #	ifdef	HAVE_SCANSTACK

@@ -1,4 +1,4 @@
-/* @(#)comerr.c	1.21 99/12/24 Copyright 1985 J. Schilling */
+/* @(#)comerr.c	1.22 00/05/07 Copyright 1985 J. Schilling */
 /*
  *	Routines for printing command errors
  *
@@ -26,6 +26,7 @@
 #include <stdxlib.h>
 #include <vadefs.h>
 #include <strdefs.h>
+#include <schily.h>
 #ifndef	HAVE_STRERROR
 extern	char	*sys_errlist[];
 extern	int	sys_nerr;

@@ -1,4 +1,4 @@
-/* @(#)xconfig.h.in	1.5 00/03/29 Copyright 1998 J. Schilling */
+/* @(#)xconfig.h.in	1.8 00/06/03 Copyright 1998 J. Schilling */
 /*
  *	Dynamic autoconf C-include code.
  *
@@ -60,6 +60,8 @@
 #undef HAVE_SUN_DKLABEL_H	/* if we may include sun/dklabel.h for disk label */
 #undef HAVE_POLL_H		/* if we may include poll.h to use poll() */
 #undef HAVE_SYS_POLL_H		/* if we may include sys/poll.h to use poll() */
+#undef HAVE_SYS_SELECT_H	/* if we may have sys/select.h nonstandard use for select() on some systems*/
+#undef NEED_SYS_SELECT_H	/* if we need sys/select.h to use select() (this is nonstandard) */
 #undef HAVE_LINUX_PG_H		/* if we may include linux/pg.h for PP ATAPI sypport */
 #undef HAVE_CAMLIB_H		/* if we may include camlib.h for CAM SCSI transport definitions */
 #undef HAVE_IEEEFP_H		/* if we may include ieeefp.h for finite()/isnand() */
@@ -111,6 +113,12 @@
 #undef HAVE_SETRESGID		/* setresgid() is present in libc */
 #undef HAVE_SETEGID		/* setegid() is present in libc */
 #undef HAVE_SETGID		/* setgid() is present in libc */
+#undef HAVE_GETPGID		/* getpgid() is present in libc (POSIX) */
+#undef HAVE_SETPGID		/* setpgid() is present in libc (POSIX) */
+#undef HAVE_GETPGRP		/* getpgrp() is present in libc (ANY) */
+#undef HAVE_SETPGRP		/* setpgrp() is present in libc (ANY) */
+#undef HAVE_BSD_GETPGRP		/* getpgrp() in libc is BSD-4.2 compliant */
+#undef HAVE_BSD_SETPGRP		/* setpgrp() in libc is BSD-4.2 compliant */
 #undef HAVE_SYNC		/* sync() is present in libc */
 #undef HAVE_FSYNC		/* fsync() is present in libc */
 #undef HAVE_WAIT3		/* working wait3() is present in libc */
@@ -161,6 +169,7 @@
 #undef HAVE_PUTENV		/* putenv() is present in libc (preferred function) */
 #undef HAVE_SETENV		/* setenv() is present in libc (use instead of putenv()) */
 #undef HAVE_UNAME		/* uname() is present in libc */
+#undef HAVE_SNPRINTF		/* snprintf() is present in libc */
 #undef HAVE_STRCASECMP		/* strcasecmp() is present in libc */
 #undef HAVE_STRSIGNAL		/* strsignal() is present in libc */
 #undef HAVE_STR2SIG		/* str2sig() is present in libc */
@@ -182,6 +191,13 @@
 #endif
 #ifdef HAVE_SEMGET
 #	define	HAVE_USGSEM	/* USG semaphores are present */
+#endif
+
+#if	defined(HAVE_GETPGRP) && !defined(HAVE_BSD_GETPGRP)
+#define	HAVE_POSIX_GETPGRP 1	/* getpgrp() in libc is POSIX compliant */
+#endif
+#if	defined(HAVE_SETPGRP) && !defined(HAVE_BSD_SETPGRP)
+#define	HAVE_POSIX_SETPGRP 1	/* setpgrp() in libc is POSIX compliant */
 #endif
 
 /*
@@ -249,6 +265,11 @@
  * Define as the return type of signal handlers (int or void).
  */
 #undef RETSIGTYPE
+
+/*
+ * Misc CC / LD related stuff
+ */
+#undef NO_USER_MALLOC		/* If we cannot define our own malloc()	*/
 
 /*
  * Strings that help to maintain OS/platform id's in C-programs

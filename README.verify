@@ -47,6 +47,8 @@ Mini-Howto for verifying a selfmade CD
 	On SunOS type:
 		mount -r -F fbk -o type=hsfs /dev/fbk0:isoimage.raw /mnt
 
+For Solaris 8 and later you may also use the Sun lofi driver (see README.sun-lofi)
+
 	The check the filesystem with:
 
 		(cd /master_for_cd; star -cPM .)|(cd /mnt; star -diff -v)

@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-pg.c	1.23 00/04/03 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-pg.c	1.27 00/07/01 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char ___sccsid[] =
-	"@(#)scsi-linux-pg.c	1.23 00/04/03 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-pg.c	1.27 00/07/01 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the Linux PARIDE implementation.
@@ -48,7 +48,7 @@ static	char ___sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.23";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.27";	/* The version for this transport*/
 
 #ifdef	USE_PG_ONLY
 
@@ -78,7 +78,7 @@ struct scg_local {
 EXPORT	char	*pg_version	__PR((SCSI *scgp, int what));
 LOCAL	int	pg_open		__PR((SCSI *scgp, char *device, int busno, int tgt, int tlun));
 LOCAL	int	pg_close	__PR((SCSI *scgp));
-LOCAL	long	pg_maxdma	__PR((SCSI *scgp));
+LOCAL	long	pg_maxdma	__PR((SCSI *scgp, long amt));
 LOCAL	int 	pg_initiator_id	__PR((SCSI *scgp));
 LOCAL	int 	pg_isatapi	__PR((SCSI *scgp));
 LOCAL	int	pg_reset	__PR((SCSI *scgp));
@@ -221,8 +221,14 @@ openbydev:
 		if (tlun < 0)
 			return (0);
 		f = open(device, 2);
-		if (f < 0 && errno == ENOENT)
+/*		if (f < 0 && errno == ENOENT) {*/
+		if (f < 0) {
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+					"Cannot open '%s'",
+					device);
 			return (0);
+		}
 
 		p = device + strlen(device) -1;
 		tgt = *p - '0';
@@ -265,8 +271,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return (PG_MAX_DATA);
 }
@@ -280,7 +287,7 @@ scsi_getbuf(scgp, amt)
 {
         char    *ret;
 
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
                 return ((void *)0);
         if (scgp->debug)
                 printf("scsi_getbuf: %ld bytes\n", amt);
@@ -484,8 +491,9 @@ do_scsi_cmd(scgp, f, sp)
 
 	sp->error = SCG_NO_ERROR;
 	i = rhp->scsi?2:0;
+/*	i = rhp->scsi;*/
 	sp->u_scb.cmd_scb[0] = i;
-	if (i) {
+	if (i & 2) {
 		if (sp->ux_errno == 0)
 			sp->ux_errno = EIO;
 		sp->error = SCG_RETRYABLE;
@@ -542,7 +550,7 @@ scsi_send(scgp, f, sp)
 	ret = do_scsi_cmd(scgp, f, sp);
 	if (ret < 0)
 		return (ret);
-	if (sp->u_scb.cmd_scb[0])
+	if (sp->u_scb.cmd_scb[0] & 2)
 		ret = do_scsi_sense(scgp, f, sp);
 	return (ret);
 }

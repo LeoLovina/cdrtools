@@ -25,7 +25,7 @@ It contains illegal values for a make file system.
 Newer Linux kernels (from 2.3.51) moved SVSv shared memory into a filesystem.
 If you get messages with error code EINVAL related to shared memory, you 
 most likely installed a newer kernel on an old system that does not mount
-the new shared memory filesyste.
+the new shared memory filesystem.
 For information on this filesystem please read README.linux-shm
 
 If you have any problems to access a device on the SCSI bus, check your
@@ -73,7 +73,7 @@ IMPORTANT:
 
 	The /dev/sg* device mapping in Linux is not stable! Using dev=/dev/sgc
 	in a shell script may fail after a reboot because the device you want
-	to talk to has moved to /dev/sgd. For the proper and OS independant
+	to talk to has moved to /dev/sgd. For the proper and OS independent
 	dev=<bus>,<tgt>,<lun> syntax read the man page of cdrecord.
 
 -	In some architectures (at least on sparc / alpha / ppc) kernels prior
@@ -91,7 +91,7 @@ IMPORTANT:
 	-	You removed SVSv IPC from your kernel. You need to enable it again.
 		Run a Linux kernel config and recompile with SYSv IPC.
 
-	-	The allowed amount of whared memory in the kernel is
+	-	The allowed amount of shared memory in the kernel is
 		not sufficient. See next main point for a solution:
 
 -       You may need to edit /usr/src/linux/include/asm*/shmparam.h to allow at least 
@@ -118,7 +118,7 @@ IMPORTANT:
 	properly recompiling the kernel. Cdrecord depends on the fact that
 	the value of the define SG_BIG_BUFF uses the same value as the actual
 	kernel. Use cdrecord -scanbus -debug to get the value of SG_BIG_BUFF
-	with cdrecorrd has been compiled. An output of:
+	with cdrecord has been compiled. An output of:
 
 		scsi_getbuf: 32768 bytes
 

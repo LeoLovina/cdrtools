@@ -1,7 +1,7 @@
-/* @(#)drv_mmc.c	1.52 00/04/27 Copyright 1997 J. Schilling */
+/* @(#)drv_mmc.c	1.56 00/07/02 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_mmc.c	1.52 00/04/27 Copyright 1997 J. Schilling";
+	"@(#)drv_mmc.c	1.56 00/07/02 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -42,6 +42,8 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <btorder.h>
 #include <intcvt.h>
+#include <schily.h>
+
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
@@ -360,7 +362,7 @@ di_to_dstat(dip, dsp)
 
 	dsp->ds_maxblocks = msf_to_lba(dip->last_lead_out[1],
 					dip->last_lead_out[2],
-					dip->last_lead_out[3]);
+					dip->last_lead_out[3], TRUE);
 	/*
 	 * Check for 0xFF:0xFF/0xFF which is an indicator for a complete disk
 	 */
@@ -370,7 +372,7 @@ di_to_dstat(dip, dsp)
 	if (dsp->ds_first_leadin == 0) {
 		dsp->ds_first_leadin = msf_to_lba(dip->last_lead_in[1],
 						dip->last_lead_in[2],
-						dip->last_lead_in[3]);
+						dip->last_lead_in[3], FALSE);
 		if (dsp->ds_first_leadin > 0)
 			dsp->ds_first_leadin = 0;
 	}
@@ -579,10 +581,10 @@ again:
 /*		get_pma();*/
 	}
 	printf("ATIP lead in:  %ld (%02d:%02d/%02d)\n",
-		msf_to_lba(mode[8], mode[9], mode[10]),
+		msf_to_lba(mode[8], mode[9], mode[10], FALSE),
 		mode[8], mode[9], mode[10]);
 	printf("ATIP lead out: %ld (%02d:%02d/%02d)\n",
-		msf_to_lba(mode[12], mode[13], mode[14]),
+		msf_to_lba(mode[12], mode[13], mode[14], TRUE),
 		mode[12], mode[13], mode[14]);
 	print_di(dip);
 	print_atip(scgp, (struct atipinfo *)mode);
@@ -630,11 +632,11 @@ static	char *ss_name[] = { "empty", "incomplete/appendable", "illegal", "complet
 	printf("last start of lead in: %ld\n",
 		msf_to_lba(dip->last_lead_in[1],
 		dip->last_lead_in[2],
-		dip->last_lead_in[3]));
+		dip->last_lead_in[3], FALSE));
 	printf("last start of lead out: %ld\n",
 		msf_to_lba(dip->last_lead_out[1],
 		dip->last_lead_out[2],
-		dip->last_lead_out[3]));
+		dip->last_lead_out[3], TRUE));
 
 	if (dip->dbc_v)
 		printf("Disk bar code: 0x%lX%lX\n",
@@ -650,11 +652,24 @@ LOCAL	char	clv_to_speed[8] = {
 		0, 2, 4, 6, 8, 0, 0, 0
 };
 
+char	*cdr_subtypes[] = {
+	"Normal Rewritable (CLV) media",
+	"High speed Rewritable (CAV) media",
+	"Medium Type A, low Beta category (A-)",
+	"Medium Type A, high Beta category (A+)",
+	"Medium Type B, low Beta category (B-)",
+	"Medium Type B, high Beta category (B+)",
+	"Medium Type C, low Beta category (C-)",
+	"Medium Type C, high Beta category (C+)",
+};
+
 void
 print_atip(scgp, atp)
 	SCSI		*scgp;
 	struct atipinfo *atp;
 {
+	char	*sub_type;
+
 	if (scgp->verbose)
 		scsiprbytes("ATIP info: ", (Uchar *)atp, sizeof (*atp));
 
@@ -665,19 +680,20 @@ print_atip(scgp, atp)
 	IS("unrestricted", atp->desc.uru);
 /*	printf("  Disk application code: %d\n", atp->desc.res5_05);*/
 	IS("erasable", atp->desc.erasable);
+	sub_type = cdr_subtypes[atp->desc.sub_type];
 	if (atp->desc.sub_type)
-		printf("  Disk sub type: %d\n", atp->desc.sub_type);
+		printf("  Disk sub type: %s (%d)\n", sub_type, atp->desc.sub_type);
 	printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
 		msf_to_lba(atp->desc.lead_in[1],
 		atp->desc.lead_in[2],
-		atp->desc.lead_in[3]),
+		atp->desc.lead_in[3], FALSE),
 		atp->desc.lead_in[1],
 		atp->desc.lead_in[2],
 		atp->desc.lead_in[3]);
 	printf("  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
 		msf_to_lba(atp->desc.lead_out[1],
 		atp->desc.lead_out[2],
-		atp->desc.lead_out[3]),
+		atp->desc.lead_out[3], TRUE),
 		atp->desc.lead_out[1],
 		atp->desc.lead_out[2],
 		atp->desc.lead_out[3]);
@@ -970,6 +986,7 @@ open_session_mmc(scgp, dp, tracks, trackp, toctype, multi)
 		mp->track_mode = 0;
 		mp->dbtype = DB_RAW;
 	}
+
 	if (driveropts != NULL) {
 		if (strcmp(driveropts, "burnproof") == 0 && dp->cdr_cdcap->res_4 != 0) {
 			errmsgno(EX_BAD, "Turning BURN-Proof on\n");
@@ -1230,6 +1247,7 @@ Uchar	db2df[] = {
 
 LOCAL	void	fillcue		__PR((struct mmc_cue *cp, int ca, int tno, int idx, int dataform, int scms, msf_t *mp));
 EXPORT	int	do_cue		__PR((int tracks, track_t *trackp, struct mmc_cue **cuep));
+EXPORT	int	_do_cue		__PR((int tracks, track_t *trackp, struct mmc_cue **cuep, BOOL needgap));
 LOCAL	int	send_cue	__PR((SCSI *scgp, int tracks, track_t *trackp));
 
 EXPORT int
@@ -1237,6 +1255,16 @@ do_cue(tracks, trackp, cuep)
 	int	tracks;
 	track_t	*trackp;
 	struct mmc_cue	**cuep;
+{
+	return (_do_cue(tracks, trackp, cuep, FALSE));
+}
+
+EXPORT int
+_do_cue(tracks, trackp, cuep, needgap)
+	int	tracks;
+	track_t	*trackp;
+	struct mmc_cue	**cuep;
+	BOOL	needgap;
 {
 	int	i;
 	struct mmc_cue	*cue;
@@ -1292,8 +1320,8 @@ do_cue(tracks, trackp, cuep)
 			if (is_scms(&trackp[i]))
 				scms = 0x80;
 			pgsize = trackp[i].pregapsize;
-/*			if (pgsize == 0)*/
-/*				pgsize = 150;*/
+			if (pgsize == 0 && needgap)
+				pgsize++;
 			lba_to_msf(trackp[i].trackstart-pgsize, &m);
 			cue = (struct mmc_cue *)realloc(cue, ++ncue * sizeof(*cue));
 			cp = &cue[icue++];
@@ -1337,6 +1365,8 @@ do_cue(tracks, trackp, cuep)
 	}
 	if (cuep)
 		*cuep = cue;
+	else
+		free (cue);
 	return (ncue);
 }
 
@@ -1378,7 +1408,15 @@ send_cue(scgp, tracks, trackp)
 			return (-1);
 		}
 	}
+	scgp->silent++;
 	ret = send_cue_sheet(scgp, (caddr_t)cp, ncue*8);
+	scgp->silent--;
 	free(cp);
+	if (ret < 0) {
+		errmsgno(EX_BAD, "CUE sheet not accepted. Retrying with minimum pregapsize = 1.\n");
+		ncue = _do_cue(tracks, trackp, &cp, TRUE);
+		ret = send_cue_sheet(scgp, (caddr_t)cp, ncue*8);
+		free(cp);
+	}
 	return (ret);
 }

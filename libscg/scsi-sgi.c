@@ -1,7 +1,7 @@
-/* @(#)scsi-sgi.c	1.20 00/02/06 Copyright 1997 J. Schilling */
+/* @(#)scsi-sgi.c	1.23 00/07/01 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sgi.c	1.20 00/02/06 Copyright 1997 J. Schilling";
+	"@(#)scsi-sgi.c	1.23 00/07/01 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the SGI generic SCSI implementation.
@@ -45,7 +45,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.20";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.23";	/* The version for this transport*/
 
 #ifdef	USE_DSLIB
 
@@ -155,8 +155,13 @@ scsi_open(scgp, device, busno, tgt, tlun)
 			return(-1);
 #else
 		f = open(devname, O_RDWR);
-		if (f < 0)
-			return(-1);
+		if (f < 0) {
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+					"Cannot open '%s'",
+					devname);
+			return (-1);
+		}
 		scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
 #endif
 		return(1);
@@ -212,8 +217,9 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return	(MAX_DMA_SGI);
 }
@@ -223,7 +229,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

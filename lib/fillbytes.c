@@ -1,4 +1,4 @@
-/* @(#)fillbytes.c	1.10 00/04/12 Copyright 1987 J. Schilling */
+/* @(#)fillbytes.c	1.11 00/05/07 Copyright 1987 J. Schilling */
 /*
  *	fill memory with data
  *
@@ -22,6 +22,7 @@
 
 #include <standard.h>
 #include <align.h>
+#include <schily.h>
 
 #define	DO8(a)	a;a;a;a;a;a;a;a;
 

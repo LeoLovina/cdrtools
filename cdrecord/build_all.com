@@ -1,4 +1,4 @@
-$! build_all.com Version 16.6.1999 for cdrecord 1.8a22
+$! build_all.com Version 23.5.2000 for cdrecord 1.8.1 final
 $ create/dir [.vms]
 $ copy *.c [.vms]
 $ copy [-.libscg]*.c [.vms]
@@ -90,5 +90,3 @@ $ libr/cre cdr.olb
 $ libr/ins cdr.olb *.obj
 $ link CDRECORD,cdr.olb/lib,lib.olb/lib,stdio.olb/lib
 $ dir *.exe
-$ set def [--.misc]
-$ @BUILD_READCD.COM

@@ -1,7 +1,7 @@
-/* @(#)scsi-vms.c	1.15 99/09/17 Copyright 1997 J. Schilling */
+/* @(#)scsi-vms.c	1.18 00/07/01 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-vms.c	1.15 99/09/17 Copyright 1997 J. Schilling";
+	"@(#)scsi-vms.c	1.18 00/07/01 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the VMS generic SCSI implementation.
@@ -47,7 +47,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.15";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.18";	/* The version for this transport*/
 
 #define MAX_SCG 	16	/* Max # of SCSI controllers */
 #define MAX_TGT 	16
@@ -250,12 +250,19 @@ scsi_close(scgp)
 	/*
 	 * XXX close gk_chan ???
 	 */
-	return (0);
+	/*
+	 * sys$dassgn()
+	 */
+
+	status=sys$dassgn(gk_chan);
+
+	return (status);
 }
 
 LOCAL long
-scsi_maxdma(scgp)
+scsi_maxdma(scgp, amt)
 	SCSI	*scgp;
+	long	amt;
 {
 	return (MAX_DMA_VMS);
 }
@@ -308,7 +315,7 @@ scsi_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_maxdma(scgp))
+	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
 		return ((void *)0);
 	if (scgp->debug)
 		printf("scsi_getbuf: %ld bytes\n", amt);

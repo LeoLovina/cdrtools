@@ -1,7 +1,7 @@
-/* @(#)cdda2wav.c	1.15 00/04/27 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)cdda2wav.c	1.17 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)cdda2wav.c	1.15 00/04/27 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)cdda2wav.c	1.17 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #undef DEBUG_BUFFER_ADDRESSES
@@ -10,6 +10,8 @@ static char     sccsid[] =
 #undef DEBUG_CLEANUP
 #undef DEBUG_DYN_OVERLAP
 #undef DEBUG_READS
+#undef SIM_ILLLEADOUT
+#define DEBUG_ILLLEADOUT	0	/* 0 disables, 1 enables */
 /*
  * Copyright: GNU Public License 2 applies
  *
@@ -27,7 +29,6 @@ static char     sccsid[] =
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * CDDA2WAV (C) 1995-1998 Heiko Eissfeldt heiko@colossus.escape.de
  * parts    (C) Peter Widow
  * parts    (C) Thomas Niederreiter
  * parts    (C) RSA Data Security, Inc.
@@ -68,15 +69,14 @@ static char     sccsid[] =
 
 #include "config.h"
 
-#if defined (HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
 #include <sys/types.h>
-#include <unistd.h>
-#endif
+#include <unixstd.h>
 
 #include <stdio.h>
 #include <standard.h>
-#include <stdlib.h>
+#include <stdxlib.h>
 #include <strdefs.h>
+#include <schily.h>
 #if	defined HAVE_STRINGS_H
 #include <strings.h>
 #endif
@@ -98,6 +98,9 @@ static char     sccsid[] =
 
 #if defined (HAVE_SYS_WAIT_H) && (HAVE_SYS_WAIT_H == 1)
 #include <sys/wait.h>
+#endif
+#if defined (HAVE_SETPRIORITY) && (HAVE_SETPRIORITY == 1)
+#include <sys/resource.h>
 #endif
 #include <vadefs.h>
 
@@ -213,7 +216,7 @@ static unsigned long nSamplesDone = 0;
 
 static	int child_pid = -2;
 
-static unsigned long nSamplesToDo;
+static unsigned long *nSamplesToDo;
 static unsigned int current_track;
 static int bulk = 0;
 
@@ -242,7 +245,7 @@ long SamplesNeeded( amount, undersampling_val)
 	long undersampling_val;
 {
   long retval = ((undersampling_val * 2 + Halved)*amount)/2;
-  if (Halved && (nSamplesToDo & 1))
+  if (Halved && (*nSamplesToDo & 1))
     retval += 2;
   return retval;
 }
@@ -503,7 +506,7 @@ fprintf(stderr, "Cdda2wav single process terminating, \n");
       } else {
         /* finish sample file for this track */
         CloseAudio(global.fname_base, track, bulk, global.channels,
-  	  (unsigned int) nSamplesToDo, global.audio_out);
+  	  (unsigned int) *nSamplesToDo, global.audio_out);
       }
     }
 
@@ -664,6 +667,33 @@ static void OpenAudio (fname, rate, nBitsPerSample, channels_val, expected_bytes
 #endif
 }
 
+#include "scsi_cmds.h"
+
+static int RealEnd __PR((SCSI *scgp));
+
+static int RealEnd(scgp)
+	SCSI	*scgp;
+{
+	if (myscsierr(scgp) != 0) {
+		int c,k,q;
+
+		k = scsi_sense_key(scgp);
+		c = scsi_sense_code(scgp);
+		q = scsi_sense_qual(scgp);
+		if ((k == 0x05 /* ILLEGAL_REQUEST */ &&
+		     c == 0x21 /* lba out of range */ &&
+		     q == 0x00) ||
+		    (k == 0x05 /* ILLEGAL_REQUEST */ &&
+		     c == 0x63 /*end of user area encountered on this track*/ &&
+		     q == 0x00) ||
+		    (k == 0x08 /* BLANK_CHECK */ &&
+		     c == 0x64 /* illegal mode for this track */ &&
+		     q == 0x00)) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 static void set_offset(p, offset)
 	myringbuff *p;
@@ -885,8 +915,10 @@ static void init_globals()
   global.swapchannels  =  0;	/* flag if channels shall be swapped */
   global.deemphasize  =  0;	/* flag undo pre-emphasis in samples */
   global.playback_rate = 100;   /* new fancy selectable sound output rate */
-  global.gui  =  0;			/* flag plain formatting for guis */
+  global.gui  =  0;		/* flag plain formatting for guis */
   global.cddb_id = 0;           /* disc identifying id for CDDB database */
+  global.illleadout_cd = 0;     /* flag if illegal leadout is present */
+  global.reads_illleadout = 0;  /* flag if cdrom drive reads cds with illegal leadouts */
   global.disctitle = NULL;
   global.creator = NULL;
   global.copyright_message = NULL;
@@ -1073,6 +1105,15 @@ switch_to_realtime_priority()
 #endif
 #endif
 
+/* wrapper for signal handler exit needed for Mac-OS-X */
+static void exit_wrapper __PR((int status));
+
+static void exit_wrapper(status)
+	int status;
+{
+	exit(status);
+}
+
 /* signal handler for process communication */
 static void set_nonforked __PR((int status));
 
@@ -1144,6 +1185,8 @@ static int do_read (p, total_unsuccessful_retries)
 
       retry_count = 0;
       do {
+	SCSI *scgp = get_scsi_p();
+	int retval;
 #ifdef DEBUG_READS
 	fprintf(stderr, "reading from %lu to %lu, overlap %u\n", lSector, lSector + SectorBurst -1, global.overlap);
 #endif
@@ -1155,10 +1198,41 @@ static int do_read (p, total_unsuccessful_retries)
   }
 #endif
 
-          ReadCdRom( get_scsi_p(), p->data, lSector, SectorBurst );
-          if (NULL ==
+	if (global.reads_illleadout != 0) scgp->silent++;
+        retval = ReadCdRom( scgp, p->data, lSector, SectorBurst );
+	if (global.reads_illleadout != 0) {
+		scgp->silent--;
+		if (retval != SectorBurst) {
+			if (RealEnd(scgp)) {
+				/* THE END IS NEAR */
+				int singles = 0;
+
+				scgp->silent++;
+				while (1 == 
+				  ReadCdRom( scgp, p->data+singles*CD_FRAMESAMPLES, 
+					lSector+singles, 1 )) {
+					 singles++;
+				}
+				scgp->silent--;
+				g_toc[cdtracks].dwStartSector = lSector+singles;
+				SectorBurst = singles;
+if (DEBUG_ILLLEADOUT)
+ fprintf(stderr, "iloop=%11lu, nSamplesToDo=%11lu, end=%lu -->\n",
+	global.iloop, *nSamplesToDo, lSector+singles);
+				*nSamplesToDo -= global.iloop - SectorBurst*CD_FRAMESAMPLES;
+				global.iloop = SectorBurst*CD_FRAMESAMPLES;
+if (DEBUG_ILLLEADOUT)
+ fprintf(stderr, "iloop=%11lu, nSamplesToDo=%11lu\n\n",
+	global.iloop, *nSamplesToDo);
+				*eorecording = 1;
+			} else {
+				scsiprinterr(scgp);
+			}
+		}
+	}
+        if (NULL ==
                  (newbuf = synchronize( p->data, SectorBurst*CD_FRAMESAMPLES,
-                			nSamplesToDo-global.iloop ))) {
+                			*nSamplesToDo-global.iloop ))) {
 	    /* could not synchronize!
 	     * Try to invalidate the cdrom cache.
 	     * Increase overlap setting, if possible.
@@ -1176,8 +1250,8 @@ static int do_read (p, total_unsuccessful_retries)
 		global.overlap = 1;
 		SectorBurst =  calc_SectorBurst();
 	    }
-	  } else
-		break;
+	} else
+	    break;
       } while (++retry_count < MAX_READRETRY);
 
       if (retry_count == MAX_READRETRY && newbuf == NULL && global.verbose != 0) {
@@ -1194,7 +1268,7 @@ static int do_read (p, total_unsuccessful_retries)
       /* how much has been added? */
       added_size = SectorBurst * CD_FRAMESAMPLES - offset/4;
 
-      if (newbuf && nSamplesToDo != global.iloop) {
+      if (newbuf && *nSamplesToDo != global.iloop) {
 	minover = min(global.overlap, minover);
 	maxover = max(global.overlap, maxover);
 
@@ -1208,12 +1282,11 @@ static int do_read (p, total_unsuccessful_retries)
 	  SectorBurst =  calc_SectorBurst();
 	}
       }
-
-      if (global.iloop >= added_size)
+      if (global.iloop >= added_size) {
         global.iloop -= added_size;
-      else
+      } else {
         global.iloop = 0;
-
+      }
       if (global.verbose) {
 	unsigned per;
 
@@ -1222,16 +1295,16 @@ static int do_read (p, total_unsuccessful_retries)
 	unsigned start_in_track = max(BeginAtSample,
                   g_toc[current_track-1].dwStartSector*CD_FRAMESAMPLES);
 
-	per = min(BeginAtSample+nSamplesToDo,
+	per = min(BeginAtSample+*nSamplesToDo,
 		  g_toc[current_track].dwStartSector*CD_FRAMESAMPLES)
 		- start_in_track;
 
-	per = (BeginAtSample+nSamplesToDo-global.iloop
+	per = (BeginAtSample+*nSamplesToDo-global.iloop
 		- start_in_track
 	      )/(per/100);
 
 #else
-	per = global.iloop ? (nSamplesToDo-global.iloop)/(nSamplesToDo/100) : 100;
+	per = global.iloop ? (*nSamplesToDo-global.iloop)/(nSamplesToDo/100) : 100;
 #endif
 
 	if (global.overlap > 0) {
@@ -1269,15 +1342,19 @@ static unsigned long do_write (p)
       /* how many bytes are available? */
       InSamples = global.nsectors*CD_FRAMESAMPLES - current_offset/4;
       /* how many samples are wanted? */
-      InSamples = min((nSamplesToDo-nSamplesDone),InSamples);
+      InSamples = min((*nSamplesToDo-nSamplesDone),InSamples);
 
       /* when track end is reached, close current file and start a new one */
-      while ((nSamplesDone < nSamplesToDo) && (InSamples != 0)) {
+      while ((nSamplesDone < *nSamplesToDo) && (InSamples != 0)) {
 	long unsigned int how_much = InSamples;
 
 	long int left_in_track;
 	left_in_track  = (int)g_toc[current_track].dwStartSector*CD_FRAMESAMPLES
 			 - (int)(BeginAtSample+nSamplesDone);
+
+	if (*eorecording != 0 && current_track == cdtracks &&
+            (*total_segments_read) == (*total_segments_written)+1)
+		left_in_track = InSamples;
 
 if (left_in_track < 0) {
 	fprintf(stderr, "internal error: negative left_in_track:%ld\n",left_in_track);
@@ -1321,7 +1398,7 @@ if (left_in_track < 0) {
           } else if (SamplesToWrite == 0) {
 	    /* finish sample file for this track */
 	    CloseAudio(global.fname_base, track, bulk, global.channels,
-	  	  (unsigned int) nSamplesToDo, global.audio_out);
+	  	  (unsigned int) *nSamplesToDo, global.audio_out);
 	  }
 
 	  if (global.verbose) {
@@ -1334,6 +1411,10 @@ if (left_in_track < 0) {
 	    if (waitforsignal == 1)
 		fprintf(stderr, ". %d silent samples omitted", global.SkippedSamples);
 	    fputs("\n", stderr);
+	    if (global.reads_illleadout && *eorecording == 1) {
+		fprintf(stderr, "Real lead out at: %ld sectors\n", 
+			(*nSamplesToDo+BeginAtSample)/CD_FRAMESAMPLES);
+	    }
           }
 
           global.nSamplesDoneInTrack = 0;
@@ -1405,7 +1486,6 @@ forked_read()
       define_buffer();
 
    } /* while (global.iloop) */
-   flush_buffers();
 
    if (total_unsuccessful_retries) {
       fprintf(stderr,"%u unsuccessful matches while reading\n",total_unsuccessful_retries);
@@ -1428,15 +1508,15 @@ forked_write()
     init_parent();
 #endif
 
-    while (nSamplesDone < nSamplesToDo) {
+    while (1) {
+	if (nSamplesDone >= *nSamplesToDo) break;
+	if (*eorecording == 1 && (*total_segments_read) == (*total_segments_written)) break;
 
-      /* get oldest buffers */
+	/* get oldest buffers */
       
-      nSamplesDone = do_write(get_oldest_buffer());
+	nSamplesDone = do_write(get_oldest_buffer());
 
-      if (global.parent_died == 0 && nSamplesDone < nSamplesToDo) {
         drop_buffer();
-      }
 
     } /* end while */
 
@@ -1917,10 +1997,10 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
 
 #define SETSIGHAND(PROC, SIG, SIGNAME) if (signal(SIG, PROC) == SIG_ERR) \
 	{ fprintf(stderr, "cannot set signal %s handler\n", SIGNAME); exit(1); }
-    SETSIGHAND(exit, SIGINT, "SIGINT")
-    SETSIGHAND(exit, SIGQUIT, "SIGQUIT")
-    SETSIGHAND(exit, SIGTERM, "SIGTERM")
-    SETSIGHAND(exit, SIGHUP, "SIGHUP")
+    SETSIGHAND(exit_wrapper, SIGINT, "SIGINT")
+    SETSIGHAND(exit_wrapper, SIGQUIT, "SIGQUIT")
+    SETSIGHAND(exit_wrapper, SIGTERM, "SIGTERM")
+    SETSIGHAND(exit_wrapper, SIGHUP, "SIGHUP")
 
     SETSIGHAND(set_nonforked, SIGPIPE, "SIGPIPE")
 
@@ -1971,13 +2051,16 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
    		 "%u bytes buffer memory requested, %d buffers, %d sectors\n",
    		 global.shmsize, global.buffers, global.nsectors);
 
-    /* initialize pointer into shared memory segment */
+    /* initialize pointers into shared memory segment */
     last_buffer = he_fill_buffer + 1;
     total_segments_read = (unsigned long *) (last_buffer + 1);
     total_segments_written = total_segments_read + 1;
     child_waits = (int *) (total_segments_written + 1);
     parent_waits = child_waits + 1;
     in_lendian = parent_waits + 1;
+    eorecording = in_lendian + 1;
+    nSamplesToDo = (unsigned long *)(eorecording + 1);
+    *eorecording = 0;
     *in_lendian = global.in_lendian;
 
     set_total_buffers(global.buffers, sem_id);
@@ -1995,6 +2078,9 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
 
   /* get table of contents */
   cdtracks = ReadToc( get_scsi_p(), g_toc );
+#if	defined SIM_ILLLEADOUT
+  g_toc[cdtracks].dwStartSector = 20*75;
+#endif
   if (cdtracks == 0) {
     fprintf(stderr, "No track in table of contents! Aborting...\n");
     exit(10);
@@ -2028,13 +2114,14 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
 
   FixupTOC(cdtracks + 1);
 
-  if ( global.verbose & (SHOW_TOC | SHOW_STARTPOSITIONS) )
-    DisplayToc ();
-
   /* try to get some extra kicks */
   needroot(0);
-#if defined(HAVE_NICE) && (HAVE_NICE == 1)
+#if defined HAVE_SETPRIORITY
+  setpriority(PRIO_PROCESS, 0, -20);
+#else
+# if defined(HAVE_NICE) && (HAVE_NICE == 1)
   nice(-20);
+# endif
 #endif
   dontneedroot();
 
@@ -2043,11 +2130,12 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
 
   atexit ( CloseAll );
 
+  DisplayToc ();
+
   if ( !FirstAudioTrack () )
     FatalError ( "This disk has no audio tracks\n" );
 
-  if ( global.verbose & (SHOW_MCN | SHOW_ISRC) )
-    Read_MCN_ISRC();
+  Read_MCN_ISRC();
 
   /* check if start track is in range */
   if ( track < 1 || track > cdtracks ) {
@@ -2074,7 +2162,7 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
     }
   } while (bulk != 0 && track <= cdtracks && lSector < 0);
 
-  if (cd_index != -1) {
+  if ((global.illleadout_cd == 0 || global.reads_illleadout != 0) && cd_index != -1) {
     if (global.verbose && !global.quiet) {
       global.verbose |= SHOW_INDICES;
     }
@@ -2089,7 +2177,7 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
   lSector += sector_offset;
   /* check against end sector of track */
   if ( lSector >= lSector_p1 ) {
-    fputs( "W Sector offset exceeds track size (ignored)\n", stderr );
+    fprintf(stderr, "W Sector offset %lu exceeds track size (ignored)\n", sector_offset );
     lSector -= sector_offset;
   }
 
@@ -2103,14 +2191,14 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
      rectime = 99999.0;
   if ( rectime == 0.0 ) {
     /* set time to track time */
-    nSamplesToDo = (lSector_p1 - lSector) * CD_FRAMESAMPLES;
+    *nSamplesToDo = (lSector_p1 - lSector) * CD_FRAMESAMPLES;
     rectime = (lSector_p1 - lSector) / 75.0;
     if (CheckTrackrange( track, endtrack) == 1) {
       lSector_p2 = GetEndSector ( endtrack ) + 1;
 
       if (lSector_p2 >= 0) {
         rectime = (lSector_p2 - lSector) / 75.0;
-        nSamplesToDo = (long)(rectime*44100.0 + 0.5);
+        *nSamplesToDo = (long)(rectime*44100.0 + 0.5);
       } else {
         fputs( "End track is no valid audio track (ignored)\n", stderr );
       }
@@ -2129,11 +2217,11 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
     }
 
     /* calculate # of samples to read */
-    nSamplesToDo = (long)(rectime*44100.0 + 0.5);
+    *nSamplesToDo = (long)(rectime*44100.0 + 0.5);
   }
 
   global.OutSampleSize = (1+bits/12);
-  if (nSamplesToDo/undersampling == 0L) {
+  if (*nSamplesToDo/undersampling == 0L) {
       usage2("Time interval is too short. Choose a duration greater than %d.%02d secs!", 
 	       undersampling/44100, (int)(undersampling/44100) % 100);
   }
@@ -2167,10 +2255,10 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
     }
   }
 
-  SamplesToWrite = nSamplesToDo*2/(int)int_part;
+  SamplesToWrite = *nSamplesToDo*2/(int)int_part;
 
   tracks_included = GetTrack(
-	      (unsigned) (lSector + nSamplesToDo/CD_FRAMESAMPLES -1))
+	      (unsigned) (lSector + *nSamplesToDo/CD_FRAMESAMPLES -1))
 				     - max(track,FirstAudioTrack()) + 1;
 
   if (global.multiname != 0 && optind + tracks_included > argc) {
@@ -2265,14 +2353,14 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
 
   global.sh_bits = 16 - bits;		/* shift counter */
 
-  global.iloop = nSamplesToDo;
+  global.iloop = *nSamplesToDo;
   if (Halved && (global.iloop&1))
       global.iloop += 2;
 
   BeginAtSample = lSector * CD_FRAMESAMPLES;
 
   if ( 1 ) {
-      if ( (global.verbose & SHOW_SUMMARY) && !just_the_toc ) {
+      if ( (global.verbose & SHOW_SUMMARY) && !just_the_toc && (global.reads_illleadout == 0 || lSector+*nSamplesToDo/CD_FRAMESAMPLES <= g_toc[cdtracks-1].dwStartSector)) {
 	fprintf(stderr, "samplefile size will be %lu bytes.\n",
            global.audio_out->GetHdrSize() +
 	   global.audio_out->InSizeToOutSize(SamplesToWrite*global.OutSampleSize*global.channels)  ); 

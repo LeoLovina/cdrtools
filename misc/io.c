@@ -30,6 +30,7 @@ static	char sccsid[] =
 #include <stdxlib.h>
 #include <strdefs.h>
 #include <utypes.h>
+#include <schily.h>
 
 struct disk {
 	int	dummy;

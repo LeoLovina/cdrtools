@@ -1,4 +1,4 @@
-/* @(#)interface.h	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)interface.h	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /***
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Heiko Eissfeldt
@@ -107,8 +107,8 @@ extern void     (*EnableCdda) __PR((SCSI *scgp, int Switch));
 extern unsigned (*ReadToc) __PR(( SCSI *scgp, TOC *ptoc ));
 extern void	(*ReadTocText) __PR(( SCSI *scgp ));
 extern unsigned (*ReadLastAudio) __PR(( SCSI *scgp, unsigned tracks ));
-extern void     (*ReadCdRom) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
-extern void     (*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p, unsigned lSector, unsigned SectorBurstVal ));
+extern int      (*ReadCdRom) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
+extern int      (*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p, unsigned lSector, unsigned SectorBurstVal ));
 extern subq_chnl *(*ReadSubQ) __PR(( SCSI *scgp, unsigned char sq_format, unsigned char track ));
 extern void     (*SelectSpeed) __PR(( SCSI *scgp, unsigned speed ));
 extern int	(*Play_at) __PR(( SCSI *scgp, unsigned from_sector, unsigned sectors));

@@ -7,9 +7,9 @@ for a CD-Recorder as it is on other architectures.
 
 User level SCSI seems not be be well tested on *BSD
 
-It would be nice if the kernel hackers of all *BSD flavors could aggree in
+It would be nice if the kernel hackers of all *BSD flavors could agree in
 adding decent and useful SCSI user land transport support.
-This would cause the following canges:
+This would cause the following changes:
 
 	-	Add a driver that is present by default and offeres an
 		easy to address interface to the /dev/ namespace.
@@ -25,11 +25,11 @@ NOTE: This changed with FreeBSD/cam cdrecord -scanbus works on FreeBSD/cam
 
 Workaround:
 
-If /dev/su0-0-0 ... does not exist on your systen, you may try
+If /dev/su0-0-0 ... does not exist on your system, you may try
 to create the devices with the MAKEDEV.su script below.
 
 There is no way to get the device node entry from the numerical target
-specification on *BSD. You must specify the apropriate device node name:
+specification on *BSD. You must specify the appropriate device node name:
 e.g. dev=/dev/cd0.ctl:6,0 together with the numerical target specification.
 A short form is:
 
@@ -57,8 +57,8 @@ Jörg
 # The su driver seems not to be well tested on *BSD
 #
 # If nothing else helps, create a link /dev/scgx to the right
-# /dev/ entry (an entry that repsponds right with /sbin/scsi)
-# for your neded device.
+# /dev/ entry (an entry that responds right with /sbin/scsi)
+# for your needed device.
 #
 minorbase="536870912 + 2"
 #minorbase="0"

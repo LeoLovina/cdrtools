@@ -1,4 +1,4 @@
-/* @(#)standard.h	1.23 00/01/21 Copyright 1985 J. Schilling */
+/* @(#)standard.h	1.24 00/05/28 Copyright 1985 J. Schilling */
 /*
  *	standard definitions
  *
@@ -122,12 +122,8 @@ typedef int bool;
 #endif
 #endif
 
-/*
- * Until we fixed all programs that #include <standard.h>
- */
-#include <schily.h>
-
 #if defined(_JOS) || defined(JOS)
+#	include <schily.h>
 #	include <jos_io.h>
 #endif
 

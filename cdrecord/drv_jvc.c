@@ -1,7 +1,7 @@
-/** @(#)drv_jvc.c	1.49 00/04/26 Copyright 1997 J. Schilling */
+/** @(#)drv_jvc.c	1.50 00/05/07 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_jvc.c	1.49 00/04/26 Copyright 1997 J. Schilling";
+	"@(#)drv_jvc.c	1.50 00/05/07 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -42,6 +42,8 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <btorder.h>
 #include <intcvt.h>
+#include <schily.h>
+
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>

@@ -1,7 +1,7 @@
-/* @(#)cdr_drv.c	1.19 00/01/07 Copyright 1997 J. Schilling */
+/* @(#)cdr_drv.c	1.20 00/05/07 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdr_drv.c	1.19 00/01/07 Copyright 1997 J. Schilling";
+	"@(#)cdr_drv.c	1.20 00/05/07 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device abstraction layer
@@ -26,6 +26,7 @@ static	char sccsid[] =
 
 #include <stdxlib.h>
 #include <standard.h>
+#include <schily.h>
 
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>

@@ -1,7 +1,7 @@
-/* @(#)ioctl.c	1.5 00/03/21 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)ioctl.c	1.8 00/06/15 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)ioctl.c	1.5 00/03/21 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)ioctl.c	1.8 00/06/15 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /***
@@ -30,6 +30,7 @@ static char     sccsid[] =
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <statdefs.h>
+#include <schily.h>
 
 #include <scg/scsitransp.h>
 
@@ -175,7 +176,7 @@ static void trash_cache_cooked(p, lSector, SectorBurstVal)
 
       ioctl(global.cooked_fd, CDROMREADAUDIO, &arg2);
 #endif
-#if	defined __sun || defined HAVE_SYS_CDIO_H
+#if	defined __sun || (defined HAVE_SYS_CDIO_H && defined CDROM_DA_NO_SUBCODE)
       struct cdrom_cdda suncdda;
 
       suncdda.cdda_addr = lSector;
@@ -211,11 +212,11 @@ static void ReadCdRomData_cooked (x, p, lSector, SectorBurstVal )
 	return;
 }
 
-static void ReadCdRom_cooked __PR(( SCSI *x, UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
+static int ReadCdRom_cooked __PR(( SCSI *x, UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
 /* read 'SectorBurst' adjacent sectors of audio sectors 
  * to Buffer '*p' beginning at sector 'lSector'
  */
-static void ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
+static int ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
 	SCSI *x;
 	UINT4 *p;
 	unsigned lSector;
@@ -251,7 +252,7 @@ static void ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
   do {
     err = ioctl(global.cooked_fd, CDROMREADAUDIO, &arg);
 #endif
-#if	defined	__sun || defined HAVE_SYS_CDIO_H
+#if	defined __sun || (defined HAVE_SYS_CDIO_H && defined CDROM_DA_NO_SUBCODE)
   struct cdrom_cdda suncdda;
 
   suncdda.cdda_addr = lSector;
@@ -274,20 +275,24 @@ static void ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
 
   } while ((err) && (retry_count < 30));
   if (err != 0) {
-      /* error handling */
-      if (err == -1) {
-	  if (nothing_read && (errno == EINVAL || errno == EIO))
-	      fprintf( stderr, "Sorry, this driver and/or drive does not support cdda reading.\n");
-	  perror("cooked: Read cdda ");
-          fprintf(stderr, " sector %u + %u, buffer %p + %x\n", lSector, SectorBurstVal, p, global.shmsize);
-      } else {
-	  fprintf(stderr, "can't read frame #%u (error %d).\n", 
-		  lSector, err);
-      }
+	if (x->silent == 0) {
+		/* error handling */
+		if (err == -1) {
+			if (nothing_read && (errno == EINVAL || errno == EIO))
+				fprintf( stderr, "Sorry, this driver and/or drive does not support cdda reading.\n");
+			perror("cooked: Read cdda ");
+			fprintf(stderr, " sector %u + %u, buffer %p + %x\n", lSector, SectorBurstVal, p, global.shmsize);
+		} else {
+			fprintf(stderr, "can't read frame #%u (error %d).\n", 
+				lSector, err);
+		}
+	}
+	return SectorBurstVal - 1;
   } else {
     nothing_read = 0;
   }
 
+  return SectorBurstVal;
 }
 
 static int StopPlay_cooked __PR(( SCSI *x));
@@ -483,7 +488,8 @@ void SetupCookedIoctl( pdev_name )
         /* some are more compatible than others */
         global.nsectors = 13;
 	break;
-	default:
+    default:
+        global.nsectors = 8;
 	break;
     }
     err = ioctl(global.cooked_fd, CDROMAUDIOBUFSIZ, global.nsectors);
@@ -501,7 +507,7 @@ void SetupCookedIoctl( pdev_name )
 #endif
     EnableCdda = EnableCdda_cooked;
     ReadCdRom = ReadCdRom_cooked;
-    ReadCdRomData = (void (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadCdRomData_cooked;
+    ReadCdRomData = (int (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadCdRomData_cooked;
     ReadToc = ReadToc_cooked;
     ReadTocText = NULL;
     ReadSubQ = ReadSubQ_cooked;

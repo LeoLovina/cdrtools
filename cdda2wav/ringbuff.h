@@ -1,4 +1,4 @@
-/* @(#)ringbuff.h	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)ringbuff.h	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /* This file contains data structures that reside in the shared memory
  * segment.
  */
@@ -30,6 +30,8 @@ struct ringbuffheader {
   volatile int child_waitstate;
   volatile int parent_waitstate;
   volatile int input_littleendian;
+  volatile int end_is_reached;
+  volatile unsigned long nSamplesToDo;
   int offset;
   UINT4 data[CD_FRAMESAMPLES];
 };
@@ -41,6 +43,7 @@ extern volatile unsigned long *total_segments_written;
 extern volatile int *child_waits;
 extern volatile int *parent_waits;
 extern volatile int *in_lendian;
+extern volatile int *eorecording;
 
 #define palign(x, a)    (((char *)(x)) + ((a) - 1 - (((unsigned)((x)-1))%(a))))
 #define multpage(x, a)    ((((x) + (a) - 1) / (a)) * (a))
