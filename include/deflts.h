@@ -1,4 +1,4 @@
-/* @(#)deflts.h	1.3 98/12/05 Copyright 1997 J. Schilling */
+/* @(#)deflts.h	1.5 00/11/08 Copyright 1997 J. Schilling */
 /*
  *	Definitions for reading program defaults.
  *
@@ -25,6 +25,10 @@
 
 #ifndef _MCONFIG_H
 #include <mconfig.h>
+#endif
+
+#ifdef	__cplusplus
+extern "C" {
 #endif
 
 #define	DEFLT	"/etc/default"
@@ -57,7 +61,13 @@
 
 extern	int	defltopen	__PR((const char *name));
 extern	int	defltclose	__PR((void));
+extern	void	defltfirst	__PR((void));
 extern	char	*defltread	__PR((const char *name));
+extern	char	*defltnext	__PR((const char *name));
 extern	int	defltcntl	__PR((int cmd, int flags));
+
+#ifdef	__cplusplus
+}
+#endif
 
 #endif	/* _DEFLTS_H */

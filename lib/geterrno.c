@@ -1,4 +1,4 @@
-/* @(#)geterrno.c	1.7 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)geterrno.c	1.8 00/08/14 Copyright 1985 J. Schilling */
 /*
  *	Get error number
  *
@@ -23,6 +23,10 @@
 #include <errno.h>
 #include <standard.h>
 #include <schily.h>
+
+#ifndef	HAVE_ERRNO_DEF
+extern	int	errno;
+#endif
 
 #ifdef	geterrno
 #undef	geterrno

@@ -1,4 +1,4 @@
-#ident @(#)rules.ins	1.8 00/03/19 
+#ident @(#)rules.ins	1.9 00/11/07 
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -39,7 +39,7 @@ __INSMODEINS=	$(_INSMODEINS:$(_UNIQ)=$(INSMODEX))
 INSMODEINS=	$(__INSMODEINS:$(_UNIQ)%=%)
 
 dummy $(PHARDLINKS):	$(INS_BASE)/$(INSDIR)/$(TARGET)
-	@echo "	==> INSTALLING link \"$@\""; $(LN) $(INS_BASE)/$(INSDIR)/$(TARGET) $@
+	@echo "	==> INSTALLING link \"$@\""; $(RM) $(RM_FORCE) $@; $(LN) $(INS_BASE)/$(INSDIR)/$(TARGET) $@
 
 xinstall:
 	@if [ ".$(XMK_FILE)" != . ] ; then				\

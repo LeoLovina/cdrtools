@@ -1,7 +1,7 @@
-/* @(#)audiosize.c	1.14 00/05/07 Copyright 1998 J. Schilling */
+/* @(#)audiosize.c	1.16 01/02/22 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)audiosize.c	1.14 00/05/07 Copyright 1998 J. Schilling";
+	"@(#)audiosize.c	1.16 01/02/22 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -25,6 +25,7 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <statdefs.h>
@@ -108,9 +109,9 @@ typedef struct {
 #endif
 
 EXPORT	BOOL	is_auname	__PR((const char *name));
-EXPORT	long	ausize		__PR((int f));
+EXPORT	off_t	ausize		__PR((int f));
 EXPORT	BOOL	is_wavname	__PR((const char *name));
-EXPORT	long	wavsize		__PR((int f));
+EXPORT	off_t	wavsize		__PR((int f));
 
 EXPORT	BOOL	is_auname(name)
 	const	char	*name;
@@ -122,14 +123,15 @@ EXPORT	BOOL	is_auname(name)
 	return (streql(p, ".au"));
 }
 
-EXPORT long
+EXPORT off_t
 ausize(f)
 	int	f;
 {
 	sun_au_t	hdr;
 	struct stat	sb;
-	long		mode;
-	long		size;
+	mode_t		mode;
+	off_t		size;
+	Int32_t		val;
 	long		ret = AU_BAD_HEADER;
 
 	/*
@@ -141,7 +143,7 @@ ausize(f)
 		return (-1L);
 	if (fstat(f, &sb) < 0)
 		return (-1L);
-	mode = (long)(sb.st_mode & S_IFMT);
+	mode = sb.st_mode & S_IFMT;
 	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
 
@@ -153,22 +155,22 @@ ausize(f)
 
 	ret = AU_BAD_CODING;
 
-	size = a_to_u_4_byte(hdr.encoding);
-	if (size != SUN_AU_LINEAR16)
+	val = a_to_u_4_byte(hdr.encoding);
+	if (val != SUN_AU_LINEAR16)
 		goto err;
 
-	size = a_to_u_4_byte(hdr.channels);
-	if (size != 2)
+	val = a_to_u_4_byte(hdr.channels);
+	if (val != 2)
 		goto err;
 
-	size = a_to_u_4_byte(hdr.sample_rate);
-	if (size != 44100)
+	val = a_to_u_4_byte(hdr.sample_rate);
+	if (val != 44100)
 		goto err;
 
-	size = a_to_u_4_byte(hdr.hdr_size);
-	if (size < (long)sizeof(hdr) || size > 512)
+	size = (off_t)a_to_u_4_byte(hdr.hdr_size);
+	if (size < (off_t)sizeof(hdr) || size > 512)
 		goto err;
-	lseek(f, (off_t)size, SEEK_SET);
+	lseek(f, size, SEEK_SET);
 
 	/*
 	 * Most .au files don't seem to honor the data_size field,
@@ -179,7 +181,7 @@ ausize(f)
 
 err:
 	lseek(f, (off_t)0L, SEEK_SET);
-	return (ret);
+	return ((off_t)ret);
 }
 
 EXPORT	BOOL	is_wavname(name)
@@ -192,7 +194,7 @@ EXPORT	BOOL	is_wavname(name)
 	return (streql(p, ".wav") || streql(p, ".WAV"));
 }
 
-EXPORT long
+EXPORT off_t
 wavsize(f)
 	int	f;
 {
@@ -200,10 +202,10 @@ wavsize(f)
 	riff_chunk	riff;
 	fmt_chunk	fmt;
 	struct stat	sb;
-	long		cursor;
+	off_t		cursor;
 	BOOL		gotFormat;
-	long		mode;
-	long		size;
+	mode_t		mode;
+	off_t		size;
 	long		ret = AU_BAD_HEADER;
 
 	/*
@@ -216,27 +218,27 @@ wavsize(f)
 		return (-1L);
 	if (fstat(f, &sb) < 0)
 		return (-1L);
-	mode = (long)(sb.st_mode & S_IFMT);
+	mode = sb.st_mode & S_IFMT;
 	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
 
-	cursor = 0;
+	cursor = (off_t)0;
 	gotFormat = FALSE;
 
 	for (;;) {
 		if (read(f, &chunk, sizeof (chunk)) != sizeof (chunk))
 			goto err;
-		size = le_a_to_u_long(chunk.cksize);
+		size = (off_t)le_a_to_u_long(chunk.cksize);
 
 		if (strncmp((char *)chunk.ckid, WAV_RIFF_MAGIC, 4) == 0) {
 			if (read(f, &riff, sizeof (riff)) != sizeof (riff))
 				goto err;
 			if (strncmp((char *)riff.wave, WAV_WAVE_MAGIC, 4) != 0)
 				goto err;
-			size = sizeof (riff);
+			size = (off_t)sizeof (riff);
 
 		} else if (strncmp((char *)chunk.ckid, WAV_FMT_MAGIC, 4) == 0) {
-			if (size < (long)sizeof (fmt)) goto err;
+			if (size < (off_t)sizeof (fmt)) goto err;
 			if (sizeof (fmt) != read(f, &fmt, sizeof (fmt))) goto err;
 			if (le_a_to_u_short(fmt.channels) != 2 ||
 			    le_a_to_u_long(fmt.sample_rate) != 44100 ||
@@ -251,7 +253,7 @@ wavsize(f)
 				ret = AU_BAD_CODING;
 				goto err;
 			}
-			if ((long)(cursor + size + sizeof (chunk)) > sb.st_size)
+			if ((cursor + size + sizeof (chunk)) > sb.st_size)
 				size = sb.st_size - (cursor  + sizeof (chunk));
 			return (size);
 		}

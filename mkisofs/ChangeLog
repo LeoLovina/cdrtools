@@ -1,3 +1,389 @@
+Fri Apr 20 18:46:36 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.49
+	  Initalize more data from struct directory_record
+
+Fri Apr 20 18:45:47 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.93
+	  Always clear allocated memory to avoid uninitialized data.
+
+Tue Apr 17 00:57:30 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.69
+	  Hint to mailman
+
+Fri Apr 13 23:31:42 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ChangeLog 1.20
+	  updated to release 1.14
+
+Fri Apr 13 20:42:30 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.92
+	  Version -> 1.14 final
+
+Fri Apr 13 20:12:50 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.68
+	  New Support mail Adresses
+
+Thu Apr 12 19:36:39 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.91
+	  make insert_file_entry() failure non fatal in mkisofs main code
+
+Sat Apr  7 17:31:44 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.48
+	  starting to implement associated files in multi-session
+
+Sat Apr  7 14:47:49 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.58
+	* mkisofs.c 1.90
+	  No exit() for warnings
+
+Tue Apr  3 23:33:26 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* Makefile 1.9
+	* defaults.h 1.15
+	  APPID_DEFAULT now includes Copyright messages
+
+Mon Apr  2 23:17:05 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.47
+	  unused vars removed
+
+Mon Apr  2 20:09:22 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.89
+	  Fixed -check-session handling for -C0,0 default, Search for SUSP RR record in '.' of root
+
+Mon Apr  2 20:05:48 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.67
+	  New option -force-rr
+
+Mon Apr  2 20:05:25 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.46
+	  rr_flags()/parse_rrflags()/find_rr() new, get_session_start() handling for -check-session fixed
+
+Mon Apr  2 20:04:34 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.60
+	  rr_flags()/parse_rrflags()/find_rr() new
+
+Sun Apr  1 21:51:43 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.66
+	  -check-session new
+
+Sun Apr  1 21:51:11 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.88
+	  Parameter for -check-session added to usage
+
+Sun Apr  1 21:49:56 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.59
+	  -check-session neu
+
+Sun Apr  1 19:13:37 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.87
+	* multi.c 1.45
+	  Need to handle -C (cdrecord_data) special if -check-session is set
+
+Sun Apr  1 17:46:59 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* name.c 1.23
+	  Back up to last '.' found if trying to find a better '.' did not work
+
+Sun Apr  1 17:45:17 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.86
+	  New option -check-session
+
+Tue Mar 20 01:09:27 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* volume.c 1.8
+	* mkisofs.h 1.58
+	* mkisofs.c 1.85
+	* mkisofs.8 1.65
+	  New options for writable HFS files from James Pearson
+
+Sun Mar  4 15:13:00 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.64
+	  Better documentation for -no-cache-inodes
+
+Sun Mar  4 00:53:59 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.84
+	  Fix a bug with '-- filename'
+
+Sun Mar  4 00:52:29 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.63
+	* hash.c 1.14
+	* mkisofs.h 1.57
+	* mkisofs.c 1.83
+	  new options -no-cache-inodes/-cache-inodes as a workaround for non unique inodes on Cygwin
+
+Fri Feb 23 21:58:52 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.62
+	  Einfo for RR_MOVED dir added
+
+Fri Feb 23 17:33:54 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.c 1.12
+	  set_Dinfo(hfs_info->finderinfo, hfs_ent); -> set_Finfo(hfs_info->finderinfo, hfs_ent); according to James Pearson to make --xinet option work
+
+Thu Feb 15 23:04:00 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.49
+	  output_fraagment now copied to allocated space to allow a desc to be used more than once
+
+Thu Feb 15 23:02:53 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.82
+	  version -> 1.14a14
+
+Thu Jan 25 23:28:32 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* Makefile 1.8
+	* eltorito.c 1.20
+	* apple.c 1.11
+	* mkisofs.h 1.56
+	* tree.c 1.57
+	* write.c 1.48
+	  changes to support large files
+
+Tue Jan 23 13:27:44 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.56
+	* mkisofs.c 1.81
+	* mkisofs.h 1.55
+	* write.c 1.47
+	* apple.c 1.10
+	* rock.c 1.28
+	* eltorito.c 1.19
+	* joliet.c 1.28
+	  Avoid gcc -W warnings (e.g. signed/unsigned)
+
+Sat Jan 20 23:17:37 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.46
+	* mkisofs.8 1.61
+	* mkisofs.c 1.80
+	  -quiet make mkisofs really quiet
+
+Sat Jan 20 23:03:26 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.79
+	  Modified to allow EBCDIC
+
+Sat Jan 20 22:46:10 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.60
+	* mkisofs.h 1.54
+	* mkisofs.c 1.78
+	* rock.c 1.27
+	* joliet.c 1.27
+	* apple.c 1.9
+	  Better charset tables for Apple
+
+Fri Jan 19 19:26:19 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.55
+	* mkisofs.c 1.77
+	* mkisofs.8 1.59
+	* mkisofs.h 1.53
+	  better rationalized uid/gid/modes
+
+Sat Dec  9 19:55:17 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.c 1.8
+	  u_short -> Ushort, u_int -> Uint
+
+Sat Dec  9 19:36:48 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.26
+	  u_char -> Uchar
+
+Tue Dec  5 15:25:02 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* volume.c 1.7
+	* write.c 1.45
+	* vms.c 1.6
+	* tree.c 1.54
+	* rock.c 1.26
+	* name.c 1.22
+	* multi.c 1.44
+	* mkisofs.h 1.52
+	* mkisofs.c 1.76
+	* match.c 1.13
+	* match.h 1.7
+	* mac_label.c 1.4
+	* joliet.c 1.25
+	* hash.c 1.13
+	* files.c 1.9
+	* exclude.c 1.8
+	* eltorito.c 1.18
+	* desktop.c 1.3
+	* apple_driver.c 1.4
+	* boot.c 1.7
+	* apple.c 1.7
+	  Completed conversion to Schily SING autoconfiguration
+
+Mon Dec  4 12:56:49 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.51
+	  Now first includes mconfig.h then stdio.h (for largefiles), now uses strdefs.h, standard.h for const abstraction, stdxlib.h instead of stdlib.h
+
+Mon Dec  4 12:53:32 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.43
+	* scsi.c 1.17
+	  lseek now using SEEK_* macros
+
+Mon Dec  4 12:53:11 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mac_label.c 1.3
+	* apple_driver.c 1.3
+	* apple.c 1.6
+	  fseek now using SEEK_* macros
+
+Fri Dec  1 14:14:23 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.42
+	  Now working without scg_prbytes() from libscg
+
+Fri Nov 24 10:49:58 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.75
+	  -print-size now also prints an easy to parse string to stdout
+
+Fri Nov 24 10:49:29 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.58
+	   New -print-size behavior documented
+
+Sun Nov 19 16:34:56 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.74
+	  New option -no-pad, -pad now default, support for Cygwin-1.x
+
+Sun Nov 19 16:33:13 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* Makefile 1.7
+	  Umbau fuer mkhybrid
+
+Sun Nov 19 16:32:40 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* Makefile.man 1.3
+	  INSMODE= beseitigt
+
+Sun Nov 19 13:03:18 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* name.c 1.21
+	  Special handling for '#' and '~' disabled because the code created infinite dir tree loops
+
+Sat Nov  4 17:59:36 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.57
+	  New option -no-pad, -pad now default
+
+Sat Oct 14 15:33:50 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.56
+	  hint for CD-Extra usage (-M/-C), note for -graft-points option in examples that need -graft-points
+
+Fri Sep  8 02:49:31 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi.c 1.16
+	  Call to scg_remote()
+
+Fri Sep  8 02:49:00 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.73
+	  Warning for using Joliet without Rock Ridge
+
+Fri Aug 25 15:31:13 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* match.c 1.12
+	* mkisofs.c 1.72
+	  new-line discarded only if really present
+
+Mon Aug 14 01:36:38 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.71
+	  Graft-points repariert fuer esacped =
+
+Sun Jul 30 14:08:38 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.41
+	* scsi.c 1.15
+	  Modified for new libscg with scg_*()
+
+Thu Jul 20 19:29:19 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.70
+	  Version -> 1.13
+
+Thu Jul 20 19:27:54 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mac_label.c 1.2
+	  Size arithmetic fix for HFS vol size
+
+Thu Jul 20 19:27:12 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.55
+	  Small typo fixes
+
+Tue Jun 27 19:12:02 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.69
+	* mkisofs.8 1.54
+	  New option -graft-points
+
+Tue Jun 27 01:38:35 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.68
+	  1.13a02 -> 1.13a03
+
+Tue Jun 27 01:31:27 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.67
+	  allow -path-list option to work without a command line arg, graft pointer escapes haf way ready
+
+Tue Jun 27 01:20:27 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* match.c 1.11
+	  better parser for -sort option, avoid buffer overflows by not using fscanf
+
+Tue Jun 27 01:18:01 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.53
+	  Better doc for -sort option
+
+Mon Jun 26 23:50:33 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple_driver.c 1.2
+	  Converted for Schily SING makefile system, made portable
+
+Mon Jun  5 03:19:54 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.44
+	  percent output now even works with NO_FLOATINGPOINT
+
+Sat Jun  3 14:24:26 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.43
+	  buffer[] -> static in write_one_file() for sake of the silly  Metrowerks C found on BeOS/PPC
+
+Sun May 28 17:41:40 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.66
+	  version -> 1.13a02
+
+Sun May 28 17:03:48 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.17
+	* mkisofs.8 1.52
+	* mkisofs.h 1.50
+	* mkisofs.c 1.65
+	  New option -eltorito-alt-boot
+
+Sun May 28 16:28:01 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.51
+	  Integration of mkisofs/mkhybrid to one single application
+
+Sun May 28 13:21:51 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.40
+	  Check for reloc_dir != NULL in match_cl_re_entries() 
+
+Sun May  7 17:23:57 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* match.c 1.10
+	* scsi.c 1.14
+	* boot.c 1.6
+	* eltorito.c 1.16
+	* name.c 1.20
+	* joliet.c 1.24
+	* multi.c 1.39
+	* rock.c 1.25
+	* hash.c 1.12
+	* write.c 1.42
+	* tree.c 1.53
+	* mkisofs.c 1.64
+	  #include <schily.h>
+
+Sun May  7 17:14:34 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.63
+	  Release -> 1.13a01, removed comment for associated files as it has been wrong
+
+Thu Apr 27 14:11:30 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* RELEASE 1.31
+	  Release 1.12.1
+
+Thu Apr 27 14:06:09 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.50
+	  New Opton -root-info, typo's corrected
+
+Thu Apr 27 13:54:09 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.c 1.5
+	  cast for correct char * / unsigned char * handling
+
+Thu Apr 27 13:36:25 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* volume.c 1.6
+	* apple.h 1.3
+	* desktop.c 1.2
+	* apple.c 1.4
+	  Major changes to implement new HFS option -root-info and -jcharset mac-roman
+
+Thu Apr 27 12:47:26 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* Makefile 1.6
+	  New file place sorting option activated with -DSORTING
+
+Thu Apr 27 12:46:35 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ChangeLog 1.19
+	  updated to release 1.12.1
+
 **************** Release 1.12.1 *******************
 
 Thu Apr 27 12:44:54 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>

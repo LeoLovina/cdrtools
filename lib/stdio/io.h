@@ -1,10 +1,28 @@
-/* @(#)io.h	2.10 00/05/07 Copyright 1986, 1995 J. Schilling */
+/* @(#)io.h	2.16 01/02/17 Copyright 1986, 1995 J. Schilling */
 /*
  *	Copyright (c) 1986, 1995 J. Schilling
  */
-/*@@C@@*/
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#ifndef	_STDIO_IO_H
+#define	_STDIO_IO_H
 
 #include <mconfig.h>
+#include <stdio.h>
 #include <standard.h>
 #include <unixstd.h>
 #include <fctldefs.h>
@@ -16,10 +34,26 @@
 #	endif
 #endif
 
+/*#if	_LFS_LARGEFILE*/
+#ifdef	HAVE_LARGEFILES
+/*
+ * XXX Hack until fseeko()/ftello() are available everywhere or until
+ * XXX we know a secure way to let autoconf ckeck for fseeko()/ftello()
+ * XXX without defining FILE_OFFSETBITS to 64 in confdefs.h
+ */
+#	define	fseek	fseeko
+#	define	ftell	ftello
+#endif
+
 /*
  * speed things up...
  */
+#ifndef	_OPENFD_SRC
+#ifdef	_openfd
+#undef	_openfd
+#endif
 #define	_openfd(name, omode)	(open(name, omode, 0666))
+#endif
 
 #define	DO_MYFLAG		/* use local flags */
 
@@ -97,11 +131,42 @@ extern	void	_io_add_my_flag __PR((FILE *, int));
 #endif	/* DO_MYFLAG */
 
 #ifdef	HAVE_USG_STDIO
+
+/*
+ * Use the right filbuf()/flsbuf() function.
+ */
+#ifdef	HAVE___FILBUF
+#	define	usg_filbuf(fp)		__filbuf(fp)
+#	define	usg_flsbuf(c, fp)	__flsbuf(c, fp)
 /*
  * Define prototypes to verify if our interface is right
  */
-extern	int	_filbuf	__PR((FILE *));
-extern	int	_flsbuf	__PR((int, FILE *));
+extern	int	__filbuf		__PR((FILE *));
+/*extern	int	__flsbuf		__PR(());*/
+#else
+#	ifdef	HAVE__FILBUF
+#	define	usg_filbuf(fp)		_filbuf(fp)
+#	define	usg_flsbuf(c, fp)	_flsbuf(c, fp)
+/*
+ * Define prototypes to verify if our interface is right
+ */
+extern	int	_filbuf			__PR((FILE *));
+/*extern	int	_flsbuf			__PR(());*/
+#	else
+/*
+ * no filbuf() but this will not happen on USG_STDIO systems.
+ */
+#	endif
+#endif
+/*
+ * Do not check this because flsbuf()'s 1st parameter may be 
+ * int			SunOS
+ * unsigned int		Apollo
+ * unsigned char	HP-UX-11
+ *
+ * Note that the interface is now checked by autoconf.
+ */
+/*extern	int	_flsbuf	__PR((int, FILE *));*/
 #else
 /*
  * If we are on a non USG system we cannot down file pointers
@@ -148,3 +213,4 @@ extern	char	_badfile[];
 extern	char	_badmode[];
 extern	char	_badop[];
 
+#endif	/* _STDIO_IO_H */

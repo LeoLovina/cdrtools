@@ -1,4 +1,4 @@
-/* @(#)btorder.h	1.11 00/01/05 Copyright 1996 J. Schilling */
+/* @(#)btorder.h	1.13 01/02/17 Copyright 1996 J. Schilling */
 /*
  *	Definitions for Bitordering
  *
@@ -24,7 +24,10 @@
 #ifndef	_BTORDER_H
 #define	_BTORDER_H
 
+#ifndef	_INCL_SYS_TYPES_H
 #include <sys/types.h>			/* try to load isa_defs.h on Solaris */
+#define	_INCL_SYS_TYPES_H
+#endif
 
 #ifndef _MCONFIG_H
 #include <mconfig.h>

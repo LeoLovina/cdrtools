@@ -1,3 +1,8 @@
+/* @(#)apple_driver.c	1.4 00/12/05 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)apple_driver.c	1.4 00/12/05 joerg";
+#endif
 /*
 **	apple_driver.c: extract Mac partition label, maps and boot driver
 **
@@ -22,10 +27,9 @@
 **	James Pearson 17/5/98
 */
 
-#include <config.h>
-#include <mkisofs.h>
+#include <mconfig.h>
+#include "mkisofs.h"
 #include <mac_label.h>
-#include <standard.h>
 #include <schily.h>
 
 EXPORT	int	get_732	__PR((char *p));
@@ -92,7 +96,7 @@ main(argc, argv)
 
 	i = 1;
 	do {
-	    if (fseek(fp, i * HFS_BLOCKSZ, 0) != 0)
+	    if (fseek(fp, i * HFS_BLOCKSZ, SEEK_SET) != 0)
 		comerr("Ccan't seek %s", argv[1]);
 
 	    if (fread(block, 1, HFS_BLOCKSZ, fp) != HFS_BLOCKSZ)
@@ -112,7 +116,7 @@ main(argc, argv)
 
 		hfs_start = get_732((char *)mac_part->pmPyPartStart);
 
-		if (fseek(fp, hfs_start*HFS_BLOCKSZ, 0) != 0)
+		if (fseek(fp, hfs_start*HFS_BLOCKSZ, SEEK_SET) != 0)
 		    comerr("Can't seek '%s'.", argv[1]);
 
 		if (fread(bootb, 2, HFS_BLOCKSZ, fp) != HFS_BLOCKSZ)
@@ -132,7 +136,7 @@ main(argc, argv)
 	i = 1;
 
 	do {
-	    if (fseek(fp, i*sbBlkSize, 0) != 0)
+	    if (fseek(fp, i*sbBlkSize, SEEK_SET) != 0)
 		comerr("Can't seek '%s'.", argv[1]);
 
 	    if (fread(block, 1, HFS_BLOCKSZ, fp) != HFS_BLOCKSZ)
@@ -153,7 +157,7 @@ main(argc, argv)
 		memset(block, 0, HFS_BLOCKSZ);
 		fwrite(block, 1, HFS_BLOCKSZ, stdout);
 
-		if (fseek(fp, start*sbBlkSize, 0) != 0)
+		if (fseek(fp, start*sbBlkSize, SEEK_SET) != 0)
 		    comerr("Can't seek '%s'.", argv[1]);
 
 		for (j=0;j<num;j++) {

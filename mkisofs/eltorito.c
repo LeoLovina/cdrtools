@@ -1,7 +1,7 @@
-/* @(#)eltorito.c	1.17 00/05/28 joerg */
+/* @(#)eltorito.c	1.20 01/01/25 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)eltorito.c	1.17 00/05/28 joerg";
+	"@(#)eltorito.c	1.20 01/01/25 joerg";
 
 #endif
 /*
@@ -27,26 +27,15 @@ static	char sccsid[] =
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.   */
 
 
-#include "config.h"
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unixstd.h>
-#include <stdxlib.h>
-#include <fctldefs.h>
-
+#include <mconfig.h>
 #include "mkisofs.h"
-#include "match.h"
-#include "iso9660.h"
-#include "diskmbr.h"
-#include "bootinfo.h"
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
-#include <schily.h>
-#endif
+#include <fctldefs.h>
 #include <utypes.h>
 #include <intcvt.h>
+#include "match.h"
+#include "diskmbr.h"
+#include "bootinfo.h"
+#include <schily.h>
 
 #undef MIN
 #define MIN(a, b) (((a) < (b))? (a): (b))
@@ -302,7 +291,7 @@ get_torito_desc(boot_desc)
 	checksum_ptr = (unsigned char *) &valid_desc;
 	/* Set checksum to 0 before computing checksum */
 	set_721(valid_desc.cksum, 0);
-	for (i = 0; i < sizeof(valid_desc); i += 2) {
+	for (i = 0; i < (int)sizeof(valid_desc); i += 2) {
 		checksum += (unsigned int) checksum_ptr[i];
 		checksum += ((unsigned int) checksum_ptr[i + 1]) * 256;
 	}
@@ -611,7 +600,7 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 #endif
 		}
 		/* End of file, set position to byte 8 */
-		lseek(bootimage, 8, SEEK_SET);
+		lseek(bootimage, (off_t)8, SEEK_SET);
 		memset(&bi_table, 0, sizeof(bi_table));
 		/* Is it always safe to assume PVD is at session_start+16? */
 		set_731(bi_table.bi_pvd, session_start + 16);

@@ -1,4 +1,4 @@
-/* @(#)scsicdb.h	2.15 99/10/18 Copyright 1986 J. Schilling */
+/* @(#)scsicdb.h	2.17 00/11/07 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI Command Descriptor Block
  *
@@ -23,6 +23,13 @@
 #ifndef	_SCG_SCSICDB_H
 #define	_SCG_SCSICDB_H
 
+#ifndef  _UTYPES_H
+#include <utypes.h>
+#endif
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
 /*
  * SCSI Operation codes. 
  */
@@ -63,12 +70,12 @@
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct	scsi_g0cdb {		/* scsi group 0 command description block */
-	u_char	cmd;		/* command code */
+	Uchar	cmd;		/* command code */
 	Ucbit	high_addr : 5;	/* high part of block address */
 	Ucbit	lun	  : 3;	/* logical unit number */
-	u_char	mid_addr;	/* middle part of block address */
-	u_char	low_addr;	/* low part of block address */
-	u_char	count;		/* transfer length */
+	Uchar	mid_addr;	/* middle part of block address */
+	Uchar	low_addr;	/* low part of block address */
+	Uchar	count;		/* transfer length */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
 	Ucbit	rsvd	  : 4;	/* reserved */
@@ -79,12 +86,12 @@ struct	scsi_g0cdb {		/* scsi group 0 command description block */
 #else	/* Motorola byteorder */
 
 struct	scsi_g0cdb {		/* scsi group 0 command description block */
-	u_char	cmd;		/* command code */
+	Uchar	cmd;		/* command code */
 	Ucbit	lun	  : 3;	/* logical unit number */
 	Ucbit	high_addr : 5;	/* high part of block address */
-	u_char	mid_addr;	/* middle part of block address */
-	u_char	low_addr;	/* low part of block address */
-	u_char	count;		/* transfer length */
+	Uchar	mid_addr;	/* middle part of block address */
+	Uchar	low_addr;	/* low part of block address */
+	Uchar	count;		/* transfer length */
 	Ucbit	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
 	Ucbit	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
 	Ucbit	rsvd	  : 4;	/* reserved */
@@ -96,13 +103,13 @@ struct	scsi_g0cdb {		/* scsi group 0 command description block */
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct	scsi_g1cdb {		/* scsi group 1 command description block */
-	u_char	cmd;		/* command code */
+	Uchar	cmd;		/* command code */
 	Ucbit	reladr	  : 1;	/* address is relative */
 	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
 	Ucbit	lun	  : 3;	/* logical unit number */
-	u_char	addr[4];	/* logical block address */
-	u_char	res6;		/* reserved byte 6 */
-	u_char	count[2];	/* transfer length */
+	Uchar	addr[4];	/* logical block address */
+	Uchar	res6;		/* reserved byte 6 */
+	Uchar	count[2];	/* transfer length */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
 	Ucbit	rsvd	  : 4;	/* reserved */
@@ -113,13 +120,13 @@ struct	scsi_g1cdb {		/* scsi group 1 command description block */
 #else	/* Motorola byteorder */
 
 struct	scsi_g1cdb {		/* scsi group 1 command description block */
-	u_char	cmd;		/* command code */
+	Uchar	cmd;		/* command code */
 	Ucbit	lun	  : 3;	/* logical unit number */
 	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
 	Ucbit	reladr	  : 1;	/* address is relative */
-	u_char	addr[4];	/* logical block address */
-	u_char	res6;		/* reserved byte 6 */
-	u_char	count[2];	/* transfer length */
+	Uchar	addr[4];	/* logical block address */
+	Uchar	res6;		/* reserved byte 6 */
+	Uchar	count[2];	/* transfer length */
 	Ucbit	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
 	Ucbit	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
 	Ucbit	rsvd	  : 4;	/* reserved */
@@ -131,13 +138,13 @@ struct	scsi_g1cdb {		/* scsi group 1 command description block */
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct	scsi_g5cdb {		/* scsi group 5 command description block */
-	u_char	cmd;		/* command code */
+	Uchar	cmd;		/* command code */
 	Ucbit	reladr	  : 1;	/* address is relative */
 	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
 	Ucbit	lun	  : 3;	/* logical unit number */
-	u_char	addr[4];	/* logical block address */
-	u_char	count[4];	/* transfer length */
-	u_char	res10;		/* reserved byte 10 */
+	Uchar	addr[4];	/* logical block address */
+	Uchar	count[4];	/* transfer length */
+	Uchar	res10;		/* reserved byte 10 */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
 	Ucbit	rsvd	  : 4;	/* reserved */
@@ -148,13 +155,13 @@ struct	scsi_g5cdb {		/* scsi group 5 command description block */
 #else	/* Motorola byteorder */
 
 struct	scsi_g5cdb {		/* scsi group 5 command description block */
-	u_char	cmd;		/* command code */
+	Uchar	cmd;		/* command code */
 	Ucbit	lun	  : 3;	/* logical unit number */
 	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
 	Ucbit	reladr	  : 1;	/* address is relative */
-	u_char	addr[4];	/* logical block address */
-	u_char	count[4];	/* transfer length */
-	u_char	res10;		/* reserved byte 10 */
+	Uchar	addr[4];	/* logical block address */
+	Uchar	count[4];	/* transfer length */
+	Uchar	res10;		/* reserved byte 10 */
 	Ucbit	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
 	Ucbit	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
 	Ucbit	rsvd	  : 4;	/* reserved */
@@ -187,46 +194,50 @@ struct	scsi_g5cdb {		/* scsi group 5 command description block */
 
 /*#define	XXXXX*/
 #ifdef	XXXXX
-#define	i_to_long(a, i)		(((u_char *)(a))[0] = ((i) >> 24)& 0xFF,\
-				 ((u_char *)(a))[1] = ((i) >> 16)& 0xFF,\
-				 ((u_char *)(a))[2] = ((i) >> 8) & 0xFF,\
-				 ((u_char *)(a))[3] = (i) & 0xFF)
+#define	i_to_long(a, i)		(((Uchar *)(a))[0] = ((i) >> 24)& 0xFF,\
+				 ((Uchar *)(a))[1] = ((i) >> 16)& 0xFF,\
+				 ((Uchar *)(a))[2] = ((i) >> 8) & 0xFF,\
+				 ((Uchar *)(a))[3] = (i) & 0xFF)
 
-#define	i_to_3_byte(a, i)	(((u_char *)(a))[0] = ((i) >> 16)& 0xFF,\
-				 ((u_char *)(a))[1] = ((i) >> 8) & 0xFF,\
-				 ((u_char *)(a))[2] = (i) & 0xFF)
+#define	i_to_3_byte(a, i)	(((Uchar *)(a))[0] = ((i) >> 16)& 0xFF,\
+				 ((Uchar *)(a))[1] = ((i) >> 8) & 0xFF,\
+				 ((Uchar *)(a))[2] = (i) & 0xFF)
 
-#define	i_to_4_byte(a, i)	(((u_char *)(a))[0] = ((i) >> 24)& 0xFF,\
-				 ((u_char *)(a))[1] = ((i) >> 16)& 0xFF,\
-				 ((u_char *)(a))[2] = ((i) >> 8) & 0xFF,\
-				 ((u_char *)(a))[3] = (i) & 0xFF)
+#define	i_to_4_byte(a, i)	(((Uchar *)(a))[0] = ((i) >> 24)& 0xFF,\
+				 ((Uchar *)(a))[1] = ((i) >> 16)& 0xFF,\
+				 ((Uchar *)(a))[2] = ((i) >> 8) & 0xFF,\
+				 ((Uchar *)(a))[3] = (i) & 0xFF)
 
-#define	i_to_short(a, i)	(((u_char *)(a))[0] = ((i) >> 8) & 0xFF,\
-				 ((u_char *)(a))[1] = (i) & 0xFF)
+#define	i_to_short(a, i)	(((Uchar *)(a))[0] = ((i) >> 8) & 0xFF,\
+				 ((Uchar *)(a))[1] = (i) & 0xFF)
 
 #define	a_to_u_short(a)	((unsigned short) \
-			((((unsigned char*) a)[1]       & 0xFF) | \
-			 (((unsigned char*) a)[0] << 8  & 0xFF00)))
+			((((Uchar*) a)[1]       & 0xFF) | \
+			 (((Uchar*) a)[0] << 8  & 0xFF00)))
 
-#define	a_to_3_byte(a)	((unsigned long) \
-			((((unsigned char*) a)[2]       & 0xFF) | \
-			 (((unsigned char*) a)[1] << 8  & 0xFF00) | \
-			 (((unsigned char*) a)[0] << 16 & 0xFF0000)))
+#define	a_to_3_byte(a)	((Ulong) \
+			((((Uchar*) a)[2]       & 0xFF) | \
+			 (((Uchar*) a)[1] << 8  & 0xFF00) | \
+			 (((Uchar*) a)[0] << 16 & 0xFF0000)))
 
 #ifdef	__STDC__
-#define	a_to_u_long(a)	((unsigned long) \
-			((((unsigned char*) a)[3]       & 0xFF) | \
-			 (((unsigned char*) a)[2] << 8  & 0xFF00) | \
-			 (((unsigned char*) a)[1] << 16 & 0xFF0000) | \
-			 (((unsigned char*) a)[0] << 24 & 0xFF000000UL)))
+#define	a_to_u_long(a)	((Ulong) \
+			((((Uchar*) a)[3]       & 0xFF) | \
+			 (((Uchar*) a)[2] << 8  & 0xFF00) | \
+			 (((Uchar*) a)[1] << 16 & 0xFF0000) | \
+			 (((Uchar*) a)[0] << 24 & 0xFF000000UL)))
 #else
-#define	a_to_u_long(a)	((unsigned long) \
-			((((unsigned char*) a)[3]       & 0xFF) | \
-			 (((unsigned char*) a)[2] << 8  & 0xFF00) | \
-			 (((unsigned char*) a)[1] << 16 & 0xFF0000) | \
-			 (((unsigned char*) a)[0] << 24 & 0xFF000000)))
+#define	a_to_u_long(a)	((Ulong) \
+			((((Uchar*) a)[3]       & 0xFF) | \
+			 (((Uchar*) a)[2] << 8  & 0xFF00) | \
+			 (((Uchar*) a)[1] << 16 & 0xFF0000) | \
+			 (((Uchar*) a)[0] << 24 & 0xFF000000)))
 #endif
 #endif	/* XXXX */
 
+
+#ifdef	__cplusplus
+}
+#endif
 
 #endif	/* _SCG_SCSICDB_H */

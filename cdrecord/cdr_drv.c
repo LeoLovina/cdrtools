@@ -1,7 +1,7 @@
-/* @(#)cdr_drv.c	1.20 00/05/07 Copyright 1997 J. Schilling */
+/* @(#)cdr_drv.c	1.21 01/02/21 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdr_drv.c	1.20 00/05/07 Copyright 1997 J. Schilling";
+	"@(#)cdr_drv.c	1.21 01/02/21 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device abstraction layer
@@ -24,7 +24,9 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
 #include <stdxlib.h>
+#include <unixstd.h>	/* Include sys/types.h to make off_t available */
 #include <standard.h>
 #include <schily.h>
 

@@ -1,12 +1,12 @@
-/* @(#)cdrecord.c	1.105 00/07/20 Copyright 1995-2000 J. Schilling */
+/* @(#)cdrecord.c	1.119 01/04/19 Copyright 1995-2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdrecord.c	1.105 00/07/20 Copyright 1995-2000 J. Schilling";
+	"@(#)cdrecord.c	1.119 01/04/19 Copyright 1995-2001 J. Schilling";
 #endif
 /*
  *	Record data on a CD/CVD-Recorder
  *
- *	Copyright (c) 1995-2000 J. Schilling
+ *	Copyright (c) 1995-2001 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -55,7 +55,7 @@ static	char sccsid[] =
 #include "auheader.h"
 #include "cdrecord.h"
 
-char	cdr_version[] = "1.9";
+char	cdr_version[] = "1.10";
 
 /*
  * Map toc/track types into names.
@@ -108,7 +108,9 @@ char	*db2name[] = {
 };
 
 int		debug;		/* print debug messages */
+LOCAL	int	kdebug;		/* print kernel debug messages */
 LOCAL	int	scsi_verbose;	/* SCSI verbose flag */
+LOCAL	int	silent;		/* SCSI silent flag */
 int		lverbose;	/* local verbose flag */
 
 /*
@@ -151,8 +153,8 @@ EXPORT	int	read_buf	__PR((int f, char *bp, int size));
 EXPORT	int	get_buf		__PR((int f, char **bpp, int size));
 LOCAL	int	write_track_data __PR((SCSI *scgp, cdr_t *, int , track_t *));
 EXPORT	int	pad_track	__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp,
-				     long startsec, long amt,
-				     BOOL dolast, long *bytesp));
+				     long startsec, Llong amt,
+				     BOOL dolast, Llong *bytesp));
 EXPORT	int	write_buf	__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp,
 				     char *bp, long startsec, long amt, int secsize,
 				     BOOL dolast, long *bytesp));
@@ -186,7 +188,6 @@ LOCAL	int	rt_raisepri	__PR((int));
 EXPORT	void	raisepri	__PR((int));
 LOCAL	void	wait_input	__PR((void));
 LOCAL	void	checkgui	__PR((void));
-LOCAL	char *	astoll		__PR((const char *s, Llong *ll));
 LOCAL	Llong	number		__PR((char* arg, int* retp));
 EXPORT	int	getnum		__PR((char* arg, long* valp));
 EXPORT	int	getllnum	__PR((char *arg, Llong* lvalp));
@@ -244,7 +245,7 @@ main(ac, av)
 	i = set_cdrcmds("mmc_dvd", (cdr_t **)NULL);
 #endif
 	if ((flags & F_MSINFO) == 0 || lverbose || flags & F_VERSION)
-		printf("Cdrecord%s %s (%s-%s-%s) Copyright (C) 1995-2000 Jörg Schilling\n",
+		printf("Cdrecord%s %s (%s-%s-%s) Copyright (C) 1995-2001 Jörg Schilling\n",
 #ifdef	DRV_DVD
 								i?"-ProDVD":"",
 #else
@@ -284,14 +285,22 @@ main(ac, av)
 		wait_input();
 	}
 
-	if ((scgp = open_scsi(dev, errstr, sizeof(errstr),
+	/*
+	 * Call scg_remote() to force loading the remote SCSI transport library
+	 * code that is located in librscg instead of the dummy remote routines
+	 * that are located inside libscg.
+	 */
+	scg_remote();
+	if ((scgp = scg_open(dev, errstr, sizeof(errstr),
 				debug, (flags & F_MSINFO) == 0 || lverbose)) == (SCSI *)0) {
 			errmsg("%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
 			comerrno(EX_BAD, "For possible targets try 'cdrecord -scanbus'. Make sure you are root.\n");
 	}
-	scsi_settimeout(scgp, timeout);
+	scg_settimeout(scgp, timeout);
 	scgp->verbose = scsi_verbose;
+	scgp->silent = silent;
 	scgp->debug = debug;
+	scgp->kdebug = kdebug;
 	scgp->cap->c_bsize = 2048;
 
 
@@ -321,22 +330,37 @@ main(ac, av)
 			"Warning: using inofficial libscg transport code version (%s-%s '%s').\n",
 				auth, vers, scg_version(scgp, SCG_SCCS_ID));
 		}
+
+		vers = scg_version(scgp, SCG_RVERSION);
+		auth = scg_version(scgp, SCG_RAUTHOR);
+		if (lverbose > 1 && vers && auth)
+			error("Using remote transport code version '%s-%s'\n", auth, vers);
+		if (auth != 0 && strcmp("schily", auth) != 0) {
+			errmsgno(EX_BAD,
+			"Warning: using inofficial remote transport code version (%s-%s '%s').\n",
+				auth, vers, scg_version(scgp, SCG_RSCCS_ID));
+		}
 	}
 	if (lverbose && driveropts)
 		printf("Driveropts: '%s'\n", driveropts);
 
-	bufsize = scsi_bufsize(scgp, BUF_SIZE);
+	bufsize = scg_bufsize(scgp, BUF_SIZE);
 	if (debug)
 		error("SCSI buffer size: %ld\n", bufsize);
-	if ((buf = scsi_getbuf(scgp, bufsize)) == NULL)
+	if ((buf = scg_getbuf(scgp, bufsize)) == NULL)
 		comerr("Cannot get SCSI I/O buffer.\n");
 
 	if ((flags & F_SCANBUS) != 0) {
-		select_target(scgp);
+		select_target(scgp, stdout);
 		exit(0);
 	}
 	if ((flags & F_RESET) != 0) {
-		scsireset(scgp);
+		if (scg_reset(scgp, SCG_RESET_NOP) < 0)
+			comerr("Cannot reset (OS does not implement reset).\n");
+		if (scg_reset(scgp, SCG_RESET_TGT) >= 0)
+			exit(0);
+		if (scg_reset(scgp, SCG_RESET_BUS) < 0)
+			comerr("Cannot reset target.\n");
 		exit(0);
 	}
 	/*
@@ -344,7 +368,7 @@ main(ac, av)
 	 * have.
 	 */
 	if (debug || lverbose)
-		printf("atapi: %d\n", scsi_isatapi(scgp));
+		printf("atapi: %d\n", scg_isatapi(scgp));
 	scgp->silent++;
 	test_unit_ready(scgp);	/* eat up unit attention */
 	scgp->silent--;
@@ -375,8 +399,19 @@ main(ac, av)
 
 	if (((flags & (F_MSINFO|F_TOC|F_LOAD|F_EJECT)) == 0 || tracks > 0) &&
 					(dp->cdr_flags & CDR_ISREADER) != 0) {
-		comerrno(EX_BAD,
+		BOOL	is_dvdr = FALSE;
+
+		errmsgno(EX_BAD,
 		"Sorry, no CD/DVD-Recorder or unsupported CD/DVD-Recorder found on this target.\n");
+
+		is_mmc(scgp, &is_dvdr);
+		if (is_dvdr && !set_cdrcmds("mmc_dvd", (cdr_t **)NULL)) {
+			errmsgno(EX_BAD,
+			"This version of cdrecord does not include DVD-R support code.\n");
+			errmsgno(EX_BAD,
+			"If you need DVD-R support, ask the Author for cdrecord-ProDVD.\n");
+		}
+		exit(EX_BAD);
 	}
 
 	if ((*dp->cdr_attach)(scgp, dp) != 0)
@@ -511,9 +546,16 @@ do_cue(tracks, track, 0);
 	 *
 	 * We set TAO unconditionally to make checkdsize() work
 	 * currectly in DAO mode too.
+	 *
+	 * XXX The ACER drive:
+	 * XXX Vendor_info    : 'ATAPI   '
+	 * XXX Identifikation : 'CD-R/RW 8X4X32  '
+	 * XXX Revision       : '5.EW'
+	 * XXX Will not return from -dummy to non-dummy without
+	 * XXX opening the tray.
 	 */
 	scgp->silent++;
-	(*dp->cdr_set_speed_dummy)(scgp, 0, TRUE);
+	(*dp->cdr_set_speed_dummy)(scgp, 0, flags & F_DUMMY);
 	scgp->silent--;
 
 	if (flags & F_MSINFO) {
@@ -573,7 +615,7 @@ do_cue(tracks, track, 0);
 		(flags & F_DUMMY)?"dummy":"real");
 	flush();
 	signal(SIGINT, intr);
-	for (i=9; --i > 0;) {
+	for (i=9; --i >= 0;) {
 		sleep(1);
 		if (didintr) {
 			printf("\n");
@@ -582,6 +624,8 @@ do_cue(tracks, track, 0);
 		printf("\b\b\b\b\b\b\b\b\b\b%d seconds.", i);
 		flush();
 	}
+	printf(" Operation starts.");
+	flush();
 	signal(SIGINT, SIG_DFL);
 	signal(SIGINT, intfifo);
 	signal(SIGTERM, intfifo);
@@ -617,7 +661,7 @@ do_cue(tracks, track, 0);
 		if (lverbose)
 			prtimediff("Blanking time: ", &starttime, &fixtime);
 
-		if (!wait_unit_ready(scgp, 60) || tracks == 0) {
+		if (!wait_unit_ready(scgp, 240) || tracks == 0) {
 			excdr(0, &exargs);
 			exit(0);
 		}
@@ -684,7 +728,7 @@ do_cue(tracks, track, 0);
 	if ((flags & F_SAO)) {
 		(*dp->cdr_next_wr_address)(scgp, 0, &track[0], &startsec);
 		if (startsec <= 0 && startsec != -150) {
-			errmsgno(EX_BAD, "WARNING: Drive returns wrong startsec (%d) using -150\n",
+			errmsgno(EX_BAD, "WARNING: Drive returns wrong startsec (%ld) using -150\n",
 					startsec);
 			startsec = -150;
 		}
@@ -699,7 +743,7 @@ do_cue(tracks, track, 0);
 		if (debug || lverbose)
 			printf("Writing lead-in...\n");
 
-		pad_track(scgp, dp, 1, &track[1], -150, 0,
+		pad_track(scgp, dp, 1, &track[1], -150, (Llong)0,
 					FALSE, 0);
 #endif
 	}
@@ -742,8 +786,8 @@ do_cue(tracks, track, 0);
 			/*
 			 * Check for "Dummy blocks added" message first.
 			 */
-			if (scsi_sense_key(scgp) != SC_ILLEGAL_REQUEST ||
-					scsi_sense_code(scgp) != 0xB5) {
+			if (scg_sense_key(scgp) != SC_ILLEGAL_REQUEST ||
+					scg_sense_code(scgp) != 0xB5) {
 				errs++;
 				break;
 			}
@@ -792,17 +836,19 @@ usage(excode)
 
 	error("Options:\n");
 	error("\t-version	print version information and exit\n");
-	error("\t-v		increment general verbose level by one\n");
-	error("\t-V		increment SCSI command transport verbose level by one\n");
-	error("\t-debug		print additional debug messages\n");
 	error("\tdev=target	SCSI target to use as CD/DVD-Recorder\n");
 	error("\ttimeout=#	set the default SCSI command timeout to #.\n");
+	error("\tdebug=#,-d	Set to # or increment misc debug level\n");
+	error("\tkdebug=#,kd=#	do Kernel debugging\n");
+	error("\t-verbose,-v	increment general verbose level by one\n");
+	error("\t-Verbose,-V	increment SCSI command transport verbose level by one\n");
+	error("\t-silent,-s	do not print status of failed SCSI commands\n");
 	error("\tdriver=name	user supplied driver name, use with extreme care\n");
 	error("\tdriveropts=opt	a comma separated list of driver specific options\n");
 	error("\t-checkdrive	check if a driver for the drive is present\n");
 	error("\t-prcap		print drive capabilities for MMC compliant drives\n");
-	error("\t-inq		do an inquiry for the drive end exit\n");
-	error("\t-scanbus	scan the SCSI bus end exit\n");
+	error("\t-inq		do an inquiry for the drive and exit\n");
+	error("\t-scanbus	scan the SCSI bus and exit\n");
 	error("\t-reset		reset the SCSI bus with the cdrecorder (if possible)\n");
 	error("\t-ignsize	ignore the known size of a medium (may cause problems)\n");
 	error("\t-useinfo	use *.inf files to overwrite audio options.\n");
@@ -810,7 +856,7 @@ usage(excode)
 	error("\tblank=type	blank a CD-RW disc (see blank=help)\n");
 #ifdef	FIFO
 	error("\tfs=#		Set fifo size to # (0 to disable, default is %ld MB)\n",
-							DEFAULT_FIFOSIZE/(1024*1024));
+							DEFAULT_FIFOSIZE/(1024L*1024L));
 #endif
 	error("\t-load		load the disk and exit (works only with tray loader)\n");
 	error("\t-eject		eject the disk after doing the work\n");
@@ -873,11 +919,12 @@ blusage(ret)
 	/* NOTREACHED */
 }
 
+/* ARGSUSED */
 LOCAL void
 intr(sig)
 	int	sig;
 {
-	sig = 0;	/* Fake usage */
+	sig = 0;	/* Fake usage for gcc */
 
 	signal(SIGINT, intr);
 
@@ -892,6 +939,7 @@ intfifo(sig)
 	exit(sig);
 }
 
+/* ARGSUSED */
 LOCAL void
 exscsi(excode, arg)
 	int	excode;
@@ -973,11 +1021,11 @@ write_track_data(scgp, dp, track, trackp)
 	int	f;
 	int	isaudio;
 	long	startsec;
-	long	bytes_read = 0;
-	long	bytes	= 0;
-	long	savbytes = 0;
+	Llong	bytes_read = 0;
+	Llong	bytes	= 0;
+	Llong	savbytes = 0;
 	int	count;
-	long	tracksize;
+	Llong	tracksize;
 	int	secsize;
 	int	secspt;
 	int	bytespt;
@@ -1024,7 +1072,7 @@ int oper = -1;
 
 	if (lverbose) {
 		if (tracksize > 0)
-			printf("\rTrack %02d:   0 of %3ld MB written.",
+			printf("\rTrack %02d:   0 of %3lld MB written.",
 			       track, tracksize >> 20);
 		else
 			printf("\rTrack %02d:   0 MB written.", track);
@@ -1035,9 +1083,10 @@ int oper = -1;
 	do {
 		bytes_to_read = bytespt;
 		if (tracksize > 0) {
-			bytes_to_read = tracksize - bytes_read;
-			if (bytes_to_read > bytespt)
+			if ((tracksize - bytes_read) > bytespt)
 				bytes_to_read = bytespt;
+			else
+				bytes_to_read = tracksize - bytes_read;				
 		}
 		count = get_buf(f, &bp, bytes_to_read);
 
@@ -1096,7 +1145,7 @@ again:
 				goto again;
 			}
 
-			printf("%swrite track data: error after %ld bytes\n",
+			printf("%swrite track data: error after %lld bytes\n",
 							neednl?"\n":"", bytes);
 			return (-1);
 		}
@@ -1106,9 +1155,9 @@ again:
 		if (lverbose && (bytes >= (savbytes + 0x100000))) {
 			int	fper;
 
-			printf("\rTrack %02d: %3ld", track, bytes >> 20);
+			printf("\rTrack %02d: %3lld", track, bytes >> 20);
 			if (tracksize > 0)
-				printf(" of %3ld MB", tracksize >> 20);
+				printf(" of %3lld MB", tracksize >> 20);
 			else
 				printf(" MB");
 			printf(" written");
@@ -1140,8 +1189,8 @@ again:
 		 * we may need to modify trackp->padsize if
 		 * tracksize+padsize is less than 300 sectors.
 		 */
-		amount = roundup(trackp->padsize, secsize);
-		if (((bytes+amount) / secsize) < 300)
+		savbytes = roundup(trackp->padsize, secsize);
+		if (((bytes+savbytes) / secsize) < 300)
 			trackp->padsize = 300 * secsize - bytes;
 	}
 	if (trackp->padsize) {
@@ -1152,16 +1201,16 @@ again:
 		if ((trackp->padsize >> 20) > 0) {
 			neednl = TRUE;
 		} else if (lverbose) {
-			printf("Track %02d: writing %3ld KB of pad data.\n",
-						track, trackp->padsize >> 10);
+			printf("Track %02d: writing %3lld KB of pad data.\n",
+					track, (Llong)(trackp->padsize >> 10));
 			neednl = FALSE;
 		}
 		pad_track(scgp, dp, track, trackp, startsec, trackp->padsize,
-					TRUE, &amount);
-		bytes += amount;
-		startsec += amount / secsize;
+					TRUE, &savbytes);
+		bytes += savbytes;
+		startsec += savbytes / secsize;
 	}
-	printf("%sTrack %02d: Total bytes read/written: %ld/%ld (%ld sectors).\n",
+	printf("%sTrack %02d: Total bytes read/written: %lld/%lld (%lld sectors).\n",
 	       neednl?"\n":"", track, bytes_read, bytes, bytes/secsize);
 	flush();
 	return 0;
@@ -1174,12 +1223,12 @@ pad_track(scgp, dp, track, trackp, startsec, amt, dolast, bytesp)
 	int	track;
 	track_t	*trackp;
 	long	startsec;
-	long	amt;
+	Llong	amt;
 	BOOL	dolast;
-	long	*bytesp;
+	Llong	*bytesp;
 {
-	long	bytes	= 0;
-	long	savbytes = 0;
+	Llong	bytes	= 0;
+	Llong	savbytes = 0;
 	int	secsize;
 	int	secspt;
 	int	bytespt;
@@ -1194,7 +1243,7 @@ pad_track(scgp, dp, track, trackp, startsec, amt, dolast, bytesp)
 	fillbytes(buf, bytespt, '\0');
 
 	if ((amt >> 20) > 0) {
-		printf("\rTrack %02d:   0 of %3ld MB pad written.",
+		printf("\rTrack %02d:   0 of %3lld MB pad written.",
 						track, amt >> 20);
 		flush();
 	}
@@ -1216,7 +1265,7 @@ again:
 				goto again;
 			}
 
-			printf("%swrite track pad data: error after %ld bytes\n",
+			printf("%swrite track pad data: error after %lld bytes\n",
 							neednl?"\n":"", bytes);
 			if (bytesp)
 				*bytesp = bytes;
@@ -1228,7 +1277,7 @@ read_buff_cap(scgp, 0, 0);
 		startsec += amount / secsize;
 
 		if (lverbose && (bytes >= (savbytes + 0x100000))) {
-			printf("\rTrack %02d: %3ld", track, bytes >> 20);
+			printf("\rTrack %02d: %3lld", track, bytes >> 20);
 			savbytes = (bytes >> 20) << 20;
 			flush();
 			neednl = TRUE;
@@ -1237,7 +1286,9 @@ read_buff_cap(scgp, 0, 0);
 
 	if (bytesp)
 		*bytesp = bytes;
-	return (bytes);
+	if (bytes == 0)
+		return (0);
+	return (bytes > 0 ? 1:-1);
 }
 
 #ifdef	USE_WRITE_BUF
@@ -1318,17 +1369,17 @@ printdata(track, trackp)
 	track_t	*trackp;
 {
 	if (trackp->tracksize >= 0) {
-		printf("Track %02d: data  %3ld MB        ",
-					track, trackp->tracksize >> 20);
+		printf("Track %02d: data  %3lld MB        ",
+					track, (Llong)(trackp->tracksize >> 20));
 	} else {
 		printf("Track %02d: data  unknown length",
 					track);
 	}
 	if (trackp->padsize > 0) {
 		if ((trackp->padsize >> 20) > 0)
-			printf(" padsize: %3ld MB", trackp->padsize >> 20);
+			printf(" padsize: %3lld MB", (Llong)(trackp->padsize >> 20));
 		else
-			printf(" padsize: %3ld KB", trackp->padsize >> 10);
+			printf(" padsize: %3lld KB", (Llong)(trackp->padsize >> 10));
 	}
 	if (trackp->pregapsize != 150) {
 		printf(" pregapsize: %3ld", trackp->pregapsize);
@@ -1342,8 +1393,8 @@ printaudio(track, trackp)
 	track_t	*trackp;
 {
 	if (trackp->tracksize >= 0) {
-		printf("Track %02d: audio %3ld MB (%02d:%02d.%02d) %spreemp%s%s",
-			track, trackp->tracksize >> 20,
+		printf("Track %02d: audio %3lld MB (%02d:%02d.%02d) %spreemp%s%s",
+			track, (Llong)(trackp->tracksize >> 20),
 			minutes(trackp->tracksize),
 			seconds(trackp->tracksize),
 			hseconds(trackp->tracksize),
@@ -1360,9 +1411,9 @@ printaudio(track, trackp)
 	}
 	if (trackp->padsize > 0) {
 		if ((trackp->padsize >> 20) > 0)
-			printf(" padsize: %3ld MB", trackp->padsize >> 20);
+			printf(" padsize: %3lld MB", (Llong)(trackp->padsize >> 20));
 		else
-			printf(" padsize: %3ld KB", trackp->padsize >> 10);
+			printf(" padsize: %3lld KB", (Llong)(trackp->padsize >> 10));
 		printf(" (%02d:%02d.%02d)",
 			minutes(trackp->padsize),
 			seconds(trackp->padsize),
@@ -1385,8 +1436,8 @@ checkfile(track, trackp)
 			  (trackp->tracksize < 300L*trackp->secsize)) ||
 			(trackp->tracksize % trackp->secsize)) &&
 						!is_pad(trackp)) {
-		errmsgno(EX_BAD, "Bad audio track size %ld for track %02d.\n",
-				trackp->tracksize, track);
+		errmsgno(EX_BAD, "Bad audio track size %lld for track %02d.\n",
+				(Llong)trackp->tracksize, track);
 		errmsgno(EX_BAD, "Audio tracks must be at least %ld bytes and a multiple of %d.\n",
 				300L*trackp->secsize, trackp->secsize);
 		comerrno(EX_BAD, "See -pad option.\n");
@@ -1459,8 +1510,8 @@ checktsize(tracks, trackp)
 	track_t	*trackp;
 {
 	int	i;
-	long	curr;
-	long	total = -150;
+	Llong	curr;
+	Llong	total = -150;
 	Ullong	btotal;
 	track_t	*tp;
 
@@ -1470,7 +1521,7 @@ checktsize(tracks, trackp)
 			total += tp->pregapsize;
 
 		if (lverbose > 1) {
-			printf("track: %d start: %ld pregap: %ld\n",
+			printf("track: %d start: %lld pregap: %ld\n",
 					i, total, tp->pregapsize);
 		}
 		tp->trackstart = total;
@@ -1496,14 +1547,14 @@ checktsize(tracks, trackp)
 	btotal = (Ullong)total * 2352;
 /* XXX Sector Size ??? */
 	if (tracks > 0) {
-		printf("Total size:     %3lu MB (%02d:%02d.%02d) = %ld sectors\n",
-			(Ulong)(btotal >> 20),
+		printf("Total size:     %3llu MB (%02d:%02d.%02d) = %lld sectors\n",
+			btotal >> 20,
 			minutes(btotal),
 			seconds(btotal),
 			hseconds(btotal), total);
 		btotal += 150 * 2352;
-		printf("Lout start:     %3lu MB (%02d:%02d/%02d) = %ld sectors\n",
-			(Ulong)(btotal >> 20),
+		printf("Lout start:     %3llu MB (%02d:%02d/%02d) = %lld sectors\n",
+			btotal >> 20,
 			minutes(btotal),
 			seconds(btotal),
 			frames(btotal), total);
@@ -1516,6 +1567,7 @@ checksize(trackp)
 	track_t	*trackp;
 {
 	struct stat	st;
+	Llong		lsize;
 
 	/*
 	 * If the current input file is a regular file and
@@ -1523,13 +1575,22 @@ checksize(trackp)
 	 * use fstat() or file parser to get the size of the file.
 	 */
 	if (trackp->tracksize < 0 && (trackp->flags & TI_ISOSIZE) != 0) {
-		trackp->tracksize = isosize(trackp->f);
+		lsize = isosize(trackp->f);
+		trackp->tracksize = lsize;
+		if (trackp->tracksize != lsize)
+			comerrno(EX_BAD, "This OS cannot handle large ISO-9660 images.\n");
 	}
 	if (trackp->tracksize < 0 && (trackp->flags & TI_NOAUHDR) == 0) {
-		trackp->tracksize = ausize(trackp->f);
+		lsize = ausize(trackp->f);
+		trackp->tracksize = lsize;
+		if (trackp->tracksize != lsize)
+			comerrno(EX_BAD, "This OS cannot handle large audio images.\n");
 	}
 	if (trackp->tracksize < 0 && (trackp->flags & TI_NOAUHDR) == 0) {
-		trackp->tracksize = wavsize(trackp->f);
+		lsize = wavsize(trackp->f);
+		trackp->tracksize = lsize;
+		if (trackp->tracksize != lsize)
+			comerrno(EX_BAD, "This OS cannot handle large WAV images.\n");
 		if (trackp->tracksize > 0)	/* Force little endian input */
 			trackp->flags |= TI_SWAB;
 	}
@@ -1670,15 +1731,15 @@ raise_fdlim()
 	rlim.rlim_cur = MAX_TRACK + 10;
 	if (rlim.rlim_cur > rlim.rlim_max)
 		errmsgno(EX_BAD,
-			"warning: low file descriptor limit (%ld)\n",
-							rlim.rlim_max);
+			"warning: low file descriptor limit (%lld)\n",
+						(Llong)rlim.rlim_max);
 	setrlimit(RLIMIT_NOFILE, &rlim);
 
 #endif	/* RLIMIT_NOFILE */
 }
 
 char	*opts =
-"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,useinfo,dev*,timeout#,driver*,driveropts*,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,atip,multi,fix,nofix,waiti,debug,v+,V+,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose,force,dao,scms,isrc*,mcn*,index*,shorttrack,noshorttrack";
+"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,useinfo,dev*,timeout#,driver*,driveropts*,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,atip,multi,fix,nofix,waiti,debug#,d+,kdebug#,kd#,verbose+,v+,Verbose+,V+,silent,s,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose,force,dao,scms,isrc*,mcn*,index*,shorttrack,noshorttrack";
 
 LOCAL void
 gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, blankp)
@@ -1782,7 +1843,11 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 				&speed,
 				&load, &eject, &dummy, &msinfo, &toc, &atip,
 				&multi, &fix, &nofix, &waiti,
-				&debug, &lverbose, &scsi_verbose,
+				&debug, &debug,
+				&kdebug, &kdebug,
+				&lverbose, &lverbose,
+				&scsi_verbose, &scsi_verbose,
+				&silent, &silent,
 				&audio, &data, &mode2,
 				&xa1, &xa2, &cdi,
 				&isize,
@@ -2048,8 +2113,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 		}
 
 		if (debug) {
-			printf("File: '%s' tracksize: %ld secsize: %d tracktype: %d = %s sectype: %X = %s dbtype: %s flags %X\n",
-				cav[0], trackp[tracks].tracksize, 
+			printf("File: '%s' tracksize: %lld secsize: %d tracktype: %d = %s sectype: %X = %s dbtype: %s flags %X\n",
+				cav[0], (Llong)trackp[tracks].tracksize, 
 				trackp[tracks].secsize, 
 				tracktype, toc2name[tracktype & TOC_MASK],
 				sectype, st2name[sectype & ST_MASK], db2name[dbtype], flags);
@@ -2162,8 +2227,8 @@ load_media(scgp, dp, doexit)
 	scgp->silent--;
 
 	if (!wait_unit_ready(scgp, 60)) {
-		code = scsi_sense_code(scgp);
-		key = scsi_sense_key(scgp);
+		code = scg_sense_code(scgp);
+		key = scg_sense_key(scgp);
 		scgp->silent++;
 		scsi_prevent_removal(scgp, 0);/* In case someone locked it */
 		scgp->silent--;
@@ -2460,19 +2525,26 @@ rt_raisepri(pri)
 #ifdef	__CYGWIN32__
 
 /*
- * NOTE: Base.h has a second typedef for BOOL.
+ * NOTE: Base.h from Cygwin-B20 has a second typedef for BOOL.
  *	 We define BOOL to make all local code use BOOL
  *	 from Windows.h and use the hidden __SBOOL for
  *	 our global interfaces.
+ *
+ * NOTE: windows.h from Cygwin-1.x includes a structure field named sample,
+ *	 so me may not define our own 'sample' or need to #undef it now.
+ *	 With a few nasty exceptions, Microsoft assumes that any global
+ *	 defines or identifiers will begin with an Uppercase letter, so
+ *	 there may be more of these problems in the future.
+ *
+ * NOTE: windows.h defines interface as an alias for struct, this 
+ *	 is used by COM/OLE2, I guess it is class on C++
+ *	 We man need to #undef 'interface'
  */
 #define	BOOL	WBOOL		/* This is the Win BOOL		*/
-#define	format	__format
-#include <vadefs.h>
-#include <Windows32/Base.h>
-#include <Windows32/Defines.h>
-#include <Windows32/Structures.h>
-#include <Windows32/Functions.h>
+#define	format	__format	/* Avoid format parameter hides global ... */
+#include <windows.h>
 #undef format
+#undef interface
 
 LOCAL	int
 rt_raisepri(pri)
@@ -2586,19 +2658,6 @@ checkgui()
 		if (lverbose > 1)
 			printf("Using remote (pipe) mode for interactive i/o.\n");
 	}
-}
-
-LOCAL char *
-astoll(s, ll)
-	register const char *s;
-        Llong *ll;
-{
-	char	*p;
-	long	l = 0;
-
-	p = astol(s, &l);
-	*ll = (Llong)l;
-	return (p);
 }
 
 LOCAL Llong

@@ -1,7 +1,7 @@
-/* @(#)scsi-wnt.c	1.19 00/07/01 Copyright 1998, 1999 J. Schilling, A.L. Faber */
+/* @(#)scsi-wnt.c	1.27 01/03/18 Copyright 1998, 1999 J. Schilling, A.L. Faber */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-wnt.c	1.19 00/07/01 Copyright 1998, 1999 J. Schilling, A.L. Faber";
+	"@(#)scsi-wnt.c	1.27 01/03/18 Copyright 1998, 1999 J. Schilling, A.L. Faber";
 #endif
 /*
  *	Interface for the Win32 ASPI library.
@@ -64,7 +64,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.19";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.27";	/* The version for this transport*/
 
 /*
  * Local defines and constants
@@ -103,14 +103,16 @@ LOCAL	HANDLE	hAspiLib			= NULL;	/* Used for Loadlib */
  */
 LOCAL	void	exit_func	__PR((void));
 #ifdef DEBUG_WNTASPI
-LOCAL	void	DebugScsiSend	__PR((SRB_ExecSCSICmd s, int bDisplayBuffer));
+LOCAL	void	DebugScsiSend	__PR((SCSI *scgp, SRB_ExecSCSICmd s, int bDisplayBuffer));
 #endif
 LOCAL	void	copy_sensedata	__PR((SRB_ExecSCSICmd *cp, struct scg_cmd *sp));
 LOCAL	void	set_error	__PR((SRB_ExecSCSICmd *cp, struct scg_cmd *sp));
 LOCAL	BOOL	open_driver	__PR((SCSI *scgp));
 LOCAL	BOOL	close_driver	__PR((void));
 LOCAL	int	ha_inquiry	__PR((SCSI *scgp, int id, SRB_HAInquiry	*ip));
-LOCAL	int	resetSCSIBus	__PR((void));
+#ifdef	__USED__
+LOCAL	int	resetSCSIBus	__PR((SCSI *scgp));
+#endif
 LOCAL	int	scsiabort	__PR((SCSI *scgp, SRB_ExecSCSICmd *sp));
 
 LOCAL void
@@ -125,8 +127,8 @@ exit_func()
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -148,14 +150,15 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+	int	busno	= scg_scsibus(scgp);
+	int	tgt	= scg_target(scgp);
+	int	tlun	= scg_lun(scgp);
+
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
 		if (scgp->errstr)
@@ -216,8 +219,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	return (1);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	exit_func();
@@ -225,32 +228,28 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
 	return (MAX_DMA_WNT);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt)) {
-		errmsgno(EX_BAD,
-			"scsi_getbuf: buffer out of range; requested size is %ld bytes\n", amt);
-		return ((void *)0);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"scgo_getbuf: %ld bytes\n", amt);
 	}
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
-
 	scgp->bufbase = malloc((size_t)(amt));
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -258,8 +257,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT __SBOOL
-scsi_havebus(scgp, busno)
+LOCAL __SBOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -269,8 +268,8 @@ scsi_havebus(scgp, busno)
 	return (TRUE);
 }
 
-EXPORT int
-scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -288,19 +287,19 @@ scsi_fileno(scgp, busno, tgt, tlun)
 }
 
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	SRB_HAInquiry	s;
 
-	if (ha_inquiry(scgp, scgp->scsibus, &s) < 0)
+	if (ha_inquiry(scgp, scg_scsibus(scgp), &s) < 0)
 		return (-1);
 	return (s.HA_SCSI_ID);
 }
 
-EXPORT int
-scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 	return (-1);	/* XXX Need to add real test */
@@ -308,11 +307,12 @@ scsi_isatapi(scgp)
 
 
 /*
- * XXX scsireset not yet tested
+ * XXX scgo_reset not yet tested
  */
-EXPORT int
-scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
 
 	DWORD			Status = 0;
@@ -320,15 +320,27 @@ scsireset(scgp)
 	HANDLE			Event	 = NULL;
 	SRB_BusDeviceReset	s;
 
-	if (scgp->debug)
-		printf("Attempting to reset SCSI device\n");
+	if (what == SCG_RESET_NOP)
+		return (0);
+	if (what != SCG_RESET_BUS) {
+		errno = EINVAL;
+		return (-1);
+	}
+	/*
+	 * XXX Does this reset TGT or BUS ???
+	 */
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"Attempting to reset SCSI device\n");
+	}
 
 	/*
 	 * Check if ASPI library is loaded
 	 */
 	if (AspiLoaded == FALSE) {
-		printf("error in scsireset: ASPI driver not loaded !\n");
-		return (FALSE);
+		js_fprintf((FILE *)scgp->errfile,
+				"error in scgo_reset: ASPI driver not loaded !\n");
+		return (-1);
 	}
 
 	memset(&s, 0, sizeof(s));	/* Clear SRB_BesDeviceReset structure */
@@ -339,10 +351,10 @@ scsireset(scgp)
 	 * Set structure variables
 	 */
 	s.SRB_Cmd	= SC_RESET_DEV;			/* ASPI command code = SC_RESET_DEV	*/
-	s.SRB_HaId	= scgp->scsibus;		/* ASPI host adapter number		*/
+	s.SRB_HaId	= scg_scsibus(scgp);		/* ASPI host adapter number		*/
 	s.SRB_Flags	= SRB_EVENT_NOTIFY;		/* Flags				*/
-	s.SRB_Target	= scgp->target;			/* Target's SCSI ID			*/
-	s.SRB_Lun	= scgp->lun;			/* Target's LUN number			*/
+	s.SRB_Target	= scg_target(scgp);		/* Target's SCSI ID			*/
+	s.SRB_Lun	= scg_lun(scgp);		/* Target's LUN number			*/
 	s.SRB_PostProc	= (LPVOID)Event;		/* Post routine				*/
 	
 	/*
@@ -381,59 +393,64 @@ scsireset(scgp)
 	 * Check condition
 	 */
 	if (s.SRB_Status != SS_COMP) {
-		printf("ERROR! 0x%08X\n", s.SRB_Status);
+		js_fprintf((FILE *)scgp->errfile,
+					"ERROR! 0x%08X\n", s.SRB_Status);
 
 		/*
 		 * Indicate that error has occured
 		 */
-		return (FALSE);
+		return (-1);
 	}
 
-	if (scgp->debug)
-		printf("Reset SCSI device completed\n");
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+					"Reset SCSI device completed\n");
+	}
 
 	/*
 	 * Everything went OK
 	 */
-	return (TRUE);
+	return (0);
 }
 
 
 #ifdef DEBUG_WNTASPI
 LOCAL void
-DebugScsiSend(s, bDisplayBuffer)
+DebugScsiSend(scgp, s, bDisplayBuffer)
+	SCSI		*scgp;
 	SRB_ExecSCSICmd	s;
 	int		bDisplayBuffer;
 {
 	int i;
 
-	printf("\n\nDebugScsiSend\n");
-	printf("s.SRB_Cmd          = 0x%02x\n", s.SRB_Cmd);
-	printf("s.SRB_HaId         = 0x%02x\n", s.SRB_HaId);
-	printf("s.SRB_Flags        = 0x%02x\n", s.SRB_Flags); 
-	printf("s.SRB_Target       = 0x%02x\n", s.SRB_Target); 
-	printf("s.SRB_Lun          = 0x%02x\n", s.SRB_Lun);
-	printf("s.SRB_BufLen       = 0x%02x\n", s.SRB_BufLen);
-	printf("s.SRB_BufPointer   = %x\n",     s.SRB_BufPointer);
-	printf("s.SRB_CDBLen       = 0x%02x\n", s.SRB_CDBLen);
-	printf("s.SRB_SenseLen     = 0x%02x\n", s.SRB_SenseLen);
-	printf("s.CDBByte          =");
+	js_fprintf((FILE *)scgp->errfile, "\n\nDebugScsiSend\n");
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_Cmd          = 0x%02x\n", s.SRB_Cmd);
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_HaId         = 0x%02x\n", s.SRB_HaId);
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_Flags        = 0x%02x\n", s.SRB_Flags); 
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_Target       = 0x%02x\n", s.SRB_Target); 
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_Lun          = 0x%02x\n", s.SRB_Lun);
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_BufLen       = 0x%02x\n", s.SRB_BufLen);
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_BufPointer   = %x\n",     s.SRB_BufPointer);
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_CDBLen       = 0x%02x\n", s.SRB_CDBLen);
+	js_fprintf((FILE *)scgp->errfile, "s.SRB_SenseLen     = 0x%02x\n", s.SRB_SenseLen);
+	js_fprintf((FILE *)scgp->errfile, "s.CDBByte          =");
 	for (i=0; i < min(s.SRB_CDBLen, 16); i++) {
-		printf(" %02X ", s.CDBByte[i]);
+		js_fprintf((FILE *)scgp->errfile, " %02X ", s.CDBByte[i]);
 	}
-	printf("\n");
+	js_fprintf((FILE *)scgp->errfile, "\n");
 
 	/*
 	if (bDisplayBuffer != 0 && s.SRB_BufLen >= 8) {
 		
-		printf("s.SRB_BufPointer   =");
+		js_fprintf((FILE *)scgp->errfile, "s.SRB_BufPointer   =");
 		for (i=0; i < 8; i++) {
-			printf(" %02X ", ((char*)s.SRB_BufPointer)[i]);
+			js_fprintf((FILE *)scgp->errfile,
+					" %02X ", ((char*)s.SRB_BufPointer)[i]);
 		}
-		printf("\n");
+		js_fprintf((FILE *)scgp->errfile, "\n");
 	}
 */
-	printf("Debug done\n");
+	js_fprintf((FILE *)scgp->errfile, "Debug done\n");
 }
 #endif
 
@@ -529,11 +546,10 @@ set_error(cp, sp)
 
 
 LOCAL int
-scsi_send(scgp, f, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd		*sp = scgp->scmd;
 	DWORD			Status = 0;
 	DWORD			EventStatus = WAIT_OBJECT_0;
 	HANDLE			Event	 = NULL;
@@ -543,12 +559,12 @@ scsi_send(scgp, f, sp)
 	 * Check if ASPI library is loaded
 	 */
 	if (AspiLoaded == FALSE) {
-		errmsgno(EX_BAD, "error in scsi_send: ASPI driver not loaded.\n");
+		errmsgno(EX_BAD, "error in scgo_send: ASPI driver not loaded.\n");
 		sp->error = SCG_FATAL;
 		return (-1);
 	}
 
-	if (f < 0) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (-1);
 	}
@@ -569,7 +585,8 @@ scsi_send(scgp, f, sp)
 	if (sp->cdb_len > 16) {
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EINVAL;
-		printf("sp->cdb_len > sizeof(SRB_ExecSCSICmd.CDBByte). Fatal error in scsi_send, exiting...\n");
+		js_fprintf((FILE *)scgp->errfile,
+			"sp->cdb_len > sizeof(SRB_ExecSCSICmd.CDBByte). Fatal error in scgo_send, exiting...\n");
 		return (-1);
 	}
 	/*
@@ -583,10 +600,10 @@ scsi_send(scgp, f, sp)
 	 * Fill ASPI structure
 	 */
 	s.SRB_Cmd	= SC_EXEC_SCSI_CMD;		/* SCSI Command			*/
-	s.SRB_HaId	= scgp->scsibus;		/* Host adapter number		*/
+	s.SRB_HaId	= scg_scsibus(scgp);		/* Host adapter number		*/
 	s.SRB_Flags	= SRB_EVENT_NOTIFY;		/* Flags			*/
-	s.SRB_Target	= scgp->target;			/* Target SCSI ID		*/
-	s.SRB_Lun	= scgp->lun;			/* Target SCSI LUN		*/
+	s.SRB_Target	= scg_target(scgp);		/* Target SCSI ID		*/
+	s.SRB_Lun	= scg_lun(scgp);		/* Target SCSI LUN		*/
 	s.SRB_BufLen	= sp->size;			/* # of bytes transferred	*/
 	s.SRB_BufPointer= sp->addr;			/* pointer to data buffer	*/
 	s.SRB_CDBLen	= sp->cdb_len;			/* SCSI command length		*/
@@ -612,8 +629,8 @@ scsi_send(scgp, f, sp)
 	/*
 	 * Dump some debug information when enabled
 	 */
-	DebugScsiSend(s, TRUE);
-/*	DebugScsiSend(s, (s.SRB_Flags&SRB_DIR_OUT) == SRB_DIR_OUT);*/
+	DebugScsiSend(scgp, s, TRUE);
+/*	DebugScsiSend(scgp, s, (s.SRB_Flags&SRB_DIR_OUT) == SRB_DIR_OUT);*/
 #endif
 
 	/*
@@ -634,8 +651,10 @@ scsi_send(scgp, f, sp)
 			ResetEvent(Event);	/* Clear event, time out     */
 
 		if (s.SRB_Status == SS_PENDING) {/* Check if we got a timeout*/
-			if (scgp->debug)
-				printf("Timeout....\n");
+			if (scgp->debug > 0) {
+				js_fprintf((FILE *)scgp->errfile,
+						"Timeout....\n");
+			}
 			scsiabort(scgp, &s);
 			ResetEvent(Event);	/* Clear event, time out     */
 			CloseHandle(Event);	/* Close the event handle    */
@@ -650,14 +669,18 @@ scsi_send(scgp, f, sp)
 	 * Check ASPI command status
 	 */
 	if (s.SRB_Status != SS_COMP) {
-		if (scgp->debug)
-			printf("Error in scsi_send: s.SRB_Status is 0x%x\n", s.SRB_Status);
+		if (scgp->debug > 0) {
+			js_fprintf((FILE *)scgp->errfile,
+				"Error in scgo_send: s.SRB_Status is 0x%x\n", s.SRB_Status);
+		}
 
 		set_error(&s, sp);		/* Set error flags	     */
 		copy_sensedata(&s, sp);		/* Copy sense and status     */
 
-		if (scgp->debug)
-			printf("Mapped to: error %d errno: %d\n", sp->error, sp->ux_errno);
+		if (scgp->debug > 0) {
+			js_fprintf((FILE *)scgp->errfile,
+				"Mapped to: error %d errno: %d\n", sp->error, sp->ux_errno);
+		}
 		return (1);
 	}
 
@@ -689,7 +712,7 @@ open_driver(scgp)
 	int	i;
 
 #ifdef DEBUG_WNTASPI
-	printf("enter open_driver\n");
+	js_fprintf((FILE *)scgp->errfile, "enter open_driver\n");
 #endif
 
 	/*
@@ -711,7 +734,7 @@ open_driver(scgp)
 	 * Check if ASPI library is loaded correctly
 	 */
 	if (hAspiLib == NULL) {
-		printf("Can not load ASPI driver! ");
+		js_fprintf((FILE *)scgp->errfile, "Can not load ASPI driver! ");
 		return (FALSE);
 	}
   
@@ -728,7 +751,8 @@ open_driver(scgp)
 #endif
 
 	if ((pfnGetASPI32SupportInfo == NULL) || (pfnSendASPI32Command == NULL)) {
-		printf("ASPI function not found in library!");
+		js_fprintf((FILE *)scgp->errfile,
+				"ASPI function not found in library!");
 		return (FALSE);
 	}
 
@@ -752,19 +776,21 @@ open_driver(scgp)
 	ASPIStatus = HIBYTE(LOWORD(astatus));
 	HACount    = LOBYTE(LOWORD(astatus));
 
-	if (scgp->debug)
-		printf("open_driver %X HostASPIStatus=0x%x HACount=0x%x\n", astatus, ASPIStatus, HACount);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"open_driver %X HostASPIStatus=0x%x HACount=0x%x\n", astatus, ASPIStatus, HACount);
+	}
 
 	if (ASPIStatus != SS_COMP && ASPIStatus != SS_NO_ADAPTERS) {
-		printf("Could not find any host adapters\n");
-		printf("ASPIStatus == 0x%02X", ASPIStatus);
+		js_fprintf((FILE *)scgp->errfile, "Could not find any host adapters\n");
+		js_fprintf((FILE *)scgp->errfile, "ASPIStatus == 0x%02X", ASPIStatus);
 		return (FALSE);
 	}
 	busses = HACount;
 
 #ifdef DEBUG_WNTASPI
-	printf("open_driver HostASPIStatus=0x%x HACount=0x%x\n", ASPIStatus, HACount);
-	printf("leaving open_driver\n");
+	js_fprintf((FILE *)scgp->errfile, "open_driver HostASPIStatus=0x%x HACount=0x%x\n", ASPIStatus, HACount);
+	js_fprintf((FILE *)scgp->errfile, "leaving open_driver\n");
 #endif
 
 	for (i=0; i < busses; i++) {
@@ -841,27 +867,29 @@ ha_inquiry(scgp, id, ip)
 
 	Status = pfnSendASPI32Command((LPSRB)ip);
 
-	if (scgp->debug) {
-		printf("Status : %d\n",	Status);
-		printf("hacount: %d\n", ip->HA_Count);
-		printf("SCSI id: %d\n", ip->HA_SCSI_ID);
-		printf("Manager: '%.16s'\n", ip->HA_ManagerId);
-		printf("Identif: '%.16s'\n", ip->HA_Identifier);
-		scsiprbytes("Unique:", ip->HA_Unique, 16);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile, "Status : %d\n",	Status);
+		js_fprintf((FILE *)scgp->errfile, "hacount: %d\n", ip->HA_Count);
+		js_fprintf((FILE *)scgp->errfile, "SCSI id: %d\n", ip->HA_SCSI_ID);
+		js_fprintf((FILE *)scgp->errfile, "Manager: '%.16s'\n", ip->HA_ManagerId);
+		js_fprintf((FILE *)scgp->errfile, "Identif: '%.16s'\n", ip->HA_Identifier);
+		scg_prbytes("Unique:", ip->HA_Unique, 16);
 	}
 	if (ip->SRB_Status != SS_COMP)
 		return (-1);
 	return (0);
 }
 
+#ifdef	__USED__
 LOCAL int
-resetSCSIBus(void)
+resetSCSIBus(scgp)
+	SCSI	*scgp;
 {
 	DWORD			Status;
 	HANDLE			Event;
 	SRB_BusDeviceReset	s;
 
-	printf("Attempting to reset SCSI bus\n");
+	js_fprintf((FILE *)scgp->errfile, "Attempting to reset SCSI bus\n");
 
 	Event = CreateEvent(NULL, TRUE, FALSE, NULL);
 
@@ -902,7 +930,7 @@ resetSCSIBus(void)
 	 * Check condition
 	 */
 	if (s.SRB_Status != SS_COMP) {
-		printf("ERROR  0x%08X\n", s.SRB_Status);
+		js_fprintf((FILE *)scgp->errfile, "ERROR  0x%08X\n", s.SRB_Status);
 
 		/*
 		 * Indicate that error has occured
@@ -915,6 +943,7 @@ resetSCSIBus(void)
 	 */
 	return (TRUE);
 }
+#endif	/* __USED__ */
 
 LOCAL int
 scsiabort(scgp, sp)
@@ -924,14 +953,17 @@ scsiabort(scgp, sp)
 	DWORD			Status = 0;
 	SRB_Abort		s;
 
-	if (scgp->debug)
-		printf("Attempting to abort SCSI command\n");
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"Attempting to abort SCSI command\n");
+	}
 
 	/*
 	 * Check if ASPI library is loaded
 	 */
 	if (AspiLoaded == FALSE) {
-		printf("error in scsiabort: ASPI driver not loaded !\n");
+		js_fprintf((FILE *)scgp->errfile,
+				"error in scsiabort: ASPI driver not loaded !\n");
 		return (FALSE);
 	}
 
@@ -939,7 +971,7 @@ scsiabort(scgp, sp)
 	 * Set structure variables
 	 */
 	s.SRB_Cmd	= SC_ABORT_SRB;			/* ASPI command code = SC_ABORT_SRB	*/
-	s.SRB_HaId	= scgp->scsibus;		/* ASPI host adapter number		*/
+	s.SRB_HaId	= scg_scsibus(scgp);		/* ASPI host adapter number		*/
 	s.SRB_Flags	= 0;				/* Flags				*/
 	s.SRB_ToAbort	= (LPSRB)&sp;			/* sp					*/
 
@@ -952,7 +984,7 @@ scsiabort(scgp, sp)
 	 * Check condition
 	 */
 	if (s.SRB_Status != SS_COMP) {
-		printf("Abort ERROR! 0x%08X\n", s.SRB_Status);
+		js_fprintf((FILE *)scgp->errfile, "Abort ERROR! 0x%08X\n", s.SRB_Status);
 
 		/*
 		 * Indicate that error has occured
@@ -960,8 +992,8 @@ scsiabort(scgp, sp)
 		return (FALSE);
 	}
 
-	if (scgp->debug)
-		printf("Abort SCSI command completed\n");
+	if (scgp->debug > 0)
+		js_fprintf((FILE *)scgp->errfile, "Abort SCSI command completed\n");
 
 	/*
 	 * Everything went OK

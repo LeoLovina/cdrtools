@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd-os.c	1.17 00/07/01 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd-os.c	1.26 01/03/18 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd-os.c	1.17 00/07/01 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd-os.c	1.26 01/03/18 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the BSD/OS user-land raw SCSI implementation.
@@ -52,7 +52,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd-os.c-1.17";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd-os.c-1.26";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -68,15 +68,15 @@ struct scg_local {
 #define	MAX_DMA_BSDI	MAXPHYS		/* More makes problems */
 
 
-LOCAL	BOOL	scsi_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
+LOCAL	BOOL	scg_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
 
 /*
  * Return version information for the low level SCSI transport code.
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -98,14 +98,14 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+		 int	busno	= scg_scsibus(scgp);
+		 int	tgt	= scg_target(scgp);
+		 int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -140,7 +140,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 
 	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 
-		sprintf(devname, "/dev/su%d-%d-%d", busno, tgt, tlun);
+		js_snprintf(devname, sizeof(devname),
+					"/dev/su%d-%d-%d", busno, tgt, tlun);
 		f = open(devname, O_RDWR|O_NONBLOCK);
 		if (f < 0) {
 			goto openbydev;
@@ -151,7 +152,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	} else for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
 			for (l=0; l < MAX_LUN ; l++) {
-				sprintf(devname, "/dev/su%d-%d-%d", b, t, l);
+				js_snprintf(devname, sizeof(devname),
+						"/dev/su%d-%d-%d", b, t, l);
 				f = open(devname, O_RDWR|O_NONBLOCK);
 /*				error("open (%s) = %d\n", devname, f);*/
 
@@ -166,7 +168,7 @@ scsi_open(scgp, device, busno, tgt, tlun)
 						return (0);
 					}
 				} else {
-					if (scsi_setup(scgp, f, b, t, l))
+					if (scg_setup(scgp, f, b, t, l))
 						nopen++;
 				}
 			}
@@ -193,17 +195,18 @@ openbydev:
 			errno = EINVAL;
 			return (0);
 		}
-		scgp->scsibus = busno	= 0;	/* use fake number, we cannot get it */
-		scgp->target  = tgt	= 0;	/* use fake number, we cannot get it */
+		busno = 0;		/* use fake number, we cannot get it */
+		tgt   = 0;		/* use fake number, we cannot get it */
+		scg_settarget(scgp, busno, tgt, tlun);
 		/* 'lun' has been specified on command line */
-		if (scsi_setup(scgp, f, busno, tgt, tlun))
+		if (scg_setup(scgp, f, busno, tgt, tlun))
 			nopen++;
 	}
 	return (nopen);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	register int	f;
@@ -228,7 +231,7 @@ scsi_close(scgp)
 }
 
 LOCAL BOOL
-scsi_setup(scgp, f, busno, tgt, tlun)
+scg_setup(scgp, f, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	f;
 	int	busno;
@@ -240,7 +243,7 @@ scsi_setup(scgp, f, busno, tgt, tlun)
 	int	Lun;
 	BOOL	onetarget = FALSE;
 
-	if (scgp->scsibus >= 0 && scgp->target >= 0 && scgp->lun >= 0)
+	if (scg_scsibus(scgp) >= 0 && scg_target(scgp) >= 0 && scg_lun(scgp) >= 0)
 		onetarget = TRUE;
 
 	/*
@@ -250,10 +253,12 @@ scsi_setup(scgp, f, busno, tgt, tlun)
 	Target	= tgt;
 	Lun	= tlun;
 
-	if (scgp->debug)
-		printf("Bus: %d Target: %d Lun: %d\n", Bus, Target, Lun);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"Bus: %d Target: %d Lun: %d\n", Bus, Target, Lun);
+	}
 
-	if (Bus >= MAX_SCG || Target >= 8 || Lun >= 8) {
+	if (Bus >= MAX_SCG || Target >= MAX_TGT || Lun >= MAX_LUN) {
 		close(f);
 		return (FALSE);
 	}
@@ -273,7 +278,7 @@ scsi_setup(scgp, f, busno, tgt, tlun)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -282,21 +287,21 @@ scsi_maxdma(scgp, amt)
 	return (maxdma);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"scgo_getbuf: %ld bytes\n", amt);
+	}
 	scgp->bufbase = malloc((size_t)(amt));
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -304,8 +309,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -316,7 +321,7 @@ BOOL scsi_havebus(scgp, busno)
 		return (FALSE);
 
 	if (scgp->local == NULL)
-		return (-1);
+		return (FALSE);
 
 	for (t=0; t < MAX_TGT; t++) {
 		for (l=0; l < MAX_LUN ; l++)
@@ -326,8 +331,8 @@ BOOL scsi_havebus(scgp, busno)
 	return (FALSE);
 }
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -344,41 +349,42 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 	return ((int)scglocal(scgp)->scgfiles[busno][tgt][tlun]);
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
 }
 
-EXPORT
-int scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 	return (FALSE);
 }
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
 	/*
 	 * Cannot reset on BSD/OS
 	 */
+	errno = EINVAL;
 	return (-1);
 }
 
 LOCAL int
-scsi_send(scgp, f, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	scsi_user_cdb_t	suc;
 	int		ret = 0;
 
-/*	printf("f: %d\n", f);*/
-	if (f < 0) {
+/*	js_fprintf((FILE *)scgp->errfile, "f: %d\n", f);*/
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
@@ -401,7 +407,7 @@ scsi_send(scgp, f, sp)
 	suc.suc_datalen = sp->size;
 	suc.suc_data = sp->addr;
 
-	if (ioctl(f, SCSIRAWCDB, &suc) < 0) {
+	if (ioctl(scgp->fd, SCSIRAWCDB, &suc) < 0) {
 		ret  = -1;
 		sp->ux_errno = geterrno();
 		if (sp->ux_errno != ENOTTY)

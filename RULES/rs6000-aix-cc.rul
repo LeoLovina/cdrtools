@@ -1,4 +1,4 @@
-#ident "@(#)rs6000-aix-cc.rul	1.4 99/08/29 "
+#ident "@(#)rs6000-aix-cc.rul	1.5 01/04/12 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -41,7 +41,7 @@ SHL_SUFFIX=	.so.1.0
 
 LIB_SOCKET=
 LIB_MATH=	-lm
-LIB_KVM=	-lkvm
+#LIB_KVM=	-lkvm
 
 LIBS_PATH=	-L$(OLIBSDIR)
 

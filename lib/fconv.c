@@ -1,4 +1,4 @@
-/* @(#)fconv.c	1.28 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)fconv.c	1.29 01/03/04 Copyright 1985 J. Schilling */
 /*
  *	Convert floating point numbers to strings for format.c
  *	Should rather use the MT-safe routines [efg]convert()
@@ -35,25 +35,27 @@ extern	char	*fcvt __PR((double, int, int *, int *));
 #endif
 
 #if	defined(HAVE_ISNAN) && defined(HAVE_ISINF)
+/*
+ * *BSD alike libc
+ */
 #define	FOUND_ISXX
 #endif
 
 #include <math.h>
 
-#if	defined(HAVE_IEEEFP_H) && !defined(FOUND_ISXX)
-/*
- * SVR4
- */
-#include <ieeefp.h>
-#define	isnan	isnand
-#define	isinf	!finite
-#define	FOUND_ISXX
-#endif
-
 #if	defined(HAVE_FP_H)  && !defined(FOUND_ISXX)
 /*
  * WAS:
  * #if	defined(__osf__) || defined(_IBMR2) || defined(_AIX)
+ */
+/*
+ * Moved before HAVE_IEEEFP_H for True64 due to a hint
+ * from Bert De Knuydt <Bert.Deknuydt@esat.kuleuven.ac.be>
+ *
+ * True64 has both fp.h & ieeefp.h but the functions
+ * isnand() & finite() seem to be erreneously not implemented
+ * as a macro and the function lives in libm.
+ * Let's hope that we will not get problems with the new order.
  */
 #include <fp.h> 
 #ifndef	isnan
@@ -65,6 +67,16 @@ extern	char	*fcvt __PR((double, int, int *, int *));
 #endif
 #define	FOUND_ISXX
 #endif 
+
+#if	defined(HAVE_IEEEFP_H) && !defined(FOUND_ISXX)
+/*
+ * SVR4
+ */
+#include <ieeefp.h>
+#define	isnan	isnand
+#define	isinf	!finite
+#define	FOUND_ISXX
+#endif
 
 /*
  * WAS:

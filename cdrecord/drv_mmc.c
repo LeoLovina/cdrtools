@@ -1,7 +1,7 @@
-/* @(#)drv_mmc.c	1.56 00/07/02 Copyright 1997 J. Schilling */
+/* @(#)drv_mmc.c	1.64 01/04/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_mmc.c	1.56 00/07/02 Copyright 1997 J. Schilling";
+	"@(#)drv_mmc.c	1.64 01/04/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -336,15 +336,20 @@ get_diskinfo(scgp, dip)
 
 	fillbytes((caddr_t)dip, sizeof(*dip), '\0');
 
-	if (read_disk_info(scgp, (caddr_t)dip, 2) < 0)
+	/*
+	 * Used to be 2 instead of 4 (now). But some Y2k ATAPI drives as used
+	 * by IOMEGA create a DMA overrun if we try to transfer only 2 bytes.
+	 */
+/*	if (read_disk_info(scgp, (caddr_t)dip, 2) < 0)*/
+	if (read_disk_info(scgp, (caddr_t)dip, 4) < 0)
 		return (-1);
 	len = a_to_u_2_byte(dip->data_len);
 	len += 2;
 	ret = read_disk_info(scgp, (caddr_t)dip, len);
 
 #ifdef	DEBUG
-	scsiprbytes("Disk info:", (u_char *)dip,
-				len-scsigetresid(scgp));
+	scg_prbytes("Disk info:", (Uchar *)dip,
+				len-scg_getresid(scgp));
 #endif
 	return (ret);
 }
@@ -393,15 +398,21 @@ get_atip(scgp, atp)
 
 	fillbytes((caddr_t)atp, sizeof(*atp), '\0');
 
-	if (read_toc(scgp, (caddr_t)atp, 0, 2, 0, FMT_ATIP) < 0)
+	/*
+	 * Used to be 2 instead of sizeof(struct tocheader), but all
+	 * other places in the code use sizeof(struct tocheader) too and
+	 * some Y2k ATAPI drives as used by IOMEGA create a DMA overrun if we
+	 * try to transfer only 2 bytes.
+	 */
+	if (read_toc(scgp, (caddr_t)atp, 0, sizeof(struct tocheader), 0, FMT_ATIP) < 0)
 		return (-1);
 	len = a_to_u_2_byte(atp->hd.len);
 	len += 2;
 	ret = read_toc(scgp, (caddr_t)atp, 0, len, 0, FMT_ATIP);
 
 #ifdef	DEBUG
-	scsiprbytes("ATIP info:", (u_char *)atp,
-				len-scsigetresid(scgp));
+	scg_prbytes("ATIP info:", (Uchar *)atp,
+				len-scg_getresid(scgp));
 #endif
 	/*
 	 * Yamaha sometimes returns zeroed ATIP info for disks without ATIP
@@ -443,8 +454,15 @@ char	atp[1024];
 
 	fillbytes((caddr_t)atp, sizeof(*atp), '\0');
 
+	/*
+	 * Used to be 2 instead of sizeof(struct tocheader), but all
+	 * other places in the code use sizeof(struct tocheader) too and
+	 * some Y2k ATAPI drives as used by IOMEGA create a DMA overrun if we
+	 * try to transfer only 2 bytes.
+	 */
 /*	if (read_toc(scgp, (caddr_t)atp, 0, 2, 1, FMT_PMA) < 0)*/
-	if (read_toc(scgp, (caddr_t)atp, 0, 2, 0, FMT_PMA) < 0)
+/*	if (read_toc(scgp, (caddr_t)atp, 0, 2, 0, FMT_PMA) < 0)*/
+	if (read_toc(scgp, (caddr_t)atp, 0, sizeof(struct tocheader), 0, FMT_PMA) < 0)
 		return (-1);
 /*	len = a_to_u_2_byte(atp->hd.len);*/
 	len = a_to_u_2_byte(atp);
@@ -453,14 +471,14 @@ char	atp[1024];
 	ret = read_toc(scgp, (caddr_t)atp, 0, len, 0, FMT_PMA);
 
 #ifdef	DEBUG
-	scsiprbytes("PMA:", (u_char *)atp,
-				len-scsigetresid(scgp));
+	scg_prbytes("PMA:", (Uchar *)atp,
+				len-scg_getresid(scgp));
 #endif
 	ret = read_toc(scgp, (caddr_t)atp, 0, len, 1, FMT_PMA);
 
 #ifdef	DEBUG
-	scsiprbytes("PMA:", (u_char *)atp,
-				len-scsigetresid(scgp));
+	scg_prbytes("PMA:", (Uchar *)atp,
+				len-scg_getresid(scgp));
 #endif
 	return (ret);
 }
@@ -475,7 +493,7 @@ getdisktype_mmc(scgp, dp, dsp)
 {
 extern	char	*buf;
 	struct disk_info *dip;
-	u_char	mode[0x100];
+	Uchar	mode[0x100];
 	char	ans[2];
 	msf_t	msf;
 	BOOL	did_atip = FALSE;
@@ -671,7 +689,7 @@ print_atip(scgp, atp)
 	char	*sub_type;
 
 	if (scgp->verbose)
-		scsiprbytes("ATIP info: ", (Uchar *)atp, sizeof (*atp));
+		scg_prbytes("ATIP info: ", (Uchar *)atp, sizeof (*atp));
 
 	printf("ATIP info from disk:\n");
 	printf("  Indicated writing power: %d\n", atp->desc.ind_wr_power);
@@ -727,7 +745,7 @@ speed_select_mmc(scgp, speedp, dummy)
 	int	*speedp;
 	int	dummy;
 {
-	u_char	mode[0x100];
+	Uchar	mode[0x100];
 	int	len;
 	struct	cd_mode_page_05 *mp;
 	int	val;
@@ -738,7 +756,7 @@ speed_select_mmc(scgp, speedp, dummy)
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	if (!get_mode_params(scgp, 0x05, "CD write parameter",
-			mode, (u_char *)0, (u_char *)0, (u_char *)0, &len))
+			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len))
 		return (-1);
 	if (len == 0)
 		return (-1);
@@ -747,7 +765,7 @@ speed_select_mmc(scgp, speedp, dummy)
 		(mode + sizeof(struct scsi_mode_header) +
 		((struct scsi_mode_header *)mode)->blockdesc_len);
 #ifdef	DEBUG
-	scsiprbytes("CD write parameter:", (u_char *)mode, len);
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
 #endif
 
 
@@ -766,15 +784,16 @@ speed_select_mmc(scgp, speedp, dummy)
 
 
 #ifdef	DEBUG
-	scsiprbytes("CD write parameter:", (u_char *)mode, len);
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
 #endif
 	if (!set_mode_params(scgp, "CD write parameter", mode, len, 0, -1))
 		return (-1);
 
 	if (speedp == 0)
 		return (0);
-
-/*	if (scsi_set_speed(-1, curspeed*176) < 0)*/
+	/*
+	 * Neither set nor get speed.
+	 */
 
 	/*
 	 * 44100 * 2 * 2 =  176400 bytes/s
@@ -789,8 +808,10 @@ speed_select_mmc(scgp, speedp, dummy)
 		return (-1);
 
 	if (scsi_get_speed(scgp, 0, &val) >= 0) {
-		curspeed = val / 176;
-		*speedp = curspeed;
+		if (val > 0) {
+			curspeed = val / 176;
+			*speedp = curspeed;
+		}
 	}
 	return (0);
 }
@@ -826,8 +847,8 @@ next_wr_addr_mmc(scgp, track, trackp, ap)
 		return (-1);
 	}
 	if (scgp->verbose)
-		scsiprbytes("track info:", (u_char *)&track_info,
-				sizeof(track_info)-scsigetresid(scgp));
+		scg_prbytes("track info:", (Uchar *)&track_info,
+				sizeof(track_info)-scg_getresid(scgp));
 	next_addr = a_to_4_byte(track_info.next_writable_addr);
 	if (ap)
 		*ap = next_addr;
@@ -852,7 +873,7 @@ open_track_mmc(scgp, dp, track, trackp)
 	int	track;
 	track_t *trackp;
 {
-	u_char	mode[0x100];
+	Uchar	mode[0x100];
 	int	len;
 	struct	cd_mode_page_05 *mp;
 
@@ -865,7 +886,7 @@ open_track_mmc(scgp, dp, track, trackp)
 			}
 			pad_track(scgp, dp, track, trackp,
 				trackp->trackstart-trackp->pregapsize,
-				trackp->pregapsize*trackp->secsize,
+				(Llong)trackp->pregapsize*trackp->secsize,
 					FALSE, 0);
 		}
 		return (0);
@@ -874,7 +895,7 @@ open_track_mmc(scgp, dp, track, trackp)
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	if (!get_mode_params(scgp, 0x05, "CD write parameter",
-			mode, (u_char *)0, (u_char *)0, (u_char *)0, &len))
+			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len))
 		return (-1);
 	if (len == 0)
 		return (-1);
@@ -912,7 +933,7 @@ open_track_mmc(scgp, dp, track, trackp)
 	}
  
 #ifdef	DEBUG
-	scsiprbytes("CD write parameter:", (u_char *)mode, len);
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
 #endif
 	if (!set_mode_params(scgp, "CD write parameter", mode, len, 0, trackp->secsize))
 		return (-1);
@@ -964,14 +985,14 @@ open_session_mmc(scgp, dp, tracks, trackp, toctype, multi)
 	int	toctype;
 	int	multi;
 {
-	u_char	mode[0x100];
+	Uchar	mode[0x100];
 	int	len;
 	struct	cd_mode_page_05 *mp;
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	if (!get_mode_params(scgp, 0x05, "CD write parameter",
-			mode, (u_char *)0, (u_char *)0, (u_char *)0, &len))
+			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len))
 		return (-1);
 	if (len == 0)
 		return (-1);
@@ -1013,7 +1034,7 @@ open_session_mmc(scgp, dp, tracks, trackp, toctype, multi)
 		fillbytes(&mp->media_cat_number[0], sizeof(mp->media_cat_number), '\0');
 	}
 #ifdef	DEBUG
-	scsiprbytes("CD write parameter:", (u_char *)mode, len);
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
 #endif
 	if (!set_mode_params(scgp, "CD write parameter", mode, len, 0, -1))
 		return (-1);
@@ -1037,7 +1058,7 @@ waitfix_mmc(scgp, secs)
 			scgp->silent--;
 			return (0);
 		}
-		key = scsi_sense_key(scgp);
+		key = scg_sense_key(scgp);
 		if (key != SC_UNIT_ATTENTION && key != SC_NOT_READY)
 			break;
 		sleep(W_SLEEP);
@@ -1080,8 +1101,8 @@ fixate_mmc(scgp, onp, dummy, toctype, tracks, trackp)
 		}
 	}
 	scgp->silent--;
-	key = scsi_sense_key(scgp);
-	code = scsi_sense_code(scgp);
+	key = scg_sense_key(scgp);
+	code = scg_sense_code(scgp);
 
 	scgp->silent++;
 	if (debug && !unit_ready(scgp)) {
@@ -1113,14 +1134,13 @@ fixate_mmc(scgp, onp, dummy, toctype, tracks, trackp)
 		 * Try to supress the error message in this case to make
 		 * simple minded users less confused.
 		 */
-		scsiprinterr(scgp);
-		scsiprintresult(scgp);	/* XXX restore key/code in future */
+		scg_printerr(scgp);
+		scg_printresult(scgp);	/* XXX restore key/code in future */
 	}
 
 	if (debug && !unit_ready(scgp)) {
 		error("Early return from fixating. Ret: %d Key: %d, Code: %d\n", ret, key, code);
 	}
-	scgp->silent--;
 
 	wait_unit_ready(scgp, 420);	/* XXX Wait for ATAPI */
 	waitfix_mmc(scgp, 420/curspeed);/* XXX Wait for ATAPI */
@@ -1204,11 +1224,33 @@ send_opc_mmc(scgp, bp, cnt, doopc)
 		return (ret);
 
 	/*
+	 * Hack for a mysterioys drive ....
+	 * Device type    : Removable CD-ROM
+	 * Version        : 0
+	 * Response Format: 1
+	 * Vendor_info    : 'RWD     '
+	 * Identifikation : 'RW2224          ' 
+	 * Revision       : '2.53'
+	 * Device seems to be: Generic mmc CD-RW.
+	 * 
+	 * Performing OPC...
+	 * CDB:  54 01 00 00 00 00 00 00 00 00
+	 * Sense Bytes: 70 00 06 00 00 00 00 0A 00 00 00 00 5A 03 00 00
+	 * Sense Key: 0x6 Unit Attention, Segment 0
+	 * Sense Code: 0x5A Qual 0x03 (operator selected write permit) Fru 0x0
+	 * Sense flags: Blk 0 (not valid)
+	 */
+	if (scg_sense_key(scgp) == SC_UNIT_ATTENTION &&
+	    scg_sense_code(scgp) == 0x5A &&
+	    scg_sense_qual(scgp) == 0x03)
+		return (0);
+
+	/*
 	 * Send OPC is optional.
 	 */
-	if (scsi_sense_key(scgp) != SC_ILLEGAL_REQUEST) {
+	if (scg_sense_key(scgp) != SC_ILLEGAL_REQUEST) {
 		if (scgp->silent <= 0)
-			scsiprinterr(scgp);
+			scg_printerr(scgp);
 		return (ret);
 	}
 	return (0);
@@ -1361,7 +1403,7 @@ _do_cue(tracks, trackp, cuep, needgap)
 	fillcue(cp, ctl|0x01, 0xAA, 1, df, 0, &m);
 
 	if (lverbose > 1) for (i = 0; i < ncue; i++) {
-		scsiprbytes("", (Uchar *)&cue[i], 8);
+		scg_prbytes("", (Uchar *)&cue[i], 8);
 	}
 	if (cuep)
 		*cuep = cue;
@@ -1403,7 +1445,7 @@ send_cue(scgp, tracks, trackp)
 
 	ncue = do_cue(tracks, trackp, &cp);
 	for (i = 1; i <= tracks; i++) {
-		if (trackp[i].tracksize < 0) {
+		if (trackp[i].tracksize < (off_t)0) {
 			errmsgno(EX_BAD, "Track %d has unknown length.\n", i);
 			return (-1);
 		}

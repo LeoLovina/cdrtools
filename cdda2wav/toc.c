@@ -1,7 +1,7 @@
-/* @(#)toc.c	1.14 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)toc.c	1.15 00/12/09 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)toc.c	1.14 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)toc.c	1.15 00/12/09 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /*
@@ -74,6 +74,33 @@ static unsigned char g_track=0xff, g_index=0xff;	/* current track, index */
 static unsigned char g_minute=0xff, g_seconds=0xff;	/* curr. minute, second */
 static unsigned char g_frame=0xff;			/* current frame */
 
+/* Conversion function: from logical block adresses  to minute,second,frame
+ */
+int lba_2_msf (lba, m, s, f)
+	long	lba;
+	int	*m;
+	int	*s;
+	int	*f;
+{
+#ifdef  __follow_redbook__
+	if (lba >= -150 && lba < 405000) {      /* lba <= 404849 */
+#else
+	if (lba >= -150) {
+#endif
+		lba += 150;
+	} else if (lba >= -45150 && lba <= -151) {
+		lba += 450150;
+	} else
+		return 1;
+
+	*m = lba / 60 / 75;
+	lba -= (*m)*60*75;
+	*s = lba / 75;
+	lba -= (*s)*75;
+	*f = lba;
+
+	return 0;
+}
 
 /* print the track currently read */
 static void UpdateTrackData (p_num)

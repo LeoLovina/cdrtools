@@ -1,7 +1,7 @@
-/* @(#)scsi-sgi.c	1.23 00/07/01 Copyright 1997 J. Schilling */
+/* @(#)scsi-sgi.c	1.34 01/03/18 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sgi.c	1.23 00/07/01 Copyright 1997 J. Schilling";
+	"@(#)scsi-sgi.c	1.34 01/03/18 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the SGI generic SCSI implementation.
@@ -45,7 +45,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.23";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.34";	/* The version for this transport*/
 
 #ifdef	USE_DSLIB
 
@@ -69,7 +69,7 @@ struct scg_local {
 
 
 #ifndef	USE_DSLIB
-LOCAL	int	scsi_sendreq	__PR((SCSI *scgp, int f, struct scg_cmd *sp, struct dsreq *dsp));
+LOCAL	int	scg_sendreq	__PR((SCSI *scgp, struct scg_cmd *sp, struct dsreq *dsp));
 #endif
 
 
@@ -78,8 +78,8 @@ LOCAL	int	scsi_sendreq	__PR((SCSI *scgp, int f, struct scg_cmd *sp, struct dsreq
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -101,14 +101,14 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+		 int	busno	= scg_scsibus(scgp);
+		 int	tgt	= scg_target(scgp);
+		 int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -148,7 +148,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 
 	if (busno >= 0 && tgt >= 0 && tlun >= 0) {	
 
-		sprintf(devname, "/dev/scsi/sc%dd%dl%d", busno, tgt, tlun);
+		js_snprintf(devname, sizeof(devname),
+				"/dev/scsi/sc%dd%dl%d", busno, tgt, tlun);
 #ifdef	USE_DSLIB
 		dsp = dsopen(devname, O_RDWR);
 		if (dsp == 0)
@@ -173,7 +174,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 			for (t=0; t < MAX_TGT; t++) {
 /*				for (l=0; l < MAX_LUN ; l++) {*/
 				for (l=0; l < 1 ; l++) {
-					sprintf(devname, "/dev/scsi/sc%dd%dl%d", b, t, l);
+					js_snprintf(devname, sizeof(devname),
+							"/dev/scsi/sc%dd%dl%d", b, t, l);
 					f = open(devname, O_RDWR);
 					if (f >= 0) {
 						scglocal(scgp)->scgfiles[b][t][l] = (short)f;
@@ -187,8 +189,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	return (nopen);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 #ifndef	USE_DSLIB
@@ -217,28 +219,28 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
 	return	(MAX_DMA_SGI);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"scgo_getbuf: %ld bytes\n", amt);
+	}
 	scgp->bufbase = valloc((size_t)(amt));
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -246,8 +248,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -268,8 +270,8 @@ BOOL scsi_havebus(scgp, busno)
 	return (FALSE);
 }
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -292,31 +294,39 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 #endif
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
 }
 
-EXPORT
-int scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 	return (FALSE);
 }
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
 	/*
 	 * Do we have a SCSI reset on SGI?
 	 */
 #ifdef	DS_RESET
-	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
-
-	return (ioctl(f, DS_RESET, 0));
+	if (what == SCG_RESET_NOP)
+		return (0);
+	if (what != SCG_RESET_BUS) {
+		errno = EINVAL;
+		return (-1);
+	}
+	/*
+	 * XXX Does this reset TGT or BUS ???
+	 */
+	return (ioctl(scgp->fd, DS_RESET, 0));
 #else
 	return (-1);
 #endif
@@ -324,21 +334,20 @@ int scsireset(scgp)
 
 #ifndef	USE_DSLIB
 LOCAL int
-scsi_sendreq(scgp, f, sp, dsp)
+scg_sendreq(scgp, sp, dsp)
 	SCSI		*scgp;
-	int		f;
 	struct scg_cmd	*sp;
 	struct dsreq	*dsp;
 {
 	int	ret;
 	int	retries = 4;
-	u_char	status;
+	Uchar	status;
 
 /*	if ((sp->flags & SCG_CMD_RETRY) == 0)*/
 /*		retries = 0;*/
 
 	while (--retries > 0) {
-		ret = ioctl(f, DS_ENTER, dsp);
+		ret = ioctl(scgp->fd, DS_ENTER, dsp);
 		if (ret < 0)  {
 			RET(dsp) = DSRT_DEVSCSI;
 			return (-1);
@@ -353,7 +362,7 @@ scsi_sendreq(scgp, f, sp, dsp)
 
 			to.tv_sec = TIME(dsp)/1000;
 			to.tv_usec = TIME(dsp)%1000;
-			scsitimes(scgp);
+			__scg_times(scgp);
 
 			if (sp->cdb.g0_cdb.cmd == SC_TEST_UNIT_READY &&
 			    scgp->cmdstop->tv_sec < to.tv_sec ||
@@ -387,11 +396,10 @@ scsi_sendreq(scgp, f, sp, dsp)
 #endif
 
 LOCAL int
-scsi_send(scgp, f, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	int	ret;
 	int	i;
 	int	amt = sp->cdb_len;
@@ -404,7 +412,7 @@ scsi_send(scgp, f, sp)
 	dsp->ds_iovlen = 0;
 #endif
 	
-	if (f < 0) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
@@ -424,7 +432,7 @@ scsi_send(scgp, f, sp)
 	DATALEN(dsp)	= sp->size;
 	CMDBUF(dsp)	= (void *) &sp->cdb;
 	CMDLEN(dsp)	= sp->cdb_len;
-	SENSEBUF(dsp)	= sp->u_sense.cmd_sense;
+	SENSEBUF(dsp)	= (caddr_t)sp->u_sense.cmd_sense;
 	SENSELEN(dsp)	= sizeof (sp->u_sense.cmd_sense);
 	TIME(dsp)	= (sp->timeout * 1000) + 100;
 	
@@ -433,9 +441,9 @@ scsi_send(scgp, f, sp)
 	sp->sense_count	= 0;
 
 #ifdef	USE_DSLIB
-	ret = doscsireq(f, dsp);
+	ret = doscsireq(scgp->fd, dsp);
 #else
-	ret = scsi_sendreq(scgp, f, sp, dsp);
+	ret = scg_sendreq(scgp, sp, dsp);
 #endif
 
 	if (RET(dsp) != DSRT_DEVSCSI)

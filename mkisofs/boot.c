@@ -1,7 +1,7 @@
-/* @(#)boot.c	1.6 00/05/07 Copyright 1999 J. Schilling */
+/* @(#)boot.c	1.7 00/12/05 Copyright 1999 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)boot.c	1.6 00/05/07 Copyright 1999 J. Schilling";
+	"@(#)boot.c	1.7 00/12/05 Copyright 1999 J. Schilling";
 #endif
 /*
  *	Support for generic boot (sector 0..16)
@@ -27,8 +27,6 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include "mkisofs.h"
-#include <standard.h>
-#include <unixstd.h>
 #include <fctldefs.h>
 #include <utypes.h>
 #include <intcvt.h>

@@ -1,3 +1,4 @@
+/* @(#)hfs.h	1.3 01/03/20 joerg */
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie
@@ -121,7 +122,7 @@ typedef struct {
 # define HFS_FNDR_ISALIAS		(1 << 15)
 
 extern char *hfs_error;
-extern unsigned char hfs_charorder[];
+/*extern unsigned char hfs_charorder[];*/
 
 #ifdef APPLE_HYB
 hfsvol *hfs_mount	__PR((hce_mem *, int, int));
@@ -132,7 +133,7 @@ hfsvol *hfs_mount	__PR((char *, int, int));
 int hfs_flush		__PR((hfsvol *));
 void hfs_flushall	__PR((void));
 #ifdef APPLE_HYB
-int hfs_umount		__PR((hfsvol *, long));
+int hfs_umount		__PR((hfsvol *, long, long));
 #else
 int hfs_umount		__PR((hfsvol *));
 #endif /* APPLE_HYB */
@@ -185,4 +186,5 @@ int hfs_rename		__PR((hfsvol *, char *, char *));
 #ifdef APPLE_HYB
 unsigned short hfs_get_drAllocPtr	__PR((hfsfile *));
 int hfs_set_drAllocPtr			__PR((hfsfile *, unsigned short, int size));
+void hfs_vsetbless			__PR((hfsvol *, unsigned long));
 #endif /* APPLE_HYB */

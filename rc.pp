@@ -1,5 +1,10 @@
 #!/bin/sh
 
+#
+# Note: The adapter shell var must updated in order to reflect your actual hardware.
+#	The current value "friq" is the right value for the FreeCom PP adapter.
+#	See paride documentation for the list of other drivers.
+#
 adapter=friq
 
 case "$1" in

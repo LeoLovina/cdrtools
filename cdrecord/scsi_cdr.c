@@ -2,10 +2,10 @@
 XXX
 SIZEOF testen !!!
 */
-/* @(#)scsi_cdr.c	1.93 00/07/02 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.101 01/04/11 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.93 00/07/02 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.101 01/04/11 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -45,6 +45,7 @@ static	char sccsid[] =
 #include <fctldefs.h>
 #include <errno.h>
 #include <strdefs.h>
+#include <timedefs.h>
 
 #include <utypes.h>
 #include <btorder.h>
@@ -68,6 +69,7 @@ EXPORT	int	rezero_unit	__PR((SCSI *scgp));
 EXPORT	int	request_sense	__PR((SCSI *scgp));
 EXPORT	int	inquiry		__PR((SCSI *scgp, caddr_t, int));
 EXPORT	int	read_capacity	__PR((SCSI *scgp));
+EXPORT	void	print_capacity	__PR((SCSI *scgp, FILE *f));
 EXPORT	int	scsi_load_unload __PR((SCSI *scgp, int));
 EXPORT	int	scsi_prevent_removal __PR((SCSI *scgp, int));
 EXPORT	int	scsi_start_stop_unit __PR((SCSI *scgp, int, int));
@@ -116,6 +118,7 @@ EXPORT	int	read_scsi	__PR((SCSI *scgp, caddr_t, long, int));
 EXPORT	int	read_g0		__PR((SCSI *scgp, caddr_t, long, int));
 EXPORT	int	read_g1		__PR((SCSI *scgp, caddr_t, long, int));
 EXPORT	BOOL	getdev		__PR((SCSI *scgp, BOOL));
+EXPORT	void	printinq	__PR((SCSI *scgp, FILE *f));
 EXPORT	void	printdev	__PR((SCSI *scgp));
 EXPORT	BOOL	do_inquiry	__PR((SCSI *scgp, BOOL));
 EXPORT	BOOL	recovery_needed	__PR((SCSI *scgp));
@@ -144,17 +147,25 @@ unit_ready(scgp)
 	else if (scmd->error >= SCG_FATAL)	/* nicht selektierbar */
 		return (FALSE);
 
-	if (scmd->sense.code < 0x70) {		/* non extended Sense */
-		if (scmd->sense.code == 0x04)	/* NOT_READY */
-			return (FALSE);
-		return (TRUE);
-	}
-	if (((struct scsi_ext_sense *)&scmd->sense)->key == SC_UNIT_ATTENTION) {
+	if (scg_sense_key(scgp) == SC_UNIT_ATTENTION) {
 		if (test_unit_ready(scgp) >= 0)	/* alles OK */
 			return (TRUE);
 	}
+	if ((scg_cmd_status(scgp) & ST_BUSY) != 0) {
+		/*
+		 * Busy/reservation_conflict
+		 */
+		usleep(500000);
+		if (test_unit_ready(scgp) >= 0)	/* alles OK */
+			return (TRUE);
+	}
+	if (scg_sense_key(scgp) == -1) {	/* non extended Sense */
+		if (scg_sense_code(scgp) == 4)	/* NOT_READY */
+			return (FALSE);
+		return (TRUE);
+	}
 						/* FALSE wenn NOT_READY */
-	return (((struct scsi_ext_sense *)&scmd->sense)->key != SC_NOT_READY);
+	return (scg_sense_key(scgp) != SC_NOT_READY);
 }
 
 EXPORT BOOL
@@ -182,11 +193,11 @@ wait_unit_ready(scgp, secs)
 			sleep(1);
 			continue;
 		}
-		c = scsi_sense_code(scgp);
-		k = scsi_sense_key(scgp);
+		c = scg_sense_code(scgp);
+		k = scg_sense_key(scgp);
 		if (k == SC_NOT_READY && (c == 0x3A || c == 0x30)) {
 			if (scgp->silent <= 1)
-				scsiprinterr(scgp);
+				scg_printerr(scgp);
 			scgp->silent--;
 			return (FALSE);
 		}
@@ -202,16 +213,16 @@ EXPORT BOOL
 scsi_in_progress(scgp)
 	SCSI	*scgp;
 {
-	if (scsi_sense_key(scgp) == SC_NOT_READY &&
+	if (scg_sense_key(scgp) == SC_NOT_READY &&
 		/*
 		 * Logigal unit not ready operation/long_write in progress
 		 */
-	    scsi_sense_code(scgp) == 0x04 &&
-	    (scsi_sense_qual(scgp) == 0x07 || scsi_sense_qual(scgp) == 0x08)) {
+	    scg_sense_code(scgp) == 0x04 &&
+	    (scg_sense_qual(scgp) == 0x07 || scg_sense_qual(scgp) == 0x08)) {
 		return (TRUE);
 	} else {
 		if (scgp->silent <= 1)
-			scsiprinterr(scgp);
+			scg_printerr(scgp);
 	}
 	return (FALSE);
 }
@@ -228,13 +239,12 @@ test_unit_ready(scgp)
 	scmd->flags = SCG_DISRE_ENA | (scgp->silent ? SCG_SILENT:0);
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_TEST_UNIT_READY;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	
 	scgp->cmdname = "test unit ready";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -249,13 +259,12 @@ rezero_unit(scgp)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_REZERO_UNIT;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	
 	scgp->cmdname = "rezero unit";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -272,16 +281,15 @@ request_sense(scgp)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_REQUEST_SENSE;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.count = CCS_SENSE_LEN;
 	
 	scgp->cmdname = "request_sense";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
-	scsiprsense((Uchar *)sensebuf, CCS_SENSE_LEN - scsigetresid(scgp));
+	scg_prsense((Uchar *)sensebuf, CCS_SENSE_LEN - scg_getresid(scgp));
 	return (0);
 }
 
@@ -300,17 +308,16 @@ inquiry(scgp, bp, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_INQUIRY;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.count = cnt;
 	
 	scgp->cmdname = "inquiry";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	if (scgp->verbose)
-		scsiprbytes("Inquiry Data   :", (Uchar *)bp, cnt - scsigetresid(scgp));
+		scg_prbytes("Inquiry Data   :", (Uchar *)bp, cnt - scg_getresid(scgp));
 	return (0);
 }
 
@@ -326,20 +333,15 @@ read_capacity(scgp)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x25;	/* Read Capacity */
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdblen(&scmd->cdb.g1_cdb, 0); /* Full Media */
 	
 	scgp->cmdname = "read capacity";
 
-	if (scsicmd(scgp) < 0) {
+	if (scg_cmd(scgp) < 0) {
 		return (-1);
 	} else {
-		long	kb;
-		long	mb;
-		long	prmb;
-		double	dkb;
 		long	cbsize;
 		long	cbaddr;
 
@@ -351,19 +353,27 @@ read_capacity(scgp)
 		cbaddr = a_to_4_byte(&scgp->cap->c_baddr);
 		scgp->cap->c_bsize = cbsize;
 		scgp->cap->c_baddr = cbaddr;
-
-		if (scgp->silent)
-			return (0);
-
-		dkb =  (scgp->cap->c_baddr+1.0) * (scgp->cap->c_bsize/1024.0);
-		kb = dkb;
-		mb = dkb / 1024.0;
-		prmb = dkb / 1000.0 * 1.024;
-		printf("Capacity: %ld Blocks = %ld kBytes = %ld MBytes = %ld prMB\n",
-			(long)scgp->cap->c_baddr+1, kb, mb, prmb);
-		printf("Sectorsize: %ld Bytes\n", (long)scgp->cap->c_bsize);
 	}
 	return (0);
+}
+
+EXPORT void
+print_capacity(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	long	kb;
+	long	mb;
+	long	prmb;
+	double	dkb;
+
+	dkb =  (scgp->cap->c_baddr+1.0) * (scgp->cap->c_bsize/1024.0);
+	kb = dkb;
+	mb = dkb / 1024.0;
+	prmb = dkb / 1000.0 * 1.024;
+	fprintf(f, "Capacity: %ld Blocks = %ld kBytes = %ld MBytes = %ld prMB\n",
+		(long)scgp->cap->c_baddr+1, kb, mb, prmb);
+	fprintf(f, "Sectorsize: %ld Bytes\n", (long)scgp->cap->c_bsize);
 }
 
 EXPORT int
@@ -377,15 +387,14 @@ scsi_load_unload(scgp, load)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G5_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g5_cdb.cmd = 0xA6;
-	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g5_cdb.addr[1] = load?3:2;
 	scmd->cdb.g5_cdb.count[2] = 0; /* slot # */
 	
 	scgp->cmdname = "medium load/unload";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -401,14 +410,13 @@ scsi_prevent_removal(scgp, prevent)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = 0x1E;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.count = prevent & 1;
 	
 	scgp->cmdname = "prevent/allow medium removal";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -426,14 +434,13 @@ scsi_start_stop_unit(scgp, flg, loej)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = 0x1B;	/* Start Stop Unit */
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.count = (flg ? 1:0) | (loej ? 2:0);
 	
 	scgp->cmdname = "start/stop unit";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -448,15 +455,14 @@ scsi_set_speed(scgp, readspeed, writespeed)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G5_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g5_cdb.cmd = 0xBB;
-	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
 	i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], readspeed);
 	i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], writespeed);
 
 	scgp->cmdname = "set cd speed";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -502,13 +508,12 @@ qic02(scgp, cmd)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = DEF_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = 0x0D;	/* qic02 Sysgen SC4000 */
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.mid_addr = cmd;
 	
 	scgp->cmdname = "qic 02";
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -528,17 +533,16 @@ write_xg0(scgp, bp, addr, size, cnt)
 /*	scmd->flags = SCG_DISRE_ENA;*/
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_WRITE;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	g0_cdbaddr(&scmd->cdb.g0_cdb, addr);
 	scmd->cdb.g0_cdb.count = cnt;
 	
 	scgp->cmdname = "write_g0";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
-	return (size - scsigetresid(scgp));
+	return (size - scg_getresid(scgp));
 }
 
 EXPORT int
@@ -558,17 +562,16 @@ write_xg1(scgp, bp, addr, size, cnt)
 /*	scmd->flags = SCG_DISRE_ENA;*/
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = SC_EWRITE;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
 	scgp->cmdname = "write_g1";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
-	return (size - scsigetresid(scgp));
+	return (size - scg_getresid(scgp));
 }
 
 EXPORT int
@@ -588,17 +591,16 @@ write_xg5(scgp, bp, addr, size, cnt)
 /*	scmd->flags = SCG_DISRE_ENA;*/
 	scmd->cdb_len = SC_G5_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g5_cdb.cmd = 0xAA;
-	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
 	g5_cdbaddr(&scmd->cdb.g5_cdb, addr);
 	g5_cdblen(&scmd->cdb.g5_cdb, cnt);
 	
 	scgp->cmdname = "write_g5";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
-	return (size - scsigetresid(scgp));
+	return (size - scg_getresid(scgp));
 }
 
 EXPORT int
@@ -611,14 +613,13 @@ scsi_flush_cache(scgp)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 2 * 60;		/* Max: sizeof(CDR-cache)/150KB/s */
 	scmd->cdb.g1_cdb.cmd = 0x35;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	
 	scgp->cmdname = "flush cache";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -638,15 +639,14 @@ read_buffer(scgp, bp, cnt, mode)
 	scmd->dma_read = 1;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x3C;	/* Read Buffer */
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.cmd_cdb[1] |= (mode & 7);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
 	scgp->cmdname = "read buffer";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -668,9 +668,8 @@ read_subchannel(scgp, bp, track, cnt, msf, subq, fmt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x42;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	if (msf)
 		scmd->cdb.g1_cdb.res = 1;
 	if (subq)
@@ -681,7 +680,7 @@ read_subchannel(scgp, bp, track, cnt, msf, subq, fmt)
 
 	scgp->cmdname = "read subchannel";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -704,9 +703,8 @@ read_toc(scgp, bp, track, cnt, msf, fmt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x43;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	if (msf)
 		scmd->cdb.g1_cdb.res = 1;
 	scmd->cdb.g1_cdb.addr[0] = fmt & 0x0F;
@@ -715,7 +713,7 @@ read_toc(scgp, bp, track, cnt, msf, fmt)
 
 	scgp->cmdname = "read toc";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -738,10 +736,9 @@ read_toc_philips(scgp, bp, track, cnt, msf, fmt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 4 * 60;		/* May last  174s on a TEAC CD-R55S */
 	scmd->cdb.g1_cdb.cmd = 0x43;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	if (msf)
 		scmd->cdb.g1_cdb.res = 1;
 	scmd->cdb.g1_cdb.res6 = track;
@@ -754,7 +751,7 @@ read_toc_philips(scgp, bp, track, cnt, msf, fmt)
 
 	scgp->cmdname = "read toc";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -775,9 +772,8 @@ read_header(scgp, bp, addr, cnt, msf)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x44;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	if (msf)
 		scmd->cdb.g1_cdb.res = 1;
 	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
@@ -785,7 +781,7 @@ read_header(scgp, bp, addr, cnt, msf)
 
 	scgp->cmdname = "read header";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -805,15 +801,14 @@ read_disk_info(scgp, bp, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 4 * 60;		/* Needs up to 2 minutes */
 	scmd->cdb.g1_cdb.cmd = 0x51;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
 	scgp->cmdname = "read disk info";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -834,17 +829,16 @@ read_track_info(scgp, bp, track, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 4 * 60;		/* Needs up to 2 minutes */
 	scmd->cdb.g1_cdb.cmd = 0x52;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.reladr = 1;	/* Track */
 	g1_cdbaddr(&scmd->cdb.g1_cdb, track);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
 	scgp->cmdname = "read track info";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -864,16 +858,15 @@ send_opc(scgp, bp, cnt, doopc)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 60;
 	scmd->cdb.g1_cdb.cmd = 0x54;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.reladr = doopc?1:0;
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
 	scgp->cmdname = "send opc";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -894,15 +887,14 @@ read_track_info_philips(scgp, bp, track, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0xE5;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdbaddr(&scmd->cdb.g1_cdb, track);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
 	scgp->cmdname = "read track info";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -920,10 +912,9 @@ scsi_close_tr_session(scgp, type, track, immed)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 8 * 60;		/* Needs up to 4 minutes */
 	scmd->cdb.g1_cdb.cmd = 0x5B;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.addr[0] = type;
 	scmd->cdb.g1_cdb.addr[3] = track;
 
@@ -935,7 +926,7 @@ scsi_close_tr_session(scgp, type, track, immed)
 	
 	scgp->cmdname = "close track/session";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -955,15 +946,14 @@ read_master_cue(scgp, bp, sheet, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x59;		/* Read master cue */
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.addr[2] = sheet;
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
 	scgp->cmdname = "read master cue";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -982,14 +972,13 @@ send_cue_sheet(scgp, bp, size)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x5D;	/* Send CUE sheet */
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdblen(&scmd->cdb.g1_cdb, size); 
 
 	scgp->cmdname = "send_cue_sheet";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (size - scmd->resid);
 }
@@ -1012,14 +1001,13 @@ read_buff_cap(scgp, sp, fp)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x5C;		/* Read buffer cap */
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdblen(&scmd->cdb.g1_cdb, sizeof(resp));
 	
 	scgp->cmdname = "read buffer cap";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 
 	bufsize   = a_to_u_4_byte(&resp[4]);
@@ -1055,7 +1043,6 @@ scsi_blank(scgp, addr, blanktype, immed)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G5_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 160 * 60; /* full blank at 1x could take 80 minutes */
 	scmd->cdb.g5_cdb.cmd = 0xA1;	/* Blank */
 	scmd->cdb.g0_cdb.high_addr = blanktype;
@@ -1066,7 +1053,7 @@ scsi_blank(scgp, addr, blanktype, immed)
 
 	scgp->cmdname = "blank unit";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 /*
@@ -1088,6 +1075,11 @@ allow_atapi(scgp, new)
 		return (old);
 
 	scgp->silent++;
+	/*
+	 * If a bad drive has been reset before, we may need to fire up two
+	 * test unit ready commands to clear status.
+	 */
+	(void)unit_ready(scgp);
 	if (new &&
 	    mode_sense_g1(scgp, mode, 8, 0x3F, 0) < 0) {	/* All pages current */
 		new = FALSE;
@@ -1157,7 +1149,7 @@ mode_select_sg0(scgp, dp, cnt, smp, pf)
 	xmode[5] = 0;
 	i_to_2_byte(&xmode[6], (unsigned int)dp[3]);
 
-	if (scgp->verbose) scsiprbytes("Mode Parameters (un-converted)", dp, cnt);
+	if (scgp->verbose) scg_prbytes("Mode Parameters (un-converted)", dp, cnt);
 
 	return (mode_select_g1(scgp, xmode, amt, smp, pf));
 }
@@ -1191,7 +1183,7 @@ mode_sense_sg0(scgp, dp, cnt, page, pcf)
 	if (mode_sense_g1(scgp, xmode, amt, page, pcf) < 0)
 		return (-1);
 
-	amt = cnt - scsigetresid(scgp);
+	amt = cnt - scg_getresid(scgp);
 /*
  * For tests: Solaris 8 & LG CD-ROM always returns resid == amt
  */
@@ -1213,7 +1205,7 @@ mode_sense_sg0(scgp, dp, cnt, page, pcf)
 	len = a_to_u_2_byte(&xmode[6]);
 	dp[3] = len;
 
-	if (scgp->verbose) scsiprbytes("Mode Sense Data (converted)", dp, amt);
+	if (scgp->verbose) scg_prbytes("Mode Sense Data (converted)", dp, amt);
 	return (0);
 }
 
@@ -1233,20 +1225,19 @@ mode_select_g0(scgp, dp, cnt, smp, pf)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_MODE_SELECT;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
 	scmd->cdb.g0_cdb.count = cnt;
 
 	if (scgp->verbose) {
 		printf("%s ", smp?"Save":"Set ");
-		scsiprbytes("Mode Parameters", dp, cnt);
+		scg_prbytes("Mode Parameters", dp, cnt);
 	}
 
 	scgp->cmdname = "mode select g0";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -1265,20 +1256,19 @@ mode_select_g1(scgp, dp, cnt, smp, pf)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x55;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
 	if (scgp->verbose) {
 		printf("%s ", smp?"Save":"Set ");
-		scsiprbytes("Mode Parameters", dp, cnt);
+		scg_prbytes("Mode Parameters", dp, cnt);
 	}
 
 	scgp->cmdname = "mode select g1";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -1298,9 +1288,8 @@ mode_sense_g0(scgp, dp, cnt, page, pcf)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_MODE_SENSE;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 #ifdef	nonono
 	scmd->cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
 #endif
@@ -1310,9 +1299,9 @@ mode_sense_g0(scgp, dp, cnt, page, pcf)
 
 	scgp->cmdname = "mode sense g0";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
-	if (scgp->verbose) scsiprbytes("Mode Sense Data", dp, cnt - scsigetresid(scgp));
+	if (scgp->verbose) scg_prbytes("Mode Sense Data", dp, cnt - scg_getresid(scgp));
 	return (0);
 }
 
@@ -1332,9 +1321,8 @@ mode_sense_g1(scgp, dp, cnt, page, pcf)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x5A;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 #ifdef	nonono
 	scmd->cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
 #endif
@@ -1343,9 +1331,9 @@ mode_sense_g1(scgp, dp, cnt, page, pcf)
 
 	scgp->cmdname = "mode sense g1";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
-	if (scgp->verbose) scsiprbytes("Mode Sense Data", dp, cnt - scsigetresid(scgp));
+	if (scgp->verbose) scg_prbytes("Mode Sense Data", dp, cnt - scg_getresid(scgp));
 	return (0);
 }
 
@@ -1600,15 +1588,15 @@ read_B0(scgp, isbcd, b0p, lop)
 		return (-1);
 	}
 	if (scgp->verbose) {
-		scsiprbytes("TOC data: ", (Uchar *)xb,
-			len > (int)sizeof(xb) - scsigetresid(scgp) ?
-				sizeof(xb) - scsigetresid(scgp) : len);
+		scg_prbytes("TOC data: ", (Uchar *)xb,
+			len > (int)sizeof(xb) - scg_getresid(scgp) ?
+				sizeof(xb) - scg_getresid(scgp) : len);
 
 		tp = &dp->desc[0];
 		pe = &xb[len];
 
 		while ((char *)tp < pe) {
-			scsiprbytes("ENT: ", (Uchar *)tp, 11);
+			scg_prbytes("ENT: ", (Uchar *)tp, 11);
 			tp++;
 		}
 	}
@@ -1621,7 +1609,7 @@ read_B0(scgp, isbcd, b0p, lop)
 		if (tp->point != 0xB0)
 			continue;
 		if (scgp->verbose)
-			scsiprbytes("B0: ", (Uchar *)tp, 11);
+			scg_prbytes("B0: ", (Uchar *)tp, 11);
 		if (isbcd) {
 			l = msf_to_lba(from_bcd(tp->amin),
 				from_bcd(tp->asec),
@@ -1676,8 +1664,8 @@ read_session_offset(scgp, offp)
 		return (-1);
 
 	if (scgp->verbose)
-		scsiprbytes("tocheader: ",
-		(Uchar *)xb, sizeof(struct tocheader) - scsigetresid(scgp));
+		scg_prbytes("tocheader: ",
+		(Uchar *)xb, sizeof(struct tocheader) - scg_getresid(scgp));
 
 	len = a_to_u_2_byte(dp->hd.len) + sizeof(struct tocheader)-2;
 	if (len > (int)sizeof(xb)) {
@@ -1688,8 +1676,8 @@ read_session_offset(scgp, offp)
 		return (-1);
 
 	if (scgp->verbose)
-		scsiprbytes("tocheader: ",
-			(Uchar *)xb, len - scsigetresid(scgp));
+		scg_prbytes("tocheader: ",
+			(Uchar *)xb, len - scg_getresid(scgp));
 
 	dp = (struct diskinfo *)xb;
 	if (offp)
@@ -1852,16 +1840,15 @@ read_g0(scgp, bp, addr, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_READ;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	g0_cdbaddr(&scmd->cdb.g0_cdb, addr);
 	scmd->cdb.g0_cdb.count = cnt;
 /*	scmd->cdb.g0_cdb.vu_56 = 1;*/
 	
 	scgp->cmdname = "read_g0";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -1882,15 +1869,14 @@ read_g1(scgp, bp, addr, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = SC_EREAD;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
 	scgp->cmdname = "read_g1";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 #endif	/* DEBUG */
 
@@ -1924,7 +1910,7 @@ getdev(scgp, print)
 	if (inquiry(scgp, (caddr_t)inq, sizeof(*inq)) < 0) {
 		got_inquiry = FALSE;
 	} else {
-		inq_len = sizeof(*inq) - scsigetresid(scgp);
+		inq_len = sizeof(*inq) - scg_getresid(scgp);
 	}
 	if (!got_inquiry) {
 		if (scgp->verbose) {
@@ -1966,7 +1952,7 @@ getdev(scgp, print)
 
 		if (len > (int)sizeof (*inq) &&
 				inquiry(scgp, (caddr_t)ibuf, inq->add_len+5) >= 0) {
-			len = inq->add_len+5 - scsigetresid(scgp);
+			len = inq->add_len+5 - scg_getresid(scgp);
 			ip = ibuf;
 		} else {
 			len = sizeof (*inq);
@@ -2111,6 +2097,8 @@ getdev(scgp, print)
 			/* It's MMC compliant */
 			if (strbeg("CDRW226", prod_ident))
 				scgp->dev = DEV_MMC_CDRW;
+#else
+			/* EMPTY */
 #endif
 
 		} else if (strbeg("MITSUMI", vendor_info)) {
@@ -2164,6 +2152,8 @@ getdev(scgp, print)
 
 		} else if (strbeg("PIONEER", vendor_info)) {
 			if (strbeg("CD-WO DW-S114X", prod_ident))
+				scgp->dev = DEV_PIONEER_DW_S114X;
+			else if (strbeg("CD-WO DR-R504X", prod_ident))	/* Reoprt from philip@merge.com */
 				scgp->dev = DEV_PIONEER_DW_S114X;
 			else if (strbeg("DVD-R DVR-S101", prod_ident))
 				scgp->dev = DEV_PIONEER_DVDR_S101;
@@ -2262,6 +2252,7 @@ getdev(scgp, print)
 			if (dvd)
 				scgp->dev = DEV_MMC_DVD;
 		}
+		break;
 
 	case INQ_PROCD:
 		if (strbeg("BERTHOLD", vendor_info)) {
@@ -2280,35 +2271,45 @@ getdev(scgp, print)
 
 	if (scgp->dev == DEV_UNKNOWN && !got_inquiry) {
 #ifdef	PRINT_INQ_ERR
-		scsiprinterr(scgp);
+		scg_printerr(scgp);
 #endif
 		return (FALSE);
 	}
 
-	printf("Device type    : ");
-	scsiprintdev(inq);
-	printf("Version        : %d\n", inq->ansi_version);
-	printf("Response Format: %d\n", inq->data_format);
+	printinq(scgp, stdout);
+	return (TRUE);
+}
+
+EXPORT void
+printinq(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	register struct scsi_inquiry *inq = scgp->inq;
+
+	fprintf(f, "Device type    : ");
+	scg_fprintdev(f, inq);
+	fprintf(f, "Version        : %d\n", inq->ansi_version);
+	fprintf(f, "Response Format: %d\n", inq->data_format);
 	if (inq->data_format >= 2) {
-		printf("Capabilities   : ");
-		if (inq->aenc)		printf("AENC ");
-		if (inq->termiop)	printf("TERMIOP ");
-		if (inq->reladr)	printf("RELADR ");
-		if (inq->wbus32)	printf("WBUS32 ");
-		if (inq->wbus16)	printf("WBUS16 ");
-		if (inq->sync)		printf("SYNC ");
-		if (inq->linked)	printf("LINKED ");
-		if (inq->cmdque)	printf("CMDQUE ");
-		if (inq->softreset)	printf("SOFTRESET ");
-		printf("\n");
+		fprintf(f, "Capabilities   : ");
+		if (inq->aenc)		fprintf(f, "AENC ");
+		if (inq->termiop)	fprintf(f, "TERMIOP ");
+		if (inq->reladr)	fprintf(f, "RELADR ");
+		if (inq->wbus32)	fprintf(f, "WBUS32 ");
+		if (inq->wbus16)	fprintf(f, "WBUS16 ");
+		if (inq->sync)		fprintf(f, "SYNC ");
+		if (inq->linked)	fprintf(f, "LINKED ");
+		if (inq->cmdque)	fprintf(f, "CMDQUE ");
+		if (inq->softreset)	fprintf(f, "SOFTRESET ");
+		fprintf(f, "\n");
 	}
 	if (inq->add_len >= 31 ||
 			inq->info[0] || inq->ident[0] || inq->revision[0]) {
-		printf("Vendor_info    : '%.8s'\n", inq->info);
-		printf("Identifikation : '%.16s'\n", inq->ident);
-		printf("Revision       : '%.4s'\n", inq->revision);
+		fprintf(f, "Vendor_info    : '%.8s'\n", inq->info);
+		fprintf(f, "Identifikation : '%.16s'\n", inq->ident);
+		fprintf(f, "Revision       : '%.4s'\n", inq->revision);
 	}
-	return (TRUE);
 }
 
 EXPORT void
@@ -2451,7 +2452,7 @@ retry:
 	if (!get_mode_params(scgp, 0x2A, "CD capabilities",
 			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len)) {
 
-		if (scsi_sense_key(scgp) == SC_NOT_READY) {
+		if (scg_sense_key(scgp) == SC_NOT_READY) {
 			if (wait_unit_ready(scgp, 60))
 				goto retry;
 		}

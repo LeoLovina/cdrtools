@@ -1,6 +1,9 @@
 WARNING: Do not use 'mc' to extract the tar file!
 All mc versions before 4.0.14 cannot extract symbolic links correctly.
 
+Linux is the most self incompatible OS I know. If you have any problem,
+first carefully read this file.
+
 Linux includes the gnu make program by default but it is called 'make' on linux.
 You will definitely need the shell script Gmake.linux to use gmake
 on a linux system.
@@ -13,6 +16,33 @@ Then compile the system by calling:
 
 /usr/bin/Gmake
 or ./Gmake.linux
+
+NOTE for all Linux versions using libc.so.6:
+
+	Libc.so.6 is definitely a big problem in binary compatibility.
+	First you should note that Linux is not a OS but only a kernel.
+
+	Creating a OS from kernel, libraries and applications is done
+	by various companies that create "Linux distributions". It seems
+	that these companies (e.g. SuSE and Red Hat) are fighting wars
+	against each other.
+
+	There is no guarantee that a binary that has been compiled
+	on one Linux distribution will run correctly on a different
+	release of the same vendor or on a distribution from a different 
+	vendor. You cannot copy binaries between different Linux
+	versions, always compile the sources by yourself.
+
+	We should consider that the name libc.so.6 is burned out for
+	these incompatibility reasons. But stop: Don't be too fast.
+	The dynamic linker on Linux does not work correctly. It has
+	been derived from the SunOS 4.x linker (which worked correctly)
+	but  the Linux version does not even warn if it could not
+	find a library with the right major version number. Until
+	this is fixed it makes no sense to switch to libc.so.7
+
+	See below for more information.
+
 
 NOTES for S.u.S.E distributions: you must unset an environment variable
 called PROMPT_COMMAND
@@ -68,7 +98,8 @@ adapters found in some CD-R or CD-RW drives.
 
 IMPORTANT:
 
--	Although cdrecord supports to use dev=/dev/sgc, it is not recommended
+-	Linux driver design oddities ******************************************
+	Although cdrecord supports to use dev=/dev/sgc, it is not recommended
 	and it is unsupported.
 
 	The /dev/sg* device mapping in Linux is not stable! Using dev=/dev/sgc
@@ -76,10 +107,12 @@ IMPORTANT:
 	to talk to has moved to /dev/sgd. For the proper and OS independent
 	dev=<bus>,<tgt>,<lun> syntax read the man page of cdrecord.
 
--	In some architectures (at least on sparc / alpha / ppc) kernels prior
+-	Linux Kernel bug ******************************************************
+	In some architectures (at least on sparc / alpha / ppc) kernels prior
 	to 2.0.32 are not usable because the call to mlockall() kills cdrecord.
 
--	If you get a message like:
+-	You configured you kernel the wrong way *******************************
+	If you get a message like:
 
 		cdrecord: Function not implemented. shmget failed
 
@@ -94,8 +127,9 @@ IMPORTANT:
 	-	The allowed amount of shared memory in the kernel is
 		not sufficient. See next main point for a solution:
 
--       You may need to edit /usr/src/linux/include/asm*/shmparam.h to allow at least 
-        4 MB of shared memory for your architecture by modifying SHMMAX
+-	Linux kernel oddities *************************************************
+	You may need to edit /usr/src/linux/include/asm*/shmparam.h to allow at least 
+	4 MB of shared memory for your architecture by modifying SHMMAX
 	and re-compile/re-install Linux !
 	(note that Linux for Intel by default allows 16 MB) 
 
@@ -105,7 +139,8 @@ IMPORTANT:
 
 	This will allow 16 MB for shared memory.
 
--	If you get the message: "Cannot allocate memory. Cannot send SCSI cmd via ioctl"
+-	Linux kernel memory management ****************************************
+	If you get the message: "Cannot allocate memory. Cannot send SCSI cmd via ioctl"
 	Your kernel/include files are inconsistent.
 
 		This seems to be the case with most actual Linux kernels!!!!!!
@@ -125,5 +160,22 @@ IMPORTANT:
 	indicates that cdrecord has been compiled with 32k SG_BIG_BUF
 
 	The Linux 'sg' driver is the worst driver design, I've ever seen.
+
+-	Linux Binary incompatibility *****************************************
+	If any of the options that take a equal sign ('=') in the middle does
+	not work correctly (e.g. dev= or if=) you are using a binary that
+	does not work correctly on your current OS distribution.
+
+	If dev=0,0,0 does not work but -dev=0,0,0 works you found this
+	incompatibility. This problem is caused by an incompatibility
+	in ctype.h and it seems that there are other compatibility problems
+	e.g. with reading /etc/default/cdrecord.
+
+	You cannot copy binaries between different Linux versions,
+	always compile the sources by yourself. 
+
+	If a hint from a user is correct then even a RPM binary built for
+	RH-6.2 did not work on RH-6.2 because of these binary incompatibilities.
+
 
 Joerg

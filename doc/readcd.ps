@@ -309,7 +309,7 @@ mark
 (lun)3361 2304 w
 10 R f
 (are integer numbers. Some operating systems)5 1874 1 3526 2304 t
-( this case the corect)4 825( In)1 152( in addition.)2 503(or SCSI transport implementations may require to specify a \256lename)9 2840 4 1080 2424 t
+( this case the correct)4 850( In)1 150( addition.)1 387(or SCSI transport implementations may require to specify a \256lename in)10 2933 4 1080 2424 t
 (syntax for the device is:)4 1010 1 1080 2544 t
 10 B f
 (dev=)2161 2544 w
@@ -339,7 +339,7 @@ mark
 (lun)4688 2544 w
 10 R f
 ( the name)2 414(. If)1 162 2 4824 2544 t
-( that has been speci\256ed on such a system referres to exactly one SCSI device, a short-)16 3562(of the device node)3 758 2 1080 2664 t
+( node that has been speci\256ed on such a system refers to exactly one SCSI device, a short-)17 3781(of the device)2 539 2 1080 2664 t
 ( form)1 255(hand in the)2 518 2 1080 2784 t
 10 B f
 (dev=)1914 2784 w
@@ -379,158 +379,200 @@ mark
 (target)1908 2904 w
 10 R f
 (,)2155 2904 w
-(To make)1 363 1 1080 3192 t
+( SCSI device name by a remote device indica-)8 1950(To access remote SCSI devices, you need to prepend the)9 2370 2 1080 3192 t
+(tor. The remote device indicator is either)6 1675 1 1080 3312 t
 10 B f
-(readcd)1479 3192 w
+(REMOTE:)2788 3312 w
+10 I f
+(user)3266 3312 w
+10 S1 f
+(@)3438 3312 w
+10 I f
+(host:)3530 3312 w
 10 R f
-(portable to all)2 577 1 1809 3192 t
+(or)3796 3312 w
+10 B f
+(REMOTE:)3945 3312 w
+10 I f
+(host:)4423 3312 w
+10 R f
+( be:)1 158(A valid remote SCSI device name may)6 1619 2 1080 3432 t
+10 B f
+(REMOTE:)2926 3432 w
+10 I f
+(user)3404 3432 w
+10 S1 f
+(@)3576 3432 w
+10 I f
+(host:)3668 3432 w
+10 R f
+(to allow remote SCSI bus scanning)5 1463 1 3937 3432 t
+(or)1080 3552 w
+10 B f
+(REMOTE:)1199 3552 w
+10 I f
+(user)1677 3552 w
+10 S1 f
+(@)1849 3552 w
+10 I f
+(host:1,0,0)1941 3552 w
+10 R f
+(to access the SCSI device at)5 1178 1 2377 3552 t
+10 I f
+(host)3590 3552 w
+10 R f
+(connected to SCSI bus)3 938 1 3792 3552 t
+10 S1 f
+(#)4765 3552 w
+10 R f
+(1,target 0 lun)2 550 1 4850 3552 t
+(0.)1080 3672 w
+(To make)1 363 1 1080 3960 t
+10 B f
+(readcd)1479 3960 w
+10 R f
+(portable to all)2 577 1 1809 3960 t
 8 R f
-(UNIX)2415 3192 w
+(UNIX)2415 3960 w
 10 R f
-(platforms, the syntax)2 863 1 2651 3192 t
+(platforms, the syntax)2 863 1 2651 3960 t
 10 B f
-(dev=)3551 3192 w
+(dev=)3551 3960 w
 10 I f
-(devicename)3795 3192 w
+(devicename)3795 3960 w
 10 R f
-(:)4273 3192 w
+(:)4273 3960 w
 10 I f
-(scsibus)4301 3192 w
+(scsibus)4301 3960 w
 10 R f
-(,)4598 3192 w
+(,)4598 3960 w
 10 I f
-(target)4623 3192 w
+(target)4623 3960 w
 10 R f
-(, is preferred)2 530 1 4870 3192 t
-( not neces-)2 466( speci\256c OS must)3 757( A)1 148(as is hides OS speci\256c knowledge about device names from the user.)11 2949 4 1080 3312 t
-(sarily support a way to specify a real device \256le name nor a way to specify)15 3099 1 1080 3432 t
+(, is preferred)2 530 1 4870 3960 t
+( not neces-)2 466( speci\256c OS must)3 757( A)1 148(as is hides OS speci\256c knowledge about device names from the user.)11 2949 4 1080 4080 t
+(sarily support a way to specify a real device \256le name nor a way to specify)15 3099 1 1080 4200 t
 10 I f
-(scsibus)4212 3432 w
+(scsibus)4212 4200 w
 10 R f
-(,)4509 3432 w
+(,)4509 4200 w
 10 I f
-(target)4534 3432 w
+(target)4534 4200 w
 10 R f
-(,)4781 3432 w
+(,)4781 4200 w
 10 I f
-(lun)4806 3432 w
+(lun)4806 4200 w
 10 R f
-(.)4942 3432 w
+(.)4942 4200 w
 10 I f
-(Scsibus)1080 3720 w
+(Scsibus)1080 4488 w
 10 R f
-( the boot messages for more information or)7 1868(0 is the default SCSI bus on the machine. Watch)9 2108 2 1424 3720 t
-(look into)1 378 1 1080 3840 t
+( the boot messages for more information or)7 1868(0 is the default SCSI bus on the machine. Watch)9 2108 2 1424 4488 t
+(look into)1 378 1 1080 4608 t
 10 B f
-(/var/adm/messages)1502 3840 w
+(/var/adm/messages)1502 4608 w
 10 R f
-( If)1 142(for more information about the SCSI con\256guration of your machine.)9 2907 2 2351 3840 t
-(you have problems to \256gure out what values for)8 2074 1 1080 3960 t
+( If)1 142(for more information about the SCSI con\256guration of your machine.)9 2907 2 2351 4608 t
+(you have problems to \256gure out what values for)8 2074 1 1080 4728 t
 10 I f
-(scsibus)3199 3960 w
+(scsibus)3199 4728 w
 10 R f
-(,)3496 3960 w
+(,)3496 4728 w
 10 I f
-(target)3521 3960 w
+(target)3521 4728 w
 10 R f
-(,)3768 3960 w
+(,)3768 4728 w
 10 I f
-(lun)3793 3960 w
+(lun)3793 4728 w
 10 R f
-( the)1 168(should be used, try)3 815 2 3966 3960 t
+( the)1 168(should be used, try)3 815 2 3966 4728 t
 10 S1 f
-(\261)4995 3960 w
+(\261)4995 4728 w
 10 B f
-(scanbus)5060 3960 w
+(scanbus)5060 4728 w
 10 R f
-(option of)1 372 1 1080 4080 t
+(option of)1 372 1 1080 4848 t
 10 B f
-(cdrecord)1485 4080 w
+(cdrecord)1485 4848 w
 10 R f
-(.)1867 4080 w
+(.)1867 4848 w
 9 B f
-(OPTIONS)720 4368 w
+(OPTIONS)720 5136 w
 10 R f
-( the)1 162(If no options except)3 838 2 1080 4488 t
+( the)1 162(If no options except)3 838 2 1080 5256 t
 10 I f
-(dev=)2120 4488 w
+(dev=)2120 5256 w
 10 R f
-(option have been speci\256ed,)3 1132 1 2366 4488 t
+(option have been speci\256ed,)3 1132 1 2366 5256 t
 10 B f
-(readcd)3538 4488 w
+(readcd)3538 5256 w
 10 R f
-( a)1 84( Select)1 317(goes into intercative mode.)3 1127 3 3872 4488 t
-(primary function and then follow the instructions.)6 2038 1 1080 4608 t
+( a)1 84( Select)1 317(goes into intercative mode.)3 1127 3 3872 5256 t
+(primary function and then follow the instructions.)6 2038 1 1080 5376 t
 10 S1 f
-(\261)1080 4776 w
+(\261)1080 5544 w
 10 B f
-(version)1145 4776 w
+(version)1145 5544 w
 10 R f
-(Print version information and exit.)4 1412 1 1440 4896 t
-10 S1 f
-(\261)1080 5064 w
+(Print version information and exit.)4 1412 1 1440 5664 t
 10 B f
-(v)1145 5064 w
-10 R f
-(Increment the level of general verbosity by one.)7 1968 1 1440 5064 t
-10 S1 f
-(\261)1080 5232 w
-10 B f
-(V)1145 5232 w
-10 R f
-( helps to debug)3 638( This)1 245(Increment the verbose level in respect of SCSI command transport by one.)11 3077 3 1440 5232 t
-( error)1 229( you get incomprehensible)3 1093( If)1 136(problems during the writing process, that occur in the drive.)9 2502 4 1440 5352 t
-( this \257ag to get more detailed output.)7 1535(messages you should use)3 1026 2 1440 5472 t
-10 S1 f
-(\261)4068 5472 w
-10 B f
-(VV)4133 5472 w
-10 R f
-(will show data buffer con-)4 1089 1 4311 5472 t
-( Using)1 306(tent in addition.)2 649 2 1440 5592 t
-10 S1 f
-(\261)2429 5592 w
-10 B f
-(V)2494 5592 w
-10 R f
-(or)2600 5592 w
-10 S1 f
-(\261)2717 5592 w
-10 B f
-(VV)2782 5592 w
-10 R f
-(slows down the process and may be the reason for a buffer)11 2440 1 2960 5592 t
-(underrun.)1440 5712 w
-10 S1 f
-(\261)1080 5880 w
-10 B f
-(w)1145 5880 w
-10 R f
-(Switch to write mode. If this option is not present,)9 2080 1 1440 5880 t
-10 B f
-(readcd)3553 5880 w
-10 R f
-(reads from the speci\256ed device.)4 1298 1 3880 5880 t
-10 B f
-(sectors=)1080 6048 w
+(dev=)1080 5832 w
 10 I f
-(range)1430 6048 w
+(target)1287 5832 w
 10 R f
-( range is speci\256ed by the starting sector)7 1802( The)1 245( sector range that should be read.)6 1508(Specify a)1 405 4 1440 6168 t
-(number, a minus sign and the ending sector number.)8 2156 1 1440 6288 t
-9 B f
-(EXAMPLES)720 6576 w
-10 R f
-( primary SCSI bus of the)5 1077(For all examples below, it will be assumed that the drive is connected to the)14 3243 2 1080 6696 t
-(machine. The SCSI target id is set to 2.)8 1630 1 1080 6816 t
-(To read the complete media from a CD-ROM writing the data to the \256le)13 2986 1 1080 6984 t
+( device speci\256cation is)3 946( typical)1 309( A)1 142(Sets the SCSI target for the drive, see notes above.)9 2130 4 1440 5952 t
+10 B f
+(dev=)5005 5952 w
 10 I f
-(cdimage.raw)4099 6984 w
+(6,0)5212 5952 w
 10 R f
-(:)4626 6984 w
-(J)720 7680 w
-(. .)1 47 1 759 7625 t
-( 1)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+(.)5375 5952 w
+(If a \256lename must be provided together with the numerical target speci\256cation, the \256lename is)14 3960 1 1440 6072 t
+( be found in the system speci\256c)6 1350( correct \256lename in this case can)6 1386( The)1 227(implementation speci\256c.)1 997 4 1440 6192 t
+( a)1 79( On)1 190(manuals of the target operating system.)5 1620 3 1440 6312 t
+10 I f
+(FreeBSD)3364 6312 w
+10 R f
+(system without)1 619 1 3770 6312 t
+10 I f
+(CAM)4424 6312 w
+10 R f
+(support, you need)2 731 1 4669 6312 t
+(to use the control device \(e.g.)5 1218 1 1440 6432 t
+10 I f
+(/dev/rcd0.ctl)2724 6432 w
+10 R f
+( in this case may be)5 830( correct device speci\256cation)3 1140(\). A)1 196 3 3234 6432 t
+10 B f
+(dev=)1440 6552 w
+10 I f
+(/dev/rcd0.ctl:)1647 6552 w
+10 S1 f
+(@)2182 6552 w
+10 R f
+(.)2307 6552 w
+( Dif-)1 210(On Linux, drives connected to a parallel port adapter are mapped to a virtual SCSI bus.)15 3750 2 1440 6792 t
+(ferent adapters are mapped to different targets on this virtual SCSI bus.)11 2933 1 1440 6912 t
+(If no)1 220 1 1440 7152 t
+10 I f
+(dev)1714 7152 w
+10 R f
+(option is present,)2 744 1 1906 7152 t
+10 B f
+(cdrecord)2704 7152 w
+10 R f
+(will try to get the device from the)7 1550 1 3140 7152 t
+10 B f
+(CDR)4745 7152 w
+10 S f
+(_)4961 7152 w
+10 B f
+(DEVICE)5011 7152 w
+10 R f
+(environment.)1440 7272 w
+(J)720 7752 w
+(. .)1 47 1 759 7697 t
+( 1)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7752 t
 cleartomark
 showpage
 restore
@@ -545,139 +587,195 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( READCD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(readcd dev=2,0 f=cdimage.raw)2 1257 1 1212 960 t
-(To read sectors from range 150 ... 10000 from a CD-ROM writing the data to the \256le)16 3520 1 1080 1128 t
-10 I f
-(cdimage.raw)4633 1128 w
-10 R f
-(:)5160 1128 w
-(readcd dev=2,0 sectors=150-10000 f=cdimage.raw)3 2056 1 1212 1296 t
-( the data from the \256le)5 952(To write)1 359 2 1080 1464 t
-10 I f
-(cdimage.raw)2435 1464 w
-10 R f
-(\(e.g. a \256lesystem image from)4 1241 1 2998 1464 t
+(If the argument to the)4 905 1 1440 960 t
 10 B f
-(mkisofs)4283 1464 w
+(dev=)2380 960 w
 10 R f
-(\) to a DVD-RAM,)3 789 1 4611 1464 t
-(call:)1080 1584 w
-(readcd dev=2,0 -w f=cdimage.raw)3 1395 1 1212 1752 t
-9 B f
-(FILES)720 2040 w
-(SEE ALSO)1 460 1 720 2160 t
-10 B f
-(cdrecord)1080 2280 w
-10 R f
-(\(1\),)1462 2280 w
-10 B f
-(mkisofs)1636 2280 w
-10 R f
-(\(1\),)1964 2280 w
-10 B f
-(scg)2138 2280 w
-10 R f
-(\(7\),)2271 2280 w
-10 B f
-(fbk)2445 2280 w
-10 R f
-(\(7\).)2590 2280 w
-9 B f
-(NOTES)720 2568 w
-10 R f
-( don't want to allow users to become root on your system,)11 2507(If you)1 257 2 1080 2688 t
-10 B f
-(readcd)3886 2688 w
-10 R f
-(may safely be installed suid)4 1178 1 4222 2688 t
-( users or a group of users with no root privileges to use)12 2293(root. This allows all)3 827 2 1080 2808 t
-10 B f
-(readcd. Readcd)1 674 1 4233 2808 t
-10 R f
-(in this case)2 460 1 4940 2808 t
-(will only allow access to CD-ROM type drives- To give all user access to use)14 3213 1 1080 2928 t
-10 B f
-(readcd,)4326 2928 w
-10 R f
-(enter:)4678 2928 w
-(chown root /usr/local/bin/readcd)2 1314 1 1440 3096 t
-(chmod 4711 /usr/local/bin/readcd)2 1359 1 1440 3216 t
-(To give a restricted group of users access to)8 1815 1 1080 3384 t
-10 B f
-(readcd)2928 3384 w
-10 R f
-(enter:)3255 3384 w
-(chown root /usr/local/bin/readcd)2 1314 1 1440 3552 t
-(chgrp cdburners /usr/local/bin/readcd)2 1507 1 1440 3672 t
-(chmod 4710 /usr/local/bin/readcd)2 1359 1 1440 3792 t
-(and add a group)3 664 1 1080 3960 t
-10 I f
-(cdburners)1777 3960 w
-10 R f
-(on your system.)2 652 1 2215 3960 t
-( to the)2 284(Never give write permissions for non root users)7 2017 2 1080 4128 t
-10 I f
-(/dev/scg?)3423 4128 w
-10 R f
-(devices unless you would allow any-)5 1558 1 3842 4128 t
-(body to read/write/format all your disks.)5 1655 1 1080 4248 t
-( not connect old drives that do not support disconnect/reconnect to either the SCSI bus that)15 3843(You should)1 477 2 1080 4416 t
-(is connected to the CD-Recorder or the source disk.)8 2129 1 1080 4536 t
-(When using)1 495 1 1080 4704 t
-10 B f
-(readcd)1615 4704 w
-10 R f
-(with the broken)2 657 1 1949 4704 t
-10 B f
-(Linux SCSI generic driver.)3 1201 1 2646 4704 t
-10 R f
-(You should note that)3 881 1 3887 4704 t
-10 B f
-(readcd)4808 4704 w
-10 R f
-(uses a)1 257 1 5143 4704 t
-( the sg driver on)4 689( Unfortunately,)1 653( functionality of the scg driver.)5 1287(hack, that tries to emulate the)5 1231 4 1080 4824 t
-10 B f
-(Linux)4975 4824 w
-10 R f
-(has)5267 4824 w
-(several severe bugs:)2 819 1 1080 4944 t
-( cannot see if a SCSI command could not be sent at all.)12 2302(\267 It)1 421 2 1080 5112 t
-( cannot get the SCSI status byte.)6 1435(\267 It)1 421 2 1080 5280 t
-10 B f
-(Readcd)2984 5280 w
-10 R f
-( SCSI com-)2 515(for that reason cannot report failing)5 1531 2 3354 5280 t
-(mands in some situations.)3 1058 1 1440 5400 t
-( count of transfer.)3 751( cannot get real DMA)4 922(\267 It)1 421 3 1080 5568 t
-10 B f
-(Readcd)3213 5568 w
-10 R f
-(cannot tell you if there is an DMA residual)8 1826 1 3574 5568 t
-(count.)1440 5688 w
-( cannot get number of bytes valid in auto sense data.)10 2364(\267 It)1 421 2 1080 5856 t
-10 B f
-(Readcd)3950 5856 w
-10 R f
-( you if device)3 630(cannot tell)1 446 2 4324 5856 t
-(transfers no sense data at all.)5 1187 1 1440 5976 t
-( fetches to few data in auto request sense \(CCS/SCSI-2/SCSI-3 needs)10 2855(\267 It)1 421 2 1080 6144 t
+(option does not contain the characters ',', '/', ')8 1934 1 2622 960 t
 10 S1 f
-(>)4389 6144 w
+(@)4556 960 w
 10 R f
-(= 18\).)1 247 1 4445 6144 t
+( it is inter-)3 447(' or ':',)2 305 2 4648 960 t
+(preted as an label name that may be found in the \256le /etc/default/cdrecord \(see FILES section\).)15 3901 1 1440 1080 t
+10 B f
+(timeout=)1080 1248 w
+10 S1 f
+(#)1464 1248 w
+10 R f
+(Set the default SCSI command timeout value to)7 2139 1 1440 1368 t
+10 S1 f
+(#)3637 1368 w
+10 R f
+( default SCSI command)3 1060(seconds. The)1 587 2 3753 1368 t
+( a SCSI command fails)4 982( If)1 139( commands.)1 498(timeout is the minimum timeout used for sending SCSI)8 2341 4 1440 1488 t
+( a timeout, you may try to raise the default SCSI command timeout above the timeout)15 3696(due to)1 264 2 1440 1608 t
+( runs correctly with a raised command timeout,)7 1991( the command)2 598( If)1 140(value of the failed command.)4 1231 4 1440 1728 t
+( the author of the pro-)5 933(please report the better timeout value and the corresponding command to)10 3027 2 1440 1848 t
+( no)1 133(gram. If)1 362 2 1440 1968 t
+10 I f
+(timeout)1968 1968 w
+10 R f
+(option is present, a default timeout of 40 seconds is used.)10 2367 1 2301 1968 t
+10 B f
+(debug=)1080 2136 w
+10 S1 f
+(#)1399 2136 w
+10 I f
+(,)1449 2136 w
+10 B f
+(-d)1515 2136 w
+10 R f
+(Set the misc debug value to)5 1167 1 1440 2256 t
+10 S1 f
+(#)2645 2256 w
+10 R f
+(\(with debug=)1 549 1 2733 2256 t
+10 S1 f
+(#)3282 2256 w
+10 R f
+( the misc debug level by one \(with)7 1477(\) or increment)2 591 2 3332 2256 t
+(-d\). If you specify)3 756 1 1440 2376 t
+10 I f
+(-dd,)2233 2376 w
+10 R f
+(this equals to)2 550 1 2427 2376 t
+10 B f
+(debug=)3013 2376 w
+10 I f
+(2.)3332 2376 w
+10 R f
+(This may help to \256nd problems while opening)7 1924 1 3476 2376 t
+( Using)1 313( with sector sizes and sector types.)6 1474( well as)2 335( as)1 156(a driver for libscg.)3 782 5 1440 2496 t
+10 S1 f
+(\261)4541 2496 w
+10 B f
+(debug)4606 2496 w
+10 R f
+(slows down)1 491 1 4909 2496 t
+(the process and may be the reason for a buffer underrun.)10 2331 1 1440 2616 t
+10 B f
+(kdebug=)1080 2784 w
+10 S1 f
+(#)1455 2784 w
+10 R f
+(,)1505 2784 w
+10 B f
+(kd=)1563 2784 w
+10 S1 f
+(#)1732 2784 w
+10 R f
+(Tell the)1 316 1 1440 2904 t
+10 B f
+(scg)1789 2904 w
+10 R f
+(-driver to modify the kernel debug value while SCSI commands are running.)11 3156 1 1922 2904 t
+10 S1 f
+(\261)1080 3072 w
+10 B f
+(silent)1145 3072 w
+10 R f
+(,)1373 3072 w
+10 S1 f
+(\261)1431 3072 w
+10 B f
+(s)1496 3072 w
+10 R f
+(Do not print out a status report for failed SCSI commands.)10 2420 1 1440 3192 t
+10 S1 f
+(\261)1080 3360 w
+10 B f
+(v)1145 3360 w
+10 R f
+( used e.g. to display the progress of the)8 1639( is)1 101( This)1 245(Increment the level of general verbosity by one.)7 1975 4 1440 3360 t
+(process.)1440 3480 w
+10 S1 f
+(\261)1080 3648 w
+10 B f
+(V)1145 3648 w
+10 R f
+( helps to)2 383( This)1 258( verbose level with respect of SCSI command transport by one.)10 2747(Increment the)1 572 4 1440 3648 t
+( during the process, that occur in the CD-Recorder. If you get incomprehensible)12 3308(debug problems)1 652 2 1440 3768 t
+(error messages you should use this \257ag to get more detailed output.)11 2978 1 1440 3888 t
+10 S1 f
+(\261)4502 3888 w
+10 B f
+(VV)4567 3888 w
+10 R f
+(will show data)2 637 1 4763 3888 t
+( Using)1 305(buffer content in addition.)3 1067 2 1440 4008 t
+10 S1 f
+(\261)2845 4008 w
+10 B f
+(V)2910 4008 w
+10 R f
+(or)3015 4008 w
+10 S1 f
+(\261)3131 4008 w
+10 B f
+(VV)3196 4008 w
+10 R f
+(slows down the process.)3 995 1 3373 4008 t
+10 B f
+(f=)1080 4176 w
+10 I f
+(\256le)1170 4176 w
+10 S1 f
+(\261)1080 4344 w
+10 B f
+(w)1145 4344 w
+10 R f
+(Switch to write mode. If this option is not present,)9 2080 1 1440 4344 t
+10 B f
+(readcd)3553 4344 w
+10 R f
+(reads from the speci\256ed device.)4 1298 1 3880 4344 t
+10 B f
+(sectors=)1080 4512 w
+10 I f
+(range)1430 4512 w
+10 R f
+( range is speci\256ed by the starting sector)7 1802( The)1 245( sector range that should be read.)6 1508(Specify a)1 405 4 1440 4632 t
+(number, a minus sign and the ending sector number.)8 2156 1 1440 4752 t
+10 S1 f
+(\261)1080 4920 w
+10 B f
+(notrunc)1145 4920 w
+10 R f
+(Do not truncate the output\256le when opening it.)7 1927 1 1440 5040 t
 9 B f
-(DIAGNOSTICS)720 6432 w
+(EXAMPLES)720 5328 w
 10 R f
-(A typical error message for a SCSI command looks like:)9 2333 1 1080 6552 t
-(readcd: I/O error. test unit ready: scsi sendcmd: no error)9 2311 1 1440 6792 t
-( 20 00 00 00 00)5 665(CDB: 00)1 400 2 1440 6912 t
-(status: 0x2 \(CHECK CONDITION\))3 1464 1 1440 7032 t
-(Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00)19 2938 1 1440 7152 t
-(Sense Key: 0x5 Illegal Request, Segment 0)6 1777 1 1440 7272 t
-(J)720 7752 w
-(. .)1 47 1 759 7697 t
-( 2)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7752 t
+( primary SCSI bus of the)5 1077(For all examples below, it will be assumed that the drive is connected to the)14 3243 2 1080 5448 t
+(machine. The SCSI target id is set to 2.)8 1630 1 1080 5568 t
+(To read the complete media from a CD-ROM writing the data to the \256le)13 2986 1 1080 5736 t
+10 I f
+(cdimage.raw)4099 5736 w
+10 R f
+(:)4626 5736 w
+(readcd dev=2,0 f=cdimage.raw)2 1257 1 1212 5904 t
+(To read sectors from range 150 ... 10000 from a CD-ROM writing the data to the \256le)16 3520 1 1080 6072 t
+10 I f
+(cdimage.raw)4633 6072 w
+10 R f
+(:)5160 6072 w
+(readcd dev=2,0 sectors=150-10000 f=cdimage.raw)3 2056 1 1212 6240 t
+( the data from the \256le)5 952(To write)1 359 2 1080 6408 t
+10 I f
+(cdimage.raw)2435 6408 w
+10 R f
+(\(e.g. a \256lesystem image from)4 1241 1 2998 6408 t
+10 B f
+(mkisofs)4283 6408 w
+10 R f
+(\) to a DVD-RAM,)3 789 1 4611 6408 t
+(call:)1080 6528 w
+(readcd dev=2,0 -w f=cdimage.raw)3 1395 1 1212 6696 t
+9 B f
+(FILES)720 6984 w
+10 R f
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 2)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
 cleartomark
 showpage
 restore
@@ -692,111 +790,258 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( READCD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(Sense Code: 0x25 Qual 0x00 \(logical unit not supported\) Fru 0x0)10 2701 1 1440 960 t
-(Sense \257ags: Blk 0 \(not valid\))5 1204 1 1440 1080 t
-( text after the \256rst colon gives)6 1265( The)1 225( of the command.)3 735(The \256rst line gives information about the transport)7 2095 4 1080 1320 t
-( from the view of the kernel. It usually is:)9 1740(the error text for the system call)6 1335 2 1080 1440 t
-10 B f
-(I/O error)1 405 1 4222 1440 t
-10 R f
-(unless other prob-)2 739 1 4661 1440 t
-( a short description for the SCSI command that fails. The rest of)12 2753(lems happen. The next words contain)5 1567 2 1080 1560 t
-( if there were any problems for the transport of the command over the SCSI bus.)15 3361(the line tells you)3 697 2 1080 1680 t
-10 B f
-(fatal)5206 1680 w
-(error)1080 1800 w
-10 R f
-( was not possible to transport the command \(i.e. no device present at the requested)14 3513(means that it)2 541 2 1346 1800 t
-(SCSI address\).)1 602 1 1080 1920 t
-(The second line prints the SCSI command descriptor block for the failed command.)12 3439 1 1080 2088 t
-( transport of)2 522(The third line gives information on the SCSI status code returned by the command, if the)15 3798 2 1080 2256 t
-(the command succeeds. This is error information from the SCSI device.)10 2948 1 1080 2376 t
-(The fourth line is a hex dump of the auto request sense information for the command.)15 3537 1 1080 2544 t
-( is only)2 313(The \256fth line is the error text for the sense key if available, followed by the segment number that)18 4007 2 1080 2712 t
-(valid if the command was a)5 1191 1 1080 2832 t
-10 I f
-(copy)2314 2832 w
-10 R f
-( error message is not directly related to the current)9 2162(command. If the)2 693 2 2545 2832 t
-(command, the text)2 757 1 1080 2952 t
-10 I f
-(deferred error)1 582 1 1870 2952 t
-10 R f
-(is appended.)1 507 1 2485 2952 t
-( the type of the)4 651( If)1 137( the sense quali\256er if available.)5 1307(The sixth line is the error text for the sense code and)11 2225 4 1080 3120 t
-(device is known, the sense data is decoded from tables in)10 2402 1 1080 3240 t
-10 I f
-(scsierrs.c)3519 3240 w
-10 R f
-( by the error)3 523( text is followed)3 683(. The)1 250 3 3944 3240 t
-(value for a \256eld replaceable unit.)5 1353 1 1080 3360 t
-( to the failed command and text for several error)9 2030(The seventh line prints the block number that is related)9 2290 2 1080 3528 t
-(\257ags. The block number may not be valid.)7 1746 1 1080 3648 t
 9 B f
-(BUGS)720 3936 w
-(CREDITS)720 4056 w
-(MAILING LISTS)1 700 1 720 4176 t
+(SEE ALSO)1 460 1 720 960 t
+10 B f
+(cdrecord)1080 1080 w
 10 R f
-( to actively take part on the development of cdrecord, you may join the cdwriting mailing)15 3828(If you want)2 492 2 1080 4296 t
-(list by sending mail to:)4 950 1 1080 4416 t
-(other-cdwrite-request)1440 4656 w
-10 S1 f
-(@)2298 4656 w
+(\(1\),)1462 1080 w
+10 B f
+(mkisofs)1636 1080 w
 10 R f
-(lists.debian.org)2390 4656 w
-(and include the word)3 864 1 1080 4896 t
-10 I f
-(subscribe)1977 4896 w
+(\(1\),)1964 1080 w
+10 B f
+(scg)2138 1080 w
 10 R f
-( mail address of the list is:)6 1098( The)1 221(in the body.)2 491 3 2393 4896 t
-(cdwrite)1440 5136 w
-10 S1 f
-(@)1739 5136 w
+(\(7\),)2271 1080 w
+10 B f
+(fbk)2445 1080 w
 10 R f
-(lists.debian.org)1831 5136 w
+(\(7\).)2590 1080 w
 9 B f
-(AUTHOR)720 5424 w
+(NOTES)720 1368 w
 10 R f
-(J)1080 5544 w
-(. .)1 47 1 1119 5489 t
-(org Schilling)1 528 1 1119 5544 t
-(Seestr. 110)1 452 1 1080 5664 t
-(D-13353 Berlin)1 638 1 1080 5784 t
-(Germany)1080 5904 w
-(Additional information can be found on:)5 1658 1 1080 6072 t
-(http://www.fokus.gmd.de/usr/schilling/cdrecord.html)1080 6192 w
-(Mail bugs and suggestions to:)4 1227 1 1080 6360 t
+( don't want to allow users to become root on your system,)11 2507(If you)1 257 2 1080 1488 t
 10 B f
-(joerg)1080 6528 w
+(readcd)3886 1488 w
+10 R f
+(may safely be installed suid)4 1178 1 4222 1488 t
+( users or a group of users with no root privileges to use)12 2293(root. This allows all)3 827 2 1080 1608 t
+10 B f
+(readcd. Readcd)1 674 1 4233 1608 t
+10 R f
+(in this case)2 460 1 4940 1608 t
+(will only allow access to CD-ROM type drives- To give all user access to use)14 3213 1 1080 1728 t
+10 B f
+(readcd,)4326 1728 w
+10 R f
+(enter:)4678 1728 w
+(chown root /usr/local/bin/readcd)2 1314 1 1440 1896 t
+(chmod 4711 /usr/local/bin/readcd)2 1359 1 1440 2016 t
+(To give a restricted group of users access to)8 1815 1 1080 2184 t
+10 B f
+(readcd)2928 2184 w
+10 R f
+(enter:)3255 2184 w
+(chown root /usr/local/bin/readcd)2 1314 1 1440 2352 t
+(chgrp cdburners /usr/local/bin/readcd)2 1507 1 1440 2472 t
+(chmod 4710 /usr/local/bin/readcd)2 1359 1 1440 2592 t
+(and add a group)3 664 1 1080 2760 t
+10 I f
+(cdburners)1777 2760 w
+10 R f
+(on your system.)2 652 1 2215 2760 t
+( to the)2 284(Never give write permissions for non root users)7 2017 2 1080 2928 t
+10 I f
+(/dev/scg?)3423 2928 w
+10 R f
+(devices unless you would allow any-)5 1558 1 3842 2928 t
+(body to read/write/format all your disks.)5 1655 1 1080 3048 t
+( not connect old drives that do not support disconnect/reconnect to either the SCSI bus that)15 3843(You should)1 477 2 1080 3216 t
+(is connected to the CD-Recorder or the source disk.)8 2129 1 1080 3336 t
+(When using)1 495 1 1080 3504 t
+10 B f
+(readcd)1615 3504 w
+10 R f
+(with the broken)2 657 1 1949 3504 t
+10 B f
+(Linux SCSI generic driver.)3 1201 1 2646 3504 t
+10 R f
+(You should note that)3 881 1 3887 3504 t
+10 B f
+(readcd)4808 3504 w
+10 R f
+(uses a)1 257 1 5143 3504 t
+( the sg driver on)4 689( Unfortunately,)1 653( functionality of the scg driver.)5 1287(hack, that tries to emulate the)5 1231 4 1080 3624 t
+10 B f
+(Linux)4975 3624 w
+10 R f
+(has)5267 3624 w
+(several severe bugs:)2 819 1 1080 3744 t
+( cannot see if a SCSI command could not be sent at all.)12 2302(\267 It)1 421 2 1080 3912 t
+( cannot get the SCSI status byte.)6 1435(\267 It)1 421 2 1080 4080 t
+10 B f
+(Readcd)2984 4080 w
+10 R f
+( SCSI com-)2 515(for that reason cannot report failing)5 1531 2 3354 4080 t
+(mands in some situations.)3 1058 1 1440 4200 t
+( count of transfer.)3 751( cannot get real DMA)4 922(\267 It)1 421 3 1080 4368 t
+10 B f
+(Readcd)3213 4368 w
+10 R f
+(cannot tell you if there is an DMA residual)8 1826 1 3574 4368 t
+(count.)1440 4488 w
+( cannot get number of bytes valid in auto sense data.)10 2364(\267 It)1 421 2 1080 4656 t
+10 B f
+(Readcd)3950 4656 w
+10 R f
+( you if device)3 630(cannot tell)1 446 2 4324 4656 t
+(transfers no sense data at all.)5 1187 1 1440 4776 t
+( fetches to few data in auto request sense \(CCS/SCSI-2/SCSI-3 needs)10 2855(\267 It)1 421 2 1080 4944 t
 10 S1 f
-(@)1301 6528 w
-10 B f
-(schily.isdn.cs.tu-berlin.de)1393 6528 w
+(>)4389 4944 w
 10 R f
-(or)2511 6528 w
-10 B f
-(js)2627 6528 w
-10 S1 f
-(@)2699 6528 w
-10 B f
-(cs.tu-berlin.de)2791 6528 w
+(= 18\).)1 247 1 4445 4944 t
+9 B f
+(DIAGNOSTICS)720 5232 w
 10 R f
-(or)3435 6528 w
+(A typical error message for a SCSI command looks like:)9 2333 1 1080 5352 t
+(readcd: I/O error. test unit ready: scsi sendcmd: no error)9 2311 1 1440 5592 t
+( 20 00 00 00 00)5 665(CDB: 00)1 400 2 1440 5712 t
+(status: 0x2 \(CHECK CONDITION\))3 1464 1 1440 5832 t
+(Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00)19 2938 1 1440 5952 t
+(Sense Key: 0x5 Illegal Request, Segment 0)6 1777 1 1440 6072 t
+(Sense Code: 0x25 Qual 0x00 \(logical unit not supported\) Fru 0x0)10 2701 1 1440 6192 t
+(Sense \257ags: Blk 0 \(not valid\))5 1204 1 1440 6312 t
+(cmd \256nished after 0.002s timeout 40s)5 1545 1 1440 6432 t
+( text after the \256rst colon gives)6 1265( The)1 225( of the command.)3 735(The \256rst line gives information about the transport)7 2095 4 1080 6672 t
+( from the view of the kernel. It usually is:)9 1740(the error text for the system call)6 1335 2 1080 6792 t
 10 B f
-(schilling)3551 6528 w
-10 S1 f
-(@)3908 6528 w
-10 B f
-(fokus.gmd.de)4000 6528 w
+(I/O error)1 405 1 4222 6792 t
 10 R f
-(J)720 7680 w
-(. .)1 47 1 759 7625 t
-( 3)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+(unless other prob-)2 739 1 4661 6792 t
+( a short description for the SCSI command that fails. The rest of)12 2753(lems happen. The next words contain)5 1567 2 1080 6912 t
+( if there were any problems for the transport of the command over the SCSI bus.)15 3361(the line tells you)3 697 2 1080 7032 t
+10 B f
+(fatal)5206 7032 w
+(error)1080 7152 w
+10 R f
+( was not possible to transport the command \(i.e. no device present at the requested)14 3513(means that it)2 541 2 1346 7152 t
+(SCSI address\).)1 602 1 1080 7272 t
+(J)720 7752 w
+(. .)1 47 1 759 7697 t
+( 3)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7752 t
 cleartomark
 showpage
 restore
 %%EndPage: 3 3
+%%Page: 4 4
+save
+mark
+4 pagesetup
+10 R f
+( Schily)1 1401(READCD \( 1 \))3 575 2 720 480 t
+10 S1 f
+(\302)2696 480 w
+10 R f
+( \( 1 \))3 164( READCD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
+(The second line prints the SCSI command descriptor block for the failed command.)12 3439 1 1080 960 t
+( transport of)2 522(The third line gives information on the SCSI status code returned by the command, if the)15 3798 2 1080 1128 t
+(the command succeeds. This is error information from the SCSI device.)10 2948 1 1080 1248 t
+(The fourth line is a hex dump of the auto request sense information for the command.)15 3537 1 1080 1416 t
+( is only)2 313(The \256fth line is the error text for the sense key if available, followed by the segment number that)18 4007 2 1080 1584 t
+(valid if the command was a)5 1191 1 1080 1704 t
+10 I f
+(copy)2314 1704 w
+10 R f
+( error message is not directly related to the current)9 2162(command. If the)2 693 2 2545 1704 t
+(command, the text)2 757 1 1080 1824 t
+10 I f
+(deferred error)1 582 1 1870 1824 t
+10 R f
+(is appended.)1 507 1 2485 1824 t
+( the type of the)4 651( If)1 137( the sense quali\256er if available.)5 1307(The sixth line is the error text for the sense code and)11 2225 4 1080 1992 t
+(device is known, the sense data is decoded from tables in)10 2402 1 1080 2112 t
+10 I f
+(scsierrs.c)3519 2112 w
+10 R f
+( by the error)3 523( text is followed)3 683(. The)1 250 3 3944 2112 t
+(value for a \256eld replaceable unit.)5 1353 1 1080 2232 t
+( to the failed command and text for several error)9 2030(The seventh line prints the block number that is related)9 2290 2 1080 2400 t
+(\257ags. The block number may not be valid.)7 1746 1 1080 2520 t
+( reports the timeout set up for this commans and the time that the command realy needed)16 3743(The eight line)2 577 2 1080 2688 t
+(to be \256nished.)2 580 1 1080 2808 t
+9 B f
+(BUGS)720 3096 w
+(CREDITS)720 3216 w
+(MAILING LISTS)1 700 1 720 3336 t
+10 R f
+( to actively take part on the development of cdrecord, you may join the cdwriting mailing)15 3828(If you want)2 492 2 1080 3456 t
+(list by sending mail to:)4 950 1 1080 3576 t
+(other-cdwrite-request)1440 3816 w
+10 S1 f
+(@)2298 3816 w
+10 R f
+(lists.debian.org)2390 3816 w
+(and include the word)3 864 1 1080 4056 t
+10 I f
+(subscribe)1977 4056 w
+10 R f
+( mail address of the list is:)6 1098( The)1 221(in the body.)2 491 3 2393 4056 t
+(cdwrite)1440 4296 w
+10 S1 f
+(@)1739 4296 w
+10 R f
+(lists.debian.org)1831 4296 w
+9 B f
+(AUTHOR)720 4584 w
+10 R f
+(J)1080 4704 w
+(. .)1 47 1 1119 4649 t
+(org Schilling)1 528 1 1119 4704 t
+(Seestr. 110)1 452 1 1080 4824 t
+(D-13353 Berlin)1 638 1 1080 4944 t
+(Germany)1080 5064 w
+(Additional information can be found on:)5 1658 1 1080 5232 t
+(http://www.fokus.gmd.de/usr/schilling/cdrecord.html)1080 5352 w
+(If you have support questions, send them to:)7 1827 1 1080 5520 t
+10 B f
+(cdrecord-support)1080 5688 w
+10 S1 f
+(@)1829 5688 w
+10 B f
+(berlios.de)1921 5688 w
+10 R f
+(or)1080 5808 w
+10 B f
+(other-cdwrite)1196 5808 w
+10 S1 f
+(@)1777 5808 w
+10 B f
+(lists.debian.org)1869 5808 w
+10 R f
+(Of you de\256nitly found a bug, send a mail to:)9 1849 1 1080 5976 t
+10 B f
+(cdrecord-developers)1080 6144 w
+10 S1 f
+(@)1950 6144 w
+10 B f
+(berlios.de)2042 6144 w
+10 R f
+(or)1080 6264 w
+10 B f
+(schilling)1196 6264 w
+10 S1 f
+(@)1553 6264 w
+10 B f
+(fokus.gmd.de)1645 6264 w
+10 R f
+(To subscribe, use:)2 740 1 1080 6432 t
+10 B f
+(http://lists.berlios.de/mailman/listinfo/cdrecord-developers)1080 6600 w
+10 R f
+(or)1080 6720 w
+10 B f
+(http://lists.berlios.de/mailman/listinfo/cdrecord-support)1196 6720 w
+10 R f
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 4)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
+cleartomark
+showpage
+restore
+%%EndPage: 4 4
 %%Trailer
 done
-%%DocumentFonts: Times-Roman Times-Bold Times-Italic
-%%Pages: 3
+%%DocumentFonts: Times-Roman Times-Bold Times-Italic Symbol
+%%Pages: 4

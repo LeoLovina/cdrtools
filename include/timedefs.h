@@ -1,4 +1,4 @@
-/* @(#)timedefs.h	1.5 99/05/13 Copyright 1996 J. Schilling */
+/* @(#)timedefs.h	1.7 01/04/12 Copyright 1996 J. Schilling */
 /*
  *	Generic header for users of gettimeofday() ...
  *
@@ -27,7 +27,7 @@
 #include <mconfig.h>
 #endif
 
-#ifdef	TIME_WITH_SYS_TIME_H
+#ifdef	TIME_WITH_SYS_TIME
 #	include <sys/time.h>
 #	include <time.h>
 #else
@@ -36,6 +36,10 @@
 #else
 #	include <time.h>
 #endif
+#endif
+
+#ifdef	__cplusplus
+extern "C" {
 #endif
 
 #ifdef	__CYGWIN32__
@@ -73,6 +77,10 @@ struct timezone {
 
 #define	timerclear(tvp)		(tvp)->tv_sec = (tvp)->tv_usec = 0
 
+#endif
+
+#ifdef	__cplusplus
+}
 #endif
 
 #endif	/* _TIMEDEFS_H */

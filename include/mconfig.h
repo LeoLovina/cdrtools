@@ -1,10 +1,13 @@
-/* @(#)mconfig.h	1.33 00/05/28 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.38 00/12/04 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
  *	Copyright (c) 1995 J. Schilling
  *
  *	This file must be included before any other file.
+ *	If this file is not included before stdio.h you will not be
+ *	able to get LARGEFILE support
+ *
  *	Use only cpp instructions.
  *
  *	NOTE: SING: (Schily Is Not Gnu)
@@ -80,6 +83,11 @@ extern "C" {
 
 #if defined(__CYGWIN32__) || defined(__CYGWIN__)
 #       define IS_GCC_WIN32
+#       define IS_CYGWIN
+
+#if	defined(unix) || defined(_X86)
+#       define IS_CYGWIN_1
+#endif
 #endif
 
 /*--------------------------------------------------------------------------*/
@@ -283,6 +291,7 @@ extern "C" {
 #endif
 
 #ifdef	IS_UNIX
+#	define	HAVE_PATH_DELIM
 #	define	PATH_DELIM	'/'
 #	define	PATH_DELIM_STR	"/"
 #	define	far
@@ -290,6 +299,7 @@ extern "C" {
 #endif
 
 #ifdef	IS_GCC_WIN32
+#	define	HAVE_PATH_DELIM
 #	define	PATH_DELIM	'/'
 #	define	PATH_DELIM_STR	"/"
 #	define	far
@@ -297,6 +307,15 @@ extern "C" {
 #endif
 
 #ifdef	__EMX__				/* We don't want to call it UNIX */
+#	define	HAVE_PATH_DELIM
+#	define	PATH_DELIM	'/'
+#	define	PATH_DELIM_STR	"/"
+#	define	far
+#	define	near
+#endif
+
+#ifdef	__BEOS__			/* We don't want to call it UNIX */
+#	define	HAVE_PATH_DELIM
 #	define	PATH_DELIM	'/'
 #	define	PATH_DELIM_STR	"/"
 #	define	far
@@ -304,11 +323,13 @@ extern "C" {
 #endif
 
 #ifdef	IS_MSDOS
+#	define	HAVE_PATH_DELIM
 #	define	PATH_DELIM	'\\'
 #	define	PATH_DELIM_STR	"\\"
 #endif
 
 #ifdef	IS_TOS
+#	define	HAVE_PATH_DELIM
 #	define	PATH_DELIM	'\\'
 #	define	PATH_DELIM_STR	"\\"
 #	define	far
@@ -316,8 +337,20 @@ extern "C" {
 #endif
 
 #ifdef	IS_MAC
+#	define	HAVE_PATH_DELIM
 #	define	PATH_DELIM	':'
 #	define	PATH_DELIM_STR	":"
+#	define	far
+#	define	near
+#endif
+
+/*
+ * I hope this will make compilation on unknown OS easier.
+ */
+#ifndef	HAVE_PATH_DELIM			/* Default to POSIX rules */
+#	define	HAVE_PATH_DELIM
+#	define	PATH_DELIM	'/'
+#	define	PATH_DELIM_STR	"/"
 #	define	far
 #	define	near
 #endif

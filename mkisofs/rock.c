@@ -1,7 +1,7 @@
-/* @(#)rock.c	1.25 00/05/07 joerg */
+/* @(#)rock.c	1.28 01/01/23 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)rock.c	1.25 00/05/07 joerg";
+	"@(#)rock.c	1.28 01/01/23 joerg";
 #endif
 /*
  * File rock.c - generate RRIP  records for iso9660 filesystems.
@@ -24,19 +24,10 @@ static	char sccsid[] =
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "config.h"
-#include <stdlib.h>
-#include <unixstd.h>
-#include <device.h>
+#include <mconfig.h>
 #include "mkisofs.h"
-#include "iso9660.h"
-#include <strdefs.h>
-#include <statdefs.h>
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
+#include <device.h>
 #include <schily.h>
-#endif
 
 #define SU_VERSION 1
 
@@ -64,9 +55,9 @@ static	char sccsid[] =
 #define TF_SIZE (5 + 3 * 7)
 #endif
 
-#ifdef APPLE_HYB
-static	void	rstrncpy			__PR((char *t, char *f, int c));
-#endif
+static	void	rstrncpy			__PR((char *t, char *f, int c,
+							struct nls_table *inls,
+							struct nls_table *onls));
 static	void	add_CE_entry			__PR((void));
 	int	generate_rock_ridge_attributes	__PR((char *whole_name,
 							char *name,
@@ -85,7 +76,7 @@ static	void	add_CE_entry			__PR((void));
  */
 
 #define MAYBE_ADD_CE_ENTRY(BYTES) \
-    (BYTES + CE_SIZE + currlen + (ipnt - recstart) > reclimit ? 1 : 0)
+    (((int)(BYTES)) + CE_SIZE + currlen + (ipnt - recstart) > reclimit ? 1 : 0)
 
 /*
  * Buffer to build RR attributes
@@ -98,31 +89,24 @@ static int      currlen = 0;
 static int      mainrec = 0;
 static int      reclimit;
 
-#ifdef APPLE_HYB
-
-/* if we are using the HFS name, we don't want the '/' character */
+/* if we are using converted filenames, we don't want the '/' character */
 static void
-rstrncpy(t, f, c)
+rstrncpy(t, f, c, inls, onls)
 	char	*t;
 	char	*f;
 	int	c;
+	struct nls_table *inls;
+	struct nls_table *onls;
 {
 	while (c-- && *f) {
-		switch (*f) {
-
-		case '/':
+		*t = conv_charset(*f, inls, onls);
+		if (*t == '/') {
 			*t = '_';
-			break;
-		default:
-			*t = *f;
-			break;
 		}
 		t++;
 		f++;
 	}
 }
-
-#endif	/* APPLE HYB */
 
 static void
 add_CE_entry()
@@ -270,13 +254,16 @@ generate_rock_ridge_attributes(whole_name, name,
 			Rock[ipnt++] = SU_VERSION;
 			Rock[ipnt++] = (remain != use ? 1 : 0);
 			flagval |= (1 << 3);
+
+			/* convert charsets as required */
 #ifdef APPLE_HYB
-			/* filter out any '/' character in HFS filename */
 			if (USE_MAC_NAME(s_entry))
-				rstrncpy((char *) &Rock[ipnt], npnt, use);
+				rstrncpy((char *) &Rock[ipnt], npnt, use,
+							hfs_inls, out_nls);
 			else
 #endif	/* APPLE_HYB */
-				strncpy((char *) &Rock[ipnt], npnt, use);
+				rstrncpy((char *) &Rock[ipnt], npnt, use,
+							in_nls, out_nls);
 			npnt += use;
 			ipnt += use;
 			remain -= use;
@@ -304,8 +291,12 @@ generate_rock_ridge_attributes(whole_name, name,
 
 	/* Check for special devices */
 #if	defined(S_IFCHR) || defined(S_IFBLK)
-
-#ifndef NON_UNIXFS
+	/*
+	 * The code in this if statement used to be #ifdef'd with NON_UNIXFS.
+	 * But as statdefs.h always provides the macros S_ISCHR() & S_ISBLK()
+	 * and device.h always provides major()/minor() it is not needed
+	 * anymore.
+	 */
 	if (S_ISCHR(lstatbuf->st_mode) || S_ISBLK(lstatbuf->st_mode)) {
 		if (MAYBE_ADD_CE_ENTRY(PN_SIZE))
 			add_CE_entry();
@@ -349,7 +340,6 @@ generate_rock_ridge_attributes(whole_name, name,
 		}
 #endif
 	};
-#endif
 #endif	/* defined(S_IFCHR) || defined(S_IFBLK) */
 
 	/* Check for and symbolic links.  VMS does not have these. */

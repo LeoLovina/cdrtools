@@ -1,7 +1,7 @@
-/* @(#)mac_label.c	1.2 00/07/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)mac_label.c	1.4 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)mac_label.c	1.2 00/07/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)mac_label.c	1.4 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -46,7 +46,6 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include "mkisofs.h"
-#include <statdefs.h>
 #include <mac_label.h>
 #include "apple.h"
 
@@ -149,7 +148,7 @@ gen_mac_label(mac_boot)
 		}
 		/* check we have a boot block as well - last 2 blocks of file */
 
-		if (fseek(fp, -2 * HFS_BLOCKSZ, 2) != 0) {
+		if (fseek(fp, (off_t)-2 * HFS_BLOCKSZ, SEEK_END) != 0) {
 			sprintf(hce->error, "unable to seek HFS boot file %s",
 								mac_boot->name);
 			return (-1);

@@ -1,7 +1,7 @@
-/* @(#)scsierrs.c	2.22 00/05/07 Copyright 1987-1996 J. Schilling */
+/* @(#)scsierrs.c	2.26 00/08/19 Copyright 1987-1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsierrs.c	2.22 00/05/07 Copyright 1987-1996 J. Schilling";
+	"@(#)scsierrs.c	2.26 00/08/19 Copyright 1987-1996 J. Schilling";
 #endif
 /*
  *	Error printing for scsitransp.c
@@ -44,15 +44,16 @@ static	char sccsid[] =
 
 #define	SMO_C501
 
-EXPORT	const char	*scsisensemsg	__PR((int, int, int,
-						const char **, char *));
-EXPORT	void		scsierrmsg	__PR((SCSI *scgp, struct scsi_sense *,
+EXPORT	const char	*scg_sensemsg	__PR((int, int, int,
+						const char **, char *, int maxcnt));
+EXPORT	int		scg__errmsg	__PR((SCSI *scgp, char *obuf, int maxcnt,
+						struct scsi_sense *,
 						struct scsi_status *,
-						int, const char **));
+						int));
 /*
  * Map old non extended sense to sense key.
  */
-static u_char sd_adaptec_keys[] = {
+static Uchar sd_adaptec_keys[] = {
 	0, 4, 4, 4,  2, 2, 4, 4,		/* 0x00-0x07 */
 	4, 4, 4, 4,  4, 4, 4, 4,		/* 0x08-0x0f */
 	4, 3, 3, 3,  3, 4, 3, 1,		/* 0x10-0x17 */
@@ -468,12 +469,13 @@ static char *sd_cmds[] = {
 
 EXPORT
 const char *
-scsisensemsg(ctype, code, qual, vec, sbuf)
+scg_sensemsg(ctype, code, qual, vec, sbuf, maxcnt)
 	register 	int	ctype;
 	register 	int	code;
 	register 	int	qual;
 	register const char	**vec;
 			char	*sbuf;
+			int	maxcnt;
 {
 	register int i;
 
@@ -507,8 +509,8 @@ scsisensemsg(ctype, code, qual, vec, sbuf)
 
 	for (i = 0; i < 2; i++) {
 		while (*vec != (char *) NULL) {
-			if (code == (u_char)(*vec)[0] &&
-					qual == (u_char)(*vec)[1]) {
+			if (code == (Uchar)(*vec)[0] &&
+					qual == (Uchar)(*vec)[1]) {
 				return (&(*vec)[2]);
 			} else {
 				vec++;		/* Next entry */
@@ -518,16 +520,18 @@ scsisensemsg(ctype, code, qual, vec, sbuf)
 			vec = sd_ccs_error_str;
 	}
 	if (code == 0x40) {
-		sprintf(sbuf, "diagnostic failure on component 0x%X", qual);
+		js_snprintf(sbuf, maxcnt,
+			"diagnostic failure on component 0x%X", qual);
 		return (sbuf);
 	}
 	if (code == 0x4D) {
-		sprintf(sbuf, "tagged overlapped commands, queue tag is 0x%X",
+		js_snprintf(sbuf, maxcnt,
+			"tagged overlapped commands, queue tag is 0x%X",
 									qual);
 		return (sbuf);
 	}
 	if (code == 0x70) {
-		sprintf(sbuf,
+		js_snprintf(sbuf, maxcnt,
 			"decompression exception short algorithm id of 0x%X",
 									qual);
 		return (sbuf);
@@ -536,21 +540,22 @@ scsisensemsg(ctype, code, qual, vec, sbuf)
 		return ((char *)NULL);
 
 	if (code < 0x80) {
-		sprintf(sbuf, "invalid sense code 0x%X", code);
+		js_snprintf(sbuf, maxcnt, "invalid sense code 0x%X", code);
 		return (sbuf);
 	}
-	sprintf(sbuf, "vendor unique sense code 0x%X", code);
+	js_snprintf(sbuf, maxcnt, "vendor unique sense code 0x%X", code);
 	return (sbuf);
 }
 
 #undef	sense	/*XXX JS Hack, solange scgio.h noch nicht fertig ist */
-EXPORT void
-scsierrmsg(scgp, sense, status, sense_code, errvec)
+EXPORT int
+scg__errmsg(scgp, obuf, maxcnt, sense, status, sense_code)
 	SCSI	*scgp;
+	char	*obuf;
+	int	maxcnt;
 	register struct scsi_sense	*sense;
 	register struct scsi_status	*status;
 	int				sense_code;
-	const char 			**errvec;
 {
 	char	sbuf[80];
 	const char *sensemsg, *cmdname, *sensekey;
@@ -567,6 +572,8 @@ scsierrmsg(scgp, sense, status, sense_code, errvec)
 	int	eom = 0;
 	int	ili = 0;
 	int	sksv = 0;
+	int	n;
+	int	sizeleft = maxcnt;
 
 	sensekey = sensemsg = "[]";
 	if (sense->code >= 0x70) {
@@ -607,9 +614,9 @@ scsierrmsg(scgp, sense, status, sense_code, errvec)
 		}
 		blkvalid = sense->adr_val;
 
-		sensemsg = scsisensemsg(scgp->dev, code, qual, errvec, sbuf);
+		sensemsg = scg_sensemsg(scgp->dev, code, qual, scgp->nonstderrs, sbuf, sizeof(sbuf));
 		if (sensemsg == NULL) {
-			sensemsg = scsisensemsg(scgp->dev, code, 0, errvec, sbuf);
+			sensemsg = scg_sensemsg(scgp->dev, code, 0, scgp->nonstderrs, sbuf, sizeof(sbuf));
 			badqual = 1;
 		}
 	}
@@ -621,49 +628,98 @@ scsierrmsg(scgp, sense, status, sense_code, errvec)
 	}
 */
 	cmdname = "";
-	printf("%sSense Key: 0x%X %s%s, Segment %d\n",
+	n = js_snprintf(obuf, sizeleft, "%sSense Key: 0x%X %s%s, Segment %d\n",
 		cmdname, key, sensekey,
 		(sense->code == 0x71)?", deferred error":"",
 		segment);
-	printf("Sense Code: 0x%02X Qual 0x%02X %s%s%s%s Fru 0x%X\n",
+	if (n <= 0) {
+		obuf[0] = '\0';
+		return (maxcnt - sizeleft);
+	}
+	obuf += n;
+	sizeleft -= n;
+	n = js_snprintf(obuf, sizeleft, "Sense Code: 0x%02X Qual 0x%02X %s%s%s%s Fru 0x%X\n",
 		code, qual, *sensemsg?"(":"", sensemsg, *sensemsg?")":"",
 		badqual? " [No matching qualifier]":"",
 		fru);
-	printf("Sense flags: Blk %d %s%s%s%s",
+	if (n <= 0) {
+		obuf[0] = '\0';
+		return (maxcnt - sizeleft);
+	}
+	obuf += n;
+	sizeleft -= n;
+	n = js_snprintf(obuf, sizeleft, "Sense flags: Blk %d %s%s%s%s",
 		blkno, blkvalid?"(valid) ":"(not valid) ",
 		fm?"file mark detected ":"",
 		eom?"end of medium ":"",
 		ili?"illegal block length ":"");
+	if (n <= 0) {
+		obuf[0] = '\0';
+		return (maxcnt - sizeleft);
+	}
+	obuf += n;
+	sizeleft -= n;
 	if (!sksv) {
-		printf("\n");
-		return;
+		n = js_snprintf(obuf, sizeleft, "\n");
+		if (n <= 0) {
+			obuf[0] = '\0';
+			return (maxcnt - sizeleft);
+		}
+		obuf += n;
+		sizeleft -= n;
+		return (maxcnt - sizeleft);
 	}
 	switch (key) {
 
 	case SC_ILLEGAL_REQUEST:
-		printf("error refers to %s part, bit ptr %d %s field ptr %d",
+		n = js_snprintf(obuf, sizeleft, "error refers to %s part, bit ptr %d %s field ptr %d",
 			ext_sense->cd? "command":"data",
 			ext_sense->bptr,
 			ext_sense->bpv? "(valid)":"(not valid)",
 			ext_sense->field_ptr[0] << 8 |
 			ext_sense->field_ptr[1]);
-		break;
+		if (n <= 0) {
+			obuf[0] = '\0';
+			return (maxcnt - sizeleft);
+		}
+		obuf += n;
+		sizeleft -= n;
+ 		break;
 
 	case SC_RECOVERABLE_ERROR:
 	case SC_HARDWARE_ERROR:
 	case SC_MEDIUM_ERROR:
-		printf("actual retry count %d",
+		n = js_snprintf(obuf, sizeleft, "actual retry count %d",
 			ext_sense->field_ptr[0] << 8 |
 			ext_sense->field_ptr[1]);
+		if (n <= 0) {
+			obuf[0] = '\0';
+			return (maxcnt - sizeleft);
+		}
+		obuf += n;
+		sizeleft -= n;
 		break;
 
 	case SC_NOT_READY:
-		printf("operation %d%% done",
+		n = js_snprintf(obuf, sizeleft, "operation %d%% done",
 			(100*(ext_sense->field_ptr[0] << 8 |
 			      ext_sense->field_ptr[1]))/(unsigned)65536);
+		if (n < 0) {
+			obuf[0] = '\0';
+			return (maxcnt - sizeleft);
+		}
+		obuf += n;
+		sizeleft -= n;
 		break;
 	}
-	printf("\n");
+	n = js_snprintf(obuf, sizeleft, "\n");
+	if (n <= 0) {
+		obuf[0] = '\0';
+		return (maxcnt - sizeleft);
+	}
+	obuf += n;
+	sizeleft -= n;
+	return (maxcnt - sizeleft);
 }
 
 #ifdef	DEBUG
@@ -694,14 +750,14 @@ print_err(code, ctype)
 		break;
 #endif
 	}
-	printf("error code: 0x%x", code);
+	js_printf("error code: 0x%x", code);
 	if (vec == (char **)NULL)
 		return;
 
 	for (i = 0; i < 2; i++) {
 		while (*vec != (char *) NULL) {
-			if (code == (u_char)*vec[0]) {
-				printf(" (%s)", (char *)((int)(*vec)+1));
+			if (code == (Uchar)*vec[0]) {
+				js_printf(" (%s)", (char *)((int)(*vec)+1));
 				return;
 			} else
 				vec++;
@@ -718,18 +774,18 @@ main()
 
 #ifdef ACB
 	for (i = 0; i < 0x30; i++) {
-/*		printf("Code: 0x%x	Key: 0x%x	", i, sd_adaptec_keys[i]);*/
-		printf("Key: 0x%x %-16s ", sd_adaptec_keys[i],
+/*		js_printf("Code: 0x%x	Key: 0x%x	", i, sd_adaptec_keys[i]);*/
+		js_printf("Key: 0x%x %-16s ", sd_adaptec_keys[i],
 					sd_sense_keys[sd_adaptec_keys[i]] );
-		print_err(i, CTYPE_ACB4000);
-		printf("\n");
+		js_print_err(i, CTYPE_ACB4000);
+		js_printf("\n");
 	}
 #else
 /*	for (i = 0; i < 0x84; i++) {*/
 	for (i = 0; i < 0xd8; i++) {
 /*		print_err(i, CTYPE_SMO_C501);*/
 		print_err(i, DEV_CDD_521);
-		printf("\n");
+		js_printf("\n");
 	}
 #endif
 }

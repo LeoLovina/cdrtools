@@ -1,7 +1,7 @@
-/* @(#)auinfo.c	1.5 00/06/02 Copyright 1999 J. Schilling */
+/* @(#)auinfo.c	1.6 01/02/21 Copyright 1999 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)auinfo.c	1.5 00/06/02 Copyright 1999 J. Schilling";
+	"@(#)auinfo.c	1.6 01/02/21 Copyright 1999 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -24,6 +24,7 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include <stdxlib.h>
+#include <unixstd.h>
 #include <stdio.h>
 #include <standard.h>
 #include <strdefs.h>
@@ -129,8 +130,8 @@ auinfo(name, track, trackp)
 
 		p = readtag("Index0=");
 		if (p && isdao) {
-			long ts;
-			long ps;
+			Llong ts;
+			Llong ps;
 
 			l = -2L;
 			astol(p, &l);

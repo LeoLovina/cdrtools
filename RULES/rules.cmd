@@ -1,4 +1,4 @@
-#ident @(#)rules.cmd	1.2 98/09/21 
+#ident @(#)rules.cmd	1.4 01/02/04 
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -23,6 +23,10 @@
 include		$(SRCROOT)/$(RULESDIR)/rules.obj
 ###########################################################################
 
+_INSMODEI=	$(_UNIQ)$(INSMODE)
+__INSMODEI=	$(_INSMODEI:$(_UNIQ)=$(INSMODEX))
+INSMODEI=	$(__INSMODEI:$(_UNIQ)%=%)
+
 all:		$(PTARGET)
 
 $(PTARGET):	$(OFILES) $(SRCLIBS)
@@ -30,6 +34,7 @@ $(PTARGET):	$(OFILES) $(SRCLIBS)
 #		$(CC) -o $@ $(OFILES) $(LDPATH) $(RUNPATH) $(SRCLIBS) $(LIBS)
 
 ###########################################################################
+include		$(SRCROOT)/$(RULESDIR)/rules.lnt
 include		$(SRCROOT)/$(RULESDIR)/rules.clr
 include		$(SRCROOT)/$(RULESDIR)/rules.ins
 include		$(SRCROOT)/$(RULESDIR)/rules.tag

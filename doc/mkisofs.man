@@ -11,36 +11,41 @@ NNNNAAAAMMMMEEEE
 
 SSSSYYYYNNNNOOOOPPPPSSSSIIIISSSS
      mmmmkkkkiiiissssooooffffssss [ ----aaaabbbbssssttttrrrraaaacccctttt _F_I_L_E ] [ ----aaaalllllllloooowwww----lllloooowwwweeeerrrrccccaaaasssseeee ] [   ---- aaaalllllllloooowwww----
-     mmmmuuuullllttttiiiiddddooootttt  ]  [ ----bbbbiiiibbbblllliiiioooo _F_I_L_E ] [ ----bbbb _e_l_t_o_r_i_t_o__b_o_o_t__i_m_a_g_e ] [ ----
-     eeeellllttttoooorrrriiiittttoooo----aaaalllltttt----bbbbooooooootttt ] [ ---- BBBB  _s_p_a_r_c__b_o_o_t__i_m_a_g_e__l_i_s_t  ]  [   ---- GGGG
-     _g_e_n_e_r_i_c__b_o_o_t__i_m_a_g_e ] [ ----gggguuuuiiii ] [ ----CCCC #,# ] [ ----hhhhaaaarrrrdddd----ddddiiiisssskkkk----bbbbooooooootttt ]
-     [ ----nnnnoooo----eeeemmmmuuuullll----bbbbooooooootttt ] [ ----nnnnoooo----bbbbooooooootttt ] [ ----bbbbooooooootttt----llllooooaaaadddd----sssseeeegggg ] [  ---- bbbbooooooootttt----
-     llllooooaaaadddd----ssssiiiizzzzeeee  ]  [   ----bbbbooooooootttt----iiiinnnnffffoooo----ttttaaaabbbblllleeee ] [ ----cccc _b_o_o_t__c_a_t_a_l_o_g ] [ ----
-     cccchhhheeeecccckkkk----oooollllddddnnnnaaaammmmeeeessss ] [ ----ccccooooppppyyyyrrrriiiigggghhhhtttt _F_I_L_E ] [ ----AAAA _a_p_p_l_i_c_a_t_i_o_n__i_d ] [
-      ---- ffff  ] [ ----dddd ] [ ----DDDD ] [ ----hhhhiiiiddddeeee _g_l_o_b ] [ ----hhhhiiiiddddeeee----lllliiiisssstttt _f_i_l_e ] [ ----
-     hhhhiiiiddddddddeeeennnn _g_l_o_b ] [ ----hhhhiiiiddddddddeeeennnn----lllliiiisssstttt _f_i_l_e ] [ ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt _g_l_o_b ] [
-     ---- hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----lllliiiisssstttt  _f_i_l_e  ]  [  ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----ttttrrrraaaannnnssss----ttttbbbbllll ] [ ----
-     hhhhiiiiddddeeee----rrrrrrrr----mmmmoooovvvveeeedddd ] [ ----iiiissssoooo----lllleeeevvvveeeellll _l_e_v_e_l ] [ ----JJJJ  ]  [   ---- jjjjcccchhhhaaaarrrrsssseeeetttt
-     _c_h_a_r_s_e_t  ]  [   ---- llll  ] [ ----LLLL ] [ ----lllloooogggg----ffffiiiilllleeee _l_o_g__f_i_l_e ] [ ----mmmmaaaaxxxx----
-     iiiissssoooo9999666666660000----ffffiiiilllleeeennnnaaaammmmeeeessss ] [ ----MMMM _p_a_t_h | _d_e_v_i_c_e ] [ ----nnnnoooobbbbaaaakkkk ] [  ---- nnnnoooo----
-     bbbbaaaakkkk  ] [ ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----ccccoooommmmppppoooonnnneeeennnnttttssss ] [ ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----
-     ffffiiiieeeellllddddssss ] [ ----ppppaaaadddd ] [ ----ppppaaaatttthhhh----lllliiiisssstttt _f_i_l_e ] [ ----pppp _p_r_e_p_a_r_e_r ]  [   ----
-     pppprrrriiiinnnntttt----ssssiiiizzzzeeee  ]  [ ----PPPP _p_u_b_l_i_s_h_e_r ] [ ----qqqquuuuiiiieeeetttt ] [ ----rrrr ] [ ----RRRR ] [ ----
-     rrrreeeellllaaaaxxxxeeeedddd----ffffiiiilllleeeennnnaaaammmmeeeessss ] [ ----ssssoooorrrrtttt _s_o_r_t _f_i_l_e ] [ ----ssssyyyyssssiiiidddd _I_D ] [ ----TTTT |
-      ---- ttttaaaabbbblllleeee----nnnnaaaammmmeeee  _T_A_B_L_E__N_A_M_E  ]  [   ----uuuuccccssss----lllleeeevvvveeeellll _l_e_v_e_l ] [ ----uuuusssseeee----
-     ffffiiiilllleeeevvvveeeerrrrssssiiiioooonnnn ] [ ----UUUU ] [ ----nnnnoooo----iiiissssoooo----ttttrrrraaaannnnssssllllaaaatttteeee ] [ ----vvvv ] [ ----VVVV _v_o_l_i_d
-     ] [ ----vvvvoooollllsssseeeetttt _I_D ] [ ----vvvvoooollllsssseeeetttt----ssssiiiizzzzeeee # ] [ ----vvvvoooollllsssseeeetttt----sssseeeeqqqqnnnnoooo # ] [ ----xxxx
-     _p_a_t_h ] [ ----eeeexxxxcccclllluuuuddddeeee----lllliiiisssstttt _f_i_l_e ] [ ----zzzz ] [ ----mmmm _g_l_o_b ] [ ----hhhhffffssss |  ----
-     aaaapppppppplllleeee ] [ ----mmmmaaaapppp _m_a_p_p_i_n_g__f_i_l_e ] [ ----mmmmaaaaggggiiiicccc _m_a_g_i_c__f_i_l_e ] [ ----pppprrrroooobbbbeeee
-     ] [ ----nnnnoooo----ddddeeeesssskkkkttttoooopppp ] [ ----mmmmaaaacccc----nnnnaaaammmmeeee ] [ ----bbbbooooooootttt----hhhhffffssss----ffffiiiilllleeee _d_r_i_v_e_r__f_i_l_e
-     [ ----ppppaaaarrrrtttt ] [ ----aaaauuuuttttoooo _A_u_t_o_S_t_a_r_t__f_i_l_e ] [ ----cccclllluuuusssstttteeeerrrr----ssssiiiizzzzeeee _s_i_z_e ] [
-     ----hhhhiiiiddddeeee----hhhhffffssss _g_l_o_b ] [ ---- hhhhiiiiddddeeee----hhhhffffssss----lllliiiisssstttt  _f_i_l_e  ]  [   ---- hhhhffffssss----vvvvoooolllliiiidddd
-     _h_f_s__v_o_l_i_d  ]  [  ----iiiiccccoooonnnn----ppppoooossssiiiittttiiiioooonnnn ] [ ----rrrrooooooootttt----iiiinnnnffffoooo _F_I_L_E [ ----pppprrrreeeepppp----
-     bbbbooooooootttt _F_I_L_E ] [ ----hhhhffffssss----ccccrrrreeeeaaaattttoooorrrr _C_R_E_A_T_O_R ] [ ----hhhhffffssss----ttttyyyyppppeeee _T_Y_P_E ] [  ----
-     ----ccccaaaapppp  ]  [   ---- ----nnnneeeettttaaaattttaaaallllkkkk ] [ --------ddddoooouuuubbbblllleeee ] [ --------eeeetttthhhheeeerrrrsssshhhhaaaarrrreeee ] [ ----
-     ----uuuusssshhhhaaaarrrreeee ] [ --------eeeexxxxcccchhhhaaaannnnggggeeee ] [ --------ssssggggiiii ] [ --------xxxxiiiinnnneeeetttt ] [ --------mmmmaaaaccccbbbbiiiinnnn  ]
-     [   ---- ----ssssiiiinnnngggglllleeee  ]  [  --------ddddaaaavvvveeee ] [ --------ssssffffmmmm ] ----oooo _f_i_l_e_n_a_m_e _p_a_t_h_s_p_e_c
-     [_p_a_t_h_s_p_e_c]
+     mmmmuuuullllttttiiiiddddooootttt  ]  [ ----bbbbiiiibbbblllliiiioooo _F_I_L_E ] [ ----ccccaaaacccchhhheeee----iiiinnnnooooddddeeeessss ] [ ----nnnnoooo----ccccaaaacccchhhheeee----
+     iiiinnnnooooddddeeeessss ] [ ----bbbb _e_l_t_o_r_i_t_o__b_o_o_t__i_m_a_g_e ] [ ----eeeellllttttoooorrrriiiittttoooo----aaaalllltttt----bbbbooooooootttt ] [
+      ----BBBB _s_p_a_r_c__b_o_o_t__i_m_a_g_e__l_i_s_t ] [ ----GGGG _g_e_n_e_r_i_c__b_o_o_t__i_m_a_g_e ] [ ----gggguuuuiiii
+     ] [ ----CCCC #,# ] [ ----hhhhaaaarrrrdddd----ddddiiiisssskkkk----bbbbooooooootttt ] [ ----nnnnoooo----eeeemmmmuuuullll----bbbbooooooootttt ] [   ---- nnnnoooo----
+     bbbbooooooootttt  ] [ ----bbbbooooooootttt----llllooooaaaadddd----sssseeeegggg ] [ ----bbbbooooooootttt----llllooooaaaadddd----ssssiiiizzzzeeee ] [ ----bbbbooooooootttt----iiiinnnnffffoooo----
+     ttttaaaabbbblllleeee ] [ ----cccc _b_o_o_t__c_a_t_a_l_o_g ] [ ----cccchhhheeeecccckkkk----oooollllddddnnnnaaaammmmeeeessss ] [   ---- cccchhhheeeecccckkkk----
+     sssseeeessssssssiiiioooonnnn _F_I_L_E ] [ ----ccccooooppppyyyyrrrriiiigggghhhhtttt _F_I_L_E ] [ ----AAAA _a_p_p_l_i_c_a_t_i_o_n__i_d ] [ ----
+     ffff ] [ ----dddd ] [ ----DDDD ] [ ----ddddiiiirrrr----mmmmooooddddeeee _m_o_d_e ] [ ----ffffiiiilllleeee----mmmmooooddddeeee _m_o_d_e ] [ ----
+     ggggiiiidddd  _g_i_d ] [ ----hhhhiiiiddddeeee _g_l_o_b ] [ ----hhhhiiiiddddeeee----lllliiiisssstttt _f_i_l_e ] [ ----hhhhiiiiddddddddeeeennnn _g_l_o_b
+     ] [ ----hhhhiiiiddddddddeeeennnn----lllliiiisssstttt _f_i_l_e ] [ ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt  _g_l_o_b  ]  [   ---- hhhhiiiiddddeeee----
+     jjjjoooolllliiiieeeetttt----lllliiiisssstttt  _f_i_l_e  ]  [ ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----ttttrrrraaaannnnssss----ttttbbbbllll ] [ ----hhhhiiiiddddeeee----rrrrrrrr----
+     mmmmoooovvvveeeedddd ] [ ----iiiissssoooo----lllleeeevvvveeeellll _l_e_v_e_l ] [ ----iiiinnnnppppuuuutttt----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t ] [  ----
+     oooouuuuttttppppuuuutttt----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t ] [ ----JJJJ ] [ ----jjjjcccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t ] [ ----llll ]
+     [ ----LLLL ] [ ----lllloooogggg----ffffiiiilllleeee _l_o_g__f_i_l_e ] [ ----mmmmaaaaxxxx----iiiissssoooo9999666666660000----ffffiiiilllleeeennnnaaaammmmeeeessss ] [ ----
+     MMMM  _p_a_t_h  | _d_e_v_i_c_e ] [ ----nnnneeeewwww----ddddiiiirrrr----mmmmooooddddeeee _m_o_d_e ] [ ----nnnnoooobbbbaaaakkkk ] [ ----nnnnoooo----
+     bbbbaaaakkkk ] [ ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----ccccoooommmmppppoooonnnneeeennnnttttssss ] [ ---- nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----
+     ffffiiiieeeellllddddssss  ]  [   ---- ppppaaaadddd  ] [ ----nnnnoooo----ppppaaaadddd ] [ ----ppppaaaatttthhhh----lllliiiisssstttt _f_i_l_e ] [ ----pppp
+     _p_r_e_p_a_r_e_r ] [ ----pppprrrriiiinnnntttt----ssssiiiizzzzeeee ] [ ----PPPP _p_u_b_l_i_s_h_e_r ] [ ----qqqquuuuiiiieeeetttt ] [ ---- rrrr
+     ] [ ----RRRR ] [ ----rrrreeeellllaaaaxxxxeeeedddd----ffffiiiilllleeeennnnaaaammmmeeeessss ] [ ----ssssoooorrrrtttt _s_o_r_t _f_i_l_e ] [ ----ssssyyyyssssiiiidddd
+     _I_D ] [ ----TTTT | ----ttttaaaabbbblllleeee----nnnnaaaammmmeeee _T_A_B_L_E__N_A_M_E ] [ ----uuuuccccssss----lllleeeevvvveeeellll _l_e_v_e_l ] [
+     ----uuuuiiiidddd _u_i_d ] [ ----uuuusssseeee----ffffiiiilllleeeevvvveeeerrrrssssiiiioooonnnn ] [ ----UUUU ] [ ----nnnnoooo----iiiissssoooo----ttttrrrraaaannnnssssllllaaaatttteeee ]
+     [ ----vvvv ] [ ----VVVV _v_o_l_i_d ] [ ----vvvvoooollllsssseeeetttt _I_D ] [ ----vvvvoooollllsssseeeetttt----ssssiiiizzzzeeee # ]  [   ----
+     vvvvoooollllsssseeeetttt----sssseeeeqqqqnnnnoooo # ] [ ----xxxx _p_a_t_h ] [ ----eeeexxxxcccclllluuuuddddeeee----lllliiiisssstttt _f_i_l_e ] [ ----zzzz ] [
+     ----mmmm _g_l_o_b ] [ ----hhhhffffssss | ----aaaapppppppplllleeee ] [ ----mmmmaaaapppp _m_a_p_p_i_n_g__f_i_l_e ] [  ---- mmmmaaaaggggiiiicccc
+     _m_a_g_i_c__f_i_l_e  ]  [  ----pppprrrroooobbbbeeee ] [ ----nnnnoooo----ddddeeeesssskkkkttttoooopppp ] [ ----mmmmaaaacccc----nnnnaaaammmmeeee ] [ ----
+     bbbbooooooootttt----hhhhffffssss----ffffiiiilllleeee _d_r_i_v_e_r__f_i_l_e [ ----ppppaaaarrrrtttt ] [ ----aaaauuuuttttoooo _A_u_t_o_S_t_a_r_t__f_i_l_e ]
+     [   ----cccclllluuuusssstttteeeerrrr----ssssiiiizzzzeeee _s_i_z_e ] [ ----hhhhiiiiddddeeee----hhhhffffssss _g_l_o_b ] [ ----hhhhiiiiddddeeee----hhhhffffssss----lllliiiisssstttt
+     _f_i_l_e ] [ ----hhhhffffssss----vvvvoooolllliiiidddd _h_f_s__v_o_l_i_d ] [ ----iiiiccccoooonnnn----ppppoooossssiiiittttiiiioooonnnn ] [ ---- rrrrooooooootttt----
+     iiiinnnnffffoooo  _F_I_L_E  [ ----pppprrrreeeepppp----bbbbooooooootttt _F_I_L_E ] [ ----hhhhffffssss----ccccrrrreeeeaaaattttoooorrrr _C_R_E_A_T_O_R ] [ ----
+     hhhhffffssss----ttttyyyyppppeeee _T_Y_P_E ] [ ----iiiinnnnppppuuuutttt----hhhhffffssss----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t ] [   ---- oooouuuuttttppppuuuutttt----
+     hhhhffffssss----cccchhhhaaaarrrrsssseeeetttt  _c_h_a_r_s_e_t  ]  [   ---- hhhhffffssss----uuuunnnnlllloooocccckkkk  ]  [   ----hhhhffffssss----bbbblllleeeessssssss
+     _f_o_l_d_e_r__n_a_m_e ] [ --------ccccaaaapppp ] [ --------nnnneeeettttaaaattttaaaallllkkkk ] [ --------ddddoooouuuubbbblllleeee ] [ --------eeeetttthhhh----
+     eeeerrrrsssshhhhaaaarrrreeee  ] [ --------uuuusssshhhhaaaarrrreeee ] [ --------eeeexxxxcccchhhhaaaannnnggggeeee ] [ --------ssssggggiiii ] [ --------xxxxiiiinnnneeeetttt ]
+     [ --------mmmmaaaaccccbbbbiiiinnnn ] [ --------ssssiiiinnnngggglllleeee ] [ --------ddddaaaavvvveeee ] [ --------ssssffffmmmm ] ---- oooo  _f_i_l_e_n_a_m_e
+     _p_a_t_h_s_p_e_c [_p_a_t_h_s_p_e_c]
 
 DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
      mmmmkkkkiiiissssooooffffssss is effectively a pre-mastering program  to  generate
@@ -53,14 +58,9 @@ DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
      such as longer filenames, uid/gid, posix  permissions,  sym-
      bolic links, block and character devices.
 
-     If Joliet or HFS hybrid command line options are  specified,
-     mmmmkkkkiiiissssooooffffssss  will  create  additional  filesystem  meta data for
-     Joliet or HFS.  The file content in this case refers to  the
-     same  data  blocks  on  the  media.  It will generate a pure
 
 
-
-Version 1.13a01      Last change: 1 May 2000                    1
+Version 1.14        Last change: 21 Jan 2001                    1
 
 
 
@@ -71,6 +71,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+     If Joliet or HFS hybrid command line options are  specified,
+     mmmmkkkkiiiissssooooffffssss  will  create  additional  filesystem  meta data for
+     Joliet or HFS.  The file content in this case refers to  the
+     same  data  blocks  on  the  media.  It will generate a pure
      ISO9660 filesystem unless the Joliet or HFS  hybrid  command
      line options are given.
 
@@ -119,14 +123,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      Note that mmmmkkkkiiiissssooooffffssss is not designed to  communicate  with  the
      writer directly.  Most writers have proprietary command sets
      which vary from one manufacturer to another, and you need  a
-     specialized tool to actually burn the disk.
-
-     The ccccddddrrrreeeeccccoooorrrrdddd utility is a  utility  capable  of  burning  an
-     actual  disc.   The  latest version of ccccddddrrrreeeeccccoooorrrrdddd is available
 
 
 
-Version 1.13a01      Last change: 1 May 2000                    2
+Version 1.14        Last change: 21 Jan 2001                    2
 
 
 
@@ -137,6 +137,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+     specialized tool to actually burn the disk.
+
+     The ccccddddrrrreeeeccccoooorrrrdddd utility is a  utility  capable  of  burning  an
+     actual  disc.   The  latest version of ccccddddrrrreeeeccccoooorrrrdddd is available
      from ftp://ftp.fokus.gmd.de/pub/unix/cdrecord
 
      Also you should know that most cd writers are very  particu-
@@ -151,13 +155,14 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      and mmmmkkkkiiiissssooooffffssss will merge the files found in all of the  speci-
      fied path components to form the cdrom image.
 
-     It is possible to graft the paths at points other  than  the
-     root  directory, and it is possible to graft files or direc-
-     tories onto the cdrom image with names different  than  what
-     they  have  in  the  source  filesystem.  This is easiest to
-     illustrate with a  couple  of  examples.    Let's  start  by
-     assuming  that  a local file ../old.lis exists, and you wish
-     to include it in the cdrom image.
+     If the option -_g_r_a_f_t-_p_o_i_n_t_s has been specified, it is possi-
+     ble  to graft the paths at points other than the root direc-
+     tory, and it is possible to graft files or directories  onto
+     the  cdrom image with names different than what they have in
+     the source filesystem.  This is easiest to illustrate with a
+     couple  of  examples.   Let's start by assuming that a local
+     file ../old.lis exists, and you wish to include  it  in  the
+     cdrom image.
 
 
           foo/bar/=../old.lis
@@ -172,12 +177,11 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      directories as well.  mmmmkkkkiiiissssooooffffssss will  create  any  directories
      required such that the graft points exist on the cdrom image
      - the directories do not need to appear in one of the paths.
-     Any  directories  that are created on the fly like this will
-     have permissions 0555 and appear to be owned by  the  person
-     running mkisofs.  If you wish other permissions or owners of
-     the intermediate directories, the  easiest  solution  is  to
-     create  real  directories  in  the  path  such  that mkisofs
-     doesn't have to invent them.
+     By default, any directories that are created on the fly like
+     this will have permissions 0555 and appear to  be  owned  by
+     the  person  running mkisofs.  If you wish other permissions
+     or owners of the intermediate directories, see -uid, -gid, -
+     dir-mode, -file-mode and -new-dir-mode.
 
      mmmmkkkkiiiissssooooffffssss will also run on Win9X/NT4  machines  when  compiled
      with        Cygnus'       cygwin       (available       from
@@ -185,14 +189,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      ences in this man page to _U_n_i_x can be replaced with _W_i_n_3_2.
 
 
-OOOOPPPPTTTTIIIIOOOONNNNSSSS
-     ----aaaabbbbssssttttrrrraaaacccctttt _F_I_L_E
-          Specifies the abstract file name.  This  parameter  can
-          also  be set in the file ....mmmmkkkkiiiissssooooffffssssrrrrcccc with ABST=filename.
 
 
 
-Version 1.13a01      Last change: 1 May 2000                    3
+Version 1.14        Last change: 21 Jan 2001                    3
 
 
 
@@ -203,6 +203,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+OOOOPPPPTTTTIIIIOOOONNNNSSSS
+     ----aaaabbbbssssttttrrrraaaacccctttt _F_I_L_E
+          Specifies the abstract file name.  This  parameter  can
+          also  be set in the file ....mmmmkkkkiiiissssooooffffssssrrrrcccc with ABST=filename.
           If specified in both places, the command  line  version
           is used.
 
@@ -235,6 +239,47 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           BIBLO=filename.  If specified in both places, the  com-
           mand line version is used.
 
+     ----ccccaaaacccchhhheeee----iiiinnnnooooddddeeeessss
+          Cache inode and device numbers to find  hard  links  to
+          files.   If mmmmkkkkiiiissssooooffffssss finds a hard link (a file with mul-
+          tiple names), then the file will only  appear  once  on
+          the CD. This helps to save space on the CD.  The option
+          ----ccccaaaacccchhhheeee----iiiinnnnooooddddeeeessss is default on UNIX  like  operating  sys-
+          tems.   Be careful when using this option on a filesys-
+          tem without unique inode numbers as it  may  result  in
+          files containing the wrong content on CD.
+
+     ----nnnnoooo----ccccaaaacccchhhheeee----iiiinnnnooooddddeeeessss
+          Do not cache inode and device numbers.  This option  is
+          needed whenever a filesystem does not have unique inode
+          numbers. It is the default on CCCCyyyyggggwwwwiiiinnnn.  As the Microsoft
+          operating  system  that  runs below CCCCyyyyggggwwwwiiiinnnn is not POSIX
+          compliant, it  does  not  have  unique  inode  numbers.
+
+
+
+Version 1.14        Last change: 21 Jan 2001                    4
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          Cygwin creates fake inode numbers from a hash algorithm
+          that is not  100%  correct.   If  mmmmkkkkiiiissssooooffffssss  would  cache
+          inodes  on Cygwin, it would believe that some files are
+          identical although they are not.  The  result  in  this
+          case are files that contain the wrong content if a sig-
+          nificant amount of different  files  (>  ~5000)  is  in
+          inside  the tree that is to be archived.  This does not
+          happen when the  ---- nnnnoooo----ccccaaaacccchhhheeee----iiiinnnnooooddddeeeessss  iiiissss  uuuusssseeeedddd,,,,  bbbbuuuutttt  tttthhhheeee
+          ddddiiiissssaaaaddddvvvvaaaannnnttttaaaaggggeeee  mmmmkkkkiiiissssooooffffssss  cannot  detect hardlinks anymore
+          and the resulting CD image may be larger than expected.
+
      ----bbbb _e_l_t_o_r_i_t_o__b_o_o_t__i_m_a_g_e
           Specifies the path and filename of the boot image to be
           used  when making an "El Torito" bootable CD. The path-
@@ -253,21 +298,7 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           Start with a new set of "El  Torito"  boot  parameters.
           This  allows  to have more than one El Torito boot on a
           CD.  A maximum of 63 El Torito boot entries may be  put
-          on a songle CD.
-
-
-
-
-Version 1.13a01      Last change: 1 May 2000                    4
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
+          on a single CD.
 
      ----BBBB _i_m_g__s_u_n_4,_i_m_g__s_u_n_4_c,_i_m_g__s_u_n_4_m,_i_m_g__s_u_n_4_d,_i_m_g__s_u_n_4_e
           Specifies a comma separated list of  boot  images  that
@@ -290,6 +321,19 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           depend on SunOS internals but only on properties of the
           Open  Boot  prom.  For this reason, it should be usable
           for any OS that boots off a sparc system.
+
+
+
+Version 1.14        Last change: 21 Jan 2001                    5
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
 
           If the special filename ............ is used, the actual and all
           following  boot  partitions  are mapped to the previous
@@ -321,20 +365,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           will load and execute this image without performing any
           disk emulation.
 
-
-
-
-Version 1.13a01      Last change: 1 May 2000                    5
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
      ----nnnnoooo----bbbbooooooootttt
           Specifies that the created "El  Torito"  CD  should  be
           marked as not bootable. The system will provide an emu-
@@ -357,20 +387,41 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           boot file.  If this option is given, the boot  file  is
           modified in the source filesystem, so make sure to make
           a copy if this file cannot be easily regenerated!   See
+
+
+
+Version 1.14        Last change: 21 Jan 2001                    6
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
           the EEEELLLL TTTTOOOORRRRIIIITTTTOOOO BBBBOOOOOOOOTTTT IIIINNNNFFFFOOOO TTTTAAAABBBBLLLLEEEE section for a description
           of this table.
 
      ----CCCC _l_a_s_t__s_e_s_s__s_t_a_r_t,_n_e_x_t__s_e_s_s__s_t_a_r_t
-          This option is needed when mmmmkkkkiiiissssooooffffssss is  used  to  create
-          the image of a second session or a higher level session
-          for a multi session disk.  The option ----CCCC takes  a  pair
-          of  two  numbers separated by a comma. The first number
-          is the sector number of the first sector  in  the  last
-          session  of  the  disk that should be appended to.  The
-          second number is the starting sector number of the  new
-          session.  The expected pair of numbers may be retrieved
-          by calling ccccddddrrrreeeeccccoooorrrrdddd ----mmmmssssiiiinnnnffffoooo ............ the ----CCCC option may  only
-          be uses in conjunction with the ----MMMM option.
+          This option is needed when mmmmkkkkiiiissssooooffffssss is used to create  a
+          CDextra  or  the  image of a second session or a higher
+          level session for a multi session disk.  The option ---- CCCC
+          takes  a  pair of two numbers separated by a comma. The
+          first number is the sector number of the  first  sector
+          in the last session of the disk that should be appended
+          to.  The second number is the starting sector number of
+          the  new  session.  The expected pair of numbers may be
+          retrieved by calling ccccddddrrrreeeeccccoooorrrrdddd ----mmmmssssiiiinnnnffffoooo ............ If  the   ---- CCCC
+          option  is  used  in  conjunction  with  the ----MMMM option,
+          mmmmkkkkiiiissssooooffffssss will create a filesystem image that is intended
+          to be a continuation of the previous session.  If the ----
+          CCCC option is used without the ----MMMM  option,  mmmmkkkkiiiissssooooffffssss  will
+          create  a  filesystem image that is intended to be used
+          for a second session on a CDextra. This is a multi ses-
+          sion  CD that holds audio data in the first session and
+          a ISO9660 filesystem in the second session.
 
      ----cccc _b_o_o_t__c_a_t_a_l_o_g
           Specifies the path and filename of the boot catalog  to
@@ -387,10 +438,25 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           Check all filenames imported from old session for  com-
           pliance  with actual mmmmkkkkiiiissssooooffffssss iso9660 file naming rules.
           It his option is not present, only names with a  length
+          > 31 are checked as these files are a hard violation of
+          the iso9660 standard.
+
+     ----cccchhhheeeecccckkkk----sssseeeessssssssiiiioooonnnn _F_I_L_E
+          Check all  old  sessions  for  compliance  with  actual
+          mmmmkkkkiiiissssooooffffssss  iso9660  file  naming  rules.   This is a high
+          level option that is a combination of the options:  ---- MMMM
+          _F_I_L_E  ----CCCC 0000,,,,0000 ----cccchhhheeeecccckkkk----oooollllddddnnnnaaaammmmeeeessss For the parameter _F_I_L_E see
+          desciption of ----MMMM option.
+
+     ----ccccooooppppyyyyrrrriiiigggghhhhtttt _F_I_L_E
+          Specifies the Copyright file name.  This parameter  can
+          also  be set in the file ....mmmmkkkkiiiissssooooffffssssrrrrcccc with COPY=filename.
+          If specified in both places, the command  line  version
+          is used.
 
 
 
-Version 1.13a01      Last change: 1 May 2000                    6
+Version 1.14        Last change: 21 Jan 2001                    7
 
 
 
@@ -400,15 +466,6 @@ Version 1.13a01      Last change: 1 May 2000                    6
 MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
-
-          > 31 are checked as these files are a hard violation of
-          the iso9660 standard.
-
-     ----ccccooooppppyyyyrrrriiiigggghhhhtttt _F_I_L_E
-          Specifies the Copyright file name.  This parameter  can
-          also  be set in the file ....mmmmkkkkiiiissssooooffffssssrrrrcccc with COPY=filename.
-          If specified in both places, the command  line  version
-          is used.
 
      ----dddd    Omit trailing period from files that  do  not  have  a
           period.
@@ -420,14 +477,37 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           This violates the ISO9660 standard, but it  happens  to
           work on many systems.  Use with caution.
 
+     ----ddddiiiirrrr----mmmmooooddddeeee _m_o_d_e
+          Overrides the mode of directories used  to  create  the
+          image  to  _m_o_d_e.   Specifying this option automatically
+          enables Rock Ridge extensions.
+
      ----ffff    Follow symbolic links when generating the  filesystem.
           When  this option is not in use, symbolic links will be
           entered using Rock Ridge if enabled, otherwise the file
           will be ignored.
 
+     ----ffffiiiilllleeee----mmmmooooddddeeee _m_o_d_e
+          Overrides the mode of regular files used to create  the
+          image  to  _m_o_d_e.   Specifying this option automatically
+          enables Rock Ridge extensions.
+
+     ----ggggiiiidddd _g_i_d
+          Overrides the gid read from the  source  files  to  the
+          value  of  _g_i_d.   Specifying  this option automatically
+          enables Rock Ridge extensions.
+
      ----gggguuuuiiii  Switch the behaviour for a GUI. This  currently  makes
           the  output  more verbose but may have other effects in
           future.
+
+     ----ggggrrrraaaafffftttt----ppppooooiiiinnnnttttssss
+          Allow to use graft points for filenames. If this option
+          is  used,  all  filenames are checked for graft points.
+          The filename is divided at the  first  unescaped  equal
+          sign.  All  occurrences of '\\' and '=' characters must
+          be escaped with '\\' if -_g_r_a_f_t-_p_o_i_n_t_s has  been  speci-
+          fied.
 
      ----hhhhiiiiddddeeee _g_l_o_b
           Hide _g_l_o_b from being seen on the ISO9660 or Rock  Ridge
@@ -435,8 +515,24 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           that must match any part of the filename or path.  Mul-
           tiple  globs  may  be hidden.  If _g_l_o_b matches a direc-
           tory, then the contents of that directory will be  hid-
-          den.  All the hidden files will still be written to the
-          output CD image file.  Should be used with the  ---- hhhhiiiiddddeeee----
+          den.  In order to match a directory name, make sure the
+          pathname does not include  a  trailing  '/'  character.
+          All  the hidden files will still be written to the out-
+          put CD image file.  Should be used  with  the   ---- hhhhiiiiddddeeee----
+
+
+
+Version 1.14        Last change: 21 Jan 2001                    8
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
           jjjjoooolllliiiieeeetttt option.
 
      ----hhhhiiiiddddeeee----lllliiiisssstttt _f_i_l_e
@@ -449,24 +545,12 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           listed on DOS based systems if the /A flag is not  used
           for  the listing.  _g_l_o_b is a shell wild-card-style pat-
           tern that must match any part of the filename or  path.
-          Multiple globs may be hidden.
+          In order to match a directory name, make sure the path-
+          name does not include a trailing '/' character.  Multi-
+          ple globs may be hidden.
 
      ----hhhhiiiiddddddddeeeennnn----lllliiiisssstttt _f_i_l_e
           A file containing a list of _g_l_o_b_s  to  get  the  hidden
-
-
-
-Version 1.13a01      Last change: 1 May 2000                    7
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
           attribute as above.
 
      ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt _g_l_o_b
@@ -474,9 +558,11 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           _g_l_o_b is a shell wild-card-style pattern that must match
           any part of the filename or path.  Multiple  globs  may
           be  hidden.  If _g_l_o_b matches a directory, then the con-
-          tents of that directory will be hidden.  All the hidden
-          files  will  still  be  written  to the output CD image
-          file.  Should be used with the ----hhhhiiiiddddeeee option.
+          tents of that directory will be hidden.   In  order  to
+          match a directory name, make sure the pathname does not
+          include a trailing '/' character.  All the hidden files
+          will  still  be  written  to  the output CD image file.
+          Should be used with the ----hhhhiiiiddddeeee option.
 
      ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----lllliiiisssstttt _f_i_l_e
           A file containing a list  of  _g_l_o_b_s  to  be  hidden  as
@@ -498,7 +584,22 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           at all, you should use the ----DDDD option. Note that in case
           that  the   ----DDDD option has been specified, the resulting
           filesystem is not ISO9660 level-1  compliant  and  will
-          not be readable on MS-DOS.
+          not  be readable on MS-DOS.  See also NNNNOOOOTTTTEEEESSSS section for
+
+
+
+Version 1.14        Last change: 21 Jan 2001                    9
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          more information on the RRRRRRRR____MMMMOOOOVVVVEEEEDDDD directory.
 
      ----llll    Allow  full  31  character  filenames.   Normally  the
           ISO9660 filename will be in an 8.3 format which is com-
@@ -507,6 +608,21 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           this option, the disc may be difficult to use on a  MS-
           DOS  system, but this comes in handy on some other sys-
           tems (such as the Amiga).  Use with caution.
+
+     ----iiiinnnnppppuuuutttt----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t
+          Input charset that defines the characters used in local
+          file names.  To get a list of valid charset names, call
+          mmmmkkkkiiiissssooooffffssss ----iiiinnnnppppuuuutttt----cccchhhhaaaarrrrsssseeeetttt hhhheeeellllpppp.... To get a 1:1 mapping,  you
+          may  use  ddddeeeeffffaaaauuuulllltttt  as charset name. The default initial
+          values are _c_p_4_3_7 on DOS based systems and _i_s_o_8_8_5_9-_1  on
+          all  other  systems.   See CCCCHHHHAAAARRRRAAAACCCCTTTTEEEERRRR SSSSEEEETTTTSSSS section below
+          for more details.
+
+     ----oooouuuuttttppppuuuutttt----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t
+          Output charset that defines the characters that will be
+          used  in  Rock  Ridge file names. Defaults to the input
+          charset. See CCCCHHHHAAAARRRRAAAACCCCTTTTEEEERRRR  SSSSEEEETTTTSSSS  section  below  for  more
+          details.
 
      ----iiiissssoooo----lllleeeevvvveeeellll _l_e_v_e_l
           Set the iso9660 conformance level.  Valid  numbers  are
@@ -519,20 +635,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
           With level 3, no restrictions apply.
 
-
-
-
-Version 1.13a01      Last change: 1 May 2000                    8
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
           With all iso9660 levels all filenames are restricted to
           upper case letters, numbers and the underscore (_). The
           maximum filename length is restricted to 31 characters,
@@ -544,17 +646,31 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           the discs are to be used on  Windows-NT  or  Windows-95
           machines.    The  Joliet  filenames  are  specified  in
           Unicode and each path component can be up to 64 Unicode
-          characters long.
+          characters  long.   Note  that  Joliet is no standard -
+          CD's that use only Joliet extensions  but  no  standard
+          Rock  Ridge  extensions  may  usually  only  be used on
+          Microsoft Win32 systems. Furthermore, the fact that the
+          filenames  are  limited  to  64 characters and the fact
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   10
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          that Joliet uses the UTF-16 coding for Unicode  charac-
+          ters causes interoperability problems.
 
      ----jjjjcccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t
-          Local charset that should be used for translating local
-          file  names  into Joliet Unicode directory records.  To
-          get a list of valid charset names, call mmmmkkkkiiiissssooooffffssss ----jjjjcccchhhhaaaarrrr----
-          sssseeeetttt  hhhheeeellllpppp.... To get a 1:1 mapping, you may use ddddeeeeffffaaaauuuulllltttt as
-          charset name. The default initial values are  _c_p_4_3_7  on
-          DOS  based  systems and _i_s_o_8_8_5_9-_1 on all other systems.
-          If the ----jjjjcccchhhhaaaarrrrsssseeeetttt option is specified, the ----JJJJ option  is
-          implied.
+          Same as using ----iiiinnnnppppuuuutttt----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t and  ---- JJJJ  options.
+          See CCCCHHHHAAAARRRRAAAACCCCTTTTEEEERRRR SSSSEEEETTTTSSSS section below for more details.
 
      ----LLLL    Allow ISO9660 filenames to begin with a period.   Usu-
           ally,  a  leading dot is replaced with an underscore in
@@ -586,19 +702,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           use filename globbing. A file is excluded if either the
           last component matches or the whole path matches.
 
-
-
-Version 1.13a01      Last change: 1 May 2000                    9
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
      ----eeeexxxxcccclllluuuuddddeeee----lllliiiisssstttt _f_i_l_e
           A file containing a list of  _g_l_o_b_s  to  be  exclude  as
           above.
@@ -613,6 +716,20 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           characters,  disks created with this option may cause a
           buffer overflow in the reading  operating  system.  Use
           with extreme care.
+
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   11
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
 
      ----MMMM _p_a_t_h
           or
@@ -632,6 +749,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           This violates the ISO9660 standard, but no  one  really
           uses the version numbers anyway.  Use with caution.
 
+     ----nnnneeeewwww----ddddiiiirrrr----mmmmooooddddeeee _m_o_d_e
+          Mode to use when creating new directories in the iso fs
+          image.  The default mode is 0555.
+
      ----nnnnoooobbbbaaaakkkk
 
      ----nnnnoooo----bbbbaaaakkkk
@@ -640,6 +761,12 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           that contain the characters '~' or '#' or end in '.bak'
           will  not be included (these are typically backup files
           for editors under unix).
+
+     ----ffffoooorrrrcccceeee----rrrrrrrr
+          Do not use the automatic Rock Ridge attributes recogni-
+          tion  for previous sessions.  This helps to show rotten
+          iso9660 extension records as e.g. created by NERO burn-
+          ing ROM.
 
      ----nnnnoooo----rrrrrrrr
           Do not use the Rock Ridge attributes from previous ses-
@@ -651,10 +778,15 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           Don't split the SL components, but  begin  a  new  Con-
           tinuation Area (CE) instead. This may waste some space,
           but the SunOS 4.1.4 cdrom driver has a bug  in  reading
+          split SL components (link_size = component_size instead
+          of link_size += component_size).
+
+     ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----ffffiiiieeeellllddddssss
+          Don't split the SL fields, but begin a new Continuation
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   10
+Version 1.14        Last change: 21 Jan 2001                   12
 
 
 
@@ -665,11 +797,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
-          split SL components (link_size = component_size instead
-          of link_size += component_size).
-
-     ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----ffffiiiieeeellllddddssss
-          Don't split the SL fields, but begin a new Continuation
           Area  (CE)  instead. This may waste some space, but the
           SunOS 4.1.4 and Solaris 2.5.1 cdrom driver have  a  bug
           in reading split SL fields (a `/' can be dropped).
@@ -690,13 +817,20 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           BBBB is used, then there is a second padding at the end of
           the boot partitions.
 
-          The padding is neded as many  operating  systems  (e.g.
+          The padding is needed as many operating  systems  (e.g.
           Linux)  implement  read  ahead bugs in their filesystem
           I/O. These bugs result in read errors on  one  or  more
           files  that are located at the end of a track. They are
           usually present when the CD is written in Track at Once
           mode or when the disk is written as mixed mode CD where
           an audio track follows the data track.
+
+          To avoid problems with I/O error on the  last  file  on
+          the  filesystem,  the   ---- ppppaaaadddd  option has been made the
+          default.
+
+     ----nnnnoooo----ppppaaaadddd
+          Do not Pad the end of the ISO9660 by 16 sectors (32kB).
 
      ----ppppaaaatttthhhh----lllliiiisssstttt _f_i_l_e
           A file containing a list of  _p_a_t_h_s_p_e_c  directories  and
@@ -715,12 +849,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           file  ....mmmmkkkkiiiissssooooffffssssrrrrcccc  with  PUBL=.   If  specified  in both
           places, the command line version is used.
 
-     ----pppp _p_r_e_p_a_r_e_r__i_d
-          Specifies a text string that will be written  into  the
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   11
+Version 1.14        Last change: 21 Jan 2001                   13
 
 
 
@@ -731,6 +863,8 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+     ----pppp _p_r_e_p_a_r_e_r__i_d
+          Specifies a text string that will be written  into  the
           volume  header.   This  should describe the preparer of
           the CDROM, usually with a  mailing  address  and  phone
           number.   There is space on the disc for 128 characters
@@ -745,7 +879,17 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           it  is needed to know the size of the filesystem before
           the actual CD-creation is done.  The option -print-size
           allows  to get this size from a "dry-run" before the CD
-          is actually written.
+          is actually written.  Old versions of mmmmkkkkiiiissssooooffffssss did write
+          this  information  (among other information) to _s_t_d_e_r_r.
+          As this turns out to  be  hard  to  parse,  the  number
+          without  any other information is now printed on ssssttttddddoooouuuutttt
+          too.  If you like  to  write  a  simple  shell  script,
+          redirect ssssttttddddeeeerrrrrrrr and catch the number from ssssttttddddoooouuuutttt.  This
+          may be done with:
+
+          ccccddddbbbblllloooocccckkkkssss====```` mmmmkkkkiiiissssooooffffssss ----pppprrrriiiinnnntttt----ssssiiiizzzzeeee ----qqqquuuuiiiieeeetttt ............ ````
+
+          mmmmkkkkiiiissssooooffffssss ............ |||| ccccddddrrrreeeeccccoooorrrrdddd ............ ttttssssiiiizzzzeeee====$$$${{{{ccccddddbbbblllloooocccckkkkssss}}}}ssss ----
 
      ----qqqquuuuiiiieeeetttt
           This makes mmmmkkkkiiiissssooooffffssss even less verbose.  No progress out-
@@ -770,23 +914,11 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           only in any case.  If any of the special mode bits  are
           set, clear them, because file locks are not useful on a
           read-only file system, and set-id bits are  not  desir-
-          able  for uid 0 or gid 0.  When used on Win32, the exe-
-          cute bit is set on _a_l_l files. This is a result  of  the
-          lack  of file permissions on Win32 and the Cygwin POSIX
-          emulation layer.
-
-     ----rrrreeeellllaaaaxxxxeeeedddd----ffffiiiilllleeeennnnaaaammmmeeeessss
-          The option ----rrrreeeellllaaaaxxxxeeeedddd----ffffiiiilllleeeennnnaaaammmmeeeessss allows ISO9660  filenames
-          to include digits, uppercase characters and all other 7
-          bit ASCII characters (resp. anything  except  lowercase
-          characters).
-          This violates the ISO9660 standard, but it  happens  to
-          work on many systems.  Use with caution.
+          able  for  uid  0  or  gid  0.  When used on Win32, the
 
 
 
-
-Version 1.13a01      Last change: 1 May 2000                   12
+Version 1.14        Last change: 21 Jan 2001                   14
 
 
 
@@ -797,13 +929,33 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+          execute bit is set on _a_l_l files. This is  a  result  of
+          the  lack  of  file permissions on Win32 and the Cygwin
+          POSIX emulation layer.  See also -uid -gid, - dir-mode,
+          -file-mode and -new-dir-mode.
+
+     ----rrrreeeellllaaaaxxxxeeeedddd----ffffiiiilllleeeennnnaaaammmmeeeessss
+          The option ----rrrreeeellllaaaaxxxxeeeedddd----ffffiiiilllleeeennnnaaaammmmeeeessss allows ISO9660  filenames
+          to include digits, uppercase characters and all other 7
+          bit ASCII characters (resp. anything  except  lowercase
+          characters).
+          This violates the ISO9660 standard, but it  happens  to
+          work on many systems.  Use with caution.
+
      ----ssssoooorrrrtttt _s_o_r_t _f_i_l_e
           Sort file locations on the media. Sorting is controlled
           by  a file that contains pairs of filenames and sorting
           offset weighting.  If the weighting is higher, the file
           will  be  located closer to the beginning of the media,
           if the weighting is lower, the  file  will  be  located
-          closer to the end of the media.
+          closer  to the end of the media. There must be only one
+          space or tabs character between the  filename  and  the
+          weight  and the weight must be the last characters on a
+          line. The filename is taken to include all the  charac-
+          ters  up  to,  but  not including the last space or tab
+          character on a line. This is to allow for space charac-
+          ters  to  be  in,  or  at  the  end  of a filename. See
+          README.sort for more details.
 
      ----ssssyyyyssssiiiidddd _I_D
           Specifies the system ID.  This parameter  can  also  be
@@ -830,6 +982,24 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           default  level  is 3.  It may be set to 1..3 using this
           option.
 
+
+
+Version 1.14        Last change: 21 Jan 2001                   15
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     ----uuuuiiiidddd _u_i_d
+          Overrides the uid read from the  source  files  to  the
+          value  of  _u_i_d.   Specifying  this option automatically
+          enables Rock Ridge extensions.
+
      ----uuuusssseeee----ffffiiiilllleeeevvvveeeerrrrssssiiiioooonnnn
           The option ----uuuusssseeee----ffffiiiilllleeeevvvveeeerrrrssssiiiioooonnnn allows mkisofs to use  file
           version  numbers from the filesystem.  If the option is
@@ -849,20 +1019,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      ----nnnnoooo----iiiissssoooo----ttttrrrraaaannnnssssllllaaaatttteeee
           Do not translate the characters '#' and '~'  which  are
           invalid  for  iso9660  filenames.  These characters are
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   13
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
           though invalid often used by Microsoft systems.
           This violates the ISO9660 standard, but it  happens  to
           work on many systems.  Use with caution.
@@ -875,7 +1031,8 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           Note that if you assign a volume ID, this is  the  name
           that  will  be  used  as  the  mount  point used by the
           Solaris volume management system and the name  that  is
-          assigned to the disc on a Windows or Mac platform.
+          assigned  to the disc on a Microsoft Win32 or Apple Mac
+          platform.
 
      ----vvvvoooollllsssseeeetttt _I_D
           Specifies the volset ID.  This parameter  can  also  be
@@ -890,6 +1047,19 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           e.g.  a Operation System installation set of CD's.  The
           option ----vvvvoooollllsssseeeetttt----ssssiiiizzzzeeee must be specified before  ---- vvvvoooollllsssseeeetttt----
           sssseeeeqqqqnnnnoooo on each command line.
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   16
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
 
      ----vvvvoooollllsssseeeetttt----sssseeeeqqqqnnnnoooo #
           Sets the volume set sequence number to #.   The  volume
@@ -915,20 +1085,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           last component matches or the whole path matches.
 
       ---- zzzz    Generate  special  SUSP  records  for  transparently
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   14
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
           compressed files.  This is only of use and interest for
           hosts that support transparent decompression.  This  is
           an experimental feature, and no hosts yet support this,
@@ -957,6 +1113,20 @@ HHHHFFFFSSSS OOOOPPPPTTTTIIIIOOOONNNNSSSS
      ----mmmmaaaaggggiiiicccc _m_a_g_i_c__f_i_l_e
           The CREATOR and TYPE information  is  set  by  using  a
           file's  _m_a_g_i_c  _n_u_m_b_e_r (usually the first few bytes of a
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   17
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
           file). The _m_a_g_i_c__f_i_l_e is only used if a file is not one
           of  the  known Apple/Unix file formats, or the filename
           extension has not been mapped using the  ---- mmmmaaaapppp  option.
@@ -981,20 +1151,6 @@ HHHHFFFFSSSS OOOOPPPPTTTTIIIIOOOONNNNSSSS
           _A_p_p_l_e_S_i_n_g_l_e files is to open and read  them.  Therefore
           this  option _m_a_y increase processing time. It is better
           to use one or more _d_o_u_b_l_e _d_a_s_h options given  below  if
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   15
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
           the Apple/Unix formats in use are known.
 
      ----nnnnoooo----ddddeeeesssskkkkttttoooopppp
@@ -1023,6 +1179,20 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      ----aaaauuuuttttoooo _A_u_t_o_S_t_a_r_t__f_i_l_e
           Make the HFS CD use the QuickTime 2.0 Autostart feature
           to   launch  an  application  or  document.  The  given
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   18
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
           filename must be the name of a document or  application
           located  at  the top level of the CD. The filename must
           be less than 12 characters. (Alpha).
@@ -1047,20 +1217,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           directory called "foobar" it too (and of course all its
           descendants) would be excluded.  The _g_l_o_b can also be a
           path name relative to the source directories  given  on
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   16
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
           the command line. Example:
 
           mkisofs -o rom -hfs -hide-hfs src/html src
@@ -1068,7 +1224,9 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           would exclude just the file or directory called  "html"
           from  the  "src" directory. Any other file or directory
           called "html" in the tree will not be excluded.  Should
-          be used with the ----hhhhiiiiddddeeee and/or ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt options.
+          be used with the ----hhhhiiiiddddeeee and/or ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt options.  In
+          order to match a directory name, make sure the pathname
+          does not include a trailing '/' character.
 
      ----hhhhiiiiddddeeee----hhhhffffssss----lllliiiisssstttt _f_i_l_e
           A file containing a list  of  _g_l_o_b_s  to  be  hidden  as
@@ -1088,6 +1246,19 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           preserved.   This  option  may become set by default in
           the future.  (Alpha).
 
+
+
+Version 1.14        Last change: 21 Jan 2001                   19
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
      ----rrrrooooooootttt----iiiinnnnffffoooo _f_i_l_e
           Set the location, size  on  screen,  scroll  positions,
           folder  View etc. for the root folder of an HFS volume.
@@ -1096,6 +1267,35 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      ----pppprrrreeeepppp----bbbbooooooootttt _F_I_L_E
           PReP  boot  image  file.  Up  to  4  are  allowed.  See
           README.prep_boot (Alpha)
+
+     ----iiiinnnnppppuuuutttt----hhhhffffssss----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t
+          Input charset that defines the characters used  in  HFS
+          file  names  when  used with the -_m_a_c-_n_a_m_e option.  The
+          default charset is cp10000  (Mac  Roman)  _c_p_1_0_0_0_0  (Mac
+          Roman)  See CCCCHHHHAAAARRRRAAAACCCCTTTTEEEERRRR SSSSEEEETTTTSSSS and HHHHFFFFSSSS MMMMAAAACCCCIIIINNNNTTTTOOOOSSSSHHHH FFFFIIIILLLLEEEE NNNNAAAAMMMMEEEESSSS
+          sections below for more details.
+
+     ----oooouuuuttttppppuuuutttt----hhhhffffssss----cccchhhhaaaarrrrsssseeeetttt _c_h_a_r_s_e_t
+          Output charset that defines the characters that will be
+          used in the HFS file names. Defaults to the input char-
+          set. See CCCCHHHHAAAARRRRAAAACCCCTTTTEEEERRRR SSSSEEEETTTTSSSS section below for more details.
+
+     ----hhhhffffssss----uuuunnnnlllloooocccckkkk
+          By default, mmmmkkkkiiiissssooooffffssss will create an HFS volume  that  is
+          _l_o_c_k_e_d.  This option leaves the volume unlocked so that
+          other applications  (e.g.   hfsutils)  can  modify  the
+          volume.  See the HHHHFFFFSSSS PPPPRRRROOOOBBBBLLLLEEEEMMMMSSSS////LLLLIIIIMMMMIIIITTTTAAAATTTTIIIIOOOONNNNSSSS section below
+          for warnings about using this option.
+
+     ----hhhhffffssss----bbbblllleeeessssssss _f_o_l_d_e_r__n_a_m_e
+          "Bless" the given directory (folder). This  is  usually
+          the  SSSSyyyysssstttteeeemmmm FFFFoooollllddddeeeerrrr and is used in creating HFS bootable
+          CDs. The name of the directory must be the  whole  path
+          name  as mmmmkkkkiiiissssooooffffssss sees it. e.g. if the given pathspec is
+          ./cddata and  the  required  folder  is  called  System
+          Folder,  then  the  whole path name is "./cddata/System
+          Folder" (remember to use quotes if  the  name  contains
+          spaces).
 
      --------ccccaaaapppp
           Look for AUFS  CAP  Macintosh  files.  Search  for  CAP
@@ -1112,11 +1312,9 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      --------eeeetttthhhheeeerrrrsssshhhhaaaarrrreeee
           Look for Helios EtherShare Macintosh files
 
-     --------uuuusssshhhhaaaarrrreeee
 
 
-
-Version 1.13a01      Last change: 1 May 2000                   17
+Version 1.14        Last change: 21 Jan 2001                   20
 
 
 
@@ -1127,6 +1325,7 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+     --------uuuusssshhhhaaaarrrreeee
           Look for IPT UShare Macintosh files
 
      --------eeeexxxxcccchhhhaaaannnnggggeeee
@@ -1151,6 +1350,193 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           Look for Microsoft's Services for Macintosh  files  (NT
           only) (Alpha)
 
+
+CCCCHHHHAAAARRRRAAAACCCCTTTTEEEERRRR SSSSEEEETTTTSSSS
+     mmmmkkkkiiiissssooooffffssss processes file names in a  POSIX  compliant  way  as
+     strings  of  8-bit characters.  To represent all codings for
+     all languages, 8-bit characters are not sufficient.  Unicode
+     or  IIIISSSSOOOO----11110000666644446666 define character codings that need at least 21
+     bits  to  represent  all  known  languages.  They   may   be
+     represented  with  UUUUTTTTFFFF----33332222,  UUUUTTTTFFFF----11116666  or UUUUTTTTFFFF----8888 coding.  UUUUTTTTFFFF----33332222
+     uses a plain 32-bit coding but seems to be uncommon.  UUUUTTTTFFFF----11116666
+     is  used  by Microsoft with Win32 with the disadvantage that
+     it only supports a subset of all codes and that 16-bit char-
+     acters  are  not  compliant with the POSIX filesystem inter-
+     face.
+
+     Modern  UNIX  operating  systems  use   UUUUTTTTFFFF----8888   coding   for
+     filenames.  This  coding  allows to use the complete Unicode
+     code set.  Each 32-bit character is represented  by  one  or
+     more  8-bit  characters.   If  a  character is coded in IIIISSSSOOOO----
+     8888888855559999----1111 (used in Central Europe and North  America)  is  maps
+     1:1  to a Unicode character.  Character codes that cannot be
+     represented as a single byte  in  UTF-8  (typically  if  the
+     value  is > 0x7F) use escape sequences that map to more than
+     one 8-bit character.
+
+     If all operating systems would  use  UUUUTTTTFFFF----8888  coding,  mmmmkkkkiiiissssooooffffssss
+     would  not  need to recode characters in file names.  Unfor-
+     tunately, Apple  uses  completely  nonstandard  codings  and
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   21
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     Microsoft  uses a Unicode coding that is not compatible with
+     the POSIX filename interface.
+
+     For all non UUUUTTTTFFFF----8888 coded operating systems, the actual  char-
+     acter that each byte represents depends on the _c_h_a_r_a_c_t_e_r _s_e_t
+     or _c_o_d_e_p_a_g_e (which is the name used by  Microsoft)  used  by
+     the  local  operating  system  in  use - the characters in a
+     character set will reflect the region  or  natural  language
+     used by the user.
+
+     Usually character codes 0x00-0x1f  are  control  characters,
+     codes  0x20-0x7f are the 7 bit ASCII characters and (on PC's
+     and Mac's) 0x80-0xff are used for other characters.   Unfor-
+     tunately  even  this  does  not  follow  ISO  standards that
+     reserve the range 0x80-0x9f for control characters and  only
+     allow 0xa0-0xff for other characters.
+
+     As there is a lot more than 256 characters/symbols  in  use,
+     only  a  small  subset  are  represented in a character set.
+     Therefore the same character code may represent a  different
+     character  in  different character sets. So a file name gen-
+     erated, say in central Europe,  may  not  display  the  same
+     character when viewed on a machine in, say eastern Europe.
+
+     To make matters more complicated, different  operating  sys-
+     tems   use  different  character  sets  for  the  region  or
+     language. For example the character code for "small  e  with
+     acute  accent" may be character code 0x82 on a PC, code 0x8e
+     on a Macintosh and code 0xe9 on a UNIX system.   Note  while
+     the  codings  used  on  a PC or Mac are nonstandard, Unicode
+     codes this character as 0x00000000e9 which is basically  the
+     same value as the value used by most UNIX systems.
+
+     As long as not all operating systems and  applications  will
+     use the Unicode character set as the basis for file names in
+     a unique way, it may be necessary to specify which character
+     set  your file names use in and which character set the file
+     names should appear on the CD.
+
+     There are four options to specify  the  character  sets  you
+     want to use:
+
+     -input-charset
+          Defines the local character set you are using  on  your
+          host  machine.  Any character set conversions that take
+          place will use this character set as the staring point.
+          The default input character sets are _c_p_4_3_7 on DOS based
+          systems and _i_s_o_8_8_5_9-_1 on all other systems.
+
+          If the -_J option is given, then the Unicode equivalents
+          of  the  input character set will be used in the Joliet
+          directory. Using the -_j_c_h_a_r_s_e_t option is  the  same  as
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   22
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          using the -_i_n_p_u_t-_c_h_a_r_s_e_t and -_J options.
+
+     -output-charset
+          Defines the character set that will be  used  with  for
+          the  Rock  Ridge names on the CD. Defaults to the input
+          character set. Only likely to be useful if  used  on  a
+          non-Unix  platform.  e.g.  using mmmmkkkkiiiissssooooffffssss on a Microsoft
+          Win32 machine to create Rock  Ridge  CDs.  If  you  are
+          using  mmmmkkkkiiiissssooooffffssss on a Unix machine, it is likely that the
+          output character set will be  the  same  as  the  input
+          character set.
+
+     -input-hfs-charset
+          Defines the HFS character set used for HFS  file  names
+          decoded  from  any  of the various Apple/Unix file for-
+          mats. Only useful when used with -_m_a_c-_n_a_m_e option.  See
+          the  HHHHFFFFSSSS  MMMMAAAACCCCIIIINNNNTTTTOOOOSSSSHHHH  FFFFIIIILLLLEEEE  NNNNAAAAMMMMEEEESSSS  for more information.
+          Defaults to _c_p_1_0_0_0_0 (Mac Roman).
+
+     -output-hfs-charset
+          Defines the HFS character set used to create  HFS  file
+          names  from  the  input  character  set in use. In most
+          cases this will be from the character  set  given  with
+          the   - _i_n_p_u_t-_c_h_a_r_s_e_t option. Defaults to the input HFS
+          character set.
+
+     There are a number of character sets built  in  to  _m_k_i_s_o_f_s.
+     To get a listing, use mmmmkkkkiiiissssooooffffssss ----iiiinnnnppppuuuutttt----cccchhhhaaaarrrrsssseeeetttt hhhheeeellllpppp....
+
+     Additional character sets can be read from file for  any  of
+     the  character set options by giving a filename as the argu-
+     ment to the options. The given file will only be read if its
+     name does not match one of the built in character sets.
+
+     The format of the character set files is  the  same  as  the
+     mapping            files            available           from
+     http://www.unicode.org/Public/MAPPINGS The format  of  these
+     files is:
+
+          Column #1 is the input byte code (in hex as 0xXX)
+          Column #2 is the Unicode (in hex as 0xXXXX)
+          Rest of the line is ignored.
+
+     Any blank line, line without two (or more)  columns  in  the
+     above  format or comments lines (starting with the # charac-
+     ter) are ignored without any  warnings.  Any  missing  input
+     code is mapped to Unicode character 0x0000.
+
+     Note that there is no support for 16 bit UNICODE (UTF-16) or
+     32  bit  UNICODE  (UTF-32) coding because this coding is not
+     POSIX compliant. There should be support for  UTF-8  UNICODE
+     coding  which is compatible to POSIX filenames and supported
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   23
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     by moder UNIX implementations such as Solaris.
+
+     A 1:1 character set mapping can be defined by using the key-
+     word  _d_e_f_a_u_l_t  as  the  argument to any of the character set
+     options. This is the behaviour of older (v1.12) versions  of
+     mmmmkkkkiiiissssooooffffssss.
+
+     The ISO9660 file names generated from  the  input  filenames
+     are  not converted from the input character set. The ISO9660
+     character set is a very limited subset of the ASCII  charac-
+     ters, so any conversion would be pointless.
+
+     Any character that mmmmkkkkiiiissssooooffffssss can not convert will be  replaced
+     with a '_' character.
 
 HHHHFFFFSSSS CCCCRRRREEEEAAAATTTTOOOORRRR////TTTTYYYYPPPPEEEE
      A Macintosh file has two properties associated with it which
@@ -1179,20 +1565,6 @@ HHHHFFFFSSSS CCCCRRRREEEEAAAATTTTOOOORRRR////T
      ----hhhhffffssss----ccccrrrreeeeaaaattttoooorrrr and/or ----hhhhffffssss----ttttyyyyppppeeee options, otherwise the default
      CREATOR and TYPE are 'unix' and 'TEXT'.
 
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   18
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
      The format of the _m_a_p_p_i_n_g file is the same _a_f_p_f_i_l_e format as
      used by _a_u_f_s.  This file has five columns for the _e_x_t_e_n_s_i_o_n,
      _f_i_l_e _t_r_a_n_s_l_a_t_i_o_n, _C_R_E_A_T_O_R, _T_Y_P_E and _C_o_m_m_e_n_t.  Lines starting
@@ -1203,6 +1575,20 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      #
      # EXTN   XLate   CREATOR   TYPE     Comment
      .tif     Raw     '8BIM'    'TIFF'   "Photoshop TIFF image"
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   24
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
      .hqx     Ascii   'BnHq'    'TEXT'   "BinHex file"
      .doc     Raw     'MSWD'    'WDBN'   "Word file"
      .mov     Raw     'TVOD'    'MooV'   "QuickTime Movie"
@@ -1245,20 +1631,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      # off   type      test       message
      0       string    GIF8       8BIM GIFf  GIF image
      0       beshort   0xffd8     8BIM JPEG  image data
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   19
-
-
-
-
-
-
-MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
-
-
-
      0       string    SIT!       SIT! SIT!  StuffIt Archive
      0       string     37235     LZIV ZIVU  standard unix compress
      0       string     37213     GNUz ZIVU  gzip compressed data
@@ -1269,6 +1641,20 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
      The format of the file is  described  in  the  mmmmaaaaggggiiiicccc(4)  man
      page. The only difference here is that for each entry in the
+
+
+
+Version 1.14        Last change: 21 Jan 2001                   25
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
      magic file, the _m_e_s_s_a_g_e for the initial  offset  mmmmuuuusssstttt  be  4
      characters  for the CREATOR followed by 4 characters for the
      TYPE - white space is optional between them. Any other char-
@@ -1311,10 +1697,20 @@ HHHHFFFFSSSS MMMMAAAACCCCIIIINNNNTTTTOOOOSSSSH
      e.g. a Macintosh file may be a JPEG image where the image is
      stored  in  the  Data fork and a desktop thumbnail stored in
      the Resource fork. It is usually the information in the data
+     fork that is useful across platforms.
+
+     Therefore to store a Macintosh file on a Unix filesystem,  a
+     way has to be found to cope with the two forks and the extra
+     attributes (which are  referred  to  as  the  _f_i_n_d_e_r  _i_n_f_o).
+     Unfortunately,  it  seems  that  every software package that
+     stores Macintosh files on Unix has chosen a completely  dif-
+     ferent storage method.
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   20
+
+
+Version 1.14        Last change: 21 Jan 2001                   26
 
 
 
@@ -1324,15 +1720,6 @@ Version 1.13a01      Last change: 1 May 2000                   20
 MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
-
-     fork that is useful across platforms.
-
-     Therefore to store a Macintosh file on a Unix filesystem,  a
-     way has to be found to cope with the two forks and the extra
-     attributes (which are  referred  to  as  the  _f_i_n_d_e_r  _i_n_f_o).
-     Unfortunately,  it  seems  that  every software package that
-     stores Macintosh files on Unix has chosen a completely  dif-
-     ferent storage method.
 
      The Apple/Unix formats  that  _m_k_i_s_o_f_s  (partially)  supports
      are:
@@ -1378,9 +1765,18 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
           ssssiiiizzzzeeee  option.   The  cluster  or allocation size can be
           found by using the DOS utility CCCCHHHHKKKKDDDDSSSSKKKK.
 
+          May not work with PC  Exchange  v2.2  or  higher  files
+          (available  with  MacOS  8.1).  DOS media containing PC
+          Exchange files should be mounted  as  type  mmmmssssddddoooossss  (not
+          vvvvffffaaaatttt) when using Linux.
+
+     SGI/XINET
+          Used by SGI machines when they mount  HFS  disks.  Data
+          fork  stored  in  a file. Resource fork in subdirectory
 
 
-Version 1.13a01      Last change: 1 May 2000                   21
+
+Version 1.14        Last change: 21 Jan 2001                   27
 
 
 
@@ -1391,14 +1787,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
-          May not work with PC  Exchange  v2.2  or  higher  files
-          (available  with  MacOS  8.1).  DOS media containing PC
-          Exchange files should be mounted  as  type  mmmmssssddddoooossss  (not
-          vvvvffffaaaatttt) when using Linux.
-
-     SGI/XINET
-          Used by SGI machines when they mount  HFS  disks.  Data
-          fork  stored  in  a file. Resource fork in subdirectory
           .HSResource with same name. Finder info as  one  record
           in  file  .HSancillary.  Separate .HSancillary for each
           data fork directory.
@@ -1443,10 +1831,18 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      ISO9660 Directory Record - in much the same way as the  Rock
      Ridge  attributes  are. In fact to make life easy, the Apple
      extensions are added at the beginning of the  existing  Rock
+     Ridge  attributes  (i.e. to get the Apple extensions you get
+     the Rock Ridge extensions as well).
+
+     The Apple extensions require the resource fork to be  stored
+     as  an ISO9660 _a_s_s_o_c_i_a_t_e_d file. This is just like any normal
+     file stored in the ISO9660 filesystem except that the  asso-
+     ciated  file  flag  is  set in the Directory Record (bit 2).
+     This file has the same name as the data fork (the file  seen
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   22
+Version 1.14        Last change: 21 Jan 2001                   28
 
 
 
@@ -1457,14 +1853,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
-     Ridge  attributes  (i.e. to get the Apple extensions you get
-     the Rock Ridge extensions as well).
-
-     The Apple extensions require the resource fork to be  stored
-     as  an ISO9660 _a_s_s_o_c_i_a_t_e_d file. This is just like any normal
-     file stored in the ISO9660 filesystem except that the  asso-
-     ciated  file  flag  is  set in the Directory Record (bit 2).
-     This file has the same name as the data fork (the file  seen
      by   non-Apple  machines).  Associated  files  are  normally
      ignored by other OSs
 
@@ -1508,11 +1896,19 @@ HHHHFFFFSSSS MMMMAAAACCCCIIIINNNNTTTTOOOOSSSSH
 
      This:t7File   converted to This%t7File
 
+     Although HFS filenames appear to  support  upper  and  lower
+     case  letters,  the filesystem is case insensitive. i.e. the
+     filenames "aBc" and "AbC" are the same. If a file  is  found
+     in  a  directory  with  the same HFS name, then _m_k_i_s_o_f_s will
+     attempt, where possible, to make a unique name by adding '_'
+     characters to one of the filenames.
+
+     If an HFS filename exists for a file, then mkisofs  can  use
+     this  name as the starting point for the ISO9660, Joliet and
 
 
 
-
-Version 1.13a01      Last change: 1 May 2000                   23
+Version 1.14        Last change: 21 Jan 2001                   29
 
 
 
@@ -1523,15 +1919,6 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
-     Although HFS filenames appear to  support  upper  and  lower
-     case  letters,  the filesystem is case insensitive. i.e. the
-     filenames "aBc" and "AbC" are the same. If a file  is  found
-     in  a  directory  with  the same HFS name, then _m_k_i_s_o_f_s will
-     attempt, where possible, to make a unique name by adding '_'
-     characters to one of the filenames.
-
-     If an HFS filename exists for a file, then mkisofs  can  use
-     this  name as the starting point for the ISO9660, Joliet and
      Rock Ridge filenames using the ----mmmmaaaacccc----nnnnaaaammmmeeee option. Normal Unix
      files  without  an  HFS name will still use their Unix name.
      e.g.
@@ -1553,6 +1940,19 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      ---- TTTT  option  -  the  Unix name will be used in the TRANS.TBL
      file, not the Macintosh name.
 
+     The character set used to convert any HFS  file  name  to  a
+     Joliet/Rock Ridge file name defaults to _c_p_1_0_0_0_0 (Mac Roman).
+     The character set used can be specified  using  the  -_i_n_p_u_t-
+     _h_f_s-_c_h_a_r_s_e_t  option.  Other built in HFS character sets are:
+     cp10006 (MacGreek), cp10007 (MacCyrillic),  cp10029  (MacLa-
+     tin2), cp10079 (MacIcelandandic) and cp10081 (MacTurkish).
+
+     Note: the character codes used by HFS file names taken  from
+     the various Apple/Unix formats will not be converted as they
+     are assumed to be in the correct Apple character  set.  Only
+     the  Joliet/Rock Ridge names derived from the HFS file names
+     will be converted.
+
      The existing mkisofs code will filter out any illegal  char-
      acters  for the ISO9660 and Joliet filenames, but as mkisofs
      expects to be dealing directly with Unix  names,  it  leaves
@@ -1571,14 +1971,10 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      end  -  don't  know  if  this  is  a  Macintosh  problem  or
      mkisofs/mkhybrid problem. All filenames will be in uppercase
      when viewed on a Macintosh. Of course,  DOS/Win3.X  machines
-     will not be able to see Level 2 filenames...
 
 
 
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   24
+Version 1.14        Last change: 21 Jan 2001                   30
 
 
 
@@ -1587,6 +1983,9 @@ Version 1.13a01      Last change: 1 May 2000                   24
 
 MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
+
+
+     will not be able to see Level 2 filenames...
 
 
 HHHHFFFFSSSS CCCCUUUUSSSSTTTTOOOOMMMM VVVVOOOOLLLLUUUUMMMMEEEE////FFFFOOOOLLLLDDDDEEEERRRR IIIICCCCOOOONNNNSSSS
@@ -1641,10 +2040,7 @@ HHHHFFFFSSSS CCCCUUUUSSSSTTTTOOOOMMMM VVVVOOOOL
 
 
 
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   25
+Version 1.14        Last change: 21 Jan 2001                   31
 
 
 
@@ -1710,7 +2106,7 @@ EEEELLLL TTTTOOOORRRRIIIITTTTOOOO BBBBOOOOOOOOT
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   26
+Version 1.14        Last change: 21 Jan 2001                   32
 
 
 
@@ -1776,7 +2172,7 @@ CCCCOOOONNNNFFFFIIIIGGGGUUUURRRRAAAATTTTIIIIOO
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   27
+Version 1.14        Last change: 21 Jan 2001                   33
 
 
 
@@ -1818,14 +2214,14 @@ EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
 
      % mkisofs -o cd.iso cd_dir
 
-     To create a HFS hybrid CD with Rock Ridge extensions of  the
-     source directory _c_d__d_i_r:
+     To create a CD with Rock  Ridge  extensions  of  the  source
+     directory _c_d__d_i_r:
 
      % mkisofs -o cd.iso -R cd_dir
 
-     To create a HFS hybrid CD with Rock Ridge extensions of  the
-     source  directory  _c_d__d_i_r where all files have at least read
-     permission and all files are owned by _r_o_o_t, call:
+     To create a CD with Rock  Ridge  extensions  of  the  source
+     directory  _c_d__d_i_r where all files have at least read permis-
+     sion and all files are owned by _r_o_o_t, call:
 
      % mkisofs -o cd.iso -r cd_dir
 
@@ -1842,7 +2238,7 @@ EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   28
+Version 1.14        Last change: 21 Jan 2001                   34
 
 
 
@@ -1881,7 +2277,7 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      _c_d__d_i_r  on  the  CD  along with the three README files - but
      only one will be seen from each of the three filesystems:
 
-     % mkisofs -o cd.iso -hfs -J -r \
+     % mkisofs -o cd.iso -hfs -J -r -graft-points \
              -hide README.hfs -hide README.joliet \
              -hide-joliet README.hfs -hide-joliet README.unix \
              -hide-hfs README.joliet -hide-hfs README.unix \
@@ -1908,7 +2304,7 @@ AAAAUUUUTTTTHHHHOOOORRRR
 
 
 
-Version 1.13a01      Last change: 1 May 2000                   29
+Version 1.14        Last change: 21 Jan 2001                   35
 
 
 
@@ -1925,11 +2321,11 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
      utility is held by Yggdrasil Computing, Incorporated.  Joerg
      Schilling wrote the SCSI transport library and it's  adapta-
      tion  layer  to mmmmkkkkiiiissssooooffffssss and newer parts (starting from 1999)
-     of the utility, this makes mmmmkkkkiiiissssooooffffssss Copyright (C) 1999,  2000
-     Joerg Schilling.
+     of the utility, this makes mmmmkkkkiiiissssooooffffssss Copyright (C) 1999, 2000,
+     2001 Joerg Schilling.
 
      HFS hybrid code Copyright  (C)  James  Pearson  1997,  1998,
-     1999, 2000
+     1999, 2000, 2001
      libhfs code Copyright (C) 1996, 1997 Robert Leslie
      libfile code Copyright (C) Ian F. Darwin 1986,  1987,  1989,
      1990, 1991, 1992, 1994, 1995.
@@ -1938,6 +2334,13 @@ NNNNOOOOTTTTEEEESSSS
      MMMMkkkkiiiissssooooffffssss may safely be  installed  suid  root.  This  may  be
      needed  to  allow  mmmmkkkkiiiissssooooffffssss to read the previous session when
      creating a multi session image.
+
+     If mmmmkkkkiiiissssooooffffssss is creating a filesystem image  with  Rock  Ridge
+     attributes  and  the  directory  nesting level of the source
+     directory tree is too much for  ISO-9660,  mmmmkkkkiiiissssooooffffssss  will  do
+     deep  directory  relocation.   This  results  in a directory
+     called RRRRRRRR____MMMMOOOOVVVVEEEEDDDD in the root directory of the CD. You  cannot
+     avoid this directory.
 
 BBBBUUUUGGGGSSSS
      +o     Any files that have hard links to  files  not  in  the
@@ -1964,17 +2367,10 @@ BBBBUUUUGGGGSSSS
      +o     Does not re-use RR_MOVED when doing multi-session from
           TRANS.TBL
 
-     +o     Does not  create  whole_name  entry  for  RR_MOVED  in
-          multi-session mode.
-
-     There may be some other ones.  Please, report  them  to  the
-     author.
 
 
 
-
-
-Version 1.13a01      Last change: 1 May 2000                   30
+Version 1.14        Last change: 21 Jan 2001                   36
 
 
 
@@ -1983,6 +2379,13 @@ Version 1.13a01      Last change: 1 May 2000                   30
 
 MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
+
+
+     +o     Does not  create  whole_name  entry  for  RR_MOVED  in
+          multi-session mode.
+
+     There may be some other ones.  Please, report  them  to  the
+     author.
 
 
 HHHHFFFFSSSS PPPPRRRROOOOBBBBLLLLEEEEMMMMSSSS////LLLLIIIIMMMMIIIITTTTAAAATTTTIIIIOOOONNNNSSSS
@@ -2013,7 +2416,8 @@ HHHHFFFFSSSS PPPPRRRROOOOBBBBLLLLEEEEMMMMSSSS/
      called "oldname" is to added to the CD, then you can not use
      the command line:
 
-          mkisofs -o output.raw -hfs newname=oldname cd_dir
+          mkisofs   -  o   output.raw   -  hfs   -   graft-points
+          newname=oldname cd_dir
 
      mkisofs will be unable to decode "oldname". However, you can
      graft Apple/Unix encoded files or directories as long as you
@@ -2030,17 +2434,9 @@ HHHHFFFFSSSS PPPPRRRROOOOBBBBLLLLEEEEMMMMSSSS/
      Hybrid volumes may be larger than pure ISO9660 volumes  con-
      taining the same data.
 
-     The resulting hybrid  volume  can  be  accessed  on  a  Unix
-     machine  by using the hfsutils routines. However, no changes
-     should be made to the contents of the volume as it's  not  a
-     "real" HFS volume.
-
-     Using the ----mmmmaaaacccc----nnnnaaaammmmeeee option will not currently work with the
-     ---- TTTT  option  -  the  Unix name will be used in the TRANS.TBL
 
 
-
-Version 1.13a01      Last change: 1 May 2000                   31
+Version 1.14        Last change: 21 Jan 2001                   37
 
 
 
@@ -2051,6 +2447,16 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+     The resulting hybrid  volume  can  be  accessed  on  a  Unix
+     machine  by using the hfsutils routines. However, no changes
+     can be made to the volume as it is set as lllloooocccckkkkeeeedddd.... The option
+      ---- hhhhffffssss----uuuunnnnlllloooocccckkkk will create an output image that is unlocked -
+     however no changes should be made to  the  contents  of  the
+     volume  (unless  you really know what you are doing) as it's
+     not a "real" HFS volume.
+
+     Using the ----mmmmaaaacccc----nnnnaaaammmmeeee option will not currently work with the
+     ---- TTTT  option  -  the  Unix name will be used in the TRANS.TBL
      file, not the Macintosh name.
 
      Although mmmmkkkkiiiissssooooffffssss does not alter the contents of a file, if a
@@ -2094,19 +2500,9 @@ MMMMAAAAIIIILLLLIIIINNNNGGGG LLLLIIIISSSSTTTTS
      and include the  word  _s_u_b_s_c_r_i_b_e  in  the  body.   The  mail
      address of the list is:
 
-               cdwrite@lists.debian.org
 
 
-MMMMAAAAIIIINNNNTTTTAAAAIIIINNNNEEEERRRR
-     Joerg Schilling
-     Seestr. 110
-     D-13353 Berlin
-     Germany
-
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   32
+Version 1.14        Last change: 21 Jan 2001                   38
 
 
 
@@ -2117,28 +2513,35 @@ MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
 
 
 
+               cdwrite@lists.debian.org
+
+
+MMMMAAAAIIIINNNNTTTTAAAAIIIINNNNEEEERRRR
+     Joerg Schilling
+     Seestr. 110
+     D-13353 Berlin
+     Germany
+
 HHHHFFFFSSSS MMMMKKKKHHHHYYYYBBBBRRRRIIIIDDDD MMMMAAAAIIIINNNNTTTTAAAAIIIINNNNEEEERRRR
      James Pearson
 
      j.pearson@ge.ucl.ac.uk
 
 
-     Mail bugs and suggestions to:
+     If you have support questions, send them to:
 
-     sssscccchhhhiiiilllllllliiiinnnngggg@@@@ffffooookkkkuuuussss....ggggmmmmdddd....ddddeeee     or     jjjjssss@@@@ccccssss....ttttuuuu----bbbbeeeerrrrlllliiiinnnn....ddddeeee      or
-     jjjjooooeeeerrrrgggg@@@@sssscccchhhhiiiillllyyyy....iiiissssddddnnnn....ccccssss....ttttuuuu----bbbbeeeerrrrlllliiiinnnn....ddddeeee
+     ccccddddrrrreeeeccccoooorrrrdddd----ssssuuuuppppppppoooorrrrtttt@@@@bbbbeeeerrrrlllliiiioooossss....ddddeeee
+     or ooootttthhhheeeerrrr----ccccddddwwwwrrrriiiitttteeee@@@@lllliiiissssttttssss....ddddeeeebbbbiiiiaaaannnn....oooorrrrgggg
 
+     Of you definitly found a bug, send a mail to:
 
+     ccccddddrrrreeeeccccoooorrrrdddd----ddddeeeevvvveeeellllooooppppeeeerrrrssss@@@@bbbbeeeerrrrlllliiiioooossss....ddddeeee
+     or sssscccchhhhiiiilllllllliiiinnnngggg@@@@ffffooookkkkuuuussss....ggggmmmmdddd....ddddeeee
 
+     To subscribe, use:
 
-
-
-
-
-
-
-
-
+     hhhhttttttttpppp::::////////lllliiiissssttttssss....bbbbeeeerrrrlllliiiioooossss....ddddeeee////mmmmaaaaiiiillllmmmmaaaannnn////lllliiiissssttttiiiinnnnffffoooo////ccccddddrrrreeeeccccoooorrrrdddd----ddddeeeevvvveeeellllooooppppeeeerrrrssss
+     or hhhhttttttttpppp::::////////lllliiiissssttttssss....bbbbeeeerrrrlllliiiioooossss....ddddeeee////mmmmaaaaiiiillllmmmmaaaannnn////lllliiiissssttttiiiinnnnffffoooo////ccccddddrrrreeeeccccoooorrrrdddd----ssssuuuuppppppppoooorrrrtttt
 
 
 
@@ -2165,14 +2568,7 @@ HHHHFFFFSSSS MMMMKKKKHHHHYYYYBBBBRRRRIIIIDDDD M
 
 
 
-
-
-
-
-
-
-
-Version 1.13a01      Last change: 1 May 2000                   33
+Version 1.14        Last change: 21 Jan 2001                   39
 
 
 

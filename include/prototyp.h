@@ -1,4 +1,4 @@
-/* @(#)prototyp.h	1.7 98/10/08 Copyright 1995 J. Schilling */
+/* @(#)prototyp.h	1.8 00/11/08 Copyright 1995 J. Schilling */
 /*
  *	Definitions for dealing with ANSI / KR C-Compilers
  *
@@ -37,6 +37,15 @@
 #		endif
 #	endif
 #endif	/* PROTOTYPES */
+
+#if	!defined(PROTOTYPES) && defined(__cplusplus)
+	/*
+	 * C++ always supports prototypes.
+	 * Define PROTOTYPES so we are not forced to make
+	 * a separtate autoconf run for C++
+	 */
+#	define	PROTOTYPES
+#endif
 
 /*
  * If we have prototypes, we should have stdlib.h string.h stdarg.h

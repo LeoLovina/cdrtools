@@ -1,7 +1,7 @@
-/* @(#)exclude.c	1.7 00/04/03 joerg */
+/* @(#)exclude.c	1.8 00/12/05 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)exclude.c	1.7 00/04/03 joerg";
+	"@(#)exclude.c	1.8 00/12/05 joerg";
 #endif
 /*
  * 9-Dec-93 R.-D. Marzusch, marzusch@odiehh.hanse.de:
@@ -9,13 +9,13 @@ static	char sccsid[] =
  * CD image.
  */
 
+#include <mconfig.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdxlib.h>
 #include <strdefs.h>
-
-#ifdef	USE_LIBSCHILY
 #include <standard.h>
-#endif
+#include <schily.h>
+
 
 /* this allows for 1000 entries to be excluded ... */
 #define MAXEXCL		1000

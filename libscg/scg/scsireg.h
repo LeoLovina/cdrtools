@@ -1,4 +1,4 @@
-/* @(#)scsireg.h	1.20 00/05/28 Copyright 1987 J. Schilling */
+/* @(#)scsireg.h	1.24 00/11/07 Copyright 1987 J. Schilling */
 /*
  *	usefull definitions for dealing with CCS SCSI - devices
  *
@@ -20,43 +20,15 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_SCSIREG_H
-#define	_SCSIREG_H
+#ifndef	_SCG_SCSIREG_H
+#define	_SCG_SCSIREG_H
 
 #include <utypes.h>
 #include <btorder.h>
 
-/* 
- * SCSI status bits.
- */
-#define	ST_VU_00	0x01	/* Vendor unique		*/
-#define	ST_CHK_COND	0x02	/* Check condition		*/
-#define	ST_COND_MET	0x04	/* Condition met		*/
-#define	ST_BUSY		0x08	/* Busy				*/
-#define	ST_IS_SEND	0x10	/* Intermediate status send	*/
-#define	ST_VU_05	0x20	/* Vendor unique		*/
-#define	ST_VU_06	0x40	/* Vendor unique		*/
-#define	ST_RSVD_07	0x80	/* Reserved	 		*/
-
-/* 
- * Sense key values for extended sense.
- */
-#define SC_NO_SENSE		0x00
-#define SC_RECOVERABLE_ERROR	0x01
-#define SC_NOT_READY		0x02
-#define SC_MEDIUM_ERROR		0x03
-#define SC_HARDWARE_ERROR	0x04
-#define SC_ILLEGAL_REQUEST	0x05
-#define SC_UNIT_ATTENTION	0x06
-#define SC_WRITE_PROTECT	0x07
-#define SC_BLANK_CHECK		0x08
-#define SC_VENDOR_UNIQUE	0x09
-#define SC_COPY_ABORTED		0x0A
-#define SC_ABORTED_COMMAND	0x0B
-#define SC_EQUAL		0x0C
-#define SC_VOLUME_OVERFLOW	0x0D
-#define SC_MISCOMPARE		0x0E
-#define SC_RESERVED		0x0F
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
@@ -172,73 +144,73 @@ struct	scsi_inquiry {
 
 struct scsi_mode_header {
 	Ucbit	sense_data_len	: 8;
-	u_char	medium_type;
+	Uchar	medium_type;
 	Ucbit	res2		: 4;
 	Ucbit	cache		: 1;
 	Ucbit	res		: 2;
 	Ucbit	write_prot	: 1;
-	u_char	blockdesc_len;
+	Uchar	blockdesc_len;
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_header {
 	Ucbit	sense_data_len	: 8;
-	u_char	medium_type;
+	Uchar	medium_type;
 	Ucbit	write_prot	: 1;
 	Ucbit	res		: 2;
 	Ucbit	cache		: 1;
 	Ucbit	res2		: 4;
-	u_char	blockdesc_len;
+	Uchar	blockdesc_len;
 };
 #endif
 
 struct scsi_modesel_header {
 	Ucbit	sense_data_len	: 8;
-	u_char	medium_type;
+	Uchar	medium_type;
 	Ucbit	res2		: 8;
-	u_char	blockdesc_len;
+	Uchar	blockdesc_len;
 };
 
 struct scsi_mode_blockdesc {
-	u_char	density;
-	u_char	nlblock[3];
+	Uchar	density;
+	Uchar	nlblock[3];
 	Ucbit	res		: 8;
-	u_char	lblen[3];
+	Uchar	lblen[3];
 };
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct acb_mode_data {
-	u_char	listformat;
-	u_char	ncyl[2];
-	u_char	nhead;
-	u_char	start_red_wcurrent[2];
-	u_char	start_precomp[2];
-	u_char	landing_zone;
-	u_char	step_rate;
+	Uchar	listformat;
+	Uchar	ncyl[2];
+	Uchar	nhead;
+	Uchar	start_red_wcurrent[2];
+	Uchar	start_precomp[2];
+	Uchar	landing_zone;
+	Uchar	step_rate;
 	Ucbit			: 2;
 	Ucbit	hard_sec	: 1;
 	Ucbit	fixed_media	: 1;
 	Ucbit			: 4;
-	u_char	sect_per_trk;
+	Uchar	sect_per_trk;
 };
 
 #else					/* Motorola byteorder */
 
 struct acb_mode_data {
-	u_char	listformat;
-	u_char	ncyl[2];
-	u_char	nhead;
-	u_char	start_red_wcurrent[2];
-	u_char	start_precomp[2];
-	u_char	landing_zone;
-	u_char	step_rate;
+	Uchar	listformat;
+	Uchar	ncyl[2];
+	Uchar	nhead;
+	Uchar	start_red_wcurrent[2];
+	Uchar	start_precomp[2];
+	Uchar	landing_zone;
+	Uchar	step_rate;
 	Ucbit			: 4;
 	Ucbit	fixed_media	: 1;
 	Ucbit	hard_sec	: 1;
 	Ucbit			: 2;
-	u_char	sect_per_trk;
+	Uchar	sect_per_trk;
 };
 #endif
 
@@ -248,7 +220,7 @@ struct scsi_mode_page_header {
 	Ucbit	p_code		: 6;
 	Ucbit	res		: 1;
 	Ucbit	parsave		: 1;
-	u_char	p_len;
+	Uchar	p_len;
 };
 
 /*
@@ -266,7 +238,7 @@ struct scsi_mode_page_header {
 	Ucbit	parsave		: 1;
 	Ucbit	res		: 1;
 	Ucbit	p_code		: 6;
-	u_char	p_len;
+	Uchar	p_len;
 };
 
 /*
@@ -284,7 +256,7 @@ struct scsi_mode_page_header {
 
 struct scsi_mode_page_01 {		/* Error recovery Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0A = 12 Bytes */
+	Uchar	p_len;			/* 0x0A = 12 Bytes */
 	Ucbit	disa_correction	: 1;	/* Byte 2 */
 	Ucbit	term_on_rec_err	: 1;
 	Ucbit	report_rec_err	: 1;
@@ -293,21 +265,21 @@ struct scsi_mode_page_01 {		/* Error recovery Parameters */
 	Ucbit	tranfer_block	: 1;
 	Ucbit	en_auto_reall_r	: 1;
 	Ucbit	en_auto_reall_w	: 1;	/* Byte 2 */
-	u_char	rd_retry_count;		/* Byte 3 */
-	u_char	correction_span;
+	Uchar	rd_retry_count;		/* Byte 3 */
+	Uchar	correction_span;
 	char	head_offset_count;
 	char	data_strobe_offset;
-	u_char	res;
-	u_char	wr_retry_count;
-	u_char	res_tape[2];
-	u_char	recov_timelim[2];
+	Uchar	res;
+	Uchar	wr_retry_count;
+	Uchar	res_tape[2];
+	Uchar	recov_timelim[2];
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_01 {		/* Error recovery Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0A = 12 Bytes */
+	Uchar	p_len;			/* 0x0A = 12 Bytes */
 	Ucbit	en_auto_reall_w	: 1;	/* Byte 2 */
 	Ucbit	en_auto_reall_r	: 1;
 	Ucbit	tranfer_block	: 1;
@@ -316,14 +288,14 @@ struct scsi_mode_page_01 {		/* Error recovery Parameters */
 	Ucbit	report_rec_err	: 1;
 	Ucbit	term_on_rec_err	: 1;
 	Ucbit	disa_correction	: 1;	/* Byte 2 */
-	u_char	rd_retry_count;		/* Byte 3 */
-	u_char	correction_span;
+	Uchar	rd_retry_count;		/* Byte 3 */
+	Uchar	correction_span;
 	char	head_offset_count;
 	char	data_strobe_offset;
-	u_char	res;
-	u_char	wr_retry_count;
-	u_char	res_tape[2];
-	u_char	recov_timelim[2];
+	Uchar	res;
+	Uchar	wr_retry_count;
+	Uchar	res_tape[2];
+	Uchar	recov_timelim[2];
 };
 #endif
 
@@ -332,32 +304,32 @@ struct scsi_mode_page_01 {		/* Error recovery Parameters */
 
 struct scsi_mode_page_02 {		/* Device dis/re connect Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0E = 16 Bytes */
-	u_char	buf_full_ratio;
-	u_char	buf_empt_ratio;
-	u_char	bus_inact_limit[2];
-	u_char	disc_time_limit[2];
-	u_char	conn_time_limit[2];
-	u_char	max_burst_size[2];	/* Start SCSI-2 */
+	Uchar	p_len;			/* 0x0E = 16 Bytes */
+	Uchar	buf_full_ratio;
+	Uchar	buf_empt_ratio;
+	Uchar	bus_inact_limit[2];
+	Uchar	disc_time_limit[2];
+	Uchar	conn_time_limit[2];
+	Uchar	max_burst_size[2];	/* Start SCSI-2 */
 	Ucbit	data_tr_dis_ctl	: 2;
 	Ucbit			: 6;
-	u_char	res[3];
+	Uchar	res[3];
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_02 {		/* Device dis/re connect Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0E = 16 Bytes */
-	u_char	buf_full_ratio;
-	u_char	buf_empt_ratio;
-	u_char	bus_inact_limit[2];
-	u_char	disc_time_limit[2];
-	u_char	conn_time_limit[2];
-	u_char	max_burst_size[2];	/* Start SCSI-2 */
+	Uchar	p_len;			/* 0x0E = 16 Bytes */
+	Uchar	buf_full_ratio;
+	Uchar	buf_empt_ratio;
+	Uchar	bus_inact_limit[2];
+	Uchar	disc_time_limit[2];
+	Uchar	conn_time_limit[2];
+	Uchar	max_burst_size[2];	/* Start SCSI-2 */
 	Ucbit			: 6;
 	Ucbit	data_tr_dis_ctl	: 2;
-	u_char	res[3];
+	Uchar	res[3];
 };
 #endif
 
@@ -378,46 +350,46 @@ struct scsi_mode_page_02 {		/* Device dis/re connect Parameters */
 
 struct scsi_mode_page_03 {		/* Direct access format Paramters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x16 = 24 Bytes */
-	u_char	trk_per_zone[2];
-	u_char	alt_sec_per_zone[2];
-	u_char	alt_trk_per_zone[2];
-	u_char	alt_trk_per_vol[2];
-	u_char	sect_per_trk[2];
-	u_char	bytes_per_phys_sect[2];
-	u_char	interleave[2];
-	u_char	trk_skew[2];
-	u_char	cyl_skew[2];
+	Uchar	p_len;			/* 0x16 = 24 Bytes */
+	Uchar	trk_per_zone[2];
+	Uchar	alt_sec_per_zone[2];
+	Uchar	alt_trk_per_zone[2];
+	Uchar	alt_trk_per_vol[2];
+	Uchar	sect_per_trk[2];
+	Uchar	bytes_per_phys_sect[2];
+	Uchar	interleave[2];
+	Uchar	trk_skew[2];
+	Uchar	cyl_skew[2];
 	Ucbit			: 3;
 	Ucbit	inhibit_save	: 1;
 	Ucbit	fmt_by_surface	: 1;
 	Ucbit	removable	: 1;
 	Ucbit	hard_sec	: 1;
 	Ucbit	soft_sec	: 1;
-	u_char	res[3];
+	Uchar	res[3];
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_03 {		/* Direct access format Paramters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x16 = 24 Bytes */
-	u_char	trk_per_zone[2];
-	u_char	alt_sec_per_zone[2];
-	u_char	alt_trk_per_zone[2];
-	u_char	alt_trk_per_vol[2];
-	u_char	sect_per_trk[2];
-	u_char	bytes_per_phys_sect[2];
-	u_char	interleave[2];
-	u_char	trk_skew[2];
-	u_char	cyl_skew[2];
+	Uchar	p_len;			/* 0x16 = 24 Bytes */
+	Uchar	trk_per_zone[2];
+	Uchar	alt_sec_per_zone[2];
+	Uchar	alt_trk_per_zone[2];
+	Uchar	alt_trk_per_vol[2];
+	Uchar	sect_per_trk[2];
+	Uchar	bytes_per_phys_sect[2];
+	Uchar	interleave[2];
+	Uchar	trk_skew[2];
+	Uchar	cyl_skew[2];
 	Ucbit	soft_sec	: 1;
 	Ucbit	hard_sec	: 1;
 	Ucbit	removable	: 1;
 	Ucbit	fmt_by_surface	: 1;
 	Ucbit	inhibit_save	: 1;
 	Ucbit			: 3;
-	u_char	res[3];
+	Uchar	res[3];
 };
 #endif
 
@@ -425,38 +397,38 @@ struct scsi_mode_page_03 {		/* Direct access format Paramters */
 
 struct scsi_mode_page_04 {		/* Rigid disk Geometry Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x16 = 24 Bytes */
-	u_char	ncyl[3];
-	u_char	nhead;
-	u_char	start_precomp[3];
-	u_char	start_red_wcurrent[3];
-	u_char	step_rate[2];
-	u_char	landing_zone[3];
+	Uchar	p_len;			/* 0x16 = 24 Bytes */
+	Uchar	ncyl[3];
+	Uchar	nhead;
+	Uchar	start_precomp[3];
+	Uchar	start_red_wcurrent[3];
+	Uchar	step_rate[2];
+	Uchar	landing_zone[3];
 	Ucbit	rot_pos_locking	: 2;	/* Start SCSI-2 */
 	Ucbit			: 6;	/* Start SCSI-2 */
-	u_char	rotational_off;
-	u_char	res1;
-	u_char	rotation_rate[2];
-	u_char	res2[2];
+	Uchar	rotational_off;
+	Uchar	res1;
+	Uchar	rotation_rate[2];
+	Uchar	res2[2];
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_04 {		/* Rigid disk Geometry Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x16 = 24 Bytes */
-	u_char	ncyl[3];
-	u_char	nhead;
-	u_char	start_precomp[3];
-	u_char	start_red_wcurrent[3];
-	u_char	step_rate[2];
-	u_char	landing_zone[3];
+	Uchar	p_len;			/* 0x16 = 24 Bytes */
+	Uchar	ncyl[3];
+	Uchar	nhead;
+	Uchar	start_precomp[3];
+	Uchar	start_red_wcurrent[3];
+	Uchar	step_rate[2];
+	Uchar	landing_zone[3];
 	Ucbit			: 6;	/* Start SCSI-2 */
 	Ucbit	rot_pos_locking	: 2;	/* Start SCSI-2 */
-	u_char	rotational_off;
-	u_char	res1;
-	u_char	rotation_rate[2];
-	u_char	res2[2];
+	Uchar	rotational_off;
+	Uchar	res1;
+	Uchar	rotation_rate[2];
+	Uchar	res2[2];
 };
 #endif
 
@@ -464,68 +436,68 @@ struct scsi_mode_page_04 {		/* Rigid disk Geometry Parameters */
 
 struct scsi_mode_page_05 {		/* Flexible disk Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x1E = 32 Bytes */
-	u_char	transfer_rate[2];
-	u_char	nhead;
-	u_char	sect_per_trk;
-	u_char	bytes_per_phys_sect[2];
-	u_char	ncyl[2];
-	u_char	start_precomp[2];
-	u_char	start_red_wcurrent[2];
-	u_char	step_rate[2];
-	u_char	step_pulse_width;
-	u_char	head_settle_delay[2];
-	u_char	motor_on_delay;
-	u_char	motor_off_delay;
+	Uchar	p_len;			/* 0x1E = 32 Bytes */
+	Uchar	transfer_rate[2];
+	Uchar	nhead;
+	Uchar	sect_per_trk;
+	Uchar	bytes_per_phys_sect[2];
+	Uchar	ncyl[2];
+	Uchar	start_precomp[2];
+	Uchar	start_red_wcurrent[2];
+	Uchar	step_rate[2];
+	Uchar	step_pulse_width;
+	Uchar	head_settle_delay[2];
+	Uchar	motor_on_delay;
+	Uchar	motor_off_delay;
 	Ucbit	spc		: 4;
 	Ucbit			: 4;
 	Ucbit			: 5;
 	Ucbit	mo		: 1;
 	Ucbit	ssn		: 1;
 	Ucbit	trdy		: 1;
-	u_char	write_compensation;
-	u_char	head_load_delay;
-	u_char	head_unload_delay;
+	Uchar	write_compensation;
+	Uchar	head_load_delay;
+	Uchar	head_unload_delay;
 	Ucbit	pin_2_use	: 4;
 	Ucbit	pin_34_use	: 4;
 	Ucbit	pin_1_use	: 4;
 	Ucbit	pin_4_use	: 4;
-	u_char	rotation_rate[2];
-	u_char	res[2];
+	Uchar	rotation_rate[2];
+	Uchar	res[2];
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_05 {		/* Flexible disk Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x1E = 32 Bytes */
-	u_char	transfer_rate[2];
-	u_char	nhead;
-	u_char	sect_per_trk;
-	u_char	bytes_per_phys_sect[2];
-	u_char	ncyl[2];
-	u_char	start_precomp[2];
-	u_char	start_red_wcurrent[2];
-	u_char	step_rate[2];
-	u_char	step_pulse_width;
-	u_char	head_settle_delay[2];
-	u_char	motor_on_delay;
-	u_char	motor_off_delay;
+	Uchar	p_len;			/* 0x1E = 32 Bytes */
+	Uchar	transfer_rate[2];
+	Uchar	nhead;
+	Uchar	sect_per_trk;
+	Uchar	bytes_per_phys_sect[2];
+	Uchar	ncyl[2];
+	Uchar	start_precomp[2];
+	Uchar	start_red_wcurrent[2];
+	Uchar	step_rate[2];
+	Uchar	step_pulse_width;
+	Uchar	head_settle_delay[2];
+	Uchar	motor_on_delay;
+	Uchar	motor_off_delay;
 	Ucbit	trdy		: 1;
 	Ucbit	ssn		: 1;
 	Ucbit	mo		: 1;
 	Ucbit			: 5;
 	Ucbit			: 4;
 	Ucbit	spc		: 4;
-	u_char	write_compensation;
-	u_char	head_load_delay;
-	u_char	head_unload_delay;
+	Uchar	write_compensation;
+	Uchar	head_load_delay;
+	Uchar	head_unload_delay;
 	Ucbit	pin_34_use	: 4;
 	Ucbit	pin_2_use	: 4;
 	Ucbit	pin_4_use	: 4;
 	Ucbit	pin_1_use	: 4;
-	u_char	rotation_rate[2];
-	u_char	res[2];
+	Uchar	rotation_rate[2];
+	Uchar	res[2];
 };
 #endif
 
@@ -533,32 +505,32 @@ struct scsi_mode_page_05 {		/* Flexible disk Parameters */
 
 struct scsi_mode_page_07 {		/* Verify Error recovery */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0A = 12 Bytes */
+	Uchar	p_len;			/* 0x0A = 12 Bytes */
 	Ucbit	disa_correction	: 1;	/* Byte 2 */
 	Ucbit	term_on_rec_err	: 1;
 	Ucbit	report_rec_err	: 1;
 	Ucbit	en_early_corr	: 1;
 	Ucbit	res		: 4;	/* Byte 2 */
-	u_char	ve_retry_count;		/* Byte 3 */
-	u_char	ve_correction_span;
+	Uchar	ve_retry_count;		/* Byte 3 */
+	Uchar	ve_correction_span;
 	char	res2[5];		/* Byte 5 */
-	u_char	ve_recov_timelim[2];	/* Byte 10 */
+	Uchar	ve_recov_timelim[2];	/* Byte 10 */
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_07 {		/* Verify Error recovery */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0A = 12 Bytes */
+	Uchar	p_len;			/* 0x0A = 12 Bytes */
 	Ucbit	res		: 4;	/* Byte 2 */
 	Ucbit	en_early_corr	: 1;
 	Ucbit	report_rec_err	: 1;
 	Ucbit	term_on_rec_err	: 1;
 	Ucbit	disa_correction	: 1;	/* Byte 2 */
-	u_char	ve_retry_count;		/* Byte 3 */
-	u_char	ve_correction_span;
+	Uchar	ve_retry_count;		/* Byte 3 */
+	Uchar	ve_correction_span;
 	char	res2[5];		/* Byte 5 */
-	u_char	ve_recov_timelim[2];	/* Byte 10 */
+	Uchar	ve_recov_timelim[2];	/* Byte 10 */
 };
 #endif
 
@@ -566,43 +538,43 @@ struct scsi_mode_page_07 {		/* Verify Error recovery */
 
 struct scsi_mode_page_08 {		/* Caching Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0A = 12 Bytes */
+	Uchar	p_len;			/* 0x0A = 12 Bytes */
 	Ucbit	disa_rd_cache	: 1;	/* Byte 2 */
 	Ucbit	muliple_fact	: 1;
 	Ucbit	en_wt_cache	: 1;
 	Ucbit	res		: 5;	/* Byte 2 */
 	Ucbit	wt_ret_pri	: 4;	/* Byte 3 */
 	Ucbit	demand_rd_ret_pri: 4;	/* Byte 3 */
-	u_char	disa_pref_tr_len[2];	/* Byte 4 */
-	u_char	min_pref[2];		/* Byte 6 */
-	u_char	max_pref[2];		/* Byte 8 */
-	u_char	max_pref_ceiling[2];	/* Byte 10 */
+	Uchar	disa_pref_tr_len[2];	/* Byte 4 */
+	Uchar	min_pref[2];		/* Byte 6 */
+	Uchar	max_pref[2];		/* Byte 8 */
+	Uchar	max_pref_ceiling[2];	/* Byte 10 */
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_08 {		/* Caching Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0A = 12 Bytes */
+	Uchar	p_len;			/* 0x0A = 12 Bytes */
 	Ucbit	res		: 5;	/* Byte 2 */
 	Ucbit	en_wt_cache	: 1;
 	Ucbit	muliple_fact	: 1;
 	Ucbit	disa_rd_cache	: 1;	/* Byte 2 */
 	Ucbit	demand_rd_ret_pri: 4;	/* Byte 3 */
 	Ucbit	wt_ret_pri	: 4;
-	u_char	disa_pref_tr_len[2];	/* Byte 4 */
-	u_char	min_pref[2];		/* Byte 6 */
-	u_char	max_pref[2];		/* Byte 8 */
-	u_char	max_pref_ceiling[2];	/* Byte 10 */
+	Uchar	disa_pref_tr_len[2];	/* Byte 4 */
+	Uchar	min_pref[2];		/* Byte 6 */
+	Uchar	max_pref[2];		/* Byte 8 */
+	Uchar	max_pref_ceiling[2];	/* Byte 10 */
 };
 #endif
 
 struct scsi_mode_page_09 {		/* Peripheral device Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* >= 0x06 = 8 Bytes */
-	u_char	interface_id[2];	/* Byte 2 */
-	u_char	res[4];			/* Byte 4 */
-	u_char	vendor_specific[1];	/* Byte 8 */
+	Uchar	p_len;			/* >= 0x06 = 8 Bytes */
+	Uchar	interface_id[2];	/* Byte 2 */
+	Uchar	res[4];			/* Byte 4 */
+	Uchar	vendor_specific[1];	/* Byte 8 */
 };
 
 #define	PDEV_SCSI	0x0000		/* scsi interface */
@@ -615,7 +587,7 @@ struct scsi_mode_page_09 {		/* Peripheral device Parameters */
 
 struct scsi_mode_page_0A {		/* Common device Control Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x06 = 8 Bytes */
+	Uchar	p_len;			/* 0x06 = 8 Bytes */
 	Ucbit	rep_log_exeption: 1;	/* Byte 2 */
 	Ucbit	res		: 7;	/* Byte 2 */
 	Ucbit	dis_queuing	: 1;	/* Byte 3 */
@@ -628,14 +600,14 @@ struct scsi_mode_page_0A {		/* Common device Control Parameters */
 	Ucbit	res3		: 4;
 	Ucbit	en_ext_cont_all	: 1;	/* Byte 4 */
 	Ucbit	res4		: 8;
-	u_char	ready_aen_hold_per[2];	/* Byte 6 */
+	Uchar	ready_aen_hold_per[2];	/* Byte 6 */
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_0A {		/* Common device Control Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x06 = 8 Bytes */
+	Uchar	p_len;			/* 0x06 = 8 Bytes */
 	Ucbit	res		: 7;	/* Byte 2 */
 	Ucbit	rep_log_exeption: 1;	/* Byte 2 */
 	Ucbit	queue_alg_mod	: 4;	/* Byte 3 */
@@ -648,7 +620,7 @@ struct scsi_mode_page_0A {		/* Common device Control Parameters */
 	Ucbit	UAENP		: 1;
 	Ucbit	EAENP		: 1;	/* Byte 4 */
 	Ucbit	res4		: 8;
-	u_char	ready_aen_hold_per[2];	/* Byte 6 */
+	Uchar	ready_aen_hold_per[2];	/* Byte 6 */
 };
 #endif
 
@@ -658,44 +630,44 @@ struct scsi_mode_page_0A {		/* Common device Control Parameters */
 
 struct scsi_mode_page_0B {		/* Medium Types Supported Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x06 = 8 Bytes */
-	u_char	res[2];			/* Byte 2 */
-	u_char	medium_one_supp;	/* Byte 4 */
-	u_char	medium_two_supp;	/* Byte 5 */
-	u_char	medium_three_supp;	/* Byte 6 */
-	u_char	medium_four_supp;	/* Byte 7 */
+	Uchar	p_len;			/* 0x06 = 8 Bytes */
+	Uchar	res[2];			/* Byte 2 */
+	Uchar	medium_one_supp;	/* Byte 4 */
+	Uchar	medium_two_supp;	/* Byte 5 */
+	Uchar	medium_three_supp;	/* Byte 6 */
+	Uchar	medium_four_supp;	/* Byte 7 */
 };
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct scsi_mode_page_0C {		/* Notch & Partition Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x16 = 24 Bytes */
+	Uchar	p_len;			/* 0x16 = 24 Bytes */
 	Ucbit	res		: 6;	/* Byte 2 */
 	Ucbit	logical_notch	: 1;
 	Ucbit	notched_drive	: 1;	/* Byte 2 */
-	u_char	res2;			/* Byte 3 */
-	u_char	max_notches[2];		/* Byte 4  */
-	u_char	active_notch[2];	/* Byte 6  */
-	u_char	starting_boundary[4];	/* Byte 8  */
-	u_char	ending_boundary[4];	/* Byte 12 */
-	u_char	pages_notched[8];	/* Byte 16 */
+	Uchar	res2;			/* Byte 3 */
+	Uchar	max_notches[2];		/* Byte 4  */
+	Uchar	active_notch[2];	/* Byte 6  */
+	Uchar	starting_boundary[4];	/* Byte 8  */
+	Uchar	ending_boundary[4];	/* Byte 12 */
+	Uchar	pages_notched[8];	/* Byte 16 */
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_0C {		/* Notch & Partition Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x16 = 24 Bytes */
+	Uchar	p_len;			/* 0x16 = 24 Bytes */
 	Ucbit	notched_drive	: 1;	/* Byte 2 */
 	Ucbit	logical_notch	: 1;
 	Ucbit	res		: 6;	/* Byte 2 */
-	u_char	res2;			/* Byte 3 */
-	u_char	max_notches[2];		/* Byte 4  */
-	u_char	active_notch[2];	/* Byte 6  */
-	u_char	starting_boundary[4];	/* Byte 8  */
-	u_char	ending_boundary[4];	/* Byte 12 */
-	u_char	pages_notched[8];	/* Byte 16 */
+	Uchar	res2;			/* Byte 3 */
+	Uchar	max_notches[2];		/* Byte 4  */
+	Uchar	active_notch[2];	/* Byte 6  */
+	Uchar	starting_boundary[4];	/* Byte 8  */
+	Uchar	ending_boundary[4];	/* Byte 12 */
+	Uchar	pages_notched[8];	/* Byte 16 */
 };
 #endif
 
@@ -703,43 +675,43 @@ struct scsi_mode_page_0C {		/* Notch & Partition Parameters */
 
 struct scsi_mode_page_0D {		/* CD-ROM Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x06 = 8 Bytes */
-	u_char	res;			/* Byte 2 */
+	Uchar	p_len;			/* 0x06 = 8 Bytes */
+	Uchar	res;			/* Byte 2 */
 	Ucbit	inact_timer_mult: 4;	/* Byte 3 */
 	Ucbit	res2		: 4;	/* Byte 3 */
-	u_char	s_un_per_m_un[2];	/* Byte 4  */
-	u_char	f_un_per_s_un[2];	/* Byte 6  */
+	Uchar	s_un_per_m_un[2];	/* Byte 4  */
+	Uchar	f_un_per_s_un[2];	/* Byte 6  */
 };
 
 #else					/* Motorola byteorder */
 
 struct scsi_mode_page_0D {		/* CD-ROM Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x06 = 8 Bytes */
-	u_char	res;			/* Byte 2 */
+	Uchar	p_len;			/* 0x06 = 8 Bytes */
+	Uchar	res;			/* Byte 2 */
 	Ucbit	res2		: 4;	/* Byte 3 */
 	Ucbit	inact_timer_mult: 4;	/* Byte 3 */
-	u_char	s_un_per_m_un[2];	/* Byte 4  */
-	u_char	f_un_per_s_un[2];	/* Byte 6  */
+	Uchar	s_un_per_m_un[2];	/* Byte 4  */
+	Uchar	f_un_per_s_un[2];	/* Byte 6  */
 };
 #endif
 
 struct sony_mode_page_20 {		/* Sony Format Mode Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0A = 12 Bytes */
-	u_char	format_mode;
-	u_char	format_type;
+	Uchar	p_len;			/* 0x0A = 12 Bytes */
+	Uchar	format_mode;
+	Uchar	format_type;
 #define	num_bands	user_band_size	/* Gilt bei Type 1 */
-	u_char	user_band_size[4];	/* Gilt bei Type 0 */
-	u_char	spare_band_size[2];
-	u_char	res[2];
+	Uchar	user_band_size[4];	/* Gilt bei Type 0 */
+	Uchar	spare_band_size[2];
+	Uchar	res[2];
 };
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct toshiba_mode_page_20 {		/* Toshiba Speed Control Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x01 = 3 Bytes */
+	Uchar	p_len;			/* 0x01 = 3 Bytes */
 	Ucbit	speed		: 1;
 	Ucbit	res		: 7;
 };
@@ -748,7 +720,7 @@ struct toshiba_mode_page_20 {		/* Toshiba Speed Control Parameters */
 
 struct toshiba_mode_page_20 {		/* Toshiba Speed Control Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x01 = 3 Bytes */
+	Uchar	p_len;			/* 0x01 = 3 Bytes */
 	Ucbit	res		: 7;
 	Ucbit	speed		: 1;
 };
@@ -758,38 +730,38 @@ struct toshiba_mode_page_20 {		/* Toshiba Speed Control Parameters */
 
 struct ccs_mode_page_38 {		/* CCS Caching Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0E = 14 Bytes */
+	Uchar	p_len;			/* 0x0E = 14 Bytes */
 
 	Ucbit	cache_table_size: 4;	/* Byte 3 */
 	Ucbit	cache_en	: 1;
 	Ucbit	res2		: 1;
 	Ucbit	wr_index_en	: 1;
 	Ucbit	res		: 1;	/* Byte 3 */
-	u_char	threshold;		/* Byte 4 Prefetch threshold */
-	u_char	max_prefetch;		/* Byte 5 Max. prefetch */
-	u_char	max_multiplier;		/* Byte 6 Max. prefetch multiplier */
-	u_char	min_prefetch;		/* Byte 7 Min. prefetch */
-	u_char	min_multiplier;		/* Byte 8 Min. prefetch multiplier */
-	u_char	res3[8];		/* Byte 9 */
+	Uchar	threshold;		/* Byte 4 Prefetch threshold */
+	Uchar	max_prefetch;		/* Byte 5 Max. prefetch */
+	Uchar	max_multiplier;		/* Byte 6 Max. prefetch multiplier */
+	Uchar	min_prefetch;		/* Byte 7 Min. prefetch */
+	Uchar	min_multiplier;		/* Byte 8 Min. prefetch multiplier */
+	Uchar	res3[8];		/* Byte 9 */
 };
 
 #else					/* Motorola byteorder */
 
 struct ccs_mode_page_38 {		/* CCS Caching Parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0E = 14 Bytes */
+	Uchar	p_len;			/* 0x0E = 14 Bytes */
 
 	Ucbit	res		: 1;	/* Byte 3 */
 	Ucbit	wr_index_en	: 1;
 	Ucbit	res2		: 1;
 	Ucbit	cache_en	: 1;
 	Ucbit	cache_table_size: 4;	/* Byte 3 */
-	u_char	threshold;		/* Byte 4 Prefetch threshold */
-	u_char	max_prefetch;		/* Byte 5 Max. prefetch */
-	u_char	max_multiplier;		/* Byte 6 Max. prefetch multiplier */
-	u_char	min_prefetch;		/* Byte 7 Min. prefetch */
-	u_char	min_multiplier;		/* Byte 8 Min. prefetch multiplier */
-	u_char	res3[8];		/* Byte 9 */
+	Uchar	threshold;		/* Byte 4 Prefetch threshold */
+	Uchar	max_prefetch;		/* Byte 5 Max. prefetch */
+	Uchar	max_multiplier;		/* Byte 6 Max. prefetch multiplier */
+	Uchar	min_prefetch;		/* Byte 7 Min. prefetch */
+	Uchar	min_multiplier;		/* Byte 8 Min. prefetch multiplier */
+	Uchar	res3[8];		/* Byte 9 */
 };
 #endif
 
@@ -797,7 +769,7 @@ struct ccs_mode_page_38 {		/* CCS Caching Parameters */
 
 struct cd_mode_page_05 {		/* write parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x32 = 50 Bytes */
+	Uchar	p_len;			/* 0x32 = 50 Bytes */
 	Ucbit	write_type	: 4;	/* Session write type (PACKET/TAO...)*/
 	Ucbit	test_write	: 1;	/* Do not actually write data	     */
 	Ucbit	res_2		: 3;
@@ -807,24 +779,24 @@ struct cd_mode_page_05 {		/* write parameters */
 	Ucbit	multi_session	: 2;	/* Multi session write type	     */
 	Ucbit	dbtype		: 4;	/* Data block type		     */
 	Ucbit	res_4		: 4;	/* Reserved			     */
-	u_char	res_56[2];		/* Reserved			     */
+	Uchar	res_56[2];		/* Reserved			     */
 	Ucbit	host_appl_code	: 6;	/* Host application code of disk     */
 	Ucbit	res_7		: 2;	/* Reserved			     */
-	u_char	session_format;		/* Session format (DA/CDI/XA)	     */
-	u_char	res_9;			/* Reserved			     */
-	u_char	packet_size[4];		/* # of user datablocks/fixed packet */
-	u_char	audio_pause_len[2];	/* # of blocks where index is zero   */
-	u_char	media_cat_number[16];	/* Media catalog Number (MCN)	     */
-	u_char	ISRC[14];		/* ISRC for this track		     */
-	u_char	sub_header[4];
-	u_char	vendor_uniq[4];
+	Uchar	session_format;		/* Session format (DA/CDI/XA)	     */
+	Uchar	res_9;			/* Reserved			     */
+	Uchar	packet_size[4];		/* # of user datablocks/fixed packet */
+	Uchar	audio_pause_len[2];	/* # of blocks where index is zero   */
+	Uchar	media_cat_number[16];	/* Media catalog Number (MCN)	     */
+	Uchar	ISRC[14];		/* ISRC for this track		     */
+	Uchar	sub_header[4];
+	Uchar	vendor_uniq[4];
 };
 
 #else				/* Motorola byteorder */
 
 struct cd_mode_page_05 {		/* write parameters */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x32 = 50 Bytes */
+	Uchar	p_len;			/* 0x32 = 50 Bytes */
 	Ucbit	res_2		: 3;
 	Ucbit	test_write	: 1;	/* Do not actually write data	     */
 	Ucbit	write_type	: 4;	/* Session write type (PACKET/TAO...)*/
@@ -834,17 +806,17 @@ struct cd_mode_page_05 {		/* write parameters */
 	Ucbit	track_mode	: 4;	/* Track mode (Q-sub control nibble) */
 	Ucbit	res_4		: 4;	/* Reserved			     */
 	Ucbit	dbtype		: 4;	/* Data block type		     */
-	u_char	res_56[2];		/* Reserved			     */
+	Uchar	res_56[2];		/* Reserved			     */
 	Ucbit	res_7		: 2;	/* Reserved			     */
 	Ucbit	host_appl_code	: 6;	/* Host application code of disk     */
-	u_char	session_format;		/* Session format (DA/CDI/XA)	     */
-	u_char	res_9;			/* Reserved			     */
-	u_char	packet_size[4];		/* # of user datablocks/fixed packet */
-	u_char	audio_pause_len[2];	/* # of blocks where index is zero   */
-	u_char	media_cat_number[16];	/* Media catalog Number (MCN)	     */
-	u_char	ISRC[14];		/* ISRC for this track		     */
-	u_char	sub_header[4];
-	u_char	vendor_uniq[4];
+	Uchar	session_format;		/* Session format (DA/CDI/XA)	     */
+	Uchar	res_9;			/* Reserved			     */
+	Uchar	packet_size[4];		/* # of user datablocks/fixed packet */
+	Uchar	audio_pause_len[2];	/* # of blocks where index is zero   */
+	Uchar	media_cat_number[16];	/* Media catalog Number (MCN)	     */
+	Uchar	ISRC[14];		/* ISRC for this track		     */
+	Uchar	sub_header[4];
+	Uchar	vendor_uniq[4];
 };
 
 #endif
@@ -853,7 +825,7 @@ struct cd_mode_page_05 {		/* write parameters */
 
 struct cd_mode_page_2A {		/* CD Cap / mech status */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x14 = 20 Bytes */
+	Uchar	p_len;			/* 0x14 = 20 Bytes */
 	Ucbit	cd_r_read	: 1;	/* Reads CD-R  media		     */
 	Ucbit	cd_rw_read	: 1;	/* Reads CD-RW media		     */
 	Ucbit	method2		: 1;	/* Reads fixed packet method2 media  */
@@ -897,26 +869,26 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	side_change	: 1;	/* Side change capable		     */
 	Ucbit	pw_in_lead_in	: 1;	/* Reads raw P-W sucode from lead in */
 	Ucbit	res_7		: 2;	/* Reserved			     */
-	u_char	max_read_speed[2];	/* Max. read speed in KB/s	     */
-	u_char	num_vol_levels[2];	/* # of supported volume levels	     */
-	u_char	buffer_size[2];		/* Buffer size for the data in KB    */
-	u_char	cur_read_speed[2];	/* Current read speed in KB/s	     */
-	u_char	res_16;			/* Reserved			     */
+	Uchar	max_read_speed[2];	/* Max. read speed in KB/s	     */
+	Uchar	num_vol_levels[2];	/* # of supported volume levels	     */
+	Uchar	buffer_size[2];		/* Buffer size for the data in KB    */
+	Uchar	cur_read_speed[2];	/* Current read speed in KB/s	     */
+	Uchar	res_16;			/* Reserved			     */
 	Ucbit	res_17_0	: 1;	/* Reserved			     */
 	Ucbit	BCK		: 1;	/* Data valid on falling edge of BCK */
 	Ucbit	RCK		: 1;	/* Set: HIGH high LRCK=left channel  */
 	Ucbit	LSBF		: 1;	/* Set: LSB first Clear: MSB first   */
 	Ucbit	length		: 2;	/* 0=32BCKs 1=16BCKs 2=24BCKs 3=24I2c*/
 	Ucbit	res_17		: 2;	/* Reserved			     */
-	u_char	max_write_speed[2];	/* Max. write speed supported in KB/s*/
-	u_char	cur_write_speed[2];	/* Current write speed in KB/s	     */
+	Uchar	max_write_speed[2];	/* Max. write speed supported in KB/s*/
+	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	     */
 };
 
 #else				/* Motorola byteorder */
 
 struct cd_mode_page_2A {		/* CD Cap / mech status */
 		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x14 = 20 Bytes */
+	Uchar	p_len;			/* 0x14 = 20 Bytes */
 	Ucbit	res_2_67	: 2;	/* Reserved			     */
 	Ucbit	dvd_ram_read	: 1;	/* Reads DVD-RAM media		     */
 	Ucbit	dvd_r_read	: 1;	/* Reads DVD-R media		     */
@@ -960,19 +932,19 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	disk_present_rep: 1;	/* Changer supports disk present rep */
 	Ucbit	sep_chan_mute	: 1;	/* Mute controls each channel separat*/
 	Ucbit	sep_chan_vol	: 1;	/* Vol controls each channel separat */
-	u_char	max_read_speed[2];	/* Max. read speed in KB/s	     */
-	u_char	num_vol_levels[2];	/* # of supported volume levels	     */
-	u_char	buffer_size[2];		/* Buffer size for the data in KB    */
-	u_char	cur_read_speed[2];	/* Current read speed in KB/s	     */
-	u_char	res_16;			/* Reserved			     */
+	Uchar	max_read_speed[2];	/* Max. read speed in KB/s	     */
+	Uchar	num_vol_levels[2];	/* # of supported volume levels	     */
+	Uchar	buffer_size[2];		/* Buffer size for the data in KB    */
+	Uchar	cur_read_speed[2];	/* Current read speed in KB/s	     */
+	Uchar	res_16;			/* Reserved			     */
 	Ucbit	res_17		: 2;	/* Reserved			     */
 	Ucbit	length		: 2;	/* 0=32BCKs 1=16BCKs 2=24BCKs 3=24I2c*/
 	Ucbit	LSBF		: 1;	/* Set: LSB first Clear: MSB first   */
 	Ucbit	RCK		: 1;	/* Set: HIGH high LRCK=left channel  */
 	Ucbit	BCK		: 1;	/* Data valid on falling edge of BCK */
 	Ucbit	res_17_0	: 1;	/* Reserved			     */
-	u_char	max_write_speed[2];	/* Max. write speed supported in KB/s*/
-	u_char	cur_write_speed[2];	/* Current write speed in KB/s	     */
+	Uchar	max_write_speed[2];	/* Max. write speed supported in KB/s*/
+	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	     */
 };
 
 #endif
@@ -1023,7 +995,7 @@ struct scsi_def_header {
 	Ucbit	gdl	: 1;
 	Ucbit	mdl	: 1;
 	Ucbit		: 3;
-	u_char	length[2];
+	Uchar	length[2];
 };
 
 #else					/* Motorola byteorder */
@@ -1034,7 +1006,7 @@ struct scsi_def_header {
 	Ucbit	mdl	: 1;
 	Ucbit	gdl	: 1;
 	Ucbit	format	: 3;
-	u_char	length[2];
+	Uchar	length[2];
 };
 #endif
 
@@ -1049,7 +1021,7 @@ struct scsi_format_header {
 	Ucbit	dcert		: 1;	/* Disable certification	    */
 	Ucbit	dmdl		: 1;	/* Disable manufacturer defect list */
 	Ucbit	enable		: 1;	/* Enable to use the next 3 bits    */
-	u_char	length[2];		/* Length of following list in bytes*/
+	Uchar	length[2];		/* Length of following list in bytes*/
 };
 
 #else					/* Motorola byteorder */
@@ -1062,26 +1034,26 @@ struct scsi_format_header {
 	Ucbit	serr		: 1;	/* Stop on error		    */
 	Ucbit			: 3;
 	Ucbit	vu		: 1;
-	u_char	length[2];		/* Length of following list in bytes*/
+	Uchar	length[2];		/* Length of following list in bytes*/
 };
 #endif
 
 struct	scsi_def_bfi {
-	u_char	cyl[3];
-	u_char	head;
-	u_char	bfi[4];
+	Uchar	cyl[3];
+	Uchar	head;
+	Uchar	bfi[4];
 };
 
 struct	scsi_def_phys {
-	u_char	cyl[3];
-	u_char	head;
-	u_char	sec[4];
+	Uchar	cyl[3];
+	Uchar	head;
+	Uchar	sec[4];
 };
 
 struct	scsi_def_list {
 	struct	scsi_def_header	hd;
 	union {
-			u_char		list_block[1][4];
+			Uchar		list_block[1][4];
 		struct	scsi_def_bfi	list_bfi[1];
 		struct	scsi_def_phys	list_phys[1];
 	} def_list;
@@ -1090,7 +1062,7 @@ struct	scsi_def_list {
 struct	scsi_format_data {
 	struct scsi_format_header hd;
 	union {
-			u_char		list_block[1][4];
+			Uchar		list_block[1][4];
 		struct	scsi_def_bfi	list_bfi[1];
 		struct	scsi_def_phys	list_phys[1];
 	} def_list;
@@ -1107,17 +1079,17 @@ struct	scsi_format_data {
 #define	SC_DEF_RES	7
 
 struct	scsi_send_diag_cmd {
-	u_char	cmd;
-	u_char	addr[4];
+	Uchar	cmd;
+	Uchar	addr[4];
 	Ucbit		: 8;
 };
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct	scsi_sector_header {
-	u_char	cyl[2];
-	u_char	head;
-	u_char	sec;
+	Uchar	cyl[2];
+	Uchar	head;
+	Uchar	sec;
 	Ucbit		: 5;
 	Ucbit	rp	: 1;
 	Ucbit	sp	: 1;
@@ -1127,9 +1099,9 @@ struct	scsi_sector_header {
 #else					/* Motorola byteorder */
 
 struct	scsi_sector_header {
-	u_char	cyl[2];
-	u_char	head;
-	u_char	sec;
+	Uchar	cyl[2];
+	Uchar	head;
+	Uchar	sec;
 	Ucbit	dt	: 1;
 	Ucbit	sp	: 1;
 	Ucbit	rp	: 1;
@@ -1137,4 +1109,8 @@ struct	scsi_sector_header {
 };
 #endif
 
-#endif	/* _SCSIREG_H */
+#ifdef	__cplusplus
+}
+#endif
+
+#endif	/* _SCG_SCSIREG_H */

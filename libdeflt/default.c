@@ -1,7 +1,7 @@
-/* @(#)default.c	1.2 98/12/01 Copyright 1997 J. Schilling */
+/* @(#)default.c	1.3 00/09/04 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)default.c	1.2 98/12/01 Copyright 1997 J. Schilling";
+	"@(#)default.c	1.3 00/09/04 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1997 J. Schilling
@@ -23,6 +23,7 @@ static	char sccsid[] =
  */
 
 #include <mconfig.h>
+#include <standard.h>
 #include <stdio.h>
 #include <strdefs.h>
 #include <deflts.h>
@@ -31,7 +32,14 @@ static	char sccsid[] =
 
 static	FILE	*dfltfile	= (FILE *)NULL;
 
-int
+EXPORT	int	defltopen	__PR((const char *name));
+EXPORT	int	defltclose	__PR((void));
+EXPORT	void	defltfirst	__PR((void));
+EXPORT	char	*defltread	__PR((const char *name));
+EXPORT	char	*defltnext	__PR((const char *name));
+EXPORT	int	defltcntl	__PR((int cmd, int flags));
+
+EXPORT int
 defltopen(name)
 	const char	*name;
 {
@@ -49,7 +57,7 @@ defltopen(name)
 	return (0);
 }
 
-int
+EXPORT int
 defltclose()
 {
 	int	ret;
@@ -62,8 +70,28 @@ defltclose()
 	return (0);
 }
 
-char *
+EXPORT void
+defltfirst()
+{
+	if (dfltfile == (FILE *)NULL) {
+		return;
+	}
+	rewind(dfltfile);
+}
+
+EXPORT char *
 defltread(name)
+	const char	*name;
+{
+	if (dfltfile == (FILE *)NULL) {
+		return ((char *)NULL);
+	}
+	rewind(dfltfile);
+	return (defltnext(name));
+}
+
+EXPORT char *
+defltnext(name)
 	const char	*name;
 {
 	register int	len;
@@ -75,7 +103,6 @@ defltread(name)
 	}
 	namelen = strlen(name);
 
-	rewind(dfltfile);
 	while (fgets(buf, sizeof(buf), dfltfile)) {
 		len = strlen(buf);
 		if (buf[len-1] == '\n') {
@@ -90,7 +117,7 @@ defltread(name)
 	return ((char *)NULL);
 }
 
-int
+EXPORT int
 defltcntl(cmd, flags)
 	int	cmd;
 	int	flags;

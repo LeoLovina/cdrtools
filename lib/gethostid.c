@@ -1,7 +1,7 @@
-/* @(#)gethostid.c	1.13 99/08/30 Copyright 1995 J. Schilling */
+/* @(#)gethostid.c	1.14 01/03/04 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)gethostid.c	1.13 99/08/30 Copyright 1995 J. Schilling";
+	"@(#)gethostid.c	1.14 01/03/04 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1995 J. Schilling
@@ -36,7 +36,9 @@ EXPORT	long	gethostid	__PR((void));
 #endif
 
 
-#if	!defined(HAVE_GETHOSTID) && defined(SI_HW_SERIAL)
+#if	!defined(HAVE_GETHOSTID)
+
+#if	defined(SI_HW_SERIAL)
 
 EXPORT long
 gethostid()
@@ -48,4 +50,21 @@ gethostid()
 	id = atoi(hbuf);
 	return (id);
 }
+#else
+
+#include <errno.h>
+EXPORT long
+gethostid()
+{
+	long	id = -1L;
+
+#ifdef	ENOSYS
+	seterrno(ENOSYS);
+#else
+	seterrno(EINVAL);
+#endif
+	return (id);
+}
+#endif
+
 #endif

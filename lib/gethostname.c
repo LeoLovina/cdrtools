@@ -1,7 +1,7 @@
-/* %Z%%M%	%I% %E% Copyright 1995 J. Schilling */
+/* @(#)gethostname.c	1.14 00/08/26 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"%Z%%M%	%I% %E% Copyright 1995 J. Schilling";
+	"@(#)gethostname.c	1.14 00/08/26 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1995 J. Schilling

@@ -1,3 +1,8 @@
+/* @(#)btree.c	1.2 00/11/30 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)btree.c	1.2 00/11/30 joerg";
+#endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie
@@ -43,7 +48,14 @@ int bt_getnode(np)
 
   /* verify the node exists and is marked as in-use */
 
-  if (np->nnum < 0 || (np->nnum > 0 && np->nnum >= bt->hdr.bthNNodes))
+	/*
+	 * XXX This is the original code. As np->nnum is unsigned, the
+	 * XXX comparison for < 0 makes no sense.
+	 * XXX Thanks for a hint from Mike.Sullivan@Eng.Sun.COM
+	 */
+/*  if (np->nnum < 0 || (np->nnum > 0 && np->nnum >= bt->hdr.bthNNodes))*/
+
+  if (np->nnum > 0 && np->nnum >= bt->hdr.bthNNodes)
     {
       ERROR(EIO, "read nonexistent b*-tree node");
       return -1;

@@ -1,6 +1,6 @@
-/* @(#)scsierrs.h	1.2 96/06/23 Copyright 1987 J. Schilling */
+/* @(#)fileopen64.c	1.5 00/12/28 Copyright 2000 J. Schilling */
 /*
- *	Copyright (c) 1987 J. Schilling
+ *	Copyright (c) 2000 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -18,8 +18,13 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-struct scnonstd {
-	u_char	class;
-	u_char	code;
-	char	*errstr;
-};
+#define	USE_LARGEFILES
+
+#include "io.h"
+
+/*#if	_LFS_LARGEFILE*/
+#ifdef	HAVE_LARGEFILES
+
+#include "fileopen.c"
+
+#endif

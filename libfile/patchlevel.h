@@ -1,3 +1,4 @@
+/* @(#)patchlevel.h	1.1 97/01/15 joerg */
 #define	FILE_VERSION_MAJOR	3
 #define	patchlevel		22
 

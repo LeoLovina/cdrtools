@@ -1,4 +1,4 @@
-/* @(#)standard.h	1.24 00/05/28 Copyright 1985 J. Schilling */
+/* @(#)standard.h	1.27 01/02/23 Copyright 1985 J. Schilling */
 /*
  *	standard definitions
  *
@@ -6,10 +6,8 @@
  *
  *	mconfig.h / config.h
  *	stdio.h
- *	stdlib.h
- *	unistd.h
- *	string.h
- *	sys/types.h
+ *	stdlib.h	(better use stdxlib.h)
+ *	unistd.h	(better use unixstd.h) needed LARGEFILE support
  *
  *	Copyright (c) 1985 J. Schilling
  */
@@ -32,16 +30,17 @@
 #ifndef _STANDARD_H
 #define _STANDARD_H
 
-#ifdef	M68000
-#	ifndef	tos
-#		define	JOS	1
-#	endif
-#endif
 #ifndef _MCONFIG_H
 #include <mconfig.h>
 #endif
 #ifndef _PROTOTYP_H
 #include <prototyp.h>
+#endif
+
+#ifdef	M68000
+#	ifndef	tos
+#		define	JOS	1
+#	endif
 #endif
 
 /*
@@ -54,8 +53,6 @@
 #	define	TRUE		1
 #	define	FALSE		0
 #endif
-#define	YES			1
-#define	NO			0
 
 /*
  *	Program exit codes
@@ -71,14 +68,7 @@
 #define	INTERN	static
 #define	LOCAL	static
 #define	FAST	register
-#if defined(_JOS) || defined(JOS)
-#	define	global	extern
-#	define	import	extern
-#	define	export
-#	define	intern	static
-#	define	local	static
-#	define	fast	register
-#endif
+
 #ifndef	PROTOTYPES
 #	ifndef	const
 #		define	const
@@ -99,7 +89,6 @@
  */
 typedef int __SBOOL;
 typedef int BOOL;
-typedef int bool;
 #ifdef	JOS
 #	define	NO_VOID
 #endif
@@ -112,18 +101,30 @@ typedef int bool;
 	typedef	void	VOID;
 #endif
 
+#if	defined(_INCL_SYS_TYPES_H) || defined(off_t)
+#	ifndef	FOUND_OFF_T
+#	define	FOUND_OFF_T
+#	endif
+#endif
+#if	defined(_INCL_SYS_TYPES_H) || defined(size_t)
+#	ifndef	FOUND_SIZE_T
+#	define	FOUND_SIZE_T
+#	endif
+#endif
+
 #if	defined(_SIZE_T)     || defined(_T_SIZE_) || defined(_T_SIZE) || \
 	defined(__SIZE_T)    || defined(_SIZE_T_) || \
 	defined(_GCC_SIZE_T) || defined(_SIZET_)  || \
 	defined(__sys_stdtypes_h) || defined(___int_size_t_h) || defined(size_t)
 
-#ifndef	HAVE_SIZE_T
-#	define	HAVE_SIZE_T	/* We already included a size_t definition */
+#ifndef	FOUND_SIZE_T
+#	define	FOUND_SIZE_T	/* We already included a size_t definition */
 #endif
 #endif
 
 #if defined(_JOS) || defined(JOS)
 #	include <schily.h>
+#	include <jos_defs.h>
 #	include <jos_io.h>
 #endif
 

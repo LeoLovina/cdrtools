@@ -1,4 +1,4 @@
-/* @(#)libport.h	1.3 99/10/16 Copyright 1995 J. Schilling */
+/* @(#)libport.h	1.4 00/11/08 Copyright 1995 J. Schilling */
 /*
  *	Copyright (c) 1995 J. Schilling
  */
@@ -29,6 +29,10 @@
 #include <prototyp.h>
 #endif
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
 #ifdef	OPENSERVER
 /*
  * Don't use the usleep() from libc on SCO's OPENSERVER.
@@ -52,6 +56,10 @@ extern	int		getdomainname	__PR((char *name, int namelen));
 #endif
 #ifndef	HAVE_USLEEP
 extern	int		usleep		__PR((int usec));
+#endif
+
+#ifdef	__cplusplus
+}
 #endif
 
 #endif	/* _LIBPORT_H */

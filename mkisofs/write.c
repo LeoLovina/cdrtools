@@ -1,7 +1,7 @@
-/* @(#)write.c	1.44 00/06/05 joerg */
+/* @(#)write.c	1.49 01/02/15 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)write.c	1.44 00/06/05 joerg";
+	"@(#)write.c	1.49 01/02/15 joerg";
 #endif
 /*
  * Program write.c - dump memory  structures to  file for iso9660 filesystem.
@@ -9,7 +9,7 @@ static	char sccsid[] =
    Written by Eric Youngdale (1993).
 
    Copyright 1993 Yggdrasil Computing, Incorporated
-   Copyright (c) 1999,2000 J. Schilling
+   Copyright (c) 1999,2000,2001 J. Schilling
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,27 +27,15 @@ static	char sccsid[] =
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
-#include "config.h"
-#include <strdefs.h>
-#include <stdxlib.h>
+#include <mconfig.h>
 #include "mkisofs.h"
-#include "iso9660.h"
+#include <timedefs.h>
+#include <fctldefs.h>
 #ifdef SORTING
 #include "match.h"
 #endif /* SORTING */
-#include <time.h>
 #include <errno.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#include <unixstd.h>
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
 #include <schily.h>
-#endif
 
 #ifdef __SVR4
 extern char    *strdup	__PR((const char *));
@@ -91,7 +79,7 @@ struct iso_primary_descriptor vol_desc;
 static	int	assign_directory_addresses __PR((struct directory *node));
 #ifdef APPLE_HYB
 static	void	write_one_file	__PR((char *filename, unsigned int size,
-					FILE *outfile, unsigned int off));
+					FILE *outfile, off_t off));
 #else
 static	void	write_one_file	__PR((char *filename, unsigned int size,
 					FILE *outfile));
@@ -265,7 +253,7 @@ xfwrite(buffer, count, size, file)
 	static int	idx = 0;
 
 	if (split_output != 0 &&
-		(idx == 0 || ftell(file) >= (1024 * 1024 * 1024))) {
+		(idx == 0 || ftell(file) >= ((off_t)1024 * 1024 * 1024))) {
 		char		nbuf[512];
 		extern char	*outfile;
 
@@ -308,7 +296,7 @@ static struct deferred_write	*dw_head = NULL,
 				*dw_tail = NULL;
 
 unsigned int	last_extent_written = 0;
-static int	path_table_index;
+static Uint	path_table_index;
 static time_t	begun;
 
 /*
@@ -366,7 +354,7 @@ write_one_file(filename, size, outfile, off)
 	char		*filename;
 	unsigned int	size;
 	FILE		*outfile;
-	unsigned int	off;
+	off_t		off;
 #else
 static void
 write_one_file(filename, size, outfile)
@@ -429,7 +417,8 @@ static	char		buffer[SECTOR_SIZE * NSECT];
 			fprintf(stderr, "%d..", last_extent_written);
 		}
 #else
-		if ((last_extent_written % (gui ? 500 : 5000)) <
+		if (verbose > 0 &&
+			   (int)(last_extent_written % (gui ? 500 : 5000)) <
 							use / SECTOR_SIZE) {
 			time_t	now;
 			time_t	the_end;
@@ -496,7 +485,7 @@ write_files(outfile)
 			 * clump sizes
 			 */
 			char	blk[SECTOR_SIZE];
-			int	i;
+			Uint	i;
 
 			for (i = 0; i < dwpnt->pad; i++)
 				xfwrite(blk, 1, SECTOR_SIZE, outfile);
@@ -1041,7 +1030,7 @@ assign_file_addresses(dpnt)
 				 */
 				dwpnt->off = s_entry->hfs_off;
 #else
-				dwpnt->off = 0;
+				dwpnt->off = (off_t)0;
 #endif	/* APPLE_HYB */
 				if (dw_tail) {
 					dw_tail->next = dwpnt;
@@ -1540,11 +1529,16 @@ void
 outputlist_insert(frag)
 	struct output_fragment *frag;
 {
+	struct output_fragment *nfrag;
+
+	nfrag = e_malloc(sizeof(*frag));
+	movebytes(frag, nfrag, sizeof(*frag));
+
 	if (out_tail == NULL) {
-		out_list = out_tail = frag;
+		out_list = out_tail = nfrag;
 	} else {
-		out_tail->of_next = frag;
-		out_tail = frag;
+		out_tail->of_next = nfrag;
+		out_tail = nfrag;
 	}
 }
 
@@ -1552,7 +1546,7 @@ static int
 file_write(outfile)
 	FILE	*outfile;
 {
-	int	should_write;
+	Uint	should_write;
 
 #ifdef APPLE_HYB
 	char	buffer[SECTOR_SIZE];
@@ -1643,7 +1637,7 @@ file_write(outfile)
 #endif	/* APPLE_HYB */
 
 	/* Hard links throw us off here */
-	if (should_write != last_extent - session_start) {
+	if (should_write != (last_extent - session_start)) {
 		fprintf(stderr,
 		"Number of extents written not what was predicted.  Please fix.\n");
 		fprintf(stderr, "Predicted = %d, written = %d\n",
@@ -2402,7 +2396,7 @@ insert_padding_file(size)
 	/* set the padding to zero */
 	dwpnt->pad = 0;
 	/* set offset to zero */
-	dwpnt->off = 0;
+	dwpnt->off = (off_t)0;
 
 	/*
 	 * don't need to wory about the s_entry stuff as it won't be touched#

@@ -1,7 +1,7 @@
-/* @(#)drv_philips.c	1.37 00/05/07 Copyright 1997 J. Schilling */
+/* @(#)drv_philips.c	1.42 01/02/20 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_philips.c	1.37 00/05/07 Copyright 1997 J. Schilling";
+	"@(#)drv_philips.c	1.42 01/02/20 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -28,6 +28,7 @@ static	char sccsid[] =
 #include <mconfig.h>
 
 #include <stdio.h>
+#include <unixstd.h>	/* Include sys/types.h to make off_t available */
 #include <standard.h>
 #include <intcvt.h>
 #include <schily.h>
@@ -47,6 +48,7 @@ LOCAL	int	philips_load			__PR((SCSI *scgp));
 LOCAL	int	philips_unload			__PR((SCSI *scgp));
 LOCAL	int	philips_dumbload		__PR((SCSI *scgp));
 LOCAL	int	philips_dumbunload		__PR((SCSI *scgp));
+LOCAL	int	plasmon_buf			__PR((SCSI *, long *, long *));
 LOCAL	int	recover_philips			__PR((SCSI *scgp, int));
 LOCAL	int	speed_select_yamaha		__PR((SCSI *scgp, int *speedp, int dummy));
 LOCAL	int	speed_select_philips		__PR((SCSI *scgp, int *speedp, int dummy));
@@ -62,6 +64,7 @@ LOCAL	int	scsi_cdr_write_philips		__PR((SCSI *scgp, caddr_t bp, long sectaddr, l
 LOCAL	int	write_track_info_philips	__PR((SCSI *scgp, int));
 LOCAL	int	write_track_philips		__PR((SCSI *scgp, long, int));
 LOCAL	int	open_track_philips		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *track_info));
+LOCAL	int	open_track_plasmon		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *track_info));
 LOCAL	int	open_track_oldphilips		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *track_info));
 LOCAL	int	open_track_yamaha		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *track_info));
 LOCAL	int	close_track_philips		__PR((SCSI *scgp, int track, track_t *trackp));
@@ -284,7 +287,7 @@ cdr_t	cdr_plasmon_rf4100 = {
 	philips_getdisktype,
 	philips_load,
 	philips_unload,
-	buf_dummy,
+	plasmon_buf,
 	recovery_needed,
 	recover_philips,
 	speed_select_philips,
@@ -293,7 +296,7 @@ cdr_t	cdr_plasmon_rf4100 = {
 	reserve_track_philips,
 	scsi_cdr_write_philips,
 	no_sendcue,
-	open_track_philips,
+	open_track_plasmon,
 	close_track_philips,
 	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
@@ -436,14 +439,13 @@ load_unload_philips(scgp, load)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0xE7;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.count[1] = !load;
 	
 	scgp->cmdname = "philips medium load/unload";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -491,6 +493,29 @@ philips_dumbunload(scgp)
 }
 
 LOCAL int
+plasmon_buf(scgp, sp, fp)
+	SCSI	*scgp;
+	long	*sp;	/* Size pointer */
+	long	*fp;	/* Free space pointer */
+{
+	/*
+	 * There's no way to obtain these values from the
+	 * Plasmon RF41xx devices.  This function stub is only
+	 * present to prevent cdrecord.c from calling a pointless
+	 * READ BUFFER SCSI cmd which is meant to be used for
+	 * something totally else, and which would only jam the
+	 * Plasmon due to the incorrect parameters used.
+	 */
+
+	if (sp)
+		*sp = 0L;
+	if (fp)
+		*fp = 0L;
+
+	return (100);	/* 100 % */
+}
+
+LOCAL int
 recover_philips(scgp, track)
 	SCSI	*scgp;
 	int	track;
@@ -501,13 +526,12 @@ recover_philips(scgp, track)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0xEC;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	
 	scgp->cmdname = "philips recover";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -533,7 +557,7 @@ speed_select_yamaha(scgp, speedp, dummy)
 		fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 		if (!get_mode_params(scgp, page, "Speed/Dummy information",
-			(u_char *)mode, (u_char *)0, (u_char *)0, (u_char *)0, &len)) {
+			(Uchar *)mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len)) {
 			return (-1);
 		}
 		if (len == 0)
@@ -582,7 +606,7 @@ speed_select_philips(scgp, speedp, dummy)
 		fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 		if (!get_mode_params(scgp, page, "Speed/Dummy information",
-			(u_char *)mode, (u_char *)0, (u_char *)0, (u_char *)0, &len)) {
+			(Uchar *)mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len)) {
 			return (-1);
 		}
 		if (len == 0)
@@ -673,8 +697,8 @@ philips_getdisktype(scgp, dp, dsp)
 	 */
 	if ((dsp->ds_cdrflags & RF_WRITE) != 0 &&
 	    dummy < 0 &&
-	    (scsi_sense_key(scgp) != SC_ILLEGAL_REQUEST ||
-						scsi_sense_code(scgp) != 0x2C)) {
+	    (scg_sense_key(scgp) != SC_ILLEGAL_REQUEST ||
+						scg_sense_code(scgp) != 0x2C)) {
 
 		errmsgno(EX_BAD, "Drive needs to reload the media to return to proper status.\n");
 
@@ -729,7 +753,7 @@ philips_getdisktype(scgp, dp, dsp)
 	/*read_subchannel(scgp, bp, track, cnt, msf, subq, fmt); */
 
 	if (read_subchannel(scgp, sbuf, 0, 14, 0, 0, 0xf1) >= 0)
-		scsiprbytes("Disk bar code:", (Uchar *)sbuf, 14 - scsigetresid(scgp));
+		scg_prbytes("Disk bar code:", (Uchar *)sbuf, 14 - scg_getresid(scgp));
 	scgp->silent--;
 
 	return (drive_getdisktype(scgp, dp, dsp));
@@ -789,9 +813,8 @@ first_writable_addr_philips(scgp, ap, track, isaudio, preemp, npa)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0xE2;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.addr[0] = track;
 	scmd->cdb.g1_cdb.addr[1] = isaudio ? (preemp ? 5 : 4) : 1;
 
@@ -800,7 +823,7 @@ first_writable_addr_philips(scgp, ap, track, isaudio, preemp, npa)
 	
 	scgp->cmdname = "first writeable address philips";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 
 	if (ap)
@@ -833,14 +856,13 @@ reserve_track_philips(scgp, len)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0xE4;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	i_to_4_byte(&scmd->cdb.g1_cdb.addr[3], len);
 	
 	scgp->cmdname = "philips reserve_track";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -889,15 +911,14 @@ write_track_philips(scgp, track, sectype)
 /*	scmd->flags = SCG_DISRE_ENA;*/
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0xE6;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdbaddr(&scmd->cdb.g1_cdb, track);
 	scmd->cdb.g1_cdb.res6 = sectype;
 	
 	scgp->cmdname = "philips write_track";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -916,6 +937,22 @@ open_track_philips(scgp, dp, track, track_info)
 		return (-1);
 
 	if (write_track_philips(scgp, 0, track_info->sectype) < 0)
+		return (-1);
+
+	return (0);
+}
+
+LOCAL int
+open_track_plasmon(scgp, dp, track, track_info)
+	SCSI	*scgp;
+	cdr_t	*dp;
+	int	track;
+	track_t *track_info;
+{
+	if (select_secsize(scgp, track_info->secsize) < 0)
+		return (-1);
+
+	if (write_track_info_philips(scgp, track_info->sectype) < 0)
 		return (-1);
 
 	return (0);
@@ -974,15 +1011,14 @@ fixation_philips(scgp, onp, dummy, type, tracks, trackp)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->timeout = 8 * 60;		/* Needs up to 4 minutes */
 	scmd->cdb.g1_cdb.cmd = 0xE9;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.count[1] = (onp ? 8 : 0) | type;
 	
 	scgp->cmdname = "philips fixation";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
@@ -1145,7 +1181,7 @@ philips_attach(scgp, dp)
 	SCSI	*scgp;
 	cdr_t	*dp;
 {
-	scsi_setnonstderrs(scgp, sd_cdd_521_error_str);
+	scg_setnonstderrs(scgp, sd_cdd_521_error_str);
 	return (0);
 }
 
@@ -1156,7 +1192,7 @@ plasmon_attach(scgp, dp)
 {
 	scgp->inq->data_format = 1;	/* Correct the ly */
 
-	scsi_setnonstderrs(scgp, sd_cdd_521_error_str);
+	scg_setnonstderrs(scgp, sd_cdd_521_error_str);
 	return (0);
 }
 
@@ -1169,7 +1205,7 @@ ricoh_attach(scgp, dp)
 		errmsgno(EX_BAD, "No support for Ricoh RO-1060C\n");
 		return (-1);
 	}
-	scsi_setnonstderrs(scgp, sd_ro1420_error_str);
+	scg_setnonstderrs(scgp, sd_ro1420_error_str);
 	return (0);
 }
 
@@ -1189,18 +1225,17 @@ philips_getlilo(scgp, lilenp, lolenp)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0xEE;	/* Read session info */
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdblen(&scmd->cdb.g1_cdb, sizeof(buf));
 
 	scgp->cmdname = "philips read session info";
 
-	if (scsicmd(scgp) < 0)
+	if (scg_cmd(scgp) < 0)
 		return (-1);
 
 	if (scgp->verbose)
-		scsiprbytes("Session info data: ", (u_char *)buf, sizeof(buf) - scsigetresid(scgp));
+		scg_prbytes("Session info data: ", (Uchar *)buf, sizeof(buf) - scg_getresid(scgp));
 
 	li = a_to_u_2_byte(buf);
 	lo = a_to_u_2_byte(&buf[2]);

@@ -1,12 +1,12 @@
-/* @(#)readcd.c	1.20 00/07/20 Copyright 1987 J. Schilling */
+/* @(#)readcd.c	1.34 01/04/13 Copyright 1987, 1995-2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)readcd.c	1.20 00/07/20 Copyright 1987 J. Schilling";
+	"@(#)readcd.c	1.34 01/04/13 Copyright 1987, 1995-2001 J. Schilling";
 #endif
 /*
  *	Skeleton for the use of the scg genearal SCSI - driver
  *
- *	Copyright (c) 1987 J. Schilling
+ *	Copyright (c) 1987, 1995-2001 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -40,7 +40,7 @@ static	char sccsid[] =
 
 #include "cdrecord.h"
 
-char	cdr_version[] = "1.9";
+char	cdr_version[] = "1.10";
 
 #if     defined(PROTOTYPES)
 #define UINT_C(a)	(a##u)
@@ -136,6 +136,7 @@ BOOL	do_write;
 BOOL	c2scan;
 BOOL	fulltoc;
 BOOL	noerror;
+BOOL	notrunc;
 int	retries = MAX_RETRY;
 
 struct	scsi_format_data fmt;
@@ -156,16 +157,21 @@ usage(ret)
 	error("\tsectors=range	Range of sectors to read/write\n");
 	error("\t-w		Switch to write mode\n");
 	error("\t-c2scan		Do a C2 error scan\n");
-	error("\tkdebug=#,kd=#\tdo Kernel debugging\n");
-	error("\t-v		increment general verbose level by one\n");
-	error("\t-V		increment SCSI command transport verbose level by one\n");
-	error("\t-silent,-s\tdo not print status of erreneous commands\n");
+	error("\ttimeout=#	set the default SCSI command timeout to #.\n");
+	error("\tdebug=#,-d	Set to # or increment misc debug level\n");
+	error("\tkdebug=#,kd=#	do Kernel debugging\n");
+	error("\t-verbose,-v	increment general verbose level by one\n");
+	error("\t-Verbose,-V	increment SCSI command transport verbose level by one\n");
+	error("\t-silent,-s	do not print status of failed SCSI commands\n");
 	error("\t-noerror	do not abort on error\n");
+	error("\t-notrunc	do not truncate outputfile in read mode\n");
 	error("\tretries=#	set retry count (default is %d)\n", retries);
+	error("\n");
+	error("sectors=0-0 will read nothing, sectors=0-1 will read one sector starting from 0\n");
 	exit(ret);
 }	
 
-char	opts[]   = "kdebug#,kd#,verbose+,v+,Verbose,V+,silent,s,debug,help,h,version,dev*,sectors*,w,c2scan,fulltoc,noerror,retries#,f*";
+char	opts[]   = "debug#,d+,kdebug#,kd#,timeout#,verbose+,v+,Verbose+,V+,silent,s,help,h,version,dev*,sectors*,w,c2scan,fulltoc,noerror,notrunc,retries#,f*";
 
 EXPORT int
 main(ac, av)
@@ -184,6 +190,7 @@ main(ac, av)
 	int	lverbose= 0;
 	int	kdebug	= 0;
 	int	debug	= 0;
+	int	deftimeout= 40;
 	int	pversion = 0;
 	SCSI	*scgp;
 	char	*filename= NULL;
@@ -195,21 +202,23 @@ main(ac, av)
 	cav = ++av;
 
 	if(getallargs(&cac, &cav, opts,
+			&debug, &debug,
 			&kdebug, &kdebug,
-			&verbose, &verbose,
+			&deftimeout,
 			&lverbose, &lverbose,
-			&silent, &silent, &debug,
+			&verbose, &verbose,
+			&silent, &silent,
 			&help, &help, &pversion,
 			&dev, &sectors, &do_write,
 			&c2scan, &fulltoc,
-			&noerror, &retries, &filename) < 0) {
+			&noerror, &notrunc, &retries, &filename) < 0) {
 		errmsgno(EX_BAD, "Bad flag: %s.\n", cav[0]);
 		usage(EX_BAD);
 	}
 	if (help)
 		usage(0);
 	if (pversion) {
-		printf("readcd %s (%s-%s-%s) Copyright (C) 1987, 1995-2000 Jörg Schilling\n",
+		printf("readcd %s (%s-%s-%s) Copyright (C) 1987, 1995-2001 Jörg Schilling\n",
 								cdr_version,
 								HOST_CPU, HOST_VENDOR, HOST_OS);
 		exit(0);
@@ -258,35 +267,34 @@ main(ac, av)
 	if (dev) {
 		char	errstr[80];
 
-		if ((scgp = open_scsi(dev, errstr, sizeof(errstr), debug, lverbose)) == (SCSI *)0)
+		/*
+		 * Call scg_remote() to force loading the remote SCSI transport
+		 * library code that is located in librscg instead of the dummy
+		 * remote routines that are located inside libscg.
+		 */
+		scg_remote();
+		if ((scgp = scg_open(dev, errstr, sizeof(errstr), debug, lverbose)) == (SCSI *)0)
 			comerr("%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
 	} else {
 		if (scsibus == -1 && target >= 0 && lun >= 0)
 			scsibus = 0;
 
-		scgp = scsi_smalloc();
+		scgp = scg_smalloc();
 		scgp->debug = debug;
 		scgp->kdebug = kdebug;
-		scgp->scsibus = scsibus;
-		scgp->target = target;
-		scgp->lun = lun;
 
-		if (!scsi_open(scgp, NULL, scsibus, target, lun))
+		scg_settarget(scgp, scsibus, target, lun);
+		if (scg__open(scgp, NULL) <= 0)
 			comerr("Cannot open SCSI driver.\n");
-
-		scgp->scsibus = scsibus;
-		scgp->target = target;
-		scgp->lun = lun;
 	}
 	scgp->silent = silent;
 	scgp->verbose = verbose;
 	scgp->debug = debug;
 	scgp->kdebug = kdebug;
-/*	scsi_settimeout(scgp, timeout);*/
-	scsi_settimeout(scgp, 40);
+	scg_settimeout(scgp, deftimeout);
 
-	Sbufsize = scsi_bufsize(scgp, 256*1024L);
-	if ((Sbuf = scsi_getbuf(scgp, Sbufsize)) == NULL)
+	Sbufsize = scg_bufsize(scgp, 256*1024L);
+	if ((Sbuf = scg_getbuf(scgp, Sbufsize)) == NULL)
 		comerr("Cannot get SCSI I/O buffer.\n");
 
 	is_suid = geteuid() != getuid();
@@ -426,6 +434,8 @@ read_disk(scgp, parmp)
 	rparm_t	rp;
 
 	read_capacity(scgp);
+	print_capacity(scgp, stderr);
+
 	rp.errors = 0;
 	rp.c2_errors = 0;
 	rp.c2_errsecs = 0;
@@ -444,6 +454,9 @@ readc2_disk(scgp, parmp)
 {
 	rparm_t	rp;
 
+	read_capacity(scgp);
+	print_capacity(scgp, stderr);
+
 	rp.errors = 0;
 	rp.c2_errors = 0;
 	rp.c2_errsecs = 0;
@@ -457,6 +470,7 @@ readc2_disk(scgp, parmp)
 	printf("C2 errors rate: %f%% \n", (100.0*rp.c2_errors)/scgp->cap->c_baddr/2352);
 }
 
+/* ARGSUSED */
 LOCAL int
 fread_data(scgp, rp, bp, addr, cnt)
 	SCSI	*scgp;
@@ -469,7 +483,8 @@ fread_data(scgp, rp, bp, addr, cnt)
 }
 
 
-int bits(c)
+LOCAL int
+bits(c)
 	int	c;
 {
 	int	n = 0;
@@ -493,7 +508,8 @@ int bits(c)
 	return (n);
 }
 
-int bitidx(c)
+LOCAL int 
+bitidx(c)
 	int	c;
 {
 	if (c & 0x80)
@@ -537,6 +553,7 @@ fread_c2(scgp, rp, bp, addr, cnt)
 	}
 }
 
+/* ARGSUSED */
 LOCAL int
 fdata_null(rp, bp, addr, cnt)
 	rparm_t	*rp;
@@ -562,14 +579,14 @@ fdata_c2(rp, bp, addr, cnt)
 	p = &bp[2352];
 
 	for (i=0; i < cnt; i++, p += (2352+294)) {
-/*		scsiprbytes("XXX ", p, 294);*/
+/*		scg_prbytes("XXX ", p, 294);*/
 		if ((j = cmpbytes(p, zeroblk, 294)) < 294) {
 			printf("C2 in sector: %3ld first at byte: %4d (0x%02X)", addr+i,
 				j*8 + bitidx(p[j]), p[j]&0xFF);
 			for (j=0,k=0; j < 294; j++)
 				k += bits(p[j]);
 			printf(" total: %4d errors\n", k);
-/*			scsiprbytes("XXX ", p, 294);*/
+/*			scg_prbytes("XXX ", p, 294);*/
 			rp->c2_errors += k;
 			rp->c2_errsecs++;
 		}
@@ -594,15 +611,14 @@ read_scsi_g1(scgp, bp, addr, cnt)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x28;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
 	scgp->cmdname = "read extended";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 #endif
 
@@ -639,15 +655,14 @@ write_g0(scgp, bp, addr, cnt)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g0_cdb.cmd = SC_WRITE;
-	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	g0_cdbaddr(&scmd->cdb.g0_cdb, addr);
-	scmd->cdb.g0_cdb.count = cnt;
+	scmd->cdb.g0_cdb.count = (Uchar)cnt;
 	
 	scgp->cmdname = "write_g0";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -668,15 +683,14 @@ write_g1(scgp, bp, addr, cnt)
 	scmd->flags = SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G1_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = SC_EWRITE;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
 	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
 	scgp->cmdname = "write_g1";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 #ifdef	used
@@ -702,23 +716,22 @@ Xrequest_sense(scgp)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G0_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g1_cdb.cmd = 0x3;
-	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.count = sizeof(sense_buf);
 	
 	scgp->cmdname = "request sense";
 
-	scsicmd(scgp);
+	scg_cmd(scgp);
 
-	sense_count = sizeof(sense_buf) - scsigetresid(scgp);
+	sense_count = sizeof(sense_buf) - scg_getresid(scgp);
 	movebytes(&ocmd, scmd, sizeof(*scmd));
 	scmd->sense_count = sense_count;
-	movebytes(sense_buf, (u_char *)&scmd->sense, scmd->sense_count);
+	movebytes(sense_buf, (Uchar *)&scmd->sense, scmd->sense_count);
 
 	scgp->cmdname = cmdsave;
-	scsiprinterr(scgp);
-	scsiprintresult(scgp);	/* XXX restore key/code in future */
+	scg_printerr(scgp);
+	scg_printresult(scgp);	/* XXX restore key/code in future */
 }
 #endif
 
@@ -741,7 +754,7 @@ read_retry(scgp, bp, addr, cnt, rfunc, rp)
 		return (-1);
 	}
 
-	errmsgno(EX_BAD, "Retrying from sector %d.\n", addr);
+	errmsgno(EX_BAD, "Retrying from sector %ld.\n", addr);
 	while (cnt > 0) {
 		error(".");
 
@@ -782,7 +795,7 @@ read_retry(scgp, bp, addr, cnt, rfunc, rp)
 
 		if (try >= retries) {
 			error("\n");
-			errmsgno(err, "Error on sector %d not corrected. Total of %d errors.\n", addr, ++rp->errors);
+			errmsgno(err, "Error on sector %ld not corrected. Total of %d errors.\n", addr, ++rp->errors);
 			if (!noerror)
 				return (-1);
 		} else {
@@ -810,11 +823,11 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 	char	filename[512];
 	char	*defname = NULL;
 	FILE	*f;
-	long	addr;
+	long	addr = 0L;
 	long	num;
 	long	end = 0L;
 	long	start = 0L;
-	long	cnt;
+	long	cnt = 0L;
 	int	msec;
 	int	err = 0;
 	BOOL	askrange = FALSE;
@@ -832,10 +845,13 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 		isrange = TRUE;
 
 	filename[0] ='\0';
+	
+	scgp->silent++;
 	if (read_capacity(scgp) >= 0)
 		end = scgp->cap->c_baddr + 1;
+	scgp->silent--;
 
-	if (end <= 0 || isrange || (askrange && scsi_yes("Ignore disk size? ")))
+	if (end <= 0 || isrange || (askrange && scg_yes("Ignore disk size? ")))
 		end = 10000000;	/* Hack to read empty (e.g. blank=fast) disks */
 
 	if (parmp) {
@@ -843,7 +859,7 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 			defname = parmp->name;
 		if (defname != NULL) {
 			error("Copy from SCSI (%d,%d,%d) disk to file '%s'\n",
-					scgp->scsibus, scgp->target, scgp->lun,
+					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp),
 					defname);
 		}
 
@@ -856,7 +872,7 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 	if (defname == NULL) {
 		defname = "disk.out";
 		error("Copy from SCSI (%d,%d,%d) disk to file\n",
-					scgp->scsibus, scgp->target, scgp->lun);
+					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 		error("Enter filename [%s]: ", defname);flush();
 		(void)getline(filename, sizeof(filename));
 	}
@@ -888,7 +904,7 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 #if	defined(__CYGWIN32__) || defined(__EMX__)
 		setmode(STDOUT_FILENO, O_BINARY);
 #endif
-	} else if ((f = fileopen(filename, "wcub")) == NULL)
+	} else if ((f = fileopen(filename, notrunc?"wcub":"wctub")) == NULL)
 		comerr("Cannot open '%s'.\n", filename);
 
 	error("end:  %8ld\n", end);
@@ -900,7 +916,7 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 		if ((addr + cnt) > end)
 			cnt = end - addr;
 
-		error("addr: %8d cnt: %d\r", addr, cnt);
+		error("addr: %8ld cnt: %ld\r", addr, cnt);
 
 		if ((*rfunc)(scgp, rp, Sbuf, addr, cnt) < 0) {
 			err = scgp->scmd->ux_errno;
@@ -918,10 +934,12 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 			break;
 		}
 	}
-	error("addr: %8d", addr);
+	error("addr: %8ld", addr);
 out:
 	error("\n");
 	msec = prstats();
+	if (msec == 0)		/* Avoid division by zero */
+		msec = 1;
 #ifdef	OOO
 	error("Read %.2f kB at %.1f kB/sec.\n",
 		(double)(addr - start)/(1024.0/scgp->cap->c_bsize),
@@ -952,8 +970,10 @@ write_disk(scgp, parmp)
 		comerrno(EX_BAD, "Not root. Will not write in suid mode\n");
 
 	filename[0] ='\0';
-	read_capacity(scgp);
-	end = scgp->cap->c_baddr + 1;
+	if (read_capacity(scgp) >= 0) {
+		end = scgp->cap->c_baddr + 1;
+		print_capacity(scgp, stderr);
+	}
 
 	if (end <= 0)
 		end = 10000000;	/* Hack to write empty disks */
@@ -963,7 +983,7 @@ write_disk(scgp, parmp)
 			defname = parmp->name;
 		error("Copy from file '%s' to SCSI (%d,%d,%d) disk\n",
 					defname,
-					scgp->scsibus, scgp->target, scgp->lun);
+					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 
 		addr = start = parmp->start;
 		if (parmp->end != -1 && parmp->end < end)
@@ -973,7 +993,7 @@ write_disk(scgp, parmp)
 else {
 
 	error("Copy from file to SCSI (%d,%d,%d) disk\n",
-					scgp->scsibus, scgp->target, scgp->lun);
+					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 	error("Enter filename [%s]: ", defname);flush();
 	(void)getline(filename, sizeof(filename));
 	error("Notice: reading from file always starts at file offset 0.\n");
@@ -1009,7 +1029,7 @@ else {
 		if ((addr + cnt) > end)
 			cnt = end - addr;
 
-		error("addr: %8d cnt: %d\r", addr, cnt);
+		error("addr: %8ld cnt: %ld\r", addr, cnt);
 
 		if ((amt = fileread(f, Sbuf, cnt * scgp->cap->c_bsize)) < 0)
 			comerr("Cannot read '%s'\n", filename);
@@ -1021,8 +1041,10 @@ else {
 			comerrno(scgp->scmd->ux_errno,
 					"Cannot write destination disk\n");
 	}
-	error("addr: %8d\n", addr);
+	error("addr: %8ld\n", addr);
 	msec = prstats();
+	if (msec == 0)		/* Avoid division by zero */
+		msec = 1;
 	error("Wrote %.2f kB at %.1f kB/sec.\n",
 		(double)(addr - start)/(1024.0/scgp->cap->c_bsize),
 		(double)((addr - start)/(1024.0/scgp->cap->c_bsize)) / (0.001*msec));
@@ -1062,11 +1084,12 @@ ra(scgp)
 
 	select_secsize(scgp, 2352);
 	read_capacity(scgp);
+	print_capacity(scgp, stderr);
 	fillbytes(Sbuf, 50*2352, 0);
 	if (read_g1(scgp, Sbuf, 0, 50) < 0)
 		errmsg("read CD\n");
 	f = fileopen("DDA", "wctb");
-/*	filewrite(f, Sbuf, 50 * 2352 - scsigetresid(scgp));*/
+/*	filewrite(f, Sbuf, 50 * 2352 - scg_getresid(scgp));*/
 	filewrite(f, Sbuf, 50 * 2352 );
 	fclose(f);
 }
@@ -1095,17 +1118,15 @@ read_da(scgp, bp, addr, cnt, framesize, subcode)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G5_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g5_cdb.cmd = 0xd8;
-	scmd->cdb.g5_cdb.lun = scgp->lun;
-	g5_cdbaddr(&scmd->cdb.g1_cdb, addr);
-	g5_cdblen(&scmd->cdb.g1_cdb, cnt);/* XXX subscript out of range ?? */
-	g5x_cdblen(&scmd->cdb.g1_cdb, cnt);/* XXX subscript out of range ?? */
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	g5_cdbaddr(&scmd->cdb.g5_cdb, addr);
+	g5_cdblen(&scmd->cdb.g5_cdb, cnt);
 	scmd->cdb.g5_cdb.res10 = subcode;
 	
 	scgp->cmdname = "read_da";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 
 EXPORT int
@@ -1126,9 +1147,8 @@ read_cd(scgp, bp, addr, cnt, framesize, data, subch)
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	scmd->cdb_len = SC_G5_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->target = scgp->target;
 	scmd->cdb.g5_cdb.cmd = 0xBE;
-	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
         scmd->cdb.g5_cdb.res = 0;	/* expected sector type field ALL */
 	g5_cdbaddr(&scmd->cdb.g5_cdb, addr);
 	g5x_cdblen(&scmd->cdb.g5_cdb, cnt);
@@ -1138,6 +1158,6 @@ read_cd(scgp, bp, addr, cnt, framesize, data, subch)
 
 	scgp->cmdname = "read_cd";
 
-	return (scsicmd(scgp));
+	return (scg_cmd(scgp));
 }
 

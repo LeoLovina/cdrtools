@@ -21,3 +21,7 @@ This package contains the following software:
 -	readcd (a stripped down version of scgskeleton)
 	may be used to read data CD's, to write to DVD-RAM
 	and to copy Solaris boot CD's
+
+-	scgcheck (a program to validate the correct behavior
+	of the low level libscg code and the SCSI transport
+	code of the underlying OS).

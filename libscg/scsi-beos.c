@@ -1,7 +1,7 @@
-/* @(#)scsi-beos.c	1.11 00/07/01 Copyright 1998 J. Schilling */
+/* @(#)scsi-beos.c	1.19 01/03/18 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-beos.c	1.11 00/07/01 Copyright 1998 J. Schilling";
+	"@(#)scsi-beos.c	1.19 01/03/18 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for the BeOS user-land raw SCSI implementation.
@@ -56,7 +56,7 @@ typedef unsigned short			ushort;
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.11";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.19";	/* The version for this transport*/
 
 /*-------------------------------------------------------------*/
 /*----- Shorthand type formats --------------------------------*/
@@ -133,8 +133,8 @@ struct _fdmap_ {
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -156,14 +156,15 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+	int	busno	= scg_scsibus(scgp);
+	int	tgt	= scg_target(scgp);
+	int	tlun	= scg_lun(scgp);
+
 #ifdef	nonono
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -185,8 +186,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	return (1);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	struct _fdmap_	*f;
@@ -202,28 +203,28 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
 	return (256*1024);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"scgo_getbuf: %ld bytes\n", amt);
+	}
 	scgp->bufbase = malloc((size_t)(amt));
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -231,8 +232,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT BOOL
-scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -240,16 +241,16 @@ scsi_havebus(scgp, busno)
 	char		buf[128];
 
 	if (busno < 8)
-		sprintf(buf, "/dev/bus/scsi/%d", busno);
+		js_snprintf(buf, sizeof(buf), "/dev/bus/scsi/%d", busno);
 	else
-		sprintf(buf, "/dev/disk/ide/atapi/%d", busno-8);
+		js_snprintf(buf, sizeof(buf), "/dev/disk/ide/atapi/%d", busno-8);
 	if (stat(buf, &sb))
 		return (FALSE);
 	return (TRUE);
 }
 
-EXPORT int
-scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -264,11 +265,13 @@ scsi_fileno(scgp, busno, tgt, tlun)
 			return (f->fd);
 	}
 	if (busno < 8) {
-		sprintf(buf, "/dev/bus/scsi/%d/%d/%d/raw",
+		js_snprintf(buf, sizeof(buf),
+					"/dev/bus/scsi/%d/%d/%d/raw",
 					busno, tgt, tlun);
 	} else {
 		char *tgtstr = (tgt == 0) ? "master" : (tgt == 1) ? "slave" : "dummy";
-		sprintf(buf, "/dev/disk/ide/atapi/%d/%s/%d/raw",
+		js_snprintf(buf, sizeof(buf),
+					"/dev/disk/ide/atapi/%d/%s/%d/raw",
 					busno-8, tgtstr, tlun);
 	}
 	fd = open(buf, 0);
@@ -285,15 +288,15 @@ scsi_fileno(scgp, busno, tgt, tlun)
 	return (fd);
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
 }
 
-EXPORT int
-scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 	/*
@@ -302,25 +305,26 @@ scsi_isatapi(scgp)
 	return (-1);
 }
 
-EXPORT int
-scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
+	errno = EINVAL;
 	return (-1);
 }
 
 LOCAL int
-scsi_send(scgp, f, sp)
-	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
+scgo_send(scgp)
+	SCSI	*scgp;
 {
+	struct scg_cmd		*sp = scgp->scmd;
 	int			e;
 	int 			scsi_error;
 	int			cam_error;
 	raw_device_command	rdc;
 
-	if (f < 0) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
@@ -334,17 +338,17 @@ scsi_send(scgp, f, sp)
 	rdc.flags = sp->flags & SCG_RECV_DATA ? B_RAW_DEVICE_DATA_IN : 0;
 	rdc.timeout = sp->timeout * 1000000;
 
-	if (scgp->debug) {
+	if (scgp->debug > 0) {
 		error("SEND(%d): cmd %02x, cdb = %d, data = %d, sense = %d\n",
 			f, rdc.command[0], rdc.command_length,
 			rdc.data_length, rdc.sense_data_length);
 	}
-	e = ioctl(f, B_RAW_DEVICE_COMMAND, &rdc, sizeof(rdc));
+	e = ioctl(scgp->fd, B_RAW_DEVICE_COMMAND, &rdc, sizeof(rdc));
 	sp->ux_errno = 0;
 	if (!e) {
 		cam_error = rdc.cam_status;
 		scsi_error = rdc.scsi_status;
-		if (scgp->debug)
+		if (scgp->debug > 0)
 			error("result: cam %02x scsi %02x\n", cam_error, scsi_error);
 		sp->u_scb.cmd_scb[0] = scsi_error;
 

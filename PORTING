@@ -34,14 +34,6 @@ Porting FAQ for SING (Schily Is Not Gnu) utilities.
 
 	for the most recent version.
 
-	The most recent 'smake' binaries that I have created so far
-	can be found in:
-
-		ftp://fokus.gmd.de/pub/unix/makefiles/bin
-
-	Note that these binaries must not necessarily be up to
-	date compared to the latest source distribution.
-
 -	To be able to use the makefile system with gmake,
 	the operating system must have a command named 'uname'.
 	If not, you have to provide it as a shell script.
@@ -50,7 +42,7 @@ Porting FAQ for SING (Schily Is Not Gnu) utilities.
 1)	If you are using smake release 1.1 or newer and 
 	a recent makefile system, the next step should be done
 	automagically (smake-1.1 or newer implement a -version
-	option to retrieve the vesion number).
+	option to retrieve the version number).
 
 	If you are using gmake, you need to do this by hand.
 

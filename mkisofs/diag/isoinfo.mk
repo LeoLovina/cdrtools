@@ -1,4 +1,4 @@
-#ident @(#)isoinfo.mk	1.2 99/12/27 
+#ident @(#)isoinfo.mk	1.4 01/01/19 
 ###########################################################################
 #@@C@@
 ###########################################################################
@@ -9,10 +9,10 @@ include		$(SRCROOT)/$(RULESDIR)/rules.top
 
 INSDIR=		bin
 TARGET=		isoinfo
-#CPPOPTS +=	-DADD_FILES
 CPPOPTS +=	-DUSE_LIBSCHILY
+CPPOPTS +=	-DUSE_LARGEFILES
 CFILES=		isoinfo.c
-LIBS=		-lschily
+LIBS=		-lunls -lschily
 XMK_FILE=	Makefile.man
 
 ###########################################################################

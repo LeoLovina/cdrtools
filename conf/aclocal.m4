@@ -1,4 +1,4 @@
-dnl @(#)aclocal.m4	1.4 00/06/04 Copyright 1998 J. Schilling
+dnl @(#)aclocal.m4	1.18 01/02/24 Copyright 1998 J. Schilling
 
 dnl Set VARIABLE to VALUE in C-string form, verbatim, or 1.
 dnl AC_DEFINE_STRING(VARIABLE [, VALUE])
@@ -41,6 +41,19 @@ if test $ac_cv_struct_st_nsec = yes; then
   AC_DEFINE(HAVE_ST_NSEC)
 fi])
 
+dnl Checks if structure 'mtget' have field 'mt_type'.
+dnl Defines HAVE_MTGET_TYPE on success.
+AC_DEFUN(AC_STRUCT_MTGET_TYPE,
+[AC_CACHE_CHECK([if struct mtget contains mt_type], ac_cv_struct_mtget_type,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/mtio.h>],
+                                [struct  mtget t; t.mt_type = 0;],
+                                [ac_cv_struct_mtget_type=yes],
+                                [ac_cv_struct_mtget_type=no])])
+if test $ac_cv_struct_mtget_type = yes; then
+  AC_DEFINE(HAVE_MTGET_TYPE)
+fi])
+
 dnl Checks if structure 'mtget' have field 'mt_dsreg'.
 dnl Defines HAVE_MTGET_DSREG on success.
 AC_DEFUN(AC_STRUCT_MTGET_DSREG,
@@ -52,6 +65,19 @@ AC_DEFUN(AC_STRUCT_MTGET_DSREG,
                                 [ac_cv_struct_mtget_dsreg=no])])
 if test $ac_cv_struct_mtget_dsreg = yes; then
   AC_DEFINE(HAVE_MTGET_DSREG)
+fi])
+
+dnl Checks if structure 'mtget' have field 'mt_erreg'.
+dnl Defines HAVE_MTGET_ERREG on success.
+AC_DEFUN(AC_STRUCT_MTGET_ERREG,
+[AC_CACHE_CHECK([if struct mtget contains mt_erreg], ac_cv_struct_mtget_erreg,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/mtio.h>],
+                                [struct  mtget t; t.mt_erreg = 0;],
+                                [ac_cv_struct_mtget_erreg=yes],
+                                [ac_cv_struct_mtget_erreg=no])])
+if test $ac_cv_struct_mtget_erreg = yes; then
+  AC_DEFINE(HAVE_MTGET_ERREG)
 fi])
 
 dnl Checks if structure 'mtget' have field 'mt_resid'.
@@ -92,6 +118,32 @@ AC_DEFUN(AC_STRUCT_MTGET_BLKNO,
                                 [ac_cv_struct_mtget_blkno=no])])
 if test $ac_cv_struct_mtget_blkno = yes; then
   AC_DEFINE(HAVE_MTGET_BLKNO)
+fi])
+
+dnl Checks if structure 'mtget' have field 'mt_flags'.
+dnl Defines HAVE_MTGET_FLAGS on success.
+AC_DEFUN(AC_STRUCT_MTGET_FLAGS,
+[AC_CACHE_CHECK([if struct mtget contains mt_flags], ac_cv_struct_mtget_flags,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/mtio.h>],
+                                [struct  mtget t; t.mt_flags = 0;],
+                                [ac_cv_struct_mtget_flags=yes],
+                                [ac_cv_struct_mtget_flags=no])])
+if test $ac_cv_struct_mtget_flags = yes; then
+  AC_DEFINE(HAVE_MTGET_FLAGS)
+fi])
+
+dnl Checks if structure 'mtget' have field 'mt_bf'.
+dnl Defines HAVE_MTGET_BF on success.
+AC_DEFUN(AC_STRUCT_MTGET_BF,
+[AC_CACHE_CHECK([if struct mtget contains mt_bf], ac_cv_struct_mtget_bf,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/mtio.h>],
+                                [struct  mtget t; t.mt_bf = 0;],
+                                [ac_cv_struct_mtget_bf=yes],
+                                [ac_cv_struct_mtget_bf=no])])
+if test $ac_cv_struct_mtget_bf = yes; then
+  AC_DEFINE(HAVE_MTGET_BF)
 fi])
 
 dnl Checks for illegal declaration of 'union semun' in sys/sem.h.
@@ -159,17 +211,79 @@ if test $ac_cv_header_makedev = sys/sysmacros.h; then
   AC_DEFINE(MAJOR_IN_SYSMACROS)
 fi])
 
-dnl Checks for USG derived STDIO
-dnl Defines HAVE_USG_STDIO on success.
-AC_DEFUN(AC_HEADER_USG_STDIO,
-[AC_CACHE_CHECK([for USG derived STDIO], ac_cv_header_usg_stdio,
+dnl Checks for USG derived STDIO that uses _filbuf()
+dnl Defines HAVE__FILBUF on success.
+AC_DEFUN(AC_HEADER__FILBUF,
+[AC_CACHE_CHECK([for _filbuf()], ac_cv_header__filbuf,
                 [AC_TRY_LINK([#include <stdio.h>],
 [FILE    *f;
 int     flag;
 int     count;
 char    *ptr;
+char	c = 0;
 f = fopen("confdefs.h", "r");
-_filbuf(f);			/* HP-UX-11.x has __filbuf() */
+_filbuf(f);
+_flsbuf(c, f);
+flag  = f->_flag & _IONBF;
+flag |= f->_flag & _IOERR;
+flag |= f->_flag & _IOEOF;
+count = f->_cnt;
+ptr = (char *)f->_ptr;
+fclose(f);],
+                [ac_cv_header__filbuf=yes],
+                [ac_cv_header__filbuf=no])])
+if test $ac_cv_header__filbuf = yes; then
+  AC_DEFINE(HAVE__FILBUF)
+fi])
+
+dnl Checks for USG derived STDIO that uses __filbuf()
+dnl Defines HAVE___FILBUF on success.
+AC_DEFUN(AC_HEADER___FILBUF,
+[AC_CACHE_CHECK([for __filbuf()], ac_cv_header___filbuf,
+                [AC_TRY_LINK([#include <stdio.h>],
+[FILE    *f;
+int     flag;
+int     count;
+char    *ptr;
+char	c = 0;
+f = fopen("confdefs.h", "r");
+__filbuf(f);
+__flsbuf(c, f);
+flag  = f->_flag & _IONBF;
+flag |= f->_flag & _IOERR;
+flag |= f->_flag & _IOEOF;
+count = f->_cnt;
+ptr = (char *)f->_ptr;
+fclose(f);],
+                [ac_cv_header___filbuf=yes],
+                [ac_cv_header___filbuf=no])])
+if test $ac_cv_header___filbuf = yes; then
+  AC_DEFINE(HAVE___FILBUF)
+fi])
+
+dnl Checks for USG derived STDIO
+dnl Defines HAVE_USG_STDIO on success.
+AC_DEFUN(AC_HEADER_USG_STDIO,
+[AC_REQUIRE([AC_HEADER__FILBUF])AC_REQUIRE([AC_HEADER___FILBUF])dnl
+AC_CACHE_CHECK([for USG derived STDIO], ac_cv_header_usg_stdio,
+                [AC_TRY_LINK([#include <stdio.h>],
+[FILE    *f;
+int     flag;
+int     count;
+char    *ptr;
+char	c = 0;
+f = fopen("confdefs.h", "r");
+#ifdef	HAVE___FILBUF
+__filbuf(f);
+__flsbuf(c, f);
+#else
+#	ifdef	HAVE__FILBUF
+_filbuf(f);
+_flsbuf(c, f);
+#	else
+no filbuf()
+#	endif
+#endif
 flag  = f->_flag & _IONBF;
 flag |= f->_flag & _IOERR;
 flag |= f->_flag & _IOEOF;
@@ -208,6 +322,49 @@ if test $ac_cv_header_inttypes = yes; then
   AC_DEFINE(HAVE_INTTYPES_H)
 fi])
 
+dnl Checks for type time_t
+dnl Defines time_t to long on failure.
+AC_DEFUN(AC_TYPE_TIME_T,
+[AC_REQUIRE([AC_HEADER_TIME])dnl
+AC_CACHE_CHECK([for time_t], ac_cv_type_time_t,
+                [AC_TRY_COMPILE([
+#include <sys/types.h>
+#ifdef	TIME_WITH_SYS_TIME_H
+#	include <sys/time.h>
+#	include <time.h>
+#else
+#ifdef	HAVE_SYS_TIME_H
+#	include <sys/time.h>
+#else
+#	include <time.h>
+#endif
+#endif], [time_t t;],
+                [ac_cv_type_time_t=yes],
+                [ac_cv_type_time_t=no])])
+if test $ac_cv_type_time_t = no; then
+  AC_DEFINE(time_t, long)
+fi])
+
+dnl Checks for type socklen_t
+dnl Defines socklen_t to int on failure.
+AC_DEFUN(AC_TYPE_SOCKLEN_T,
+[AC_REQUIRE([AC_HEADER_STDC])dnl
+AC_MSG_CHECKING(for socklen_t)
+AC_CACHE_VAL(ac_cv_type_socklen_t,
+[AC_EGREP_CPP(dnl
+changequote(<<,>>)dnl
+<<(^|[^a-zA-Z_0-9])socklen_t[^a-zA-Z_0-9]>>dnl
+changequote([,]), [#include <sys/types.h>
+#if STDC_HEADERS
+#include <stdlib.h>
+#include <stddef.h>
+#endif
+#include <sys/socket.h>], ac_cv_type_socklen_t=yes, ac_cv_type_socklen_t=no)])dnl
+AC_MSG_RESULT($ac_cv_type_socklen_t)
+if test $ac_cv_type_socklen_t = no; then
+  AC_DEFINE(socklen_t, int)
+fi])
+
 dnl Checks for type long long
 dnl Defines HAVE_LONGLONG on success.
 AC_DEFUN(AC_TYPE_LONGLONG,
@@ -228,6 +385,7 @@ struct {
 	unsigned char	x1:4;
 	unsigned char	x2:4;
 } a;
+int
 main()
 {
 char	*cp;
@@ -248,6 +406,7 @@ AC_DEFUN(AC_TYPE_PROTOTYPES,
                 [AC_TRY_RUN([
 doit(int i, ...)
 {return 0;}
+int
 main(int ac, char *av[])
 { doit(1, 2, 3);
 exit(0);}],
@@ -275,6 +434,7 @@ dnl Defines CHAR_IS_UNSIGNED on success.
 AC_DEFUN(AC_TYPE_CHAR,
 [AC_CACHE_CHECK([if char is unsigned], ac_cv_type_char_unsigned,
                 [AC_TRY_RUN([
+int
 main()
 {
 	char c;
@@ -376,17 +536,49 @@ if test $ac_cv_func_dtoa = yes; then
   AC_DEFINE(HAVE_DTOA)
 fi])
 
+dnl Checks if reentrant __dtoa() exists (needs a result prt)
+dnl Defines HAVE_DTOA_R on success.
+AC_DEFUN(AC_FUNC_DTOA_R,
+[AC_REQUIRE([AC_FUNC_DTOA])dnl
+AC_CACHE_CHECK([for __dtoa that needs result ptr], ac_cv_func_dtoa_r,
+                [AC_TRY_RUN([
+extern	char *__dtoa();
+int
+main()
+{
+#ifdef	HAVE_DTOA
+	int	decpt, sign;
+	char	*bp;
+	char	*ep;
+	char	*result;
+
+	result = 0;
+	bp = __dtoa(1.9, 2, 5, &decpt, &sign, &ep, &result);
+	exit(result == 0);
+#else
+	exit(1);
+#endif
+}],
+                [ac_cv_func_dtoa_r=yes],
+                [ac_cv_func_dtoa_r=no])])
+if test $ac_cv_func_dtoa_r = yes; then
+  AC_DEFINE(HAVE_DTOA_R)
+fi])
+
 dnl Checks if working ecvt() exists
 dnl Defines HAVE_ECVT on success.
 AC_DEFUN(AC_FUNC_ECVT,
 [AC_CACHE_CHECK([for working ecvt() ], ac_cv_func_ecvt,
                 [AC_TRY_RUN([
+extern	char *ecvt();
+
 sprintf(s)
 	char	*s;
 {
 	strcpy(s, "DEAD");
 }
 
+int
 main()
 {
 	int a, b;
@@ -405,12 +597,15 @@ dnl Defines HAVE_FCVT on success.
 AC_DEFUN(AC_FUNC_FCVT,
 [AC_CACHE_CHECK([for working fcvt() ], ac_cv_func_fcvt,
                 [AC_TRY_RUN([
+extern	char *fcvt();
+
 sprintf(s)
 	char	*s;
 {
 	strcpy(s, "DEAD");
 }
 
+int
 main()
 {
 	int a, b;
@@ -429,12 +624,15 @@ dnl Defines HAVE_GCVT on success.
 AC_DEFUN(AC_FUNC_GCVT,
 [AC_CACHE_CHECK([for working gcvt() ], ac_cv_func_gcvt,
                 [AC_TRY_RUN([
+extern	char *gcvt();
+
 sprintf(s)
 	char	*s;
 {
 	strcpy(s, "DEAD");
 }
 
+int
 main()
 {
 	char	buf[32];
@@ -471,6 +669,7 @@ AC_DEFUN(AC_FUNC_MLOCKALL,
 #include <sys/mman.h>
 #include <errno.h>
 
+int
 main()
 {
 	if (mlockall(MCL_CURRENT|MCL_FUTURE) < 0) {
@@ -487,6 +686,311 @@ if test $ac_cv_func_mlockall = yes; then
   AC_DEFINE(HAVE_MLOCKALL)
 fi])
 
+AC_DEFUN(jsAC_FUNC_MMAP,
+[AC_REQUIRE([AC_MMAP_SIZEP])dnl
+AC_CHECK_HEADERS(unistd.h)
+AC_CHECK_FUNCS(getpagesize)
+AC_CACHE_CHECK(for working mmap, ac_cv_func_mmap_fixed_mapped,
+[AC_TRY_RUN([
+/* Thanks to Mike Haertel and Jim Avera for this test.
+   Here is a matrix of mmap possibilities:
+	mmap private not fixed
+	mmap private fixed at somewhere currently unmapped
+	mmap private fixed at somewhere already mapped
+	mmap shared not fixed
+	mmap shared fixed at somewhere currently unmapped
+	mmap shared fixed at somewhere already mapped
+   For private mappings, we should verify that changes cannot be read()
+   back from the file, nor mmap's back from the file at a different
+   address.  (There have been systems where private was not correctly
+   implemented like the infamous i386 svr4.0, and systems where the
+   VM page cache was not coherent with the filesystem buffer cache
+   like early versions of FreeBSD and possibly contemporary NetBSD.)
+   For shared mappings, we should conversely verify that changes get
+   propogated back to all the places they're supposed to be.
+
+   Grep wants private fixed already mapped.
+   The main things grep needs to know about mmap are:
+   * does it exist and is it safe to write into the mmap'd area
+   * how to use it (BSD variants)  */
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+
+/*
+ * Needed for Apollo Domain/OS and may be for others?
+ */
+#ifdef	_MMAP_WITH_SIZEP
+#	define	mmap_sizeparm(s)	(&(s))
+#else
+#	define	mmap_sizeparm(s)	(s)
+#endif
+
+/* This mess was copied from the GNU getpagesize.h.  */
+#ifndef HAVE_GETPAGESIZE
+# ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+# endif
+
+/* Assume that all systems that can run configure have sys/param.h.  */
+# ifndef HAVE_SYS_PARAM_H
+#  define HAVE_SYS_PARAM_H 1
+# endif
+
+# ifdef _SC_PAGESIZE
+#  define getpagesize() sysconf(_SC_PAGESIZE)
+# else /* no _SC_PAGESIZE */
+#  ifdef HAVE_SYS_PARAM_H
+#   include <sys/param.h>
+#   ifdef EXEC_PAGESIZE
+#    define getpagesize() EXEC_PAGESIZE
+#   else /* no EXEC_PAGESIZE */
+#    ifdef NBPG
+#     define getpagesize() NBPG * CLSIZE
+#     ifndef CLSIZE
+#      define CLSIZE 1
+#     endif /* no CLSIZE */
+#    else /* no NBPG */
+#     ifdef NBPC
+#      define getpagesize() NBPC
+#     else /* no NBPC */
+#      ifdef PAGESIZE
+#       define getpagesize() PAGESIZE
+#      endif /* PAGESIZE */
+#     endif /* no NBPC */
+#    endif /* no NBPG */
+#   endif /* no EXEC_PAGESIZE */
+#  else /* no HAVE_SYS_PARAM_H */
+#   define getpagesize() 8192	/* punt totally */
+#  endif /* no HAVE_SYS_PARAM_H */
+# endif /* no _SC_PAGESIZE */
+
+#endif /* no HAVE_GETPAGESIZE */
+
+#ifdef __cplusplus
+extern "C" { void *malloc(unsigned); }
+#else
+char *malloc();
+#endif
+
+int
+main()
+{
+	char *data, *data2, *data3;
+	int i, pagesize;
+	int fd;
+
+	pagesize = getpagesize();
+
+	/*
+	 * First, make a file with some known garbage in it.
+	 */
+	data = malloc(pagesize);
+	if (!data)
+		exit(1);
+	for (i = 0; i < pagesize; ++i)
+		*(data + i) = rand();
+	umask(0);
+	fd = creat("conftestmmap", 0600);
+	if (fd < 0)
+		exit(1);
+	if (write(fd, data, pagesize) != pagesize)
+		exit(1);
+	close(fd);
+
+	/*
+	 * Next, try to mmap the file at a fixed address which
+	 * already has something else allocated at it.  If we can,
+	 * also make sure that we see the same garbage.
+	 */
+	fd = open("conftestmmap", O_RDWR);
+	if (fd < 0)
+		exit(1);
+	data2 = malloc(2 * pagesize);
+	if (!data2)
+		exit(1);
+	data2 += (pagesize - ((int) data2 & (pagesize - 1))) & (pagesize - 1);
+	if (data2 != mmap(data2, mmap_sizeparm(pagesize), PROT_READ | PROT_WRITE,
+	    MAP_PRIVATE | MAP_FIXED, fd, 0L))
+		exit(1);
+	for (i = 0; i < pagesize; ++i)
+		if (*(data + i) != *(data2 + i))
+			exit(1);
+
+	/*
+	 * Finally, make sure that changes to the mapped area
+	 * do not percolate back to the file as seen by read().
+	 * (This is a bug on some variants of i386 svr4.0.)
+	 */
+	for (i = 0; i < pagesize; ++i)
+		*(data2 + i) = *(data2 + i) + 1;
+	data3 = malloc(pagesize);
+	if (!data3)
+		exit(1);
+	if (read(fd, data3, pagesize) != pagesize)
+		exit(1);
+	for (i = 0; i < pagesize; ++i)
+		if (*(data + i) != *(data3 + i))
+			exit(1);
+	close(fd);
+	unlink("conftestmmap");
+	exit(0);
+}
+], ac_cv_func_mmap_fixed_mapped=yes, ac_cv_func_mmap_fixed_mapped=no,
+ac_cv_func_mmap_fixed_mapped=no)])
+if test $ac_cv_func_mmap_fixed_mapped = yes; then
+  AC_DEFINE(HAVE_MMAP)
+fi
+])
+
+AC_DEFUN(AC_MMAP_SIZEP,
+[AC_CHECK_HEADERS(unistd.h)
+AC_CHECK_FUNCS(getpagesize)
+AC_CACHE_CHECK(for mmap that needs ptr to size, ac_cv_func_mmap_sizep,
+[AC_TRY_RUN([
+#include <sys/types.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <setjmp.h>
+#include <sys/mman.h>
+
+#ifndef MAP_FILE
+#define MAP_FILE   0		/* Needed on Apollo Domain/OS */
+#endif
+
+/* This mess was copied from the GNU getpagesize.h.  */
+#ifndef HAVE_GETPAGESIZE
+# ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+# endif
+
+/* Assume that all systems that can run configure have sys/param.h.  */
+# ifndef HAVE_SYS_PARAM_H
+#  define HAVE_SYS_PARAM_H 1
+# endif
+
+# ifdef _SC_PAGESIZE
+#  define getpagesize() sysconf(_SC_PAGESIZE)
+# else /* no _SC_PAGESIZE */
+#  ifdef HAVE_SYS_PARAM_H
+#   include <sys/param.h>
+#   ifdef EXEC_PAGESIZE
+#    define getpagesize() EXEC_PAGESIZE
+#   else /* no EXEC_PAGESIZE */
+#    ifdef NBPG
+#     define getpagesize() NBPG * CLSIZE
+#     ifndef CLSIZE
+#      define CLSIZE 1
+#     endif /* no CLSIZE */
+#    else /* no NBPG */
+#     ifdef NBPC
+#      define getpagesize() NBPC
+#     else /* no NBPC */
+#      ifdef PAGESIZE
+#       define getpagesize() PAGESIZE
+#      endif /* PAGESIZE */
+#     endif /* no NBPC */
+#    endif /* no NBPG */
+#   endif /* no EXEC_PAGESIZE */
+#  else /* no HAVE_SYS_PARAM_H */
+#   define getpagesize() 8192	/* punt totally */
+#  endif /* no HAVE_SYS_PARAM_H */
+# endif /* no _SC_PAGESIZE */
+
+#endif /* no HAVE_GETPAGESIZE */
+
+#ifdef __cplusplus
+extern "C" { void *malloc(unsigned); }
+#else
+char *malloc();
+#endif
+
+jmp_buf jenv;
+
+int
+intr()
+{
+	signal(SIGSEGV, intr);
+	longjmp(jenv, 1);
+}
+
+int
+main()
+{
+	char *data, *data2;
+	int i, pagesize, ps;
+	int fd;
+
+	pagesize = getpagesize();
+
+	/*
+	 * First, make a file with some known garbage in it.
+	 */
+	data = malloc(pagesize);
+	if (!data)
+		exit(1);
+	for (i = 0; i < pagesize; ++i)
+		*(data + i) = rand();
+	umask(0);
+	fd = creat("conftestmmap", 0600);
+	if (fd < 0)
+		exit(1);
+	if (write(fd, data, pagesize) != pagesize)
+		exit(1);
+	close(fd);
+
+	/*
+	 * Next, try to mmap the file at a fixed address which
+	 * already has something else allocated at it.  If we can,
+	 * also make sure that we see the same garbage.
+	 */
+	fd = open("conftestmmap", O_RDWR);
+	if (fd < 0)
+		exit(1);
+
+	/*
+	 * Keep a copy, Apollo modifies the value...
+	 */
+	ps = pagesize;
+
+	/*
+	 * Apollo mmap() is not a syscall but a library function and fails
+	 * if it tries to dereference 'ps'. We must use setjmp in order to
+	 * catch the failure.
+	 */
+	signal(SIGSEGV, intr);
+	if (setjmp(jenv) == 0) {
+		data2 = mmap(0, ps, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0L);
+	} else {
+		data2 = (char *)-1;
+	}
+	if (data2 != (char *)-1)
+		exit(1);
+
+	signal(SIGSEGV, intr);
+	if (setjmp(jenv) == 0) {
+		data2 = mmap(0, &ps, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0L);
+	} else {
+		data2 = (char *)-1;
+	}
+	if (data2 == (char *)-1)
+		exit(1);
+
+	for (i = 0; i < pagesize; ++i)
+		if (*(data + i) != *(data2 + i))
+			exit(1);
+
+	close(fd);
+	unlink("conftestmmap");
+	exit(0);
+}
+], ac_cv_func_mmap_sizep=yes, ac_cv_func_mmap_sizep=no,
+ac_cv_func_mmap_sizep=no)])
+if test $ac_cv_func_mmap_sizep = yes; then
+  AC_DEFINE(_MMAP_WITH_SIZEP)
+fi
+])
+
 dnl Checks if mmap() works to get shared memory
 dnl Defines HAVE_SMMAP on success.
 AC_DEFUN(AC_FUNC_SMMAP,
@@ -494,6 +998,21 @@ AC_DEFUN(AC_FUNC_SMMAP,
                 [AC_TRY_RUN([
 #include <sys/types.h>
 #include <sys/mman.h>
+
+#ifndef	MAP_ANONYMOUS
+#	ifdef	MAP_ANON
+#		define MAP_ANONYMOUS MAP_ANON
+#	endif
+#endif
+
+/*
+ * Needed for Apollo Domain/OS and may be for others?
+ */
+#ifdef	_MMAP_WITH_SIZEP
+#	define	mmap_sizeparm(s)	(&(s))
+#else
+#	define	mmap_sizeparm(s)	(s)
+#endif
 
 char *
 mkshare()
@@ -504,11 +1023,11 @@ mkshare()
 
 #ifdef  MAP_ANONYMOUS   /* HP/UX */
         f = -1;
-        addr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, f, 0);
+        addr = mmap(0, mmap_sizeparm(size), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, f, 0);
 #else
         if ((f = open("/dev/zero", 2)) < 0)
                 exit(1);
-        addr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, f, 0);
+        addr = mmap(0, mmap_sizeparm(size), PROT_READ|PROT_WRITE, MAP_SHARED, f, 0);
 #endif
         if (addr == (char *)-1)
                 exit(1);
@@ -517,11 +1036,12 @@ mkshare()
         return (addr);
 }
 
+int
 main()
 {
         char    *addr;
         
-        addr = mkshare(8192);
+        addr = mkshare();
         *addr = 'I';
 
         switch (fork()) {
@@ -556,6 +1076,7 @@ dnl Defines HAVE_SYS_SIGLIST on success.
 AC_DEFUN(AC_FUNC_SYS_SIGLIST,
 [AC_CACHE_CHECK([for sys_siglist], ac_cv_func_sys_siglist,
                 [AC_TRY_RUN([
+int
 main()
 { extern char *sys_siglist[];
 if (sys_siglist[1] == 0)
@@ -607,6 +1128,7 @@ AC_CACHE_VAL(AC_CV_NAME,
 #	define minor(dev)		((dev) & 0xFF)
 #	define makedev(majo, mino)	(((majo) << 8) | (mino))
 #endif
+int
 main()
 {
 	long	l = 1;
@@ -667,6 +1189,7 @@ AC_CACHE_CHECK([whether bits in minor device numbers are non contiguous], ac_cv_
 #	define minor(dev)		((dev) & 0xFF)
 #	define makedev(majo, mino)	(((majo) << 8) | (mino))
 #endif
+int
 main()
 {
 	long	l = 1;
@@ -709,6 +1232,7 @@ dnl Defines HAVE_BSD_GETPGRP on success.
 AC_DEFUN(AC_FUNC_BSD_GETPGRP,
 [AC_CACHE_CHECK([for BSD compliant getpgrp], ac_cv_func_bsd_getpgrp,
                 [AC_TRY_RUN([
+int
 main()
 { long p;
 /*
@@ -734,6 +1258,7 @@ AC_CACHE_CHECK([for BSD compliant setpgrp], ac_cv_func_bsd_setpgrp,
 #ifndef	HAVE_ERRNO_DEF
 extern	int	errno;
 #endif
+int
 main()
 { errno = 0;
 /*
@@ -779,3 +1304,141 @@ if test $ac_cv_header_need_sys_select_h = yes; then
   AC_DEFINE(NEED_SYS_SELECT_H)
 fi])
 
+dnl Checks if file locking via fcntl() is available
+dnl Defines HAVE_FCNTL_LOCKF on success.
+AC_DEFUN(AC_FUNC_FCNTL_LOCKF,
+[AC_CACHE_CHECK([for file locking via fcntl], ac_cv_func_fcntl_lock,
+                [AC_TRY_LINK([
+#include <sys/types.h>
+#include <fcntl.h>], 
+		[
+struct flock fl;
+fcntl(0, F_SETLK, &fl);],
+                [ac_cv_func_fcntl_lock=yes],
+                [ac_cv_func_fcntl_lock=no])])
+if test $ac_cv_func_fcntl_lock = yes; then
+  AC_DEFINE(HAVE_FCNTL_LOCKF)
+fi])
+
+
+dnl XXXXXXXXXXXXXXXXXX Begin Stolen from GNU tar XXXXXXXXXXXXXXXXXXXXXXXXXXX
+dnl One line has been changed to:    [ac_save_CC="${CC-cc}"
+
+
+#serial 18
+
+dnl By default, many hosts won't let programs access large files;
+dnl one must use special compiler options to get large-file access to work.
+dnl For more details about this brain damage please see:
+dnl http://www.sas.com/standards/large.file/x_open.20Mar96.html
+
+dnl Written by Paul Eggert <eggert@twinsun.com>.
+
+dnl Internal subroutine of AC_SYS_LARGEFILE.
+dnl AC_SYS_LARGEFILE_TEST_INCLUDES
+AC_DEFUN(AC_SYS_LARGEFILE_TEST_INCLUDES,
+  [[#include <sys/types.h>
+    /* Check that off_t can represent 2**63 - 1 correctly.
+       We can't simply "#define LARGE_OFF_T 9223372036854775807",
+       since some C++ compilers masquerading as C compilers
+       incorrectly reject 9223372036854775807.  */
+#   define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+			&& LARGE_OFF_T % 2147483647 == 1)
+		       ? 1 : -1];
+  ]])
+
+dnl Internal subroutine of AC_SYS_LARGEFILE.
+dnl AC_SYS_LARGEFILE_MACRO_VALUE(C-MACRO, VALUE, CACHE-VAR, COMMENT, INCLUDES, FUNCTION-BODY)
+AC_DEFUN(AC_SYS_LARGEFILE_MACRO_VALUE,
+  [AC_CACHE_CHECK([for $1 value needed for large files], $3,
+     [$3=no
+      AC_TRY_COMPILE([$5],
+	[$6], 
+	,
+	[AC_TRY_COMPILE([#define $1 $2]
+[$5]
+	   ,
+	   [$6],
+	   [$3=$2])])])
+   if test "[$]$3" != no; then
+     AC_DEFINE_UNQUOTED([$1], [$]$3, [$4])
+   fi])
+
+AC_DEFUN(AC_SYS_LARGEFILE,
+  [AC_ARG_ENABLE(largefile,
+     [  --disable-largefile     omit support for large files])
+   if test "$enable_largefile" != no; then
+
+     AC_CACHE_CHECK([for special C compiler options needed for large files],
+       ac_cv_sys_largefile_CC,
+       [ac_cv_sys_largefile_CC=no
+        if test "$GCC" != yes; then
+	  # IRIX 6.2 and later do not support large files by default,
+	  # so use the C compiler's -n32 option if that helps.
+	  AC_TRY_COMPILE(AC_SYS_LARGEFILE_TEST_INCLUDES, , ,
+	    [ac_save_CC="${CC-cc}"
+	     CC="$CC -n32"
+	     AC_TRY_COMPILE(AC_SYS_LARGEFILE_TEST_INCLUDES, ,
+	       ac_cv_sys_largefile_CC=' -n32')
+	     CC="$ac_save_CC"])
+        fi])
+     if test "$ac_cv_sys_largefile_CC" != no; then
+       CC="$CC$ac_cv_sys_largefile_CC"
+     fi
+
+     AC_SYS_LARGEFILE_MACRO_VALUE(_FILE_OFFSET_BITS, 64,
+       ac_cv_sys_file_offset_bits,
+       [Number of bits in a file offset, on hosts where this is settable.],
+       AC_SYS_LARGEFILE_TEST_INCLUDES)
+     AC_SYS_LARGEFILE_MACRO_VALUE(_LARGE_FILES, 1,
+       ac_cv_sys_large_files,
+       [Define for large files, on AIX-style hosts.],
+       AC_SYS_LARGEFILE_TEST_INCLUDES)
+   fi
+  ])
+
+
+AC_DEFUN(AC_FUNC_FSEEKO,
+  [AC_SYS_LARGEFILE_MACRO_VALUE(_LARGEFILE_SOURCE, 1,
+     ac_cv_sys_largefile_source,
+     [Define to make fseeko visible on some hosts (e.g. glibc 2.2).],
+     [#include <stdio.h>], [return !fseeko;])
+   # We used to try defining _XOPEN_SOURCE=500 too, to work around a bug
+   # in glibc 2.1.3, but that breaks too many other things.
+   # If you want fseeko and ftello with glibc, upgrade to a fixed glibc.
+
+   AC_CACHE_CHECK([for fseeko], ac_cv_func_fseeko,
+     [ac_cv_func_fseeko=no
+      AC_TRY_LINK([#include <stdio.h>],
+        [return fseeko && fseeko (stdin, 0, 0);],
+	[ac_cv_func_fseeko=yes])])
+   if test $ac_cv_func_fseeko != no; then
+     AC_DEFINE(HAVE_FSEEKO, 1,
+       [Define if fseeko (and presumably ftello) exists and is declared.])
+   fi])
+
+
+dnl XXXXXXXXXXXXXXXXXX End Stolen from GNU tar XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+AC_DEFUN(AC_HAVE_LARGEFILES,
+[AC_CACHE_CHECK([if system supports Large Files at all], ac_cv_largefiles,
+     	[AC_TRY_COMPILE([#include <stdio.h>
+#include <sys/types.h>],
+     		[
+/*
+ * Check that off_t can represent 2**63 - 1 correctly.
+ * We can't simply "#define LARGE_OFF_T 9223372036854775807",
+ * since some C++ compilers masquerading as C compilers
+ * incorrectly reject 9223372036854775807.
+ */
+#   define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+			&& LARGE_OFF_T % 2147483647 == 1)
+		       ? 1 : -1];
+return !ftello;],
+     		[ac_cv_largefiles=yes],
+     		[ac_cv_largefiles=no])])
+	if test $ac_cv_largefiles = yes; then
+		AC_DEFINE(HAVE_LARGEFILES)
+	fi])

@@ -1,3 +1,8 @@
+/* @(#)file.c	1.3 01/02/17 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)file.c	1.3 01/02/17 joerg";
+#endif
 /*
 **	find file types by using a modified "magic" file
 **
@@ -63,45 +68,41 @@ static char *moduleid =
 #include <mconfig.h>
 #include <stdio.h>
 #include <stdxlib.h>
-#include <strdefs.h>
+#include <unixstd.h>	/* for read() */
 #include <sys/types.h>
-#include <sys/param.h>	/* for MAXPATHLEN */
 #include <sys/stat.h>
-#include <fcntl.h>	/* for open() */
-#if (__COHERENT__ >= 0x420)
-# include <sys/utime.h>
-#else
-# ifdef USE_UTIMES
-#  include <sys/time.h>
-# else
-#  include <utime.h>
-# endif
-#endif
-#include <unistd.h>	/* for read() */
+#include <fctldefs.h>	/* for open() */
 
+#ifdef RESTORE_TIME
+#include <utimdefs.h>
+#ifdef HAVE_UTIMES
+#define	USE_UTIMES
+#endif
+#endif
+
+#if 0
 #include <netinet/in.h>		/* for byte swapping */
+#endif
 
 #include "patchlevel.h"
 #include "file.h"
 
-int 			/* Global command-line options 		*/
+#ifdef MAIN
+ 			/* Global command-line options 		*/
 #ifdef DEBUG
-	debug = 1, 	/* debugging 				*/
+int	debug = 1; 	/* debugging 				*/
 #else
-	debug = 0, 	/* debugging 				*/
+int	debug = 0; 	/* debugging 				*/
 #endif /* DEBUG */
-	lflag = 0,	/* follow Symlinks (BSD only) 		*/
-	zflag = 0;	/* follow (uncompress) compressed files */
+int	lflag = 0;	/* follow Symlinks (BSD only) 		*/
+int	zflag = 0;	/* follow (uncompress) compressed files */
 
-int			/* Misc globals				*/
-	nmagic = 0;	/* number of valid magic[]s 		*/
-
-struct  magic *magic;	/* array of magic entries		*/
-
+			/* Misc globals				*/
 char *magicfile;	/* where magic be found 		*/
 
 char *progname;		/* used throughout 			*/
 int lineno;		/* line number in the magic file	*/
+#endif
 
 char *	get_magic_match	__PR((const char *inname));
 void	clean_magic	__PR((void));
@@ -232,6 +233,7 @@ const char	*inname;
 		utbuf.modtime = sb.st_mtime;
 		(void) utime(inname, &utbuf); /* don't care if loses */
 # endif
+	}
 #endif
 	(void) close(fd);
 
@@ -244,8 +246,8 @@ const char	*inname;
 void
 clean_magic()
 {
-	if (magic)
-		free(magic);
+	if (__f_magic)
+		free(__f_magic);
 }
 	
 

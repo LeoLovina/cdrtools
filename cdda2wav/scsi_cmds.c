@@ -1,7 +1,7 @@
-/* @(#)scsi_cmds.c	1.5 00/06/02 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)scsi_cmds.c	1.11 01/03/11 Copyright 1998-2001 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)scsi_cmds.c	1.5 00/06/02 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)scsi_cmds.c	1.11 01/03/11 Copyright 1998-2001 Heiko Eissfeldt";
 
 #endif
 /* file for all SCSI commands
@@ -41,24 +41,11 @@ unsigned char *bufferTOC;
 subq_chnl *SubQbuffer;
 unsigned char *cmd;
 
-int myscsierr(scgp)
-	SCSI	*scgp;
-{
-        register struct scg_cmd *cp = scgp->scmd;
-
-        if(cp->error != SCG_NO_ERROR ||
-                                cp->ux_errno != 0 ||
-                                *(u_char *)&cp->scb != 0 ||
-                                cp->u_sense.cmd_sense[0] != 0)  /* Paranioa */
-                return (1);
-        return (0);
-}
-
 int SCSI_emulated_ATAPI_on(scgp)
 	SCSI *scgp;
 {
 /*	return is_atapi;*/
-	if (scsi_isatapi(scgp) > 0)
+	if (scg_isatapi(scgp) > 0)
 		return (TRUE);
 
 	(void) allow_atapi(scgp, TRUE);
@@ -240,9 +227,8 @@ void ReadTocTextSCSIMMC ( scgp )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0x43;		/* Read TOC command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.addr[0] = 5;		/* format field */
         scmd->cdb.g1_cdb.res6 = 0;	/* track/session is reserved */
         g1_cdblen(&scmd->cdb.g1_cdb, 4);
@@ -252,7 +238,7 @@ void ReadTocTextSCSIMMC ( scgp )
 
 	scgp->cmdname = "read toc size (text)";
 
-        if (scsicmd(scgp) < 0) {
+        if (scg_cmd(scgp) < 0) {
           scgp->silent--;
 	  if (global.quiet != 1)
             fprintf (stderr, "Read TOC CD Text failed (probably not supported).\n");
@@ -270,9 +256,8 @@ void ReadTocTextSCSIMMC ( scgp )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0x43;		/* Read TOC command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.addr[0] = 5;		/* format field */
         scmd->cdb.g1_cdb.res6 = 0;	/* track/session is reserved */
         g1_cdblen(&scmd->cdb.g1_cdb, 2+datalength);
@@ -282,7 +267,7 @@ void ReadTocTextSCSIMMC ( scgp )
 
 	scgp->cmdname = "read toc data (text)";
 
-        if (scsicmd(scgp) < 0) {
+        if (scg_cmd(scgp) < 0) {
           scgp->silent--;
 	  if (global.quiet != 1)
             fprintf (stderr,  "Read TOC CD Text data failed (probably not supported).\n");
@@ -320,9 +305,8 @@ unsigned ReadFirstSessionTOCSony ( scgp, tracks )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0x43;		/* Read TOC command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.res6 = 1;    		/* session */
         g1_cdblen(&scmd->cdb.g1_cdb, 4 + (tracks + 3) * 11);
         scmd->cdb.g1_cdb.vu_97 = 1;   		/* format */
@@ -332,7 +316,7 @@ unsigned ReadFirstSessionTOCSony ( scgp, tracks )
 
 	scgp->cmdname = "read toc first session";
 
-        if (scsicmd(scgp) < 0) {
+        if (scg_cmd(scgp) < 0) {
           scgp->silent--;
 	  if (global.quiet != 1)
             fprintf (stderr, "Read TOC first session failed (probably not supported).\n");
@@ -382,9 +366,8 @@ unsigned ReadFirstSessionTOCMMC ( scgp, tracks )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0x43;		/* Read TOC command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.addr[0] = 2;		/* format */
         scmd->cdb.g1_cdb.res6 = 1;		/* session */
         g1_cdblen(&scmd->cdb.g1_cdb, 4 + (tracks + 3) * 11);
@@ -394,7 +377,7 @@ unsigned ReadFirstSessionTOCMMC ( scgp, tracks )
 
 	scgp->cmdname = "read toc first session";
 
-        if (scsicmd(scgp) < 0) {
+        if (scg_cmd(scgp) < 0) {
           scgp->silent--;
 	  if (global.quiet != 1)
             fprintf (stderr, "Read TOC first session failed (probably not supported).\n");
@@ -424,100 +407,98 @@ unsigned ReadTocSCSI ( scgp, toc )
 	SCSI *scgp;
 	TOC *toc;
 {
-  unsigned i;
-  unsigned tracks;
+    unsigned i;
+    unsigned tracks;
+    int	result;
 
-  /* first read the first and last track number */
-  /* READTOC, MSF format flag, res, res, res, res, Start track, len msb,
-     len lsb, flags */
-	register struct	scg_cmd	*scmd = scgp->scmd;
+    /* first read the first and last track number */
+    /* READTOC, MSF format flag, res, res, res, res, Start track, len msb,
+       len lsb, flags */
+    register struct	scg_cmd	*scmd = scgp->scmd;
 
-	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
-        scmd->addr = (caddr_t)bufferTOC;
-        scmd->size = 4;
-        scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-        scmd->cdb_len = SC_G1_CDBLEN;
-        scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
-        scmd->cdb.g1_cdb.cmd = 0x43;		/* read TOC command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
-        scmd->cdb.g1_cdb.res6 = 1;		/* start track */
-        g1_cdblen(&scmd->cdb.g1_cdb, 4);
+    fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+    scmd->addr = (caddr_t)bufferTOC;
+    scmd->size = 4;
+    scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+    scmd->cdb_len = SC_G1_CDBLEN;
+    scmd->sense_len = CCS_SENSE_LEN;
+    scmd->cdb.g1_cdb.cmd = 0x43;		/* read TOC command */
+    scmd->cdb.g1_cdb.lun = scg_lun(scgp);
+    scmd->cdb.g1_cdb.res6 = 1;		/* start track */
+    g1_cdblen(&scmd->cdb.g1_cdb, 4);
 
-        if (scgp->verbose) fprintf(stderr, "\nRead TOC size (standard)...");
-  /* do the scsi cmd (read table of contents) */
+    if (scgp->verbose) fprintf(stderr, "\nRead TOC size (standard)...");
+    /* do the scsi cmd (read table of contents) */
 
-	scgp->cmdname = "read toc size";
-  if (scsicmd(scgp) < 0)
-      FatalError ("Read TOC size failed.\n");
+    scgp->cmdname = "read toc size";
+    if (scg_cmd(scgp) < 0)
+	FatalError ("Read TOC size failed.\n");
+    
 
+    tracks = ((bufferTOC [3] ) - bufferTOC [2] + 2) ;
+    if (tracks > MAXTRK) return 0;
+    if (tracks == 0) return 0;
+    
+    
+    fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+    scmd->addr = (caddr_t)bufferTOC;
+    scmd->size = 4 + tracks * 8;
+    scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+    scmd->cdb_len = SC_G1_CDBLEN;
+    scmd->sense_len = CCS_SENSE_LEN;
+    scmd->cdb.g1_cdb.cmd = 0x43;		/* read TOC command */
+    scmd->cdb.g1_cdb.lun = scg_lun(scgp);
+    scmd->cdb.g1_cdb.res = 1;		/* MSF format */
+    scmd->cdb.g1_cdb.res6 = 1;		/* start track */
+    g1_cdblen(&scmd->cdb.g1_cdb, 4 + tracks * 8);
 
-  tracks = ((bufferTOC [3] ) - bufferTOC [2] + 2) ;
-  if (tracks > MAXTRK) return 0;
-  if (tracks == 0) return 0;
+    if (scgp->verbose) fprintf(stderr, "\nRead TOC tracks (standard MSF)...");
+    /* do the scsi cmd (read table of contents) */
 
+    scgp->cmdname = "read toc tracks ";
+    result = scg_cmd(scgp);
 
-	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
-        scmd->addr = (caddr_t)bufferTOC;
-        scmd->size = 4 + tracks * 8;
-        scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-        scmd->cdb_len = SC_G1_CDBLEN;
-        scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
-        scmd->cdb.g1_cdb.cmd = 0x43;		/* read TOC command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
-        scmd->cdb.g1_cdb.res = 1;		/* MSF format */
-        scmd->cdb.g1_cdb.res6 = 1;		/* start track */
-        g1_cdblen(&scmd->cdb.g1_cdb, 4 + tracks * 8);
-
-        if (scgp->verbose) fprintf(stderr, "\nRead TOC tracks (standard MSF)...");
-        /* do the scsi cmd (read table of contents) */
-
-	scgp->cmdname = "read toc tracks ";
-
-  if (scsicmd(scgp) < 0) {
-      /* fallback to LBA format for cd burners like Philips CD-522 */
-	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
-        scmd->addr = (caddr_t)bufferTOC;
-        scmd->size = 4 + tracks * 8;
-        scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-        scmd->cdb_len = SC_G1_CDBLEN;
-        scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
-        scmd->cdb.g1_cdb.cmd = 0x43;		/* read TOC command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
-        scmd->cdb.g1_cdb.res = 0;		/* LBA format */
-        scmd->cdb.g1_cdb.res6 = 1;		/* start track */
-        g1_cdblen(&scmd->cdb.g1_cdb, 4 + tracks * 8);
-
-        if (scgp->verbose) fprintf(stderr, "\nRead TOC tracks (standard LBA)...");
-        /* do the scsi cmd (read table of contents) */
-
-	scgp->cmdname = "read toc tracks ";
-        if (scsicmd(scgp) < 0) {
-          FatalError ("Read TOC tracks failed.\n");
-        }
-        for (i = 0; i < tracks; i++) {
-          memcpy (&toc[i], bufferTOC + 4 + 8*i, 8);
-          toc[i].ISRC[0] = 0;
-          toc[i].dwStartSector = be32_to_cpu(toc[i].dwStartSector);
-          if ( toc [i].bTrack != i+1 )
-	    toc [i].bTrack = i+1;
-        }
-  } else {
-
-    /* copy to our structure and convert start sector */
-    for (i = 0; i < tracks; i++) {
-      memcpy (&toc[i], bufferTOC + 4 + 8*i, 8);
-      toc[i].ISRC[0] = 0;
-      toc[i].dwStartSector = -150 + 75*60* bufferTOC[4 + 8*i + 5]+
-                                    75*    bufferTOC[4 + 8*i + 6]+
-                                           bufferTOC[4 + 8*i + 7];
-      if ( toc [i].bTrack != i+1 )
-	  toc [i].bTrack = i+1;
+    if (result >= 0) {
+	/* MSF format succeeded */
+	/* copy to our structure */
+	for (i = 0; i < tracks; i++) {
+	    toc[i].mins = bufferTOC[4 + 8*i + 5];
+	    toc[i].secs = bufferTOC[4 + 8*i + 6];
+	    toc[i].frms = bufferTOC[4 + 8*i + 7];
+	}
     }
-  }
-  return --tracks;           /* without lead-out */
+
+    /* LBA format for cd burners like Philips CD-522 */
+    fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+    scmd->addr = (caddr_t)bufferTOC;
+    scmd->size = 4 + tracks * 8;
+    scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+    scmd->cdb_len = SC_G1_CDBLEN;
+    scmd->sense_len = CCS_SENSE_LEN;
+    scmd->cdb.g1_cdb.cmd = 0x43;		/* read TOC command */
+    scmd->cdb.g1_cdb.lun = scg_lun(scgp);
+    scmd->cdb.g1_cdb.res = 0;		/* LBA format */
+    scmd->cdb.g1_cdb.res6 = 1;		/* start track */
+    g1_cdblen(&scmd->cdb.g1_cdb, 4 + tracks * 8);
+
+    if (scgp->verbose) fprintf(stderr, "\nRead TOC tracks (standard LBA)...");
+    /* do the scsi cmd (read table of contents) */
+
+    scgp->cmdname = "read toc tracks ";
+    if (scg_cmd(scgp) < 0) {
+	FatalError ("Read TOC tracks failed.\n");
+    }
+    for (i = 0; i < tracks; i++) {
+	memcpy (&toc[i], bufferTOC + 4 + 8*i, 8);
+	toc[i].ISRC[0] = 0;
+	toc[i].dwStartSector = be32_to_cpu(toc[i].dwStartSector);
+	if (result < 0) {
+	    lba_2_msf((long)toc[i].dwStartSector, &toc[i].mins, &toc[i].secs, &toc[i].frms);
+	}
+	if ( toc [i].bTrack != i+1 )
+	    toc [i].bTrack = i+1;
+    }
+    return --tracks;           /* without lead-out */
 }
 
 /* ---------------- Read methods ------------------------------ */
@@ -540,9 +521,8 @@ int ReadStandard (scgp, p, lSector, SectorBurstVal )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0x28;		/* read 10 command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.res |= (accepts_fua_bit == 1 ? 1 << 2 : 0);
         g1_cdbaddr(&scmd->cdb.g1_cdb, lSector);
         g1_cdblen(&scmd->cdb.g1_cdb, SectorBurstVal);
@@ -550,10 +530,10 @@ int ReadStandard (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "ReadStandard10";
 
-	if (scsicmd(scgp)) return 0;
+	if (scg_cmd(scgp)) return 0;
 
 	/* has all or something been read? */
-	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
+	return SectorBurstVal - scg_getresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read max. SectorBurst of cdda sectors to buffer
@@ -574,9 +554,8 @@ int ReadCdda10 (scgp, p, lSector, SectorBurstVal )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0xd4;		/* Read audio command */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g1_cdb.res |= (accepts_fua_bit == 1 ? 1 << 2 : 0);
         g1_cdbaddr(&scmd->cdb.g1_cdb, lSector);
         g1_cdblen(&scmd->cdb.g1_cdb, SectorBurstVal);
@@ -584,10 +563,10 @@ int ReadCdda10 (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "Read10 NEC";
 
-	if (scsicmd(scgp)) return 0;
+	if (scg_cmd(scgp)) return 0;
 
 	/* has all or something been read? */
-	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
+	return SectorBurstVal - scg_getresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 
@@ -607,9 +586,8 @@ int ReadCdda12 (scgp, p, lSector, SectorBurstVal )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G5_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g5_cdb.cmd = 0xd8;		/* read audio command */
-        scmd->cdb.g5_cdb.lun = scgp->lun;
+        scmd->cdb.g5_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g5_cdb.res |= (accepts_fua_bit == 1 ? 1 << 2 : 0);
         g5_cdbaddr(&scmd->cdb.g5_cdb, lSector);
         g5_cdblen(&scmd->cdb.g5_cdb, SectorBurstVal);
@@ -618,10 +596,10 @@ int ReadCdda12 (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "Read12";
 
-	if (scsicmd(scgp)) return 0;
+	if (scg_cmd(scgp)) return 0;
 
 	/* has all or something been read? */
-	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
+	return SectorBurstVal - scg_getresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read max. SectorBurst of cdda sectors to buffer
@@ -645,9 +623,8 @@ int ReadCdda12Matsushita (scgp, p, lSector, SectorBurstVal )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G5_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g5_cdb.cmd = 0xd4;		/* read audio command */
-        scmd->cdb.g5_cdb.lun = scgp->lun;
+        scmd->cdb.g5_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g5_cdb.res |= (accepts_fua_bit == 1 ? 1 << 2 : 0);
         g5_cdbaddr(&scmd->cdb.g5_cdb, lSector);
         g5_cdblen(&scmd->cdb.g5_cdb, SectorBurstVal);
@@ -656,10 +633,10 @@ int ReadCdda12Matsushita (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "Read12Matsushita";
 
-	if (scsicmd(scgp)) return 0;
+	if (scg_cmd(scgp)) return 0;
 
 	/* has all or something been read? */
-	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
+	return SectorBurstVal - scg_getresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read max. SectorBurst of cdda sectors to buffer
@@ -679,9 +656,8 @@ int ReadCddaMMC12 (scgp, p, lSector, SectorBurstVal )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G5_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g5_cdb.cmd = 0xbe;		/* read cd command */
-        scmd->cdb.g5_cdb.lun = scgp->lun;
+        scmd->cdb.g5_cdb.lun = scg_lun(scgp);
         scmd->cdb.g5_cdb.res = 1 << 1; /* expected sector type field CDDA */
         g5_cdbaddr(&scmd->cdb.g5_cdb, lSector);
         g5x_cdblen(&scmd->cdb.g5_cdb, SectorBurstVal);
@@ -691,10 +667,10 @@ int ReadCddaMMC12 (scgp, p, lSector, SectorBurstVal )
 
 	scgp->cmdname = "ReadCD MMC 12";
 
-	if (scsicmd(scgp)) return 0;
+	if (scg_cmd(scgp)) return 0;
 
 	/* has all or something been read? */
-	return SectorBurstVal - scsigetresid(scgp)/CD_FRAMESIZE_RAW;
+	return SectorBurstVal - scg_getresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
 /* Read the Sub-Q-Channel to SubQbuffer. This is the method for
@@ -716,10 +692,9 @@ static subq_chnl *ReadSubQFallback ( scgp, sq_format, track )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0x42;		/* Read SubQChannel */
 						/* use LBA */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.addr[0] = 0x40; 	/* SubQ info */
         scmd->cdb.g1_cdb.addr[1] = 0;	 	/* parameter list: all */
         scmd->cdb.g1_cdb.res6 = track;		/* track number */
@@ -729,7 +704,7 @@ static subq_chnl *ReadSubQFallback ( scgp, sq_format, track )
 
 	scgp->cmdname = "Read Subchannel_dumb";
 
-	if (scsicmd(scgp) < 0) {
+	if (scg_cmd(scgp) < 0) {
 	  fprintf( stderr, "Read SubQ failed\n");
 	}
 
@@ -781,10 +756,9 @@ subq_chnl *ReadSubQSCSI ( scgp, sq_format, track )
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g1_cdb.cmd = 0x42;
 						/* use LBA */
-        scmd->cdb.g1_cdb.lun = scgp->lun;
+        scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.addr[0] = 0x40; 	/* SubQ info */
         scmd->cdb.g1_cdb.addr[1] = sq_format;	/* parameter list: all */
         scmd->cdb.g1_cdb.res6 = track;		/* track number */
@@ -794,7 +768,7 @@ subq_chnl *ReadSubQSCSI ( scgp, sq_format, track )
 
 	scgp->cmdname = "Read Subchannel";
 
-  if (scsicmd(scgp) < 0) {
+  if (scg_cmd(scgp) < 0) {
     /* in case of error do a fallback for dumb firmwares */
     return ReadSubQFallback(scgp, sq_format, track);
   }
@@ -849,9 +823,8 @@ void SpeedSelectSCSINEC (scgp, speed)
   scmd->flags = SCG_DISRE_ENA;
   scmd->cdb_len = SC_G1_CDBLEN;
   scmd->sense_len = CCS_SENSE_LEN;
-  scmd->target = scgp->target;
   scmd->cdb.g1_cdb.cmd = 0xC5;
-  scmd->cdb.g1_cdb.lun = scgp->lun;
+  scmd->cdb.g1_cdb.lun = scg_lun(scgp);
   scmd->cdb.g1_cdb.addr[0] = 0 ? 1 : 0 | 1 ? 0x10 : 0;
   g1_cdblen(&scmd->cdb.g1_cdb, 12);
 
@@ -860,7 +833,7 @@ void SpeedSelectSCSINEC (scgp, speed)
 
 	scgp->cmdname = "speed select NEC";
 
-  if ((retval = scsicmd(scgp)) < 0)
+  if ((retval = scg_cmd(scgp)) < 0)
         fprintf(stderr ,"speed select NEC failed\n");
 }
 
@@ -945,9 +918,8 @@ void SpeedSelectSCSIMMC (scgp, speed)
         scmd->flags = SCG_DISRE_ENA;
         scmd->cdb_len = SC_G5_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
-        scmd->target = scgp->target;
         scmd->cdb.g5_cdb.cmd = 0xBB;
-        scmd->cdb.g5_cdb.lun = scgp->lun;
+        scmd->cdb.g5_cdb.lun = scg_lun(scgp);
         i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], spd);
         i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], 0xffff);
 
@@ -956,13 +928,13 @@ void SpeedSelectSCSIMMC (scgp, speed)
 	scgp->cmdname = "set cd speed";
 
 	scgp->silent++;
-        if (scsicmd(scgp) < 0) {
-		if (scsi_sense_key(scgp) == 0x05 &&
-		    scsi_sense_code(scgp) == 0x20 &&
-		    scsi_sense_qual(scgp) == 0x00) {
+        if (scg_cmd(scgp) < 0) {
+		if (scg_sense_key(scgp) == 0x05 &&
+		    scg_sense_code(scgp) == 0x20 &&
+		    scg_sense_qual(scgp) == 0x00) {
 			/* this optional command is not implemented */
 		} else {
-			scsiprinterr(scgp);
+			scg_printerr(scgp);
                 	fprintf (stderr, "speed select MMC failed\n");
 		}
 	}
@@ -991,21 +963,20 @@ unsigned char *Inquiry ( scgp )
   scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
   scmd->cdb_len = SC_G0_CDBLEN;
   scmd->sense_len = CCS_SENSE_LEN;
-  scmd->target = scgp->target;
   scmd->cdb.g0_cdb.cmd = SC_INQUIRY;
-  scmd->cdb.g0_cdb.lun = scgp->lun;
+  scmd->cdb.g0_cdb.lun = scg_lun(scgp);
   scmd->cdb.g0_cdb.count = 42;
         
 	scgp->cmdname = "inquiry";
 
-  if (scsicmd(scgp) < 0)
+  if (scg_cmd(scgp) < 0)
      return (NULL);
 
   /* define structure with inquiry data */
   memcpy(scgp->inq, Inqbuffer, sizeof(*scgp->inq)); 
 
   if (scgp->verbose)
-     scsiprbytes("Inquiry Data   :", (u_char *)Inqbuffer, 22 - scmd->resid);
+     scg_prbytes("Inquiry Data   :", (Uchar *)Inqbuffer, 22 - scmd->resid);
 
   return (Inqbuffer);
 }
@@ -1035,16 +1006,15 @@ int TestForMedium ( scgp )
   scmd->flags = SCG_DISRE_ENA | (1 ? SCG_SILENT:0);
   scmd->cdb_len = SC_G0_CDBLEN;
   scmd->sense_len = CCS_SENSE_LEN;
-  scmd->target = scgp->target;
   scmd->cdb.g0_cdb.cmd = SC_TEST_UNIT_READY;
-  scmd->cdb.g0_cdb.lun = scgp->lun;
+  scmd->cdb.g0_cdb.lun = scg_lun(scgp);
         
   if (scgp->verbose) fprintf(stderr, "\ntest unit ready...");
   scgp->silent++;
 
 	scgp->cmdname = "test unit ready";
 
-  if (scsicmd(scgp) >= 0) {
+  if (scg_cmd(scgp) >= 0) {
     scgp->silent--;
     return 1;
   }
@@ -1072,16 +1042,15 @@ int StopPlaySCSI ( scgp )
   scmd->flags = SCG_DISRE_ENA;
   scmd->cdb_len = SC_G0_CDBLEN;
   scmd->sense_len = CCS_SENSE_LEN;
-  scmd->target = scgp->target;
   scmd->cdb.g0_cdb.cmd = 0x1b;
-  scmd->cdb.g0_cdb.lun = scgp->lun;
+  scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 
   if (scgp->verbose) fprintf(stderr, "\nstop audio play");
   /* do the scsi cmd */
 
 	scgp->cmdname = "stop audio play";
 
-  return scsicmd(scgp) >= 0 ? 0 : -1;
+  return scg_cmd(scgp) >= 0 ? 0 : -1;
 }
 
 int Play_atSCSI ( scgp, from_sector, sectors)
@@ -1097,9 +1066,8 @@ int Play_atSCSI ( scgp, from_sector, sectors)
   scmd->flags = SCG_DISRE_ENA;
   scmd->cdb_len = SC_G1_CDBLEN;
   scmd->sense_len = CCS_SENSE_LEN;
-  scmd->target = scgp->target;
   scmd->cdb.g1_cdb.cmd = 0x47;
-  scmd->cdb.g1_cdb.lun = scgp->lun;
+  scmd->cdb.g1_cdb.lun = scg_lun(scgp);
   scmd->cdb.g1_cdb.addr[1] = (from_sector + 150) / (60*75);
   scmd->cdb.g1_cdb.addr[2] = ((from_sector + 150) / 75) % 60;
   scmd->cdb.g1_cdb.addr[3] = (from_sector + 150) % 75;
@@ -1112,7 +1080,7 @@ int Play_atSCSI ( scgp, from_sector, sectors)
 
 	scgp->cmdname = "play sectors";
 
-  return scsicmd(scgp) >= 0 ? 0 : -1;
+  return scg_cmd(scgp) >= 0 ? 0 : -1;
 }
 
 static caddr_t scsibuffer;	/* page aligned scsi transfer buffer */
@@ -1127,7 +1095,7 @@ void init_scsibuf(scgp, amt)
 		fprintf(stderr, "the SCSI transfer buffer has already been allocated!\n");
 		exit(3);
 	}
-	scsibuffer = scsi_getbuf(scgp, amt);
+	scsibuffer = scg_getbuf(scgp, amt);
 	if (scsibuffer == NULL) {
 		fprintf(stderr, "could not get SCSI transfer buffer!\n");
 		exit(3);

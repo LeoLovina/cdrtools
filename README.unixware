@@ -26,6 +26,14 @@ Limitations for CDRTOOLS-1.8 on UnixWare:
 ===================================================================
 NOTE: cdrecord now supports the -scanbus option. Therefore the 
       old addressing methods are NO LONGER AVAILABLE !!!
+      
+      As UnixWare 7.1.1 doesn't allow to open the passthrough
+      interface for disks, this is disabled by default. 
+      cdrecord -scanbus will therefore only list devices other
+      than disks. To enable the scanning of disks, you need to
+      set an environment variable "LIBSCG_SCAN_ALL".
+      
+      Be warned, doing so might lock your disk subsystem!
 ===================================================================
 
 The correct dev= syntax on UnixWare 7 is:

@@ -1,7 +1,7 @@
-/* @(#)dump.c	1.10 00/05/07 joerg */
+/* @(#)dump.c	1.11 00/12/09 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)dump.c	1.10 00/05/07 joerg";
+	"@(#)dump.c	1.11 00/12/09 joerg";
 #endif
 /*
  * File dump.c - dump a file/device both in hex and in ASCII.
@@ -24,11 +24,11 @@ static	char sccsid[] =
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "../config.h"
-
+#include <mconfig.h>
 #include <stdxlib.h>
 #include <unixstd.h>
 #include <strdefs.h>
+#include <utypes.h>
 
 #include <stdio.h>
 #include <standard.h>
@@ -41,8 +41,8 @@ static	char sccsid[] =
 #include <signal.h>
 #include <schily.h>
 
-FILE * infile;
-int file_addr;
+FILE *	infile;
+off_t	file_addr;
 unsigned char buffer[256];
 unsigned char search[64];
 
@@ -142,12 +142,16 @@ showblock(flag)
 {
   unsigned int k;
   int i, j;
-  lseek(fileno(infile), file_addr, 0);
+  lseek(fileno(infile), file_addr, SEEK_SET);
   read(fileno(infile), buffer, sizeof(buffer));
   if(flag) {
     for(i=0;i<16;i++){
       crsr2(i+3,1);
-      printf("%8.8x ",file_addr+(i<<4));
+	if (sizeof(file_addr) > sizeof(long)) {
+		printf("%16.16llx ", (Llong)file_addr+(i<<4));
+	} else {
+		printf("%8.8lx ", (long)file_addr+(i<<4));
+	}
       for(j=15;j>=0;j--){
 	printf("%2.2x",buffer[(i<<4)+j]);
 	if(!(j & 0x3)) printf(" ");
@@ -160,7 +164,13 @@ showblock(flag)
     }
   };
   crsr2(20,1);
-  printf(" Zone, zone offset: %6x %4.4x  ",file_addr>>11, file_addr & 0x7ff);
+	if (sizeof(file_addr) > sizeof(long)) {
+		printf(" Zone, zone offset: %14llx %12.12llx  ",
+			(Llong)file_addr>>11, (Llong)file_addr & 0x7ff);
+	} else {
+		printf(" Zone, zone offset: %6lx %4.4lx  ",
+			(long)(file_addr>>11), (long)(file_addr & 0x7ff));
+	}
   fflush(stdout);
 }
 
@@ -207,7 +217,7 @@ main(argc, argv)
 #endif
   }
   for(i=0;i<30;i++) printf("\n");
-  file_addr = 0;
+  file_addr = (off_t)0;
 /* Now setup the keyboard for single character input. */
 #ifdef HAVE_TERMIOS_H
   if(tcgetattr(0, &savetty) == -1)
@@ -232,7 +242,7 @@ main(argc, argv)
 #endif
 
   do{
-    if(file_addr < 0) file_addr = 0;
+    if(file_addr < (off_t)0) file_addr = (off_t)0;
     showblock(1);
     read (0, &c, 1);
     if (c == 'a') file_addr -= PAGE;
@@ -240,7 +250,15 @@ main(argc, argv)
     if (c == 'g') {
       crsr2(20,1);
       printf("Enter new starting block (in hex):");
-      scanf("%x",&file_addr);
+	if (sizeof(file_addr) > sizeof(long)) {
+		Llong	ll;
+		scanf("%llx",&ll);
+		file_addr = (off_t)ll;
+	} else {
+		long	l;
+		scanf("%lx",&l);
+		file_addr = (off_t)l;
+	}
       file_addr = file_addr << 11;
       crsr2(20,1);
       printf("                                     ");

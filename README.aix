@@ -25,6 +25,8 @@ If you like to create bootable CD's for AIX on the CHRP architecture:
 	There's more info about it in /usr/lpp/bos.sysmgt/mkcd.README.html.
 
 
-NOTE:	there is currently no real SCSI generic support for AIX.
+NOTE:	there is currently no real SCSI generic support for AIX, so 
+	cdrecord -scanbus will not work.
+
 	/dev/rcd0 is mapped to dev=0,0,0
 	/dev/rcd1 is mapped to dev=0,1,0

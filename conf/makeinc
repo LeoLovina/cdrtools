@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# %Z%%M%	%I% %E% Copyright 1998 J. Schilling
+# @(#)makeinc	1.2 00/11/19 Copyright 1998 J. Schilling
 ###########################################################################
 # Copyright 1998 by J. Schilling
 ###########################################################################
@@ -81,7 +81,7 @@ gcc -v 2> /dev/null && CC=gcc
 echo "CC:		$CC"
 
 MANSTYLE=sysv
-if [-r /usr/man/*man7*/man* -o -r /usr/share/man/*man7*/man* \
+if [ -r /usr/man/*man7*/man* -o -r /usr/share/man/*man7*/man* \
 	-o -r /usr/man/*man7*/ascii* -o -r /usr/share/man/*man7*/ascii* ]; then 
 	MANSTYLE=bsd
 fi
@@ -166,6 +166,13 @@ echo "MANSTYLE:	$MANSTYLE"
 		fi
 		;;
 
+	#######################################################################
+	# This entry is not really needed...
+	#######################################################################
+	*TARGETS/Targetdirs*)
+		echo "Linking $1 to $SRCROOT/TARGETS/Targetdirs"
+		ln -s Targetdirs $1
+		;;
 	*)
 		echo "Unknown rule to build: '$1'."
 		exit 1

@@ -1,7 +1,7 @@
-/* @(#)isodump.c	1.13 00/05/07 joerg */
+/* @(#)isodump.c	1.14 00/12/09 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isodump.c	1.13 00/05/07 joerg";
+	"@(#)isodump.c	1.14 00/12/09 joerg";
 #endif
 /*
  * File isodump.c - dump iso9660 directory information.
@@ -25,11 +25,11 @@ static	char sccsid[] =
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "../config.h"
-
+#include <mconfig.h>
 #include <stdxlib.h>
 #include <unixstd.h>
 #include <strdefs.h>
+#include <utypes.h>
 
 #include <stdio.h>
 #include <standard.h>
@@ -42,8 +42,8 @@ static	char sccsid[] =
 #include <signal.h>
 #include <schily.h>
 
-FILE * infile;
-int file_addr;
+FILE	*infile;
+off_t	file_addr;
 unsigned char buffer[2048];
 unsigned char search[64];
 int blocksize;
@@ -247,7 +247,8 @@ int parse_rr(pnt, len, cont_flag)
 	int slen;
 	int ncount;
 	int extent;
-	int cont_extent, cont_offset, cont_size;
+	off_t cont_extent;
+	int cont_offset, cont_size;
 	int flag1, flag2;
 	unsigned char *pnts;
 	char symlinkname[1024];
@@ -257,7 +258,8 @@ int parse_rr(pnt, len, cont_flag)
 
 	symlinkname[0] = 0;
 
-	cont_extent = cont_offset = cont_size = 0;
+	cont_extent = (off_t)0;
+	cont_offset = cont_size = 0;
 
 	ncount = 0;
 	flag1 = flag2 = 0;
@@ -299,10 +301,10 @@ int parse_rr(pnt, len, cont_flag)
 		};
 
 		if(strncmp((char *)pnt, "CE", 2) == 0) {
-			cont_extent = isonum_733(pnt+4);
+			cont_extent = (off_t)isonum_733(pnt+4);
 			cont_offset = isonum_733(pnt+12);
 			cont_size = isonum_733(pnt+20);
-			printf("=[%x,%x,%d]", cont_extent, cont_offset, 
+			printf("=[%x,%x,%d]", (int)cont_extent, cont_offset, 
 			       cont_size);
 		};
 
@@ -362,7 +364,7 @@ int parse_rr(pnt, len, cont_flag)
 		pnt += pnt[2];
 		if(len <= 3 && cont_extent) {
 		  unsigned char sector[2048];
-		  lseek(fileno(infile), cont_extent * blocksize, 0);
+		  lseek(fileno(infile), cont_extent * blocksize, SEEK_SET);
 		  read(fileno(infile), sector, sizeof(sector));
 		  flag2 |= parse_rr(&sector[cont_offset], cont_size, 1);
 		};
@@ -405,7 +407,7 @@ showblock(flag)
   int i, j;
   int line;
   struct iso_directory_record * idr;
-  lseek(fileno(infile), file_addr, 0);
+  lseek(fileno(infile), file_addr, SEEK_SET);
   read(fileno(infile), buffer, sizeof(buffer));
   for(i=0;i<60;i++) printf("\n");
   fflush(stdout);
@@ -437,8 +439,15 @@ showblock(flag)
 	  };
   };
   printf("\n");
-  printf(" Zone, zone offset: %6x %4.4x  ",file_addr / blocksize, 
-	 file_addr & (blocksize - 1));
+	if (sizeof(file_addr) > sizeof(long)) {
+		printf(" Zone, zone offset: %14llx %12.12llx  ",
+			(Llong)file_addr / blocksize, 
+			(Llong)file_addr & (Llong)(blocksize - 1));
+	} else {
+		printf(" Zone, zone offset: %6lx %4.4lx  ",
+			(long) (file_addr / blocksize),
+			(long) file_addr & (blocksize - 1));
+	}
   fflush(stdout);
 }
 
@@ -487,8 +496,8 @@ main(argc, argv)
 #endif
   }
 
-  file_addr = 16 << 11;
-  lseek(fileno(infile), file_addr, 0);
+  file_addr = (off_t) (16 << 11);
+  lseek(fileno(infile), file_addr, SEEK_SET);
   read(fileno(infile), &ipd, sizeof(ipd));
 
   idr = (struct iso_directory_record *)ipd.root_directory_record;
@@ -499,7 +508,7 @@ main(argc, argv)
       blocksize = 2048;
     }
 
-  file_addr = isonum_733(idr->extent);
+  file_addr = (off_t)isonum_733(idr->extent);
 
   file_addr = file_addr * blocksize;
 
@@ -527,7 +536,7 @@ main(argc, argv)
 #endif
 
   do{
-    if(file_addr < 0) file_addr = 0;
+    if(file_addr < 0) file_addr = (off_t)0;
     showblock(1);
     read (0, &c, 1);
     if (c == 'a') file_addr -= blocksize;
@@ -535,7 +544,15 @@ main(argc, argv)
     if (c == 'g') {
       crsr2(20,1);
       printf("Enter new starting block (in hex):");
-      scanf("%x",&file_addr);
+	if (sizeof(file_addr) > sizeof(long)) {
+		Llong	ll;
+		scanf("%llx",&ll);
+		file_addr = (off_t)ll;
+	} else {
+		long	l;
+		scanf("%lx",&l);
+		file_addr = (off_t)l;
+	}
       file_addr = file_addr * blocksize;
       crsr2(20,1);
       printf("                                     ");

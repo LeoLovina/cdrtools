@@ -1,7 +1,7 @@
-/* @(#)scsi.c	1.14 00/05/07 Copyright 1997 J. Schilling */
+/* @(#)scsi.c	1.17 00/12/04 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi.c	1.14 00/05/07 Copyright 1997 J. Schilling";
+	"@(#)scsi.c	1.17 00/12/04 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1997 J. Schilling
@@ -89,7 +89,7 @@ readsecs(startsecno, buffer, sectorcount)
 			secnum = amt / secsize;
 
 			if (read_scsi(scgp, bp, secno, secnum) < 0 ||
-						scsigetresid(scgp) != 0) {
+						scg_getresid(scgp) != 0) {
 #ifdef	OLD
 				return (-1);
 #else
@@ -106,7 +106,7 @@ readsecs(startsecno, buffer, sectorcount)
 
 	f = fileno(in_image);
 
-	if (lseek(f, (off_t)startsecno * SECTOR_SIZE, 0) == (off_t)-1) {
+	if (lseek(f, (off_t)startsecno * SECTOR_SIZE, SEEK_SET) == (off_t)-1) {
 #ifdef	USE_LIBSCHILY
 		comerr("Seek error on old image\n");
 #else
@@ -135,17 +135,23 @@ scsidev_open(path)
 	char	*buf;	/* ignored, bit OS/2 ASPI layer needs memory which
 			   has been allocated by scsi_getbuf()		   */
 
+	/*
+	 * Call scg_remote() to force loading the remote SCSI transport library
+	 * code that is located in librscg instead of the dummy remote routines
+	 * that are located inside libscg.
+	 */
+	scg_remote();
 			/* path, debug, verboseopen */
-	scgp = open_scsi(path, errstr, sizeof(errstr), 0, 0);
+	scgp = scg_open(path, errstr, sizeof(errstr), 0, 0);
 	if (scgp == 0) {
 		errmsg("%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
 		return (-1);
 	}
 
-	bufsize = scsi_bufsize(scgp, BUF_SIZE);
-	if ((buf = scsi_getbuf(scgp, bufsize)) == NULL) {
+	bufsize = scg_bufsize(scgp, BUF_SIZE);
+	if ((buf = scg_getbuf(scgp, bufsize)) == NULL) {
 		errmsg("Cannot get SCSI I/O buffer.\n");
-		close_scsi(scgp);
+		scg_close(scgp);
 		return (-1);
 	}
 
@@ -169,7 +175,7 @@ EXPORT int
 scsidev_close()
 {
 	if (in_image == NULL) {
-		return (close_scsi(scgp));
+		return (scg_close(scgp));
 	} else {
 		return (fclose(in_image));
 	}

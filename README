@@ -1,13 +1,13 @@
-# @(#)README	1.21 00/05/28 Copyright 1996 J. Schilling
+# @(#)README	1.22 01/04/13 Copyright 1996 J. Schilling
 
-This is Version 1.8.1 of cdrecord
+This is Version 1.10 of cdrecord
 
 Cdrecord allows you to create CD's on a CD-Recorder.
 Cdrecord runs on:
 
 SunOS 4.1.3 or later:	sparc.
 Solaris 2.3 or later:	sparc and x86.
-Linux:			x86 sparc sparc64 ppc strongarm and alpha.
+Linux:			x86 sparc sparc64 m68k ppc strongarm and alpha.
 NetBSD/FreeBSD/OpenBSD:	x86 sparc alpha amiga and m68k
 SGI IRIX:		mips
 HP-UX:			hppa
@@ -25,13 +25,19 @@ VMS:			*VAX
 BeOS:			x86
 Win95:			x86
 Win98:			x86
+WinME:			x86
 WinNT:			x86
+WinNT-5 (aka Win2000):	x86
+Apollo Domain/OS	m68k ???
 QNX:			x86 (coming soon)
 
 
 To learn how to compile and install cdrecord, read README.compile
 
 For multi session please read README.multi
+
+In general, it is a good idea to read all README's and check whether
+they may apply for your needs/problems.
 
 Cdrecord runs without problems on a loaded Solaris system.
 On Solaris, cdrecord uses the SVr4 priocntl() call to establish
@@ -45,11 +51,6 @@ The SCSI library is suitable to talk to any SCSI device without having
 a special driver for it.
 Cdrecord may be easily ported to any system that has a 
 SCSI device driver similar to the scg driver.
-
-On Linux cdrecord currently uses the /dev/sg? driver 
-	- you need no additional driver
-On *BSD, SGI IRIX and HP-UX the internal user level SCSI driver is used
-but you will not need an OS specific SCSI user library.
 
 On SunOS/Solaris:
 You *need* the SCSI general driver 'scg' in order to run cdrecord.
@@ -72,6 +73,8 @@ Solaris only:
 	it is supplied binary in pkgadd(1m) format and is tested
 	on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
 
+On other OS, libscg uses the SCSI drivers that are present on the system.
+
 Cdrecord-1.3 or later adopts the right BUF_SIZE for each architecture.
 This is to reduce some performance problems on Solaris x86.
 It may be that the reason for this performance problems is that
@@ -82,6 +85,8 @@ be needed on Linux anyway.
 
 Cdrecord is currently maintained with the following drives:
 
+	Plextor PX-W1210S
+	Plextor PX-W1210A
 	Plextor PX-W124
 	Plextor PX-W8220
 	Plextor PX-W4220
@@ -92,14 +97,22 @@ Cdrecord is currently maintained with the following drives:
 	Ricoh MP-7040A
 	Ricoh MP-7040S
 	Ricoh MP-7060S (available only to Thomas Niederreiter and Heiko Eiﬂfeld)
+	Ricoh MP-7063A
+	Ricoh MP-7080A
+	Ricoh MP-7083A
+	Ricoh MP-9060A
 	TEAC CD-R55S
 	TEAC CD-R58S
 	TEAC CD-W54E
 	Sanyo CDR-Bp2
+	Sanyo CDR-Bp3A
 	Sony CDU948S
+	Sony CRX-145E
 	COMPRO/Matsushita/Panasonic CW-7502
+	COMPRO/Matsushita/Panasonic CW-7586
 	Philips CDD-2000
-	Goldstar 8080
+	Philips PCRW-804
+	Goldstar LG 8080
 
 It should run also on:
 
@@ -121,6 +134,7 @@ them to be identical to working drives:
 	AOPEN CRW9420 (Re-writable)
 	BTC BCE 621E
 	COMPRO CW-7502
+	COMPRO/Matsushita/Panasonic CW-7586
 	Dysan CR-622 ???? See Wearnes 622
 	Dysan CR-1622
 	DynaTec CDM-240J (see Pinnacle RCD-4x4)
@@ -149,6 +163,7 @@ them to be identical to working drives:
 	Matsushita CW-7502
 	Matsushita CW-7503
 	Matsushita CW-7582
+	Matsushita CW-7586
 	Memorex CR-622 ???? See Wearnes 622
 	Memorex CR-1622
 	Memorex CRW-1622
@@ -173,6 +188,7 @@ them to be identical to working drives:
 	Panasonic CW-7502
 	Panasonic CW-7503
 	Panasonic CW-7582
+	Panasonic CW-7586
 	Philips CDD 521 (CDD521/02  Revision: 2.06 has bad firmware - seems not to work)
 	Philips CDD 521 (upgraded units only: ID: CDD521/10  Revision: 2.07)
 	Philips CDD 522
@@ -184,6 +200,7 @@ them to be identical to working drives:
 	Philips Omniwriter 26
 	Philips Omniwriter 26A
 	Philips CDD4201 CD-RW
+	Philips PCRW-804
 	Pinnacle Micro RCD-1000 (see TEAC/JVC): Need to upgrade firmware to 2.35
 	Pinnacle Micro RCD-5020 (see TEAC/JVC - audio not working)
 	Pinnacle Micro RCD-5040 (see TEAC/JVC - audio not working)
@@ -200,6 +217,8 @@ them to be identical to working drives:
 	Plextor PX-W4220
 	Plextor PX-W8220
 	Plextor PX-W124
+	Plextor PX-W1210S
+	Plextor PX-W1210A
 	Procom PCDR 4 (use cdrecord driver=yamaha_cdr100 and report inquiry)
 	Ricoh RO-1420C
 	Ricoh MP-6200
@@ -208,7 +227,12 @@ them to be identical to working drives:
 	Ricoh MP-7040A
 	Ricoh MP-7040S
 	Ricoh MP-7060S
+	Ricoh MP-7063A
+	Ricoh MP-7080A
+	Ricoh MP-7083A
+	Ricoh MP-9060A
 	Sanyo CDR-Bp2
+	Sanyo CDR-Bp3
 	Smart & Friendly CD-R1002 (use cdrecord driver=sony_cdu924   and report inquiry)
 	Smart & Friendly CD-R1004 (use cdrecord driver=yamaha_cdr100 and report inquiry)
 	Smart & Friendly CD-R2004 (use cdrecord driver=sony_cdu924   and report inquiry)
@@ -255,6 +279,7 @@ them to be identical to working drives:
 	Yamaha CRW-4416
 	Yamaha CRW-6416
 	Yamaha CRW-8424
+	Yamaha CRW-2100
 
 Multi-session has not been tested with the Plasmon RF-4100
 
@@ -280,7 +305,7 @@ The following drives are currently not supported because I don't get specs:
 	Plasmon CDR-4240
 	Sony CDW-900E
 
-The following drives may get support soon:
+The following drives may get support soon (If I get time to do so):
 
 	Panasonic CW-7501
 	Ricoh RS-1060C
@@ -296,7 +321,7 @@ Solaris only:
 Note that the fbk driver packet is for Solaris 2.4 and not system independent.
 
 All Systems:
-	cdrecord-1.6.1.tar.gz	The cdrecord for source distribution.
+	cdrtools-1.10.tar.gz	The cdrecord for source distribution.
 
 NOTE:	All these tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
 	tar may get some minor trouble.

@@ -1,7 +1,7 @@
-/* @(#)hash.c	1.12 00/05/07 joerg */
+/* @(#)hash.c	1.14 01/03/03 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)hash.c	1.12 00/05/07 joerg";
+	"@(#)hash.c	1.14 01/03/03 joerg";
 
 #endif
 /*
@@ -28,14 +28,26 @@ static	char sccsid[] =
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
-#include "config.h"
-#include <stdxlib.h>
-#include "mkisofs.h"
+/*
+ * From jb@danware.dk:
+ *
+ * Cygwin fakes inodes by hashing file info, actual collisions observed!
+ * This is documented in the cygwin source, look at winsup/cygwin/path.cc
+ * and search for the word 'Hash'.  On NT, cygwin ORs together the
+ * high and low 32 bits of the 64 bit genuine inode, look at fhandler.cc.
+ *
+ * Note:	Other operating systems which support the FAT filesystem may
+ *		have the same problem because FAT does not use the inode
+ *		concept.  For NTFS, genuine inode numbers exist, but they are
+ *		64 bits and available only through an open file handle.
+ *
+ * The solution is the new options -no-cache-inodes/-cache-inodes that
+ * allow to disable the mkisofs inode cache.
+ */
 
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
+#include <mconfig.h>
+#include "mkisofs.h"
 #include <schily.h>
-#endif
 
 #define NR_HASH 1024
 
@@ -75,6 +87,8 @@ add_hash(spnt)
 #endif
 		};
 
+	if (!cache_inodes)
+		return;
 	if (spnt->dev == (dev_t) UNCACHED_DEVICE ||
 				spnt->inode == UNCACHED_INODE) {
 		return;
@@ -106,10 +120,12 @@ find_hash(dev, inode)
 	unsigned int    hash_number;
 	struct file_hash *spnt;
 
-	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
+	if (!cache_inodes)
+		return NULL;
 	if (dev == (dev_t) UNCACHED_DEVICE || inode == UNCACHED_INODE)
 		return NULL;
 
+	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
 	spnt = hash_table[hash_number];
 	while (spnt) {
 		if (spnt->inode == inode && spnt->dev == dev)
@@ -151,8 +167,11 @@ add_directory_hash(dev, inode)
 	struct file_hash *s_hash;
 	unsigned int    hash_number;
 
+	if (!cache_inodes)
+		return;
 	if (dev == (dev_t) UNCACHED_DEVICE || inode == UNCACHED_INODE)
 		return;
+
 	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
 
 	s_hash = (struct file_hash *) e_malloc(sizeof(struct file_hash));
@@ -170,10 +189,12 @@ find_directory_hash(dev, inode)
 	unsigned int    hash_number;
 	struct file_hash *spnt;
 
-	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
+	if (!cache_inodes)
+		return NULL;
 	if (dev == (dev_t) UNCACHED_DEVICE || inode == UNCACHED_INODE)
 		return NULL;
 
+	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
 	spnt = directory_hash_table[hash_number];
 	while (spnt) {
 		if (spnt->inode == inode && spnt->dev == dev)

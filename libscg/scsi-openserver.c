@@ -1,7 +1,7 @@
-/* @(#)scsi-openserver.c	1.19 00/07/01 Copyright 1998 J. Schilling, Santa Cruz Operation */
+/* @(#)scsi-openserver.c	1.28 01/03/18 Copyright 1998 J. Schilling, Santa Cruz Operation */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-openserver.c	1.19 00/07/01 Copyright 1998 J. Schilling, Santa Cruz Operation";
+	"@(#)scsi-openserver.c	1.28 01/03/18 Copyright 1998 J. Schilling, Santa Cruz Operation";
 #endif
 /*
  *	Interface for the SCO SCSI implementation.
@@ -41,7 +41,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.19";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.28";	/* The version for this transport*/
 
 #define	MAX_SCG		16		/* Max # of cdrom devices */
 #define	MAX_TGT		16		/* Not really needed      */
@@ -138,8 +138,8 @@ LOCAL	void	cp_sco2scg	__PR((struct scsicmd2 *sco, struct scg_cmd *scg));
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -281,10 +281,10 @@ extern	char		**environ;
 	} else
 		nlm = atoi(lines);
 
-	if (scgp->debug) {
-		printf("-------------------- \n");
-		printf("mscsi lines = %d\n", nlm);
-		printf("-------------------- \n");
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
+		js_fprintf((FILE *)scgp->errfile, "mscsi lines = %d\n", nlm);
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
 	}
 
 	if (pclose(cmd) == -1) {
@@ -314,7 +314,8 @@ extern	char		**environ;
 		/* the order the lines will be received in will determine */
 		/* the device name we can use to open the device         */
 
-		sprintf(sconf, SCSI_DEV, l + 1); /* enumeration starts with 1 */
+		js_snprintf(sconf, sizeof(sconf),
+			SCSI_DEV, l + 1); /* enumeration starts with 1 */
 
 		evsave = environ;
 		environ = 0;
@@ -347,19 +348,23 @@ extern	char		**environ;
 					&cmtbl[l].lun);
 
 		if ( strstr(cmtbl[l].typ, "Sdsk") != NULL ){
-			sprintf(cmtbl[l].dev, DEV_SDSK, ++nSdsk);
+			js_snprintf(cmtbl[l].dev,  sizeof(cmtbl[l].dev),
+					DEV_SDSK, ++nSdsk);
 		}
 
 		if ( strstr(cmtbl[l].typ, "Srom") != NULL ){
-			sprintf(cmtbl[l].dev, DEV_SROM, ++nSrom);
+			js_snprintf(cmtbl[l].dev,  sizeof(cmtbl[l].dev),
+					DEV_SROM, ++nSrom);
 		}
 
 		if ( strstr(cmtbl[l].typ, "Stp") != NULL ){
-			sprintf(cmtbl[l].dev, DEV_STP, ++nStp);
+			js_snprintf(cmtbl[l].dev, sizeof(cmtbl[l].dev),
+					DEV_STP, ++nStp);
 		}
 
-		if (scgp->debug) {
-			printf("%-4s = %5s(%d,%d,%d,%d) -> %s\n", 
+		if (scgp->debug > 0) {
+			js_fprintf((FILE *)scgp->errfile,
+				"%-4s = %5s(%d,%d,%d,%d) -> %s\n", 
 				cmtbl[l].typ, 
 				cmtbl[l].drv, 
 				cmtbl[l].hba, 
@@ -371,21 +376,22 @@ extern	char		**environ;
 
 	}
 
-	if (scgp->debug) {
-		printf("-------------------- \n");
-		printf("%2d DISK  \n", nSdsk + 1);
-		printf("%2d CD-ROM\n", nSrom + 1);
-		printf("%2d TAPE  \n", nStp  + 1);
-		printf("-------------------- \n");
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
+		js_fprintf((FILE *)scgp->errfile, "%2d DISK  \n", nSdsk + 1);
+		js_fprintf((FILE *)scgp->errfile, "%2d CD-ROM\n", nSrom + 1);
+		js_fprintf((FILE *)scgp->errfile, "%2d TAPE  \n", nStp  + 1);
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
 	}
 
 	/* ok, now let's sort this array of scsi devices	*/
 
 	qsort((void *) cmtbl, nlm, sizeof(amscsi_t), sort_mscsi);
 
-	if (scgp->debug) {
+	if (scgp->debug > 0) {
 		for (l = 0; l < nlm; l++)
-		printf("%-4s = %5s(%d,%d,%d,%d) -> %s\n", 
+		js_fprintf((FILE *)scgp->errfile,
+			"%-4s = %5s(%d,%d,%d,%d) -> %s\n", 
 			cmtbl[l].typ, 
 			cmtbl[l].drv, 
 			cmtbl[l].hba, 
@@ -393,7 +399,7 @@ extern	char		**environ;
 			cmtbl[l].tgt, 
 			cmtbl[l].lun,
 			cmtbl[l].dev);
-		printf("-------------------- \n");
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
 	}
 
 
@@ -405,15 +411,16 @@ extern	char		**environ;
 			t = l;
 
 
-	if (scgp->debug) {
-		printf("root = %5s(%d,%d,%d,%d) -> %s\n", 
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"root = %5s(%d,%d,%d,%d) -> %s\n", 
 			cmtbl[t].drv, 
 			cmtbl[t].hba, 
 			cmtbl[t].bus, 
 			cmtbl[t].tgt, 
 			cmtbl[t].lun,
 			cmtbl[t].dev);
-		printf("-------------------- \n");
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
 	}
 
 	/* calculate scg from drv, hba and bus 			*/
@@ -475,8 +482,9 @@ extern	char		**environ;
 					continue;
 				}
 
-				if (scgp->debug) {
-					printf("%d,%d,%d => %5s(%d,%d,%d,%d) -> %d : %s \n", 
+				if (scgp->debug > 0) {
+					js_fprintf((FILE *)scgp->errfile,
+						"%d,%d,%d => %5s(%d,%d,%d,%d) -> %d : %s \n", 
 						s, t, l,
 						cmtbl[mscsi].drv, 
 						cmtbl[mscsi].hba, 
@@ -495,24 +503,24 @@ extern	char		**environ;
 		}
 	}
 
-	if (scgp->debug) {
-		printf("-------------------- \n");
-		printf("nopen = %d devices   \n", nopen);
-		printf("-------------------- \n");
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
+		js_fprintf((FILE *)scgp->errfile, "nopen = %d devices   \n", nopen);
+		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
 	}
 
 	return (nopen);
 }
 
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+	int	busno	= scg_scsibus(scgp);
+	int	tgt	= scg_target(scgp);
+	int	tlun	= scg_lun(scgp);
 	int	f, b, t, l;
 	int	nopen = 0;
 	char	devname[64];
@@ -551,8 +559,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	register int	f;
@@ -583,7 +591,7 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -591,23 +599,22 @@ scsi_maxdma(scgp, amt)
 }
 
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
-
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"scgo_getbuf: %ld bytes\n", amt);
+	}
 	scgp->bufbase = valloc((size_t)(amt));
 
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -615,8 +622,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -637,8 +644,8 @@ BOOL scsi_havebus(scgp, busno)
 	return (FALSE);
 }
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -655,8 +662,8 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 	return ((int)scglocal(scgp)->scgfiles[busno][tgt][tlun]);
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
@@ -674,17 +681,19 @@ scsi_initiator_id(scgp)
 	*/
 }
 
-EXPORT
-int scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
-	return (sdidevs[scgp->scsibus][scgp->target][scgp->lun].atapi);
+	return (sdidevs[scg_scsibus(scgp)][scg_target(scgp)][scg_lun(scgp)].atapi);
 }
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
+	errno = EINVAL;
 	return(-1);		/* no scsi reset available */
 }
 
@@ -735,16 +744,15 @@ cp_sco2scg(sco, scg)
 
 
 LOCAL int
-scsi_send(scgp, fd, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		fd;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	struct scsicmd2	scsi_cmd;
 	int		i;
-	u_char		sense_buf[SCG_MAX_SENSE];
+	Uchar		sense_buf[SCG_MAX_SENSE];
 
-	if ( fd < 0 ) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
@@ -759,7 +767,7 @@ scsi_send(scgp, fd, sp)
 	for (;;) {
 		int	ioctlStatus;
 
-		if ((ioctlStatus = ioctl(fd, SCSIUSERCMD2, &scsi_cmd)) < 0) {
+		if ((ioctlStatus = ioctl(scgp->fd, SCSIUSERCMD2, &scsi_cmd)) < 0) {
 			if (errno == EINTR)
 				continue;
 

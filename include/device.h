@@ -1,4 +1,4 @@
-/* @(#)device.h	1.5 00/01/10 Copyright 1995 J. Schilling */
+/* @(#)device.h	1.8 01/02/17 Copyright 1995 J. Schilling */
 /*
  *	Generic header for users of major(), minor() and makedev()
  *
@@ -39,7 +39,10 @@
  * an old definition for major()/minor() defining 8 minorbits.
  * Use <sys/mkdev.h> instead.
  */
+#ifndef	_INCL_SYS_TYPES_H
 #include <sys/types.h>
+#define	_INCL_SYS_TYPES_H
+#endif
 /*
  * Some systems define major in <sys/types.h>.
  * We are ready...
@@ -69,6 +72,10 @@
 #		include <sys/mknod.h>
 #		define _FOUND_MAJOR_
 #	endif
+#endif
+
+#ifdef	__cplusplus
+extern "C" {
 #endif
 
 /*
@@ -120,5 +127,9 @@ extern	XDEV_T	_dev_make	__PR((int mbits, XDEV_T majo, XDEV_T mino));
 #endif
 
 #endif	/* __XDEV__ */
+
+#ifdef	__cplusplus
+}
+#endif
 
 #endif	/* _DEVICE_H */

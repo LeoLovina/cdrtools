@@ -1,7 +1,7 @@
-/* @(#)isoinfo.c	1.17 00/05/07 joerg */
+/* @(#)isoinfo.c	1.21 01/04/02 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isoinfo.c	1.17 00/05/07 joerg";
+	"@(#)isoinfo.c	1.21 01/04/02 joerg";
 #endif
 /*
  * File isodump.c - dump iso9660 directory information.
@@ -37,13 +37,13 @@ static	char sccsid[] =
  *	isoinfo -f -i imagefile
  */
 
-#include "../config.h"
-
+#include <mconfig.h>
 #include <stdxlib.h>
 #include <unixstd.h>
 #include <strdefs.h>
 
 #include <stdio.h>
+#include <utypes.h>
 #include <standard.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -51,6 +51,8 @@ static	char sccsid[] =
 #include <schily.h>
 
 #include "../iso9660.h"
+
+#include <unls.h>
 
 #ifdef __SVR4
 #include <stdlib.h>
@@ -79,6 +81,8 @@ int do_find = 0;
 int do_pathtab = 0;
 int do_pvd = 0;
 char * xtract = 0;
+int su_version = 0;
+int aa_version = 0;
 int ucs_level = 0;
 
 struct stat fstat_buf;
@@ -88,6 +92,8 @@ unsigned char date_buf[9];
 unsigned int sector_offset = 0;
 
 unsigned char buffer[2048];
+
+struct nls_table *nls;
 
 #define PAGE sizeof(buffer)
 
@@ -101,7 +107,8 @@ int	isonum_733	__PR((unsigned char * p));
 void	printchars	__PR((char *s, int n));
 void	dump_pathtab	__PR((int block, int size));
 int	parse_rr	__PR((unsigned char * pnt, int len, int cont_flag));
-void	dump_rr		__PR((struct iso_directory_record * idr));
+void	find_rr		__PR((struct iso_directory_record * idr, Uchar **pntp, int *lenp));
+int	dump_rr		__PR((struct iso_directory_record * idr));
 void	dump_stat	__PR((int extent));
 void	extract_file	__PR((struct iso_directory_record * idr));
 void	parse_dir	__PR((char * rootname, int extent, int len));
@@ -177,20 +184,23 @@ dump_pathtab(block, size)
 	int	block;
 	int	size;
 {
-    char * buf;
+    unsigned char * buf;
     int    offset;
     int    idx;
     int    extent;
     int    pindex;
     int    j;
     int    len;
+    int    jlen;
     char   namebuf[255];
+    unsigned char uh, ul, uc, *up;
+    
 
     printf("Path table starts at block %d, size %d\n", block, size);
     
-    buf = (char *) malloc(size);
+    buf = (unsigned char *) malloc(size);
     
-    lseek(fileno(infile), (block - sector_offset) << 11, 0);
+    lseek(fileno(infile), ((off_t)(block - sector_offset)) << 11, SEEK_SET);
     read(fileno(infile), buf, size);
     
     offset = 0;
@@ -198,18 +208,30 @@ dump_pathtab(block, size)
     while(offset < size)
     {
 	len    = buf[offset];
-	extent = isonum_731(buf + offset + 2);
-	pindex  = isonum_721(buf + offset + 6);
+	extent = isonum_731((char *)buf + offset + 2);
+	pindex  = isonum_721((char *)buf + offset + 6);
 	switch( ucs_level )
 	{
 	case 3:
 	case 2:
 	case 1:
-	    for(j=0; j < len; j++)
+	    jlen = len/2;
+	    namebuf[0] = '\0';
+	    for(j=0; j < jlen; j++)
 	    {
-		namebuf[j] = buf[offset + 8 + j*2+1];
+		uh = buf[offset + 8 + j*2];
+		ul = buf[offset + 8 + j*2+1];
+
+		up = nls->page_uni2charset[uh];
+
+		if (up == NULL)
+			uc = '\0';
+		else
+			uc = up[ul];
+
+		namebuf[j] = uc ? uc : '_';
 	    }
-	    printf("%4d: %4d %x %.*s\n", idx, pindex, extent, len, namebuf);
+	    printf("%4d: %4d %x %.*s\n", idx, pindex, extent, jlen, namebuf);
 	    break;
 	case 0:
 	    printf("%4d: %4d %x %.*s\n", idx, pindex, extent, len, buf + offset + 8);
@@ -243,28 +265,34 @@ int parse_rr(pnt, len, cont_flag)
 
 	ncount = 0;
 	flag1 = flag2 = 0;
-	while(len >= 4){
+	while(len >= 4) {
 		if(pnt[3] != 1 && pnt[3] != 2) {
 		  printf("**BAD RRVERSION (%d)\n", pnt[3]);
 		  return 0;	/* JS ??? Is this right ??? */
-		};
+		}
 		ncount++;
 		if(pnt[0] == 'R' && pnt[1] == 'R') flag1 = pnt[4] & 0xff;
 		if(strncmp((char *)pnt, "PX", 2) == 0) flag2 |= 1;	/* POSIX attributes */
-		if(strncmp((char *)pnt, "PN", 2) == 0) flag2 |= 2;	/* POSIX devive number */
+		if(strncmp((char *)pnt, "PN", 2) == 0) flag2 |= 2;	/* POSIX device number */
 		if(strncmp((char *)pnt, "SL", 2) == 0) flag2 |= 4;	/* Symlink */
 		if(strncmp((char *)pnt, "NM", 2) == 0) flag2 |= 8;	/* Alternate Name */
 		if(strncmp((char *)pnt, "CL", 2) == 0) flag2 |= 16;	/* Child link */
 		if(strncmp((char *)pnt, "PL", 2) == 0) flag2 |= 32;	/* Parent link */
 		if(strncmp((char *)pnt, "RE", 2) == 0) flag2 |= 64;	/* Relocated Direcotry */
 		if(strncmp((char *)pnt, "TF", 2) == 0) flag2 |= 128;	/* Time stamp */
+		if(strncmp((char *)pnt, "SP", 2) == 0){flag2 |= 1024;	/* SUSP record */
+			su_version = pnt[3] & 0xff;
+		}
+		if(strncmp((char *)pnt, "AA", 2) == 0){flag2 |= 2048;	/* Apple Signature record */
+			aa_version = pnt[3] & 0xff;
+		}
 
 		if(strncmp((char *)pnt, "PX", 2) == 0) {		/* POSIX attributes */
 			fstat_buf.st_mode = isonum_733(pnt+4);
 			fstat_buf.st_nlink = isonum_733(pnt+12);
 			fstat_buf.st_uid = isonum_733(pnt+20);
 			fstat_buf.st_gid = isonum_733(pnt+28);
-		};
+		}
 
 		if(strncmp((char *)pnt, "NM", 2) == 0) {		/* Alternate Name */
 		  strncpy(name_buf, (char *)(pnt+5), pnt[2] - 5);
@@ -275,11 +303,11 @@ int parse_rr(pnt, len, cont_flag)
 			cont_extent = isonum_733(pnt+4);
 			cont_offset = isonum_733(pnt+12);
 			cont_size = isonum_733(pnt+20);
-		};
+		}
 
 		if(strncmp((char *)pnt, "PL", 2) == 0 || strncmp((char *)pnt, "CL", 2) == 0) {
 			extent = isonum_733(pnt+4);
-		};
+		}
 
 		if(strncmp((char *)pnt, "SL", 2) == 0) {		/* Symlink */
 		        int cflag;
@@ -313,36 +341,39 @@ int parse_rr(pnt, len, cont_flag)
 					printf("Reserved bit setting in symlink");
 					goof++;
 					break;
-				};
+				}
 				if((pnts[0] & 0xfe) && pnts[1] != 0) {
 					printf("Incorrect length in symlink component");
-				};
+				}
 				if((pnts[0] & 1) == 0) strcat(symlinkname,"/");
 
 				slen -= (pnts[1] + 2);
 				pnts += (pnts[1] + 2);
 				if(xname[0] == 0) strcpy(xname, "-> ");
 				strcat(xname, symlinkname);
-		       };
+		       }
 			symlinkname[0] = 0;
-		};
+		}
 
 		len -= pnt[2];
 		pnt += pnt[2];
 		if(len <= 3 && cont_extent) {
 		  unsigned char sector[2048];
-		  lseek(fileno(infile), (cont_extent - sector_offset) << 11, 0);
+		  lseek(fileno(infile), ((off_t)(cont_extent - sector_offset)) << 11, SEEK_SET);
 		  read(fileno(infile), sector, sizeof(sector));
 		  flag2 |= parse_rr(&sector[cont_offset], cont_size, 1);
-		};
-	};
+		}
+	}
 	return flag2;
 }
 
 void
-dump_rr(idr)
+find_rr(idr, pntp, lenp)
 	struct iso_directory_record *idr;
+	Uchar	**pntp;
+	int	*lenp;
 {
+	struct iso_xa_dir_record *xadp;
 	int len;
 	unsigned char * pnt;
 
@@ -350,6 +381,7 @@ dump_rr(idr)
 	len -= sizeof(struct iso_directory_record);
 	len += sizeof(idr->name);
 	len -= idr->name_len[0];
+
 	pnt = (unsigned char *) idr;
 	pnt += sizeof(struct iso_directory_record);
 	pnt -= sizeof(idr->name);
@@ -357,8 +389,29 @@ dump_rr(idr)
 	if((idr->name_len[0] & 1) == 0){
 		pnt++;
 		len--;
-	};
-	parse_rr(pnt, len, 0);
+	}
+	if (len >= 14) {
+		xadp = (struct iso_xa_dir_record *)pnt;
+
+		if (xadp->signature[0] == 'X' && xadp->signature[1] == 'A'
+				&& xadp->reserved[0] == '\0') {
+			len -= 14;
+			pnt += 14;
+		}
+	}
+	*pntp = pnt;
+	*lenp = len;
+}
+
+int
+dump_rr(idr)
+	struct iso_directory_record *idr;
+{
+	int len;
+	unsigned char * pnt;
+
+	find_rr(idr, &pnt, &len);
+	return (parse_rr(pnt, len, 0));
 }
 
 struct todo
@@ -456,7 +509,7 @@ extract_file(idr)
 
   while(len > 0)
     {
-      lseek(fileno(infile), (extent - sector_offset) << 11, 0);
+      lseek(fileno(infile), ((off_t)(extent - sector_offset)) << 11, SEEK_SET);
       tlen = (len > sizeof(buff) ? sizeof(buff) : len);
       read(fileno(infile), buff, tlen);
       len -= tlen;
@@ -475,6 +528,7 @@ parse_dir(rootname, extent, len)
   struct todo * td;
   int i;
   struct iso_directory_record * idr;
+  unsigned char uh, ul, uc, *up;
 
 
   if( do_listing)
@@ -482,7 +536,7 @@ parse_dir(rootname, extent, len)
 
   while(len > 0 )
     {
-      lseek(fileno(infile), (extent - sector_offset) << 11, 0);
+      lseek(fileno(infile), ((off_t)(extent - sector_offset)) << 11, SEEK_SET);
       read(fileno(infile), buffer, sizeof(buffer));
       len -= sizeof(buffer);
       extent++;
@@ -492,7 +546,7 @@ parse_dir(rootname, extent, len)
 	if(idr->length[0] == 0) break;
 	memset(&fstat_buf, 0, sizeof(fstat_buf));
 	name_buf[0] = xname[0] = 0;
-	fstat_buf.st_size = isonum_733((unsigned char *)idr->size);
+	fstat_buf.st_size = (off_t)isonum_733((unsigned char *)idr->size);
 	if( idr->flags[0] & 2)
 	  fstat_buf.st_mode |= S_IFDIR;
 	else
@@ -513,9 +567,20 @@ parse_dir(rootname, extent, len)
 	      {
 		int j;
 
+		name_buf[0] = '\0';
 		for(j=0; j < idr->name_len[0] / 2; j++)
 		  {
-		    name_buf[j] = idr->name[j*2+1];
+		    uh = idr->name[j*2];
+		    ul = idr->name[j*2+1];
+
+		    up = nls->page_uni2charset[uh];
+
+		    if (up == NULL)
+			uc = '\0';
+		    else
+			uc = up[ul];
+
+		    name_buf[j] = uc ? uc : '_';
 		  }
 		name_buf[idr->name_len[0]/2] = '\0';
 	      }
@@ -534,7 +599,7 @@ parse_dir(rootname, extent, len)
 	       */
 	      exit(1);
 	    }
-	};
+	}
 	memcpy(date_buf, idr->date, 9);
 	if(use_rock) dump_rr(idr);
 	if(   (idr->flags[0] & 2) != 0
@@ -601,6 +666,7 @@ usage(excode)
 	error("\t-d		Print information from the primary volume descriptor\n");
 	error("\t-f		Generate output similar to 'find .  -print'\n");
 	error("\t-J		Print information from from Joliet extensions\n");
+	error("\t-j charset	Use charset to display Joliet file names\n");
 	error("\t-l		Generate output similar to 'ls -lR'\n");
 	error("\t-p		Print Path Table\n");
 	error("\t-R		Print information from from Rock Ridge extensions\n");
@@ -619,15 +685,18 @@ main(argc, argv)
   int c;
   char * filename = NULL;
   int toc_offset = 0;
+  int extent;
   struct todo * td;
   struct iso_primary_descriptor ipd;
+  struct iso_primary_descriptor jpd;
   struct iso_directory_record * idr;
+  char *charset = NULL;
 
 	save_args(argc, argv);
 
   if(argc < 2)
 	usage(EX_BAD);
-  while ((c = getopt(argc, argv, "hdpi:JRlx:fN:T:")) != EOF)
+  while ((c = getopt(argc, argv, "hdpi:JRlx:fN:T:j:")) != EOF)
     switch (c)
       {
       case 'h':
@@ -647,6 +716,10 @@ main(argc, argv)
 	break;
       case 'J':
 	use_joliet++;
+	break;
+      case 'j':
+	use_joliet++;
+	charset = optarg;
 	break;
       case 'l':
 	do_listing++;
@@ -678,7 +751,28 @@ main(argc, argv)
       default:
 	usage(EX_BAD);
       }
-  
+
+	init_nls();		/* Initialize UNICODE tables */
+	init_nls_file(charset);
+	if (charset == NULL) {
+#if	(defined(__CYGWIN32__) || defined(__CYGWIN__)) && !defined(IS_CYGWIN_1)
+		nls = load_nls("cp437");
+#else
+		nls = load_nls("iso8859-1");
+#endif
+	} else {
+		if (strcmp(charset, "default") == 0)
+			nls = load_nls_default();
+		else
+			nls = load_nls(charset);
+	}
+	if (nls == NULL) {	/* Unknown charset specified */
+		fprintf(stderr, "Unknown charset: %s\nKnown charsets are:\n",
+							charset);
+		list_nls();	/* List all known charset names */
+		exit(1);
+	}
+
   if( filename == NULL )
   {
 #ifdef	USE_LIBSCHILY
@@ -704,9 +798,37 @@ main(argc, argv)
   /*
    * Absolute sector offset, so don't subtract sector_offset here.
    */
-  lseek(fileno(infile), (16 + toc_offset) <<11, 0);
+  lseek(fileno(infile), ((off_t)(16 + toc_offset)) <<11, SEEK_SET);
   read(fileno(infile), &ipd, sizeof(ipd));
+  idr = (struct iso_directory_record *)ipd.root_directory_record;
   if (do_pvd) {
+	/*
+	 * High sierra:
+	 *
+	 *	DESC TYPE	== 1 (VD_SFS)	offset 8	len 1
+	 *	STR ID		== "CDROM"	offset 9	len 5
+	 *	STD_VER		== 1		offset 14	len 1
+	 */
+	if ((((char *)&ipd)[8] == 1) &&
+	    (strncmp(&((char *)&ipd)[9], "CDROM", 5) == 0) &&
+	    (((char *)&ipd)[14] == 1)) {
+		printf("CD-ROM is in High Sierra format\n");
+		exit(0);
+	}
+	/*
+	 * ISO 9660:
+	 *
+	 *	DESC TYPE	== 1 (VD_PVD)	offset 0	len 1
+	 *	STR ID		== "CD001"	offset 1	len 5
+	 *	STD_VER		== 1		offset 6	len 1
+	 */
+	if ((ipd.type[0] != ISO_VD_PRIMARY) ||
+	    (strncmp(ipd.id, ISO_STANDARD_ID, sizeof(ipd.id)) != 0) ||
+	    (ipd.version[0] != 1)) {
+		printf("CD-ROM is NOT in ISO 9660 format\n");
+		exit(1);
+	}
+
 	printf("CD-ROM is in ISO 9660 format\n");
 	printf("System id: ");
 	printchars(ipd.system_id, 32);
@@ -742,35 +864,47 @@ main(argc, argv)
 	printf("Volume set seqence number is: %d\n", isonum_723(ipd.volume_sequence_number));
 	printf("Logical block size is: %d\n", isonum_723(ipd.logical_block_size));
 	printf("Volume size is: %d\n", isonum_733((unsigned char *)ipd.volume_space_size));
-
-	exit(0);
   }
+	/*
+	 * ISO 9660:
+	 *
+	 *	DESC TYPE	== 1 (VD_PVD)	offset 0	len 1
+	 *	STR ID		== "CD001"	offset 1	len 5
+	 *	STD_VER		== 1		offset 6	len 1
+	 */
+	if ((ipd.type[0] != ISO_VD_PRIMARY) ||
+	    (strncmp(ipd.id, ISO_STANDARD_ID, sizeof(ipd.id)) != 0) ||
+	    (ipd.version[0] != 1)) {
+		printf("CD-ROM is NOT in ISO 9660 format\n");
+		exit(1);
+	}
 
-  if( use_joliet )
+  if( use_joliet || do_pvd)
     {
       int block = 16;
-      while( (unsigned char) ipd.type[0] != ISO_VD_END )
+      movebytes(&ipd, &jpd, sizeof(ipd));
+      while( (unsigned char) jpd.type[0] != ISO_VD_END )
 	{
-		if( (unsigned char) ipd.type[0] == ISO_VD_SUPPLEMENTARY )
+		if( (unsigned char) jpd.type[0] == ISO_VD_SUPPLEMENTARY )
 	  /*
 	   * Find the UCS escape sequence.
 	   */
-	  if(    ipd.escape_sequences[0] == '%'
-	      && ipd.escape_sequences[1] == '/'
-	      && ipd.escape_sequences[3] == '\0'
-	      && (    ipd.escape_sequences[2] == '@'
-		   || ipd.escape_sequences[2] == 'C'
-		   || ipd.escape_sequences[2] == 'E') )
+	  if(    jpd.escape_sequences[0] == '%'
+	      && jpd.escape_sequences[1] == '/'
+	      && jpd.escape_sequences[3] == '\0'
+	      && (    jpd.escape_sequences[2] == '@'
+		   || jpd.escape_sequences[2] == 'C'
+		   || jpd.escape_sequences[2] == 'E') )
 	    {
 	      break;
 	    }
 
 	  block++;
-	  lseek(fileno(infile), (block + toc_offset) <<11, 0);
-	  read(fileno(infile), &ipd, sizeof(ipd));
+	  lseek(fileno(infile), ((off_t)(block + toc_offset)) <<11, SEEK_SET);
+	  read(fileno(infile), &jpd, sizeof(jpd));
 	}
 
-      if( (unsigned char) ipd.type[0] == ISO_VD_END )
+      if(use_joliet && ((unsigned char) jpd.type[0] == ISO_VD_END) )
 	{
 #ifdef	USE_LIBSCHILY
 	  comerrno(EX_BAD, "Unable to find Joliet SVD\n");
@@ -780,7 +914,7 @@ main(argc, argv)
 #endif
 	}
 
-      switch(ipd.escape_sequences[2])
+      switch(jpd.escape_sequences[2])
 	{
 	case '@':
 	  ucs_level = 1;
@@ -803,13 +937,48 @@ main(argc, argv)
 #endif
 	}
     }
+	if (do_pvd) {
+		if (ucs_level > 0)
+			printf("Joliet with UCS level %d found\n", ucs_level);
+		else
+			printf("NO Joliet present\n");
 
-  idr = (struct iso_directory_record *)ipd.root_directory_record;
+		extent = isonum_733((unsigned char *)idr->extent);
 
-  if( do_pathtab )
-    {
-      dump_pathtab(isonum_731(ipd.type_l_path_table), 
+		lseek(fileno(infile), ((off_t)(extent - sector_offset)) <<11, SEEK_SET);
+		read(fileno(infile), buffer, sizeof(buffer));
+		idr = (struct iso_directory_record *) buffer;
+		if ((c = dump_rr(idr)) != 0) {
+/*			printf("RR %X %d\n", c, c);*/
+			if (c & 1024)
+				printf("Rock Ridge signatures version %d found\n", su_version);
+			else
+				printf("Bad Rock Ridge signatures found (SU record missing)\n");
+			/*
+			 * This is currently a no op!
+			 * We need to check the first plain file instead of
+			 * the '.' entry in the root directory.
+			 */
+			if (c & 2048)
+				printf("Apple signatures version %d found\n", aa_version);
+		} else {
+			printf("NO Rock Ridge present\n");
+		}
+		exit(0);
+	}
+
+	if (use_joliet)
+		idr = (struct iso_directory_record *)jpd.root_directory_record;
+
+  if (do_pathtab) {
+
+	if (use_joliet) {
+		dump_pathtab(isonum_731(jpd.type_l_path_table), 
+		   isonum_733((unsigned char *)jpd.path_table_size));
+	} else {
+		dump_pathtab(isonum_731(ipd.type_l_path_table), 
 		   isonum_733((unsigned char *)ipd.path_table_size));
+	}
     }
 
   parse_dir("/", isonum_733((unsigned char *)idr->extent), isonum_733((unsigned char *)idr->size));

@@ -1,4 +1,4 @@
-/* @(#)unixstd.h	1.3 98/10/09 Copyright 1996 J. Schilling */
+/* @(#)unixstd.h	1.6 01/02/20 Copyright 1996 J. Schilling */
 /*
  *	Definitions for unix system interface
  *
@@ -28,6 +28,11 @@
 #endif
 
 #ifdef	HAVE_UNISTD_H
+
+#ifndef	_INCL_SYS_TYPES_H
+#include <sys/types.h>
+#define	_INCL_SYS_TYPES_H
+#endif
 #include <unistd.h>
 
 #ifndef	_SC_PAGESIZE
@@ -37,6 +42,14 @@
 #endif
 
 #else	/* HAVE_UNISTD_H */
+
+/*
+ * unistd.h grants things like off_t to be typedef'd.
+ */
+#ifndef	_INCL_SYS_TYPES_H
+#include <sys/types.h>
+#define	_INCL_SYS_TYPES_H
+#endif
 
 #endif	/* HAVE_UNISTD_H */
 

@@ -1,4 +1,4 @@
-#ident @(#)rules.cnf	1.5 98/12/06 
+#ident @(#)rules.cnf	1.6 01/02/25 
 ###########################################################################
 # Written 1998 by J. Schilling
 ###########################################################################
@@ -33,10 +33,16 @@ $(OINCSDIR):
 #
 # Hack until the <mach>-<os>-*cc.rul files are updated
 #
-_CCCOM=	$(OARCH:%-gcc=gcc)
-CCCOM=	$(_CCCOM:%-cc=cc)
+_HCCCOM=	$(OARCH:%-gcc=gcc)
+HCCCOM=		$(_HCCCOM:%-cc=cc)
 
-CONFFLAGS +=	-cc=$(CCCOM)
+_CCCOM=		$(_UNIQ)$(CCCOM)
+__CCCOM=	$(_CCCOM:$(_UNIQ)=$(HCCCOM))
+XCCCOM=		$(__CCCOM:$(_UNIQ)%=%)
+
+#CONFFLAGS +=	-cc=$(XCCCOM)
+
+include		$(DEFLTSROOT)/$(DEFLTSDIR)/Defaults
 
 $(OINCSDIR)/rules.cnf $(OINCSDIR)/xconfig.h: $(OINCSDIR)/Inull \
 						$(SRCROOT)/conf/configure \
@@ -45,7 +51,9 @@ $(OINCSDIR)/rules.cnf $(OINCSDIR)/xconfig.h: $(OINCSDIR)/Inull \
 	$(RUL_CONF)
 
 ###########################################################################
-RUL_CONF=	@echo "	==> CONFIGURING RULES \"$@\""; $(RM_F) $@; cd $(OINCSDIR); CFLAGS="$(CFLAGS)" sh ../../conf/configure $(CONFFLAGS)
+RUL_CONF=	@echo "	==> CONFIGURING RULES \"$@\""; $(RM_F) $@; \
+		cd $(OINCSDIR); \
+		CONFIG_NOFAIL=TRUE CC="$(XCCCOM)" CFLAGS="$(CFLAGS)" sh ../../conf/configure $(CONFFLAGS)
 ###########################################################################
 include $(OINCSDIR)/Inull
 include $(OINCSDIR)/rules.cnf

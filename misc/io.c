@@ -151,6 +151,7 @@ BOOL getvalue(s, lp, mini, maxi, prt, cvt, dp)
 
 		if (strlen(linep) == 0) {
 			/* Leere Eingabe */
+			/* EMPTY */
 		} else if ((*cvt)(linep, lp, mini, maxi, dp))
 			return (TRUE);
 	}

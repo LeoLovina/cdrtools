@@ -1,4 +1,4 @@
-/* @(#)match.h	1.6 00/04/16 joerg */
+/* @(#)match.h	1.7 00/12/05 joerg */
 /*
  * 27th March 1996. Added by Jan-Piet Mens for matching regular expressions
  *                  in paths.
@@ -10,6 +10,10 @@
 #ifdef SORTING
 #include <limits.h>
 #define NOT_SORTED INT_MIN
+
+#ifdef	MAX				/* May be defined in param.h */
+#undef	MAX
+#endif
 #define MAX(A,B) (A) > (B) ? (A) : (B)
 #endif
 

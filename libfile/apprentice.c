@@ -1,3 +1,8 @@
+/* @(#)apprentice.c	1.4 01/02/17 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)apprentice.c	1.4 01/02/17 joerg";
+#endif
 /*
 **	find file types by using a modified "magic" file
 **
@@ -33,17 +38,20 @@
  * 4. This notice may not be removed or altered.
  */
 
+#include <mconfig.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdxlib.h>
+#include <strdefs.h>
 #include <ctype.h>
-#include <errno.h>
 #include "file.h"
 
 #ifndef	lint
 static char *moduleid = 
 	"@(#)$Id: apprentice.c,v 1.25 1997/01/15 17:23:24 christos Exp $";
 #endif	/* lint */
+
+int	__f_nmagic = 0;		/* number of valid magic[]s 		*/
+struct  magic *__f_magic;	/* array of magic entries		*/
 
 #define	EATAB {while (isascii((unsigned char) *l) && \
 		      isspace((unsigned char) *l))  ++l;}
@@ -70,8 +78,8 @@ init_magic(fn)
 char *fn;			/* list of magic files */
 {
         maxmagic = MAXMAGIS;
-	magic = (struct magic *) calloc(sizeof(struct magic), maxmagic);
-	if (magic == NULL) 
+	__f_magic = (struct magic *) calloc(sizeof(struct magic), maxmagic);
+	if (__f_magic == NULL) 
 		return -1;
 
 	return(apprentice_1(fn, 0));
@@ -87,6 +95,7 @@ int check;			/* non-zero? checking-only run. */
 	FILE *f;
 	char line[BUFSIZ+1];
 	int errs = 0;
+	int lineno;
 
 	f = fopen(fn, "r");
 	if (f==NULL) {
@@ -103,7 +112,7 @@ int check;			/* non-zero? checking-only run. */
 		if (strlen(line) <= (unsigned)1) /* null line, garbage, etc */
 			continue;
 		line[strlen(line)-1] = '\0'; /* delete newline */
-		if (parse(line, &nmagic, check) != 0)
+		if (parse(line, &__f_nmagic, check) != 0)
 			errs = 1;
 	}
 
@@ -115,10 +124,10 @@ int check;			/* non-zero? checking-only run. */
  * extend the sign bit if the comparison is to be signed
  * XXX is uint32 really a good idea XXX JS
  */
-uint32
+UInt32_t
 signextend(m, v)
 struct magic *m;
-uint32 v;
+UInt32_t v;
 {
 	if (!(m->flag & UNSIGNED))
 		switch(m->type) {
@@ -141,7 +150,7 @@ uint32 v;
 		case LONG:
 		case BELONG:
 		case LELONG:
-			v = (int32) v;
+			v = (Int32_t) v;
 			break;
 		case STRING:
 			break;
@@ -166,18 +175,22 @@ int *ndx, check;
 #define ALLOC_INCR	20
 	if (nd+1 >= maxmagic){
 	    maxmagic += ALLOC_INCR;
-	    if ((magic = (struct magic *) realloc(magic, 
+	    if ((__f_magic = (struct magic *) realloc(__f_magic, 
 						  sizeof(struct magic) * 
 						  maxmagic)) == NULL) {
+#ifdef	MAIN
 		(void) fprintf(stderr, "%s: Out of memory.\n", progname);
+#else
+		(void) fprintf(stderr, "libfile: Out of memory.\n");
+#endif
 		if (check)
 			return -1;
 		else
 			exit(1);
 	    }
-	    memset(&magic[*ndx], 0, sizeof(struct magic) * ALLOC_INCR);
+	    memset(&__f_magic[*ndx], 0, sizeof(struct magic) * ALLOC_INCR);
 	}
-	m = &magic[*ndx];
+	m = &__f_magic[*ndx];
 	m->flag = 0;
 	m->cont_level = 0;
 
@@ -305,7 +318,7 @@ int *ndx, check;
 	/* New-style anding: "0 byte&0x80 =0x80 dynamically linked" */
 	if (*l == '&') {
 		++l;
-		m->mask = signextend(m, (uint32)strtoul(l, &l, 0)); /* XXX JS uint32 cat may be wrong */
+		m->mask = signextend(m, (UInt32_t)strtoul(l, &l, 0)); /* XXX JS uint32 cat may be wrong */
 		eatsize(&l);
 	} else
 		m->mask = ~0L;
@@ -386,7 +399,7 @@ char **p;
 		m->vallen = slen;
 	} else
 		if (m->reln != 'x') {
-			m->value.l = signextend(m, (uint32)strtoul(*p, p, 0)); /* XXX JS uint32 cat may be wrong */
+			m->value.l = signextend(m, (UInt32_t)strtoul(*p, p, 0)); /* XXX JS uint32 cat may be wrong */
 			eatsize(p);
 		}
 	return 0;

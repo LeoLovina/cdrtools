@@ -1,7 +1,7 @@
-/* @(#)multi.c	1.40 00/05/28 joerg */
+/* @(#)multi.c	1.49 01/04/20 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)multi.c	1.40 00/05/28 joerg";
+	"@(#)multi.c	1.49 01/04/20 joerg";
 #endif
 /*
  * File multi.c - scan existing iso9660 image and merge into
@@ -25,14 +25,13 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "config.h"
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <strdefs.h>
-#include <time.h>
+#include <mconfig.h>
+#include "mkisofs.h"
+#include <timedefs.h>
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <utypes.h>
+#include <ctype.h>			/* Needed for printasc()	*/
+#include <schily.h>
 
 #ifdef VMS
 
@@ -42,19 +41,6 @@ static	char sccsid[] =
 extern char    *strdup(const char *);
 
 #endif
-
-#include "mkisofs.h"
-#include "iso9660.h"
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
-#include <schily.h>
-#endif
-
-#include <standard.h>			/* Needed for scsitransp.h	*/
-#include <utypes.h>			/* Needed for scsitransp.h	*/
-#include <scg/scsitransp.h>		/* Needed for scsiprbytes()	*/
-#include <ctype.h>			/* Needed for printasc()	*/
 
 #ifndef howmany
 #define howmany(x, y)   (((x)+((y)-1))/(y))
@@ -79,8 +65,12 @@ static int	isonum_723	__PR((unsigned char *p));
 static int	isonum_731	__PR((unsigned char *p));
 
 static	void	printasc	__PR((char *txt, unsigned char *p, int len));
+static	void	prbytes		__PR((char *txt, unsigned char *p, int len));
 unsigned char	*parse_xa	__PR((unsigned char *pnt, int *lenp,
 					struct directory_entry *dpnt));
+EXPORT	int	rr_flags	__PR((struct iso_directory_record *idr));
+EXPORT	int	parse_rrflags	__PR((Uchar *pnt, int len, int cont_flag));
+EXPORT	void	find_rr		__PR((struct iso_directory_record *idr, Uchar **pntp, int *lenp));
 static int	parse_rr	__PR((unsigned char *pnt, int len,
 					struct directory_entry *dpnt));
 static int	check_rr_dates	__PR((struct directory_entry *dpnt,
@@ -195,7 +185,7 @@ readsecs(startsecno, buffer, sectorcount)
 {
 	int		f = fileno(in_image);
 
-	if (lseek(f, (off_t) startsecno * SECTOR_SIZE, 0) == (off_t) - 1) {
+	if (lseek(f, (off_t) startsecno * SECTOR_SIZE, SEEK_SET) == (off_t) - 1) {
 #ifdef	USE_LIBSCHILY
 		comerr(" Seek error on old image\n");
 #else
@@ -235,6 +225,18 @@ printasc(txt, p, len)
 	error("\n");
 }
 
+static void
+prbytes(txt, p, len)
+		char	*txt;
+	register Uchar	*p;
+	register int	len;
+{
+	error("%s", txt);
+	while (--len >= 0)
+		error(" %02X", *p++);
+	error("\n");
+}
+
 unsigned char *
 parse_xa(pnt, lenp, dpnt)
 	unsigned char	*pnt;
@@ -250,7 +252,7 @@ static	int		did_xa = 0;
 	if (len >= 14) {
 		xadp = (struct iso_xa_dir_record *)pnt;
 
-/*		if (dpnt) scsiprbytes("XA ", pnt, len);*/
+/*		if (dpnt) prbytes("XA ", pnt, len);*/
 		if (xadp->signature[0] == 'X' && xadp->signature[1] == 'A'
 				&& xadp->reserved[0] == '\0') {
 			len -= 14;
@@ -266,9 +268,9 @@ static	int		did_xa = 0;
 			if (dpnt)
 				cp = (char *)&dpnt->isorec;
 			if (cp) {
-				scsiprbytes("ISOREC:", (Uchar *)cp, 33+cp[32]);
+				prbytes("ISOREC:", (Uchar *)cp, 33+cp[32]);
 				printasc("ISOREC:", (Uchar *)cp, 33+cp[32]);
-				scsiprbytes("XA REC:", pnt, len);
+				prbytes("XA REC:", pnt, len);
 				printasc("XA REC:", pnt, len);
 			}
 			no_rr =1;
@@ -282,10 +284,134 @@ static	int		did_xa = 0;
 		}
 	}
 	if (len >= 4 && pnt[3] != 1 && pnt[3] != 2) {
-		scsiprbytes("BAD RR ATTRIBUTES:", pnt, len);
+		prbytes("BAD RR ATTRIBUTES:", pnt, len);
 		printasc("BAD RR ATTRIBUTES:", pnt, len);
 	}
 	return (pnt);
+}
+
+EXPORT void
+find_rr(idr, pntp, lenp)
+	struct iso_directory_record *idr;
+	Uchar		**pntp;
+	int		*lenp;
+{
+	struct iso_xa_dir_record *xadp;
+	int		len;
+	unsigned char	*pnt;
+
+	len = idr->length[0] & 0xff;
+	len -= sizeof(struct iso_directory_record);
+	len += sizeof(idr->name);
+	len -= idr->name_len[0];
+
+	pnt = (unsigned char *) idr;
+	pnt += sizeof(struct iso_directory_record);
+	pnt -= sizeof(idr->name);
+	pnt += idr->name_len[0];
+	if ((idr->name_len[0] & 1) == 0) {
+		pnt++;
+		len--;
+	}
+	if (len >= 14) {
+		xadp = (struct iso_xa_dir_record *)pnt;
+
+		if (xadp->signature[0] == 'X' && xadp->signature[1] == 'A'
+				&& xadp->reserved[0] == '\0') {
+			len -= 14;
+			pnt += 14;
+		}
+	}
+	*pntp = pnt;
+	*lenp = len;
+}
+
+EXPORT int
+parse_rrflags(pnt, len, cont_flag)
+	Uchar	*pnt;
+	int	len;
+	int	cont_flag;
+{
+	int	ncount;
+	int	cont_extent;
+	int	cont_offset;
+	int	cont_size;
+	int	flag1;
+	int	flag2;
+
+	cont_extent = cont_offset = cont_size = 0;
+
+	ncount = 0;
+	flag1 = flag2 = 0;
+	while (len >= 4) {
+		if (pnt[3] != 1 && pnt[3] != 2) {
+#ifdef USE_LIBSCHILY
+			errmsgno(EX_BAD,
+				"**BAD RRVERSION (%d) for %c%c\n",
+				pnt[3], pnt[0], pnt[1]);
+#else
+			fprintf(stderr,
+				"**BAD RRVERSION (%d) for %c%c\n",
+				pnt[3], pnt[0], pnt[1]);
+#endif
+			return 0;	/* JS ??? Is this right ??? */
+		}
+		ncount++;
+		if (pnt[0] == 'R' && pnt[1] == 'R')
+			flag1 = pnt[4] & 0xff;
+
+		if (strncmp((char *) pnt, "PX", 2) == 0)	/* POSIX attributes */
+			flag2 |= 1;
+		if (strncmp((char *) pnt, "PN", 2) == 0)	/* POSIX device number */
+			flag2 |= 2;
+		if (strncmp((char *) pnt, "SL", 2) == 0)	/* Symlink */
+			flag2 |= 4;
+		if (strncmp((char *) pnt, "NM", 2) == 0)	/* Alternate Name */
+			flag2 |= 8;
+		if (strncmp((char *) pnt, "CL", 2) == 0)	/* Child link */
+			flag2 |= 16;
+		if (strncmp((char *) pnt, "PL", 2) == 0)	/* Parent link */
+			flag2 |= 32;
+		if (strncmp((char *) pnt, "RE", 2) == 0)	/* Relocated Direcotry */
+			flag2 |= 64;
+		if (strncmp((char *) pnt, "TF", 2) == 0)	/* Time stamp */
+			flag2 |= 128;
+		if (strncmp((char *) pnt, "SP", 2) == 0) {	/* SUSP record */
+			flag2 |= 1024;
+/*			su_version = pnt[3] & 0xff;*/
+		}
+		if (strncmp((char *) pnt, "AA", 2) == 0) {	/* Apple Signature record */
+			flag2 |= 2048;
+/*			aa_version = pnt[3] & 0xff;*/
+		}
+
+		if(strncmp((char *)pnt, "CE", 2) == 0) {	/* Continuation Area */
+			cont_extent = isonum_733(pnt+4);
+			cont_offset = isonum_733(pnt+12);
+			cont_size = isonum_733(pnt+20);
+		}
+
+		len -= pnt[2];
+		pnt += pnt[2];
+		if (len <= 3 && cont_extent) {
+			unsigned char   sector[2048];
+
+			readsecs(cont_extent, sector, 1);
+			flag2 |= parse_rrflags(&sector[cont_offset], cont_size, 1);
+		}
+	}
+	return flag2;
+}
+
+int
+rr_flags(idr)
+	struct iso_directory_record *idr;
+{
+	int		len;
+	unsigned char	*pnt;
+
+	find_rr(idr, &pnt, &len);
+	return (parse_rrflags(pnt, len, 0));
 }
 
 /*
@@ -569,6 +695,10 @@ read_merging_directory(mrootp, nent)
 		(*pnt)->rr_attr_size = 0;
 		(*pnt)->total_rr_attr_size = 0;
 		(*pnt)->de_flags = SAFE_TO_REUSE_TABLE_ENTRY;
+#ifdef APPLE_HYB
+		(*pnt)->assoc = NULL;
+		(*pnt)->hfs_ent = NULL;
+#endif	/* APPLE_HYB */
 
 		/*
 		 * Check for and parse any RR attributes for the file. All we
@@ -1036,6 +1166,9 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 	unsigned int	ttbl_extent = 0;
 	unsigned int	ttbl_index = 0;
 	char		whole_path[1024];
+#ifdef APPLE_HYB
+	struct directory_entry *assoc = NULL;
+#endif /* APPLE_HYB */
 
 	/*
 	 * Whatever is leftover in the list needs to get merged back into the
@@ -1061,6 +1194,41 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 			ttbl_index = i;
 			continue;
 		}
+#ifdef APPLE_HYB
+		/*
+		 * If we have previously found an associated file, check
+		 * it has the same ISO name and link it to this entry
+		 */
+		if (assoc &&
+			((pnt[i]->isorec.flags[0] & ISO_ASSOCIATED) == 0) &&
+			(assoc->isorec.name_len[0] ==
+			    pnt[i]->isorec.name_len[0]) &&
+			(strcmp(assoc->isorec.name, pnt[i]->isorec.name)
+			    == 0)) {
+
+			pnt[i]->assoc = assoc;
+
+			/* don't want this entry to be in the Joliet tree */
+			assoc->de_flags |= INHIBIT_JOLIET_ENTRY;
+
+			/*
+			 * as we have associated files, then assume we are
+			 * are dealing with Apple's extensions - if not already
+			 * set
+			 */
+			if (apple_both == 0) {
+				apple_both = apple_ext = 1;
+			}
+		}
+
+		assoc = NULL;
+
+		/* flag this entry if it's associated */
+		if ((pnt[i]->isorec.flags[0] & ISO_ASSOCIATED) != 0) {
+			assoc = pnt[i];
+		}
+#endif /* APPLE_HYB */
+
 		/*
 		 * Skip directories for now - these need to be treated
 		 * differently.
@@ -1284,7 +1452,8 @@ get_session_start(file_addr)
 	 * parameters.  For now, we assume we are writing the 2nd session, so
 	 * we start from the session that starts at 0.
 	 */
-	*file_addr = (16 << 11);
+	if (file_addr != NULL)
+		*file_addr = (16 << 11);
 
 	/*
 	 * We need to coordinate with cdrecord to get the next writable address
@@ -1292,6 +1461,12 @@ get_session_start(file_addr)
 	 */
 	session_start = last_extent = last_extent_written = cdrecord_result();
 #else
+
+	if (file_addr != NULL)
+		*file_addr = 0L * SECTOR_SIZE;
+	session_start = last_extent = last_extent_written = 0L;
+	if (check_session && cdrecord_data == NULL)
+		return (0);
 
 	if (cdrecord_data == NULL) {
 #ifdef	USE_LIBSCHILY
@@ -1315,6 +1490,7 @@ get_session_start(file_addr)
 		exit(1);
 #endif
 	}
+
 	*pnt = '\0';
 	if (file_addr != NULL) {
 		*file_addr = atol(cdrecord_data) * SECTOR_SIZE;

@@ -1,11 +1,14 @@
 #! /bin/sh
 #
-# %Z%%M%	%I% %E% 1999 J. Schilling
+# @(#)install-sh	1.5 01/04/03 1999 J. Schilling
 #
 # install - install a program, script, or datafile
 # This comes from X11R5 (mit/util/scripts/install.sh).
+# Mods to make install-sh behave reasonable when called by
+# non root user by J. Schilling
 #
 # Copyright 1991 by the Massachusetts Institute of Technology
+# Copyright 1999 by J. Schilling
 #
 # Permission to use, copy, modify, distribute, and sell this software and its
 # documentation for any purpose is hereby granted without fee, provided that
@@ -57,13 +60,22 @@ dst=""
 dir_arg=""
 
 #
-# Check if we are root to avoid chown as non root user
+# Check if we are 'root' to avoid chown as non root user
 #
 rootflag=FALSE
 dsttmp=/tmp/xx.$$
 trap "rm -f ${dsttmp}" 0
 echo > ${dsttmp}
 ${chownprog} root ${dsttmp} 2> /dev/null && ${chmodcmd} ${dsttmp} 2> /dev/null && rootflag=TRUE
+#
+# Win95 has no user 'root' and chown succeeds always.
+# Unfortunately, there is also no user 'bin' and chown complains about
+# user 'bin' being non-existant.
+# Check if the fie is now really owned by 'root' to avoid the Win95 probems
+#
+if [ $rootflag = TRUE ]; then
+	ls -l ${dsttmp} 2> /dev/null | grep root > /dev/null || rootflag=FALSE
+fi
 rm -f ${dsttmp}
 
 while [ x"$1" != x ]; do

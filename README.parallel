@@ -8,7 +8,7 @@ Make sure that your parallel port device is set up to EPP mode
 from within the BIOS. In many cases it is best to set the PP delay to 0.
 
 Here is a short explanation how to make the FreeCom Traveller work
-in 4x speed on a notebok:
+in 4x speed on a notebook:
 
 1.) Set BIOS for parallel port to 'EPP'.
 
@@ -51,3 +51,5 @@ in case of a FreeCom Traveller this is:
 5.) Check for optimum delay using for maximum speed using cdrecord -dummy 
 
 6.) Use the file rc.pp and modify for your needs
+
+7.) Your CD drive now appears as /dev/pcd?

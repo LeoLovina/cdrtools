@@ -1,4 +1,4 @@
-#ident @(#)Makefile	1.1 00/01/02 
+#ident @(#)Makefile	1.2 00/12/09 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -17,7 +17,7 @@ HFILES=		cdda2wav.h interface.h semshm.h global.h resample.h \
 		config.h saveargs.h sndfile.h aiff.h aifc.h \
 		sndconfig.h scsi_cmds.h lowlevel.h byteorder.h mycdrom.h \
 		base64.h sha.h mmsystem.h
-LIBS=		-lscg -lschily $(SCSILIB) $(EXTRALIB)
+LIBS=		-lrscg -lscg -lschily $(SCSILIB) $(EXTRALIB) $(LIB_SOCKET)
 XMK_FILE=	Makefile.man
 
 LCONFIG=	local.cnf

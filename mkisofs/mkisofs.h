@@ -1,11 +1,11 @@
-/* @(#)mkisofs.h	1.50 00/05/28 joerg */
+/* @(#)mkisofs.h	1.60 01/04/02 joerg */
 /*
  * Header file mkisofs.h - assorted structure definitions and typecasts.
 
    Written by Eric Youngdale (1993).
 
    Copyright 1993 Yggdrasil Computing, Incorporated
-   Copyright (c) 1999,2000 J. Schilling
+   Copyright (c) 1999,2000,2001 J. Schilling
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,34 +23,31 @@
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
+#include <mconfig.h>	/* Must be before stdio.h for LARGEFILE support */
 #include <stdio.h>
-#include <prototyp.h>
-
-/*
- * This symbol is used to indicate that we do not have things like
- * symlinks, devices, and so forth available.  Just files and dirs
- */
-#ifdef VMS
-#define NON_UNIXFS
-#endif
-
-#ifdef DJGPP
-#define NON_UNIXFS
-#endif
-
-#ifdef VMS
-#include <sys/dir.h>
-#define dirent direct
-#endif
-
-#ifdef _WIN32
-#define NON_UNIXFS
-#endif	/* _WIN32 */
-
-#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <statdefs.h>
+#include <stdxlib.h>
+#include <unixstd.h>	/* Needed for for LARGEFILE support */
+#include <strdefs.h>
+#ifdef ultrix
+extern char    *strdup();
+#endif
+#include <dirdefs.h>
+#include <utypes.h>
+#include <standard.h>
+
+/*#if	_LFS_LARGEFILE*/
+#ifdef	HAVE_LARGEFILES
+/*
+ * XXX Hack until fseeko()/ftello() are available everywhere or until
+ * XXX we know a secure way to let autoconf ckeck for fseeko()/ftello()
+ * XXX without defining FILE_OFFSETBITS to 64 in confdefs.h
+ */
+#	define	fseek	fseeko
+#	define	ftell	ftello
+#endif
 
 #ifndef	HAVE_LSTAT
 #ifndef	VMS
@@ -58,45 +55,7 @@
 #endif
 #endif
 
-#if defined(HAVE_DIRENT_H)
-#include <dirent.h>
-#define NAMLEN(dirent) strlen((dirent)->d_name)
-#else
-#define dirent direct
-#define NAMLEN(dirent) (dirent)->d_namlen
-#if defined(HAVE_SYS_NDIR_H)
-#include <sys/ndir.h>
-#endif
-#if defined(HAVE_SYS_DIR_H)
-#include <sys/dir.h>
-#endif
-#if defined(HAVE_NDIR_H)
-#include <ndir.h>
-#endif
-#endif
-
-#if defined(HAVE_STRING_H)
-#include <string.h>
-#else
-#if defined(HAVE_STRINGS_H)
-#include <strings.h>
-#endif
-#endif
-
-#ifdef ultrix
-extern char    *strdup();
-
-#endif
-
-#ifdef __STDC__
-#else
-#define const
-#endif
-
-
-#ifdef __SVR4
-#include <stdlib.h>
-#else
+#ifndef __SVR4
 extern int      optind;
 extern char    *optarg;
 
@@ -105,6 +64,12 @@ extern char    *optarg;
 
 #include "iso9660.h"
 #include "defaults.h"
+#include <unls.h>
+
+extern struct nls_table *in_nls;	/* input UNICODE conversion table */
+extern struct nls_table *out_nls;	/* output UNICODE conversion table */
+extern struct nls_table *hfs_inls;	/* input HFS UNICODE conversion table */
+extern struct nls_table *hfs_onls;	/* output HFS UNICODE conversion table */
 
 #ifdef APPLE_HYB
 #include "mactypes.h"
@@ -125,7 +90,7 @@ struct directory_entry {
 	struct directory_entry *jnext;
 	struct iso_directory_record isorec;
 	unsigned int    starting_block;
-	unsigned int    size;
+	off_t		size;
 	unsigned short  priority;
 	unsigned char   jreclen;	/* Joliet record len */
 	char           *name;
@@ -143,8 +108,8 @@ struct directory_entry {
 #ifdef APPLE_HYB
 	struct directory_entry *assoc;	/* entry has a resource fork */
 	hfsdirent      *hfs_ent;	/* HFS parameters */
-	unsigned int    hfs_off;	/* offset to real start of fork */
-	unsigned int    hfs_type;	/* type of HFS Unix file */
+	off_t		hfs_off;	/* offset to real start of fork */
+	int		hfs_type;	/* type of HFS Unix file */
 #endif	/* APPLE_HYB */
 #ifdef SORTING
 	int		sort;		/* sort weight for entry */
@@ -156,7 +121,7 @@ struct file_hash {
 	ino_t           inode;		/* Used in the hash table */
 	dev_t           dev;		/* Used in the hash table */
 	unsigned int    starting_block;
-	unsigned int    size;
+	off_t		size;
 #ifdef SORTING
 	struct directory_entry *de;
 #endif /* SORTING */
@@ -262,7 +227,7 @@ struct deferred_write {
 	char           *name;
 	struct directory_entry *s_entry;
 	unsigned int    pad;
-	unsigned int    off;
+	off_t		off;
 };
 
 struct eltorito_boot_entry_info {
@@ -300,6 +265,7 @@ extern struct iso_directory_record root_record;
 extern struct iso_directory_record jroot_record;
 
 extern int      check_oldnames;
+extern int      check_session;
 extern int      use_eltorito;
 extern int      hard_disk_boot;
 extern int      not_bootable;
@@ -310,7 +276,17 @@ extern int      boot_info_table;
 extern int      use_RockRidge;
 extern int      use_Joliet;
 extern int      rationalize;
+extern int      rationalize_uid;
+extern int      rationalize_gid;
+extern int      rationalize_filemode;
+extern int      rationalize_dirmode;
+extern uid_t    uid_to_use;
+extern gid_t    gid_to_use;
+extern int      filemode_to_use;
+extern int      dirmode_to_use;
+extern int      new_dir_mode;
 extern int      follow_links;
+extern int	cache_inodes;
 extern int      verbose;
 extern int      gui;
 extern int      all_files;
@@ -323,7 +299,7 @@ extern int      omit_period;
 extern int      omit_version_number;
 extern int      no_rr;
 extern int      transparent_compression;
-extern int      RR_relocation_depth;
+extern Uint	RR_relocation_depth;
 extern int	iso9660_level;
 extern int	iso9660_namelen;
 extern int      full_iso9660_filenames;
@@ -355,6 +331,8 @@ extern char    *autoname;	/* Autostart filename */
 extern int      afe_size;	/* Apple File Exchange block size */
 extern char    *hfs_volume_id;	/* HFS volume ID */
 extern int      icon_pos;	/* Keep Icon position */
+extern int	hfs_lock;	/* lock HFS volume (read-only) */
+extern char    *hfs_bless;	/* name of folder to 'bless' (System Folder) */
 
 #define MAP_LAST	1	/* process magic then map file */
 #define MAG_LAST	2	/* process map then magic file */
@@ -459,6 +437,9 @@ extern struct iso_directory_record *
 extern int free_mdinfo __PR((struct directory_entry **, int len));
 extern unsigned char *parse_xa __PR((unsigned char *pnt, int *lenp,
 		                struct directory_entry * dpnt));
+extern int	rr_flags	__PR((struct iso_directory_record *idr));
+extern int	parse_rrflags	__PR((Uchar *pnt, int len, int cont_flag));
+extern void	find_rr		__PR((struct iso_directory_record *idr, Uchar **pntp, int *lenp));
 extern struct directory_entry **
 	                read_merging_directory __PR((struct iso_directory_record *, int *));
 extern void merge_remaining_entries __PR((struct directory *,
@@ -468,7 +449,9 @@ extern int merge_previous_session __PR((struct directory *,
 extern int get_session_start __PR((int *));
 
 /* joliet.c */
-int joliet_sort_tree __PR((struct directory * node));
+extern unsigned char conv_charset __PR((unsigned char, struct nls_table *,
+				struct nls_table *));
+extern int joliet_sort_tree __PR((struct directory * node));
 
 /* match.c */
 extern int matches __PR((char *));

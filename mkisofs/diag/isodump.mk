@@ -1,4 +1,4 @@
-#ident @(#)isodump.mk	1.2 99/12/27 
+#ident @(#)isodump.mk	1.3 00/12/09 
 ###########################################################################
 #@@C@@
 ###########################################################################
@@ -9,8 +9,8 @@ include		$(SRCROOT)/$(RULESDIR)/rules.top
 
 INSDIR=		bin
 TARGET=		isodump
-#CPPOPTS +=	-DADD_FILES
 CPPOPTS +=	-DUSE_LIBSCHILY
+CPPOPTS +=	-DUSE_LARGEFILES
 CFILES=		isodump.c
 LIBS=		-lschily
 #XMK_FILE=	Makefile.man

@@ -1,7 +1,7 @@
-/* @(#)fifo.c	1.22 00/05/07 Copyright 1989,1997 J. Schilling */
+/* @(#)fifo.c	1.28 01/04/11 Copyright 1989,1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)fifo.c	1.22 00/05/07 Copyright 1989,1997 J. Schilling";
+	"@(#)fifo.c	1.28 01/04/11 Copyright 1989,1997 J. Schilling";
 #endif
 /*
  *	A "fifo" that uses shared memory between two processes
@@ -55,7 +55,7 @@ static	char sccsid[] =
 #include <fctldefs.h>
 #include <sys/types.h>
 #if defined(HAVE_SMMAP) && defined(USE_MMAP)
-#include <sys/mman.h>
+#include <mmapdefs.h>
 #endif
 #include <stdio.h>
 #include <stdxlib.h>
@@ -89,22 +89,23 @@ FILE	*ef;
 #define palign(x, a)	(((char *)(x)) + ((a) - 1 - (((unsigned)((x)-1))%(a))))
 
 typedef enum faio_owner {
-	owner_none,
-	owner_reader,
-	owner_writer,
-	owner_faio
+	owner_none,		/* Unused in real life			     */
+	owner_writer,		/* owned by process that writes into FIFO    */
+	owner_faio,		/* Intermediate state when buf still in use  */
+	owner_reader		/* owned by process that reads from FIFO     */
 } fowner_t;
 
 char	*onames[] = {
 	"none",
-	"reader",
 	"writer",
-	"faio"
+	"faio",
+	"reader",
 };
 
 typedef struct faio {
 	int	len;
 	volatile fowner_t owner;
+	volatile int users;
 	short	fd;
 	short	saved_errno;
 	char	*bufp;
@@ -117,6 +118,7 @@ struct faio_stats {
 	long	full;
 	long	done;
 	long	cont_low;
+	int	users;
 } *sp;
 
 #define	MIN_BUFFERS	3
@@ -202,10 +204,10 @@ init_fifo(fs)
 
 	bufbase = buf;
 	bufend = buf + buflen;
-	EDEBUG(("buf: %X bufend: %X, buflen: %ld\n", buf, bufend, buflen));
+	EDEBUG(("buf: %p bufend: %p, buflen: %ld\n", buf, bufend, buflen));
 	buf = palign(buf, pagesize);
 	buflen -= buf - bufbase;
-	EDEBUG(("buf: %X bufend: %X, buflen: %ld (align %ld)\n", buf, bufend, buflen, buf - bufbase));
+	EDEBUG(("buf: %p bufend: %p, buflen: %ld (align %ld)\n", buf, bufend, buflen, (long)(buf - bufbase)));
 
 	/*
 	 * Dirty the whole buffer. This can die with various signals if
@@ -229,17 +231,19 @@ mkshare(size)
 
 #ifdef	MAP_ANONYMOUS	/* HP/UX */
 	f = -1;
-	addr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, f, 0);
+	addr = mmap(0, mmap_sizeparm(size),
+			PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, f, 0);
 #else
 	if ((f = open("/dev/zero", O_RDWR)) < 0)
 		comerr("Cannot open '/dev/zero'.\n");
-	addr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, f, 0);
+	addr = mmap(0, mmap_sizeparm(size),
+			PROT_READ|PROT_WRITE, MAP_SHARED, f, 0);
 #endif
 	if (addr == (char *)-1)
 		comerr("Cannot get mmap for %d Bytes on /dev/zero.\n", size);
 	close(f);
 
-	if (debug) errmsgno(EX_BAD, "shared memory segment attached: %x\n", addr);
+	if (debug) errmsgno(EX_BAD, "shared memory segment attached: %p\n", (void *)addr);
 
 	return (addr);
 }
@@ -276,7 +280,7 @@ mkshm(size)
 	if ((addr = shmat(id, (char *)0, 0600)) == (char *)-1)
 		comerr("shmat failed\n");
 
-	if (debug) errmsgno(EX_BAD, "shared memory segment attached: %x\n", addr);
+	if (debug) errmsgno(EX_BAD, "shared memory segment attached: %p\n", addr);
 
 	if (shmctl(id, IPC_RMID, 0) < 0)
 		comerr("shmctl failed to detach shared memory segment\n");
@@ -355,7 +359,7 @@ init_faio(tracks, track, bufsize)
 	 */
 	bufsize = roundup(bufsize, pagesize);
 	faio_buffers = (buflen - sizeof(*sp)) / bufsize;
-	EDEBUG(("bufsize: %d buffers: %d hdrsize %d\n", bufsize, faio_buffers, faio_buffers * sizeof(struct faio)));
+	EDEBUG(("bufsize: %d buffers: %d hdrsize %ld\n", bufsize, faio_buffers, (long)faio_buffers * sizeof(struct faio)));
 
 	/*
 	 * Reduce buffer space by header space.
@@ -363,7 +367,7 @@ init_faio(tracks, track, bufsize)
 	n = sizeof(*sp) + faio_buffers * sizeof(struct faio);
 	n = roundup(n, pagesize);
 	faio_buffers = (buflen-n) / bufsize;
-	EDEBUG(("bufsize: %d buffers: %d hdrsize %d\n", bufsize, faio_buffers, faio_buffers * sizeof(struct faio)));
+	EDEBUG(("bufsize: %d buffers: %d hdrsize %ld\n", bufsize, faio_buffers, (long)faio_buffers * sizeof(struct faio)));
 
 	if (faio_buffers < MIN_BUFFERS) {
 		errmsgno(EX_BAD,
@@ -380,20 +384,24 @@ init_faio(tracks, track, bufsize)
 				pagesize);
 
 	for (n = 0; n < faio_buffers; n++, f++, base += bufsize) {
-		/* Give all the buffers to the reader process */
+		/* Give all the buffers to the file reader process */
 		f->owner = owner_writer;
+		f->users = 0;
 		f->bufp = base;
 		f->fd = -1;
 	}
 	sp = (struct faio_stats *)f;	/* point past headers */
 	sp->gets = sp->puts = sp->done = 0L;
+	sp->users = 1;
 
 	faio_pid = fork();
 	if (faio_pid < 0)
 		comerr("fork(2) failed");
 
 	if (faio_pid == 0) {
-		/* child process */
+		/*
+		 * child (background) process that fills the FIFO.
+		 */
 		raisepri(1);		/* almost max priority */
 
 #ifdef USE_OS2SHM
@@ -518,8 +526,8 @@ faio_read_track(trackp)
 	int	fd = trackp->f;
 	int	bytespt = trackp->secsize * trackp->secspt;
 	int	l;
-	long	tracksize = trackp->tracksize;
-	long	bytes_read = 0L;
+	off_t	tracksize = trackp->tracksize;
+	off_t	bytes_read = (off_t)0;
 	long	bytes_to_read;
 
 	if (bytespt > faio_buf_size) {
@@ -532,9 +540,10 @@ faio_read_track(trackp)
 	do {
 		bytes_to_read = bytespt;
 		if (tracksize > 0) {
-			bytes_to_read = tracksize - bytes_read;
-			if (bytes_to_read > bytespt)
+			if ((tracksize - bytes_read) > bytespt)
 				bytes_to_read = bytespt;
+			else
+				bytes_to_read = tracksize - bytes_read;				
 		}
 		l = faio_read_segment(fd, faio_ref(buf_idx), bytes_to_read);
 		if (++buf_idx >= faio_buffers)
@@ -576,11 +585,11 @@ faio_wait_on_buffer(f, s, delay, max_wait)
 	}
 	if (debug) {
 		errmsgno(EX_BAD,
-		"%lu microseconds passed waiting for %d current: %d idx: %d\n",
-		max_wait, s, f->owner, (f - faio_ref(0))/sizeof(*f));
+		"%lu microseconds passed waiting for %d current: %d idx: %ld\n",
+		max_wait, s, f->owner, (long)(f - faio_ref(0))/sizeof(*f));
 	}
 	comerrno(EX_BAD, "faio_wait_on_buffer for %s timed out.\n",
-	(s > owner_faio || s < owner_none) ? "bad_owner" : onames[s]);
+	(s > owner_reader || s < owner_none) ? "bad_owner" : onames[s-owner_none]);
 }
 
 LOCAL int
@@ -598,6 +607,7 @@ faio_read_segment(fd, f, len)
 	f->len = l;
 	f->saved_errno = errno;
 	f->owner = owner_reader;
+	f->users = sp->users;
 
 	sp->puts++;
 
@@ -638,7 +648,7 @@ again:
 	}
 
 	if ((sp->puts - sp->gets) < sp->cont_low && sp->done == 0) {
-		EDEBUG(("gets: %d puts: %d cont: %d low: %d\n", sp->gets, sp->puts, sp->puts - sp->gets, sp->cont_low));
+		EDEBUG(("gets: %ld puts: %ld cont: %ld low: %ld\n", sp->gets, sp->puts, sp->puts - sp->gets, sp->cont_low));
 		sp->cont_low = sp->puts - sp->gets;
 	}
 	faio_wait_on_buffer(f, owner_reader, READER_DELAY, READER_MAXWAIT);
@@ -668,7 +678,8 @@ again:
 	sp->gets++;
 
 	*bpp = f->bufp;
-	f->owner = owner_faio;
+	if (--f->users <= 0)
+		f->owner = owner_faio;
 	return len;
 }
 

@@ -1,3 +1,663 @@
+Fri Apr 13 20:41:36 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.118
+	  Version -> 1.10 final
+
+Fri Apr 13 20:40:58 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.117
+	  Backwardcounter corrected
+
+Fri Apr 13 20:39:09 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.56
+	  New Support mail Adresses
+
+Wed Apr 11 01:22:18 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.101
+	* cdrecord.h 1.68
+	  print_capacity() new with FILE * Parameter
+
+Sun Apr  8 02:03:49 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.22
+	  scgp->silent--; was oat wrong place
+
+Sun Apr  1 14:39:01 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.55
+	  Typo
+
+Sat Mar 31 23:02:28 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.21
+	  unit_ready() before each mode_sense()/mode_select()
+
+Sat Mar 31 22:46:28 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.63
+	  Comment for IOMEGA DMA overrun modified (Philips removed)
+
+Sun Mar 18 19:39:48 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.54
+	  REMOTE SCSI description and new unified SCSI Options
+
+Sun Mar 18 19:31:31 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.116
+	  Unified SCSI Options
+
+Sun Mar 18 19:27:02 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.80
+	  Fixed bug that printed SCSI timing without verbose
+
+Sun Mar 18 18:37:45 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.79
+	  New Functions: scg_svhead()/scg_svtail()/scg__sprinterr()
+	  Comments for Functions
+	  Print SCSI timing for earch failed SCSI Command
+
+Sun Mar 18 18:28:17 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.50
+	  New Funstions: scg_svhead()/scg_svtail()/scg__sprinterr()
+
+Sun Mar 18 15:37:09 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.78
+	  Print Timing without Verbose
+
+Sun Mar 18 15:10:18 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-wnt.c 1.27
+	* scsi-vms.c 1.29
+	* scsi-unixware.c 1.25
+	* scsi-sgi.c 1.34
+	* scsi-osf.c 1.23
+	* scsi-next.c 1.30
+	* scsi-linux-sg.c 1.65
+	* scsi-hpux.c 1.29
+	* scsi-linux-pg.c 1.39
+	* scsi-bsd.c 1.40
+	* scsi-bsd-os.c 1.26
+	* scsi-beos.c 1.19
+	* scsi-aix.c 1.33
+	  if (scgp->debug) -> if (scgp->debug > 0)
+
+Wed Mar 14 00:42:40 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.49
+	* scsitransp.c 1.77
+	  scg_verbose() -> scg_vsetup()
+
+Mon Mar 12 23:09:38 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.115
+	  Version -> 1.10a17, select_target() uses FILE *
+
+Mon Mar 12 23:08:46 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_scan.h 1.3
+	* scsi_scan.c 1.14
+	  comerrno() removed
+	  select_target() with FILE *
+	  select_target() returns number of Targets
+
+Mon Mar 12 23:06:50 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.67
+	* scsi_cdr.c 1.100
+	  printinq() new
+
+Mon Mar 12 22:06:05 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.64
+	  Better differentiation SCG_RETRYABLE/SCG_NO_ERROR
+	  Set ux_errno if Sense Data present
+
+Sun Mar 11 17:10:12 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-pg.c 1.38
+	  SCG_RETRYABLE for DMA overrun
+	  CHECK CONDITION == SCG_NO_ERROR
+
+Sun Mar 11 17:07:48 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.76
+	  Remove unused Variables
+
+Sun Mar 11 16:56:24 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.48
+	  scg_vhead()/scg_vtail()/scg_verbose() & scg_errfflush() new
+
+Sun Mar 11 16:55:55 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.75
+	  scg_vhead()/scg_vtail()/scg_verbose() & scg_errfflush() new
+	  Version -> 0.5
+
+Sat Mar 10 17:53:45 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.47
+	  scgp->bufptr new
+	  SCG_KVERSION new
+
+Sat Mar 10 17:52:53 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.74
+	  scgp->bufptr new
+	  scgp->scmd->resid < 0 == DMA overrun
+
+Sat Mar 10 16:24:00 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.63
+	  SCG_KVERSION new
+
+Mon Feb 26 22:20:32 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-unixware.c 1.24
+	  New formatting
+
+Mon Feb 26 22:18:39 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-unixware.c 1.23
+	  Environment "LIBSCG_SCAN_ALL" controls scanning of Harddisks because of system crash
+
+Mon Feb 26 16:05:41 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.114
+	  Warning if DVD-R code is missing and we found a DVD-R drive
+
+Sun Feb 25 13:02:42 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.27
+	  Now using mmapdefs.h
+
+Fri Feb 23 17:32:38 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsidefs.h 1.24
+	  ccs() Makro -> is_ccs()
+
+Fri Feb 23 00:24:02 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.26
+	  Support for mmap() on Apollo Domain/OS with mmap(0, &size, ...)
+
+Thu Feb 22 16:13:27 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.16
+	  Fixed bug in Prototyp (result from long -> off_t)
+
+Thu Feb 22 16:11:07 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.66
+	* wm_packet.c 1.14
+	* cdrecord.c 1.113
+	* drv_mmc.c 1.62
+	* drv_jvc.c 1.54
+	* drv_dvd.c 1.51
+	  Large File support
+
+Thu Feb 22 16:10:53 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.55
+	  padsize Parameter for pad_track() casted to Llong 
+
+Thu Feb 22 00:57:53 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdr_drv.c 1.21
+	  mconfig.h/unixstd.h for Large Files
+
+Thu Feb 22 00:55:35 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_scan.c 1.13
+	  #include <mconfig.h> for Large Files
+
+Thu Feb 22 00:54:26 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.25
+	  Large File support
+	  Casts for sizeof() [long] on MaxOS X
+
+Wed Feb 21 23:32:51 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* defaults.c 1.6
+	  #include unixstd.h for Large Files
+
+Wed Feb 21 23:27:48 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* auinfo.c 1.6
+	* isosize.c 1.7
+	* audiosize.c 1.15
+	  Large File support
+
+Tue Feb 20 23:56:44 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.45
+	* drv_philips.c 1.42
+	  unixstd.h for sys/types.h for off_t in cdrecord.h
+
+Thu Feb 15 23:09:12 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.37
+	  Test for HAVE_BSD_DEV_SCSIREG_H for new MacOSX
+
+Fri Feb  9 00:35:50 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.41
+	  Fixes for Plasmon RF 4100
+
+Tue Jan 23 12:20:32 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.20
+	  Cast for singed/unsigned cmparison
+
+Mon Jan 15 01:09:05 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.24
+	  %x -> %p Format
+
+Sun Jan  7 19:46:42 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.36
+	  scsi-apollo.c new
+
+Sun Jan  7 19:39:40 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.73
+	* scsi-vms.c 1.28
+	* scsi-unixware.c 1.22
+	* scsi-linux-pg.c 1.37
+	* scsi-aix.c 1.32
+	  sense_len check -> scsitransp.c
+
+Tue Jan  2 00:09:45 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.72
+	  sccsid[] is always used -> without #ifdef lint
+
+Fri Dec 29 00:06:35 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.112
+	  Lint, 1.10a10, rlimit cast to Llong for SGI
+
+Thu Dec 28 23:19:23 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.99
+	  Modified for Lint
+
+Wed Dec 20 18:26:01 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.33
+	  Cast to caddr_t for SENSEBUF(dsp)
+
+Wed Dec 13 20:22:52 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-pg.c 1.36
+	  Cast s_cmd.addr = (caddr_t)sp->u_sense.cmd_sense;
+
+Tue Dec 12 15:20:46 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.46
+	  struct scsi -> struct scg_scsi for AIX
+
+Sat Dec  9 22:52:01 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.62
+	  Recognise ENOTTY as errno for failed ioctl()
+
+Sat Dec  9 18:20:25 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.19
+	* scsilog.c 1.13
+	* drv_sony.c 1.44
+	* drv_philips.c 1.40
+	* drv_mmc.c 1.61
+	* drv_jvc.c 1.53
+	* drv_dvd.c 1.50
+	  u_char -> Uchar
+
+Wed Dec  6 12:43:51 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.111
+	  atoll() -> libschily
+
+Wed Nov 29 17:22:15 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-vms.c 1.27
+	  Indented
+
+Wed Nov 29 17:18:51 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-vms.c 1.26
+	  ATAPI Support and changed for new libscg Interface
+
+Fri Nov 24 11:00:58 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.110
+	  Workaround for ACER drive that does not return from -dummy
+	  Typo in  online Help
+
+Wed Nov  8 00:06:05 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.45
+	* scsireg.h 1.24
+	* scsidefs.h 1.23
+	* scgio.h 2.16
+	  #ifdef __cplusplus extern "C" {
+
+Sat Nov  4 15:00:50 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.23
+	* cdrecord.c 1.109
+	  Printf-like Formats cleaned up
+
+Sat Nov  4 14:56:09 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.98
+	  PIONEER CD-WO DR-R504X -> DEV_PIONEER_DW_S114X
+
+Sat Nov  4 14:52:43 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.65
+	  DEFAULT_FIFOSIZE -> Long Constant
+
+Tue Oct 31 15:58:54 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.108
+	  Cygwin-1.x Compatibility
+
+Sun Oct 22 13:37:15 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-aix.c 1.31
+	  Type in sizeof(devname removed
+
+Tue Oct 17 10:35:34 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.53
+	  SEE ALSO enhanced
+
+Fri Oct 13 11:28:51 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.61
+	  use pg_version() only for PP
+
+Wed Sep 20 00:59:38 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.18
+	  Code reordered so DMA overrun messages only appears once
+
+Sun Sep 17 17:15:06 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.64
+	  #define sample -> #define msample for Win32
+
+Fri Sep  8 03:04:50 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.17
+	  Warning for Philips DMA overrun
+
+Wed Sep  6 23:41:34 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.97
+	  unit_ready() made better
+
+Wed Sep  6 09:59:05 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.71
+	* scsitransp.h 1.44
+	  scg_cmderr() -> scg_cmd_err(), scg_cmd_status() new
+
+Tue Sep  5 03:32:34 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.70
+	  Default printing to stderr
+
+Tue Sep  5 03:06:01 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.69
+	  scg__open() returns -1 when SCGO_OPEN fails, to avoid calling scg_fileno()
+
+Tue Sep  5 02:30:41 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.96
+	  allow_atapi() calls unit_ready() before mode_sense() to make it work past a reset
+
+Tue Sep  5 02:28:03 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.16
+	  Minimal transfer sizeof(struct scsi_mode_header) after DMA overrun
+
+Tue Sep  5 02:22:48 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.60
+	  read_toc()/read_disk_info() reads minimal 4 bytes for Philips ATAPI drives
+
+Mon Sep  4 20:24:52 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.52
+	  Typo removed
+
+Sat Sep  2 21:16:00 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.43
+	  Drive flags new in SCSI *
+
+Sat Sep  2 21:03:48 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-wnt.c 1.26
+	* scsi-vms.c 1.25
+	* scsi-unixware.c 1.21
+	* scsi-sgi.c 1.32
+	* scsi-osf.c 1.22
+	* scsi-os2.c 1.21
+	* scsi-next.c 1.29
+	* scsi-linux-sg.c 1.60
+	* scsi-linux-pg.c 1.35
+	* scsi-hpux.c 1.28
+	* scsi-bsd.c 1.39
+	* scsi-bsd-os.c 1.25
+	* scsi-aix.c 1.30
+	* scsi-beos.c 1.18
+	  All debug printing to stderr (scgp->errfile)
+
+Tue Aug 29 23:44:31 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-next.c 1.28
+	* scsi-bsd-os.c 1.24
+	  error codes & return harmonised
+
+Tue Aug 29 02:36:09 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.59
+	  set curspeed only if > 0 (SCSI-3 floating point exception in waitfix)
+
+Tue Aug 29 02:35:04 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_scan.c 1.12
+	  call scg_settarget() in scanbus, to make sure SCSI address for scg_initator_id() is OK
+
+Sat Aug 26 10:20:43 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.58
+	  OPC Hack for strange drive that returns from OPC with "UNIT ATTENTION/operator selected write permit"
+
+Sat Aug 26 10:15:03 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.107
+	  Enhancements for remote SCSI, scg_reset() with what Parameter
+
+Sat Aug 26 00:53:10 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.35
+	* scsitransp.c 1.68
+	  scsibus/target/lun acess now only with scg_scsibus()/scsi_target()/scg_lun() and scg_settarget()
+	  do not initialize target in struct scg_cmd because this is now done in SCG lowlevel code
+	  scg__open() from scsihack.c -> scsitransp.c, scg_settarget() -> scgsettarget.c
+	  dummy code it now always present
+
+Sat Aug 26 00:22:51 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.42
+	  scg_settarget() -> scgsettarget.c
+
+Fri Aug 25 23:17:25 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-wnt.c 1.25
+	* scsi-vms.c 1.24
+	* scsi-unixware.c 1.20
+	* scsi-sgi.c 1.31
+	* scsi-osf.c 1.21
+	* scsi-os2.c 1.20
+	* scsi-next.c 1.27
+	* scsi-linux-sg.c 1.59
+	* scsi-linux-pg.c 1.34
+	* scsi-hpux.c 1.27
+	* scsi-bsd.c 1.38
+	* scsi-bsd-os.c 1.23
+	* scsi-beos.c 1.17
+	* scsi-aix.c 1.29
+	  scsibus/target/lun acess now only with scg_scsibus()/scsi_target()/scg_lun() and scg_settarget()
+	  do not initialize target in struct scg_cmd because this is now done in SCG lowlevel code
+
+Thu Aug 24 00:52:32 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.41
+	  scg Address Stucture new
+	  scg__open() without bus/target/lun Parameter
+	  scg_remote() new
+
+Wed Aug 23 22:44:26 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_scan.c 1.11
+	* scsilog.c 1.12
+	* drv_dvd.c 1.49
+	* drv_jvc.c 1.52
+	* drv_philips.c 1.39
+	* drv_sony.c 1.43
+	* scsi_cdr.c 1.95
+	  scsibus/target/lun acess now only with scg_scsibus()/scsi_target()/scg_lun() and scg_settarget()
+	  do not initialize target in struct scg_cmd because this is now done in SCG lowlevel code
+
+Sun Aug 20 20:57:32 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.40
+	* scsitransp.c 1.67
+	* scsihack.c 1.34
+	* scsi-linux-sg.c 1.58
+	* scsi-linux-pg.c 1.33
+	* scsi-sgi.c 1.30
+	* scsi-next.c 1.26
+	* scsi-hpux.c 1.26
+	* scsi-bsd.c 1.37
+	* scsi-aix.c 1.28
+	* scsi_scan.c 1.10
+	  Now using scg_settarget()
+
+Sat Aug 19 23:24:03 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.66
+	* scsihack.c 1.33
+	* scsi-wnt.c 1.24
+	* scsi-vms.c 1.23
+	* scsi-unixware.c 1.19
+	* scsi-sgi.c 1.29
+	* scsi-osf.c 1.20
+	* scsi-os2.c 1.19
+	* scsi-next.c 1.25
+	* scsi-linux-sg.c 1.57
+	* scsi-linux-pg.c 1.32
+	* scsi-hpux.c 1.25
+	* scsi-bsd.c 1.36
+	* scsi-beos.c 1.16
+	* scsi-bsd-os.c 1.22
+	* scsi-aix.c 1.27
+	* scsitransp.h 1.38
+	  scg_reset() with Function code Parameter
+
+Sat Aug 19 22:37:30 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.63
+	* scsitransp.h 1.39
+	  #ifdef's modified for new #define _SCG_*_H
+
+Sat Aug 19 21:57:31 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsireg.h 1.23
+	* scsidefs.h 1.22
+	* scgio.h 2.15
+	  Correctly made multi include safe with #ifdef _SCG_*
+
+Sat Aug 19 21:05:25 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.65
+	  sys/param.h removed
+
+Sat Aug 19 20:52:31 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.37
+	  Now using scg_ops
+	  Remote Version #defines, scg__version() removed
+
+Sat Aug 19 20:23:20 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.28
+	* scsi-osf.c 1.19
+	* scsierrs.c 2.26
+	* scsitransp.c 1.64
+	* scsireg.h 1.22
+	  u_char -> Uchar
+
+Sat Aug 19 19:13:16 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.63
+	* scsihack.c 1.32
+	  scsitransp.c and scsihack.c separated
+
+Sat Aug 19 17:30:28 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsireg.h 1.21
+	  Status & Sense Definitions from scsireg.h
+
+Fri Aug 18 10:40:48 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-vms.c 1.22
+	* scsi-wnt.c 1.23
+	* scsi-unixware.c 1.18
+	* scsi-sgi.c 1.27
+	* scsi-osf.c 1.18
+	* scsi-os2.c 1.18
+	* scsi-next.c 1.24
+	* scsi-linux-sg.c 1.56
+	* scsi-linux-pg.c 1.31
+	* scsi-hpux.c 1.24
+	* scsi-bsd.c 1.35
+	* scsi-bsd-os.c 1.21
+	* scsi-beos.c 1.15
+	* scsihack.c 1.31
+	* scsi-aix.c 1.26
+	* scsitransp.c 1.62
+	  Now uses scg_ops Structure and calling via pointers
+
+Thu Aug 17 22:50:53 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.61
+	  Bracketing typo in scg_sprintresult() removed (printed junk)
+
+Wed Aug 16 10:11:08 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-wnt.c 1.22
+	* scsi-vms.c 1.21
+	* scsi-unixware.c 1.17
+	* scsi-sgi.c 1.26
+	* scsi-os2.c 1.17
+	* scsi-osf.c 1.17
+	* scsi-next.c 1.23
+	* scsi-linux-sg.c 1.55
+	* scsi-hpux.c 1.23
+	* scsi-linux-pg.c 1.30
+	* scsi-bsd.c 1.34
+	* scsi-beos.c 1.14
+	* scsi-bsd-os.c 1.20
+	* scsi-aix.c 1.25
+	* scsihack.c 1.30
+	* scsitransp.c 1.60
+	  scg_send() now only with scgp* Parameter
+
+Sun Aug 13 23:31:37 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.59
+	  Buggy braketing corrected (printed 4-5 null Bytes to error output even in silent mode)
+
+Fri Aug  4 01:26:24 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.36
+	* scsitransp.c 1.58
+	  Komplett umgebaut damit die Fehlerausgabe in einen String erfolgt
+
+Tue Aug  1 00:03:45 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.35
+	* scsitransp.c 1.57
+	* scsierrs.c 2.25
+	* scsi-wnt.c 1.21
+	* scsi-vms.c 1.20
+	* scsi-unixware.c 1.16
+	* scsi-sgi.c 1.25
+	* scsi-osf.c 1.16
+	* scsi-os2.c 1.16
+	* scsi-next.c 1.22
+	* scsi-linux-sg.c 1.54
+	* scsi-linux-pg.c 1.29
+	* scsi-hpux.c 1.22
+	* scsi-bsd.c 1.33
+	* scsi-bsd-os.c 1.19
+	* scsi-beos.c 1.13
+	* scsi-aix.c 1.24
+	  All printf()'s -> js_printf(), sprintf() -> snprintf()
+
+Sun Jul 30 15:15:34 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.56
+	* scsitransp.h 1.34
+	  scg_prbytes()/scg_prsense() & scg_printdev() INterface restructured
+
+Sun Jul 30 13:52:05 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* wm_packet.c 1.13
+	* scsi_scan.c 1.9
+	* scsilog.c 1.11
+	* cdrecord.c 1.106
+	* scsi_cdr.c 1.94
+	* modes.c 1.15
+	* drv_sony.c 1.42
+	* drv_simul.c 1.16
+	* drv_philips.c 1.38
+	* drv_mmc.c 1.57
+	* drv_jvc.c 1.51
+	* drv_dvd.c 1.48
+	  Restructured for new libscg with scg_*()
+
+Thu Jul 27 01:17:47 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.55
+	  scg_prbytes()/scg_printdev() now using FILE * Parameter
+	  scg__errmsg() restructured to be similar to snprintf()
+
+Thu Jul 27 01:15:54 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsierrs.c 2.24
+	  Made similar to snprintf()
+
+Thu Jul 27 01:15:02 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.33
+	  scg_prbytes()/scg_printdev() now using FILE * Parameter
+	  scg__errmsg() restructured to be similar to snprintf()
+
+Sun Jul 23 18:01:12 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsierrs.c 2.23
+	* scsihack.c 1.29
+	* scsitransp.c 1.54
+	* scsi-wnt.c 1.20
+	* scsi-vms.c 1.19
+	* scsi-unixware.c 1.15
+	* scsi-osf.c 1.15
+	* scsi-sgi.c 1.24
+	* scsi-os2.c 1.15
+	* scsi-next.c 1.21
+	* scsi-linux-sg.c 1.53
+	* scsi-linux-pg.c 1.28
+	* scsi-hpux.c 1.21
+	* scsi-bsd.c 1.32
+	* scsi-beos.c 1.12
+	* scsi-bsd-os.c 1.18
+	* scsi-aix.c 1.23
+	* scsitransp.h 1.32
+	  restructured to use scg_ basieed Function names
+
+Sun Jul 23 00:28:09 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.31
+	  open_scsi()/close_scsi()/... -> scg_open()/scg_close/...
+
+Thu Jul 20 20:12:42 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.51
+	  Note for Volmgt & Solaris/USCSI
+
 *************** Release 1.9 *******************
 
 Thu Jul 20 19:49:20 2000 jes

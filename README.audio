@@ -4,7 +4,7 @@ You may have a byte swapping problem, try cdrecord -swab
 
 Cdrecord assumes Motorola/Network byte order (big-endian) on input
 regardless of the byte order of the CD-Recorder. If Cdrecord
-encounters a .vaw file, byte order is corrected to match the byte order
+encounters a .wav file, byte order is corrected to match the byte order
 of the .wav file.
 
 Cdrecord currently only supports Track at once. This gives 2 seconds

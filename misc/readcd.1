@@ -1,4 +1,4 @@
-.\" @(#)readcd.1	1.1 00/04/23 Copyright 1996 J. Schilling
+.\" @(#)readcd.1	1.5 01/04/16 Copyright 1996 J. Schilling
 .\" 
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -32,7 +32,7 @@
 .if n .ds o oe
 .if n .ds u ue
 .if n .ds s sz
-.TH READCD 1 "Version 1.8.1" "J\*org Schilling" "Schily\'s USER COMMANDS"
+.TH READCD 1 "Version 1.10" "J\*org Schilling" "Schily\'s USER COMMANDS"
 .SH NAME
 readcd \- read or write data Compact Discs
 .SH SYNOPSIS
@@ -70,14 +70,14 @@ and
 are integer numbers. 
 Some operating systems or SCSI transport implementations may require to
 specify a filename in addition.
-In this case the corect syntax for the device is:
+In this case the correct syntax for the device is:
 .B dev=
 .IR devicename : scsibus , target , lun
 or
 .B dev=
 .IR devicename : target , lun .
 If the name of the device node that has been specified on such a system
-referres to exactly one SCSI device, a shorthand in the form
+refers to exactly one SCSI device, a shorthand in the form
 .B dev=
 .IR devicename : @
 or
@@ -86,6 +86,22 @@ or
 may be used instead of
 .B dev=
 .IR devicename : scsibus , target , lun .
+
+.PP
+To access remote SCSI devices, you need to prepend the SCSI device name by
+a remote device indicator. The remote device indicator is either
+.BI REMOTE: user@host:
+or
+.BR
+.BI REMOTE: host:
+.br
+A valid remote SCSI device name may be:
+.BI REMOTE: user@host:
+to allow remote SCSI bus scanning or
+.BI REMOTE: user@host:1,0,0
+to access the SCSI device at 
+.I host
+connected to SCSI bus # 1,target 0 lun 0.
 
 .PP
 To make 
@@ -124,13 +140,85 @@ Select a primary function and then follow the instructions.
 .B \-version
 Print version information and exit.
 .TP
+.BI dev= target
+Sets the SCSI target for the drive, see notes above.
+A typical device specification is
+.BI dev= 6,0
+\&.
+If a filename must be provided together with the numerical target 
+specification, the filename is implementation specific.
+The correct filename in this case can be found in the system specific
+manuals of the target operating system.
+On a 
+.I FreeBSD
+system without 
+.I CAM
+support, you need to use the control device (e.g.
+.IR /dev/rcd0.ctl ).
+A correct device specification in this case may be
+.BI dev= /dev/rcd0.ctl:@
+\&.
+.sp
+On Linux, drives connected to a parallel port adapter are mapped
+to a virtual SCSI bus. Different adapters are mapped to different
+targets on this virtual SCSI bus.
+.sp
+If no 
+.I dev
+option is present, 
+.B cdrecord
+will try to get the device from the 
+.B CDR_DEVICE
+environment.
+.sp
+If the argument to the
+.B dev=
+option does not contain the characters ',', '/', '@' or ':',
+it is interpreted as an label name that may be found in the file
+/etc/default/cdrecord (see FILES section).
+.TP
+.BI timeout= #
+Set the default SCSI command timeout value to 
+.IR # " seconds.
+The default SCSI command timeout is the minimum timeout used for sending
+SCSI commands.
+If a SCSI command fails due to a timeout, you may try to raise the
+default SCSI command timeout above the timeout value of the failed command.
+If the command runs correctly with a raised command timeout,
+please report the better timeout value and the corresponding command to 
+the author of the program.
+If no 
+.I timeout 
+option is present, a default timeout of 40 seconds is used.
+.TP
+.BI debug= "#, " -d
+Set the misc debug value to # (with debug=#) or increment
+the misc debug level by one (with -d). If you specify
+.I -dd,
+this equals to 
+.BI debug= 2.
+This may help to find problems while opening a driver for libscg.
+as well as with sector sizes and sector types.
+Using
+.B \-debug
+slows down the process and may be the reason for a buffer underrun.
+.TP
+.BR kdebug= "#, " kd= #
+Tell the 
+.BR scg -driver
+to modify the kernel debug value while SCSI commands are running.
+.TP
+.BR \-silent ", " \-s
+Do not print out a status report for failed SCSI commands.
+.TP
 .B \-v
 Increment the level of general verbosity by one.
+This is used e.g. to display the progress of the process.
 .TP
 .B \-V
-Increment the verbose level in respect of SCSI command transport by one.
+Increment the verbose level with respect of SCSI command transport by one.
 This helps to debug problems
-during the writing process, that occur in the drive.
+during the process, that occur in the CD-Recorder. 
 If you get incomprehensible error messages you should use this flag
 to get more detailed output.
 .B \-VV
@@ -139,7 +227,9 @@ Using
 .B \-V
 or
 .B \-VV
-slows down the process and may be the reason for a buffer underrun.
+slows down the process.
+.TP
+.BI f= file
 .TP
 .B \-w
 Switch to write mode. If this option is not present,
@@ -150,6 +240,9 @@ reads from the specified device.
 Specify a sector range that should be read.
 The range is specified by the starting sector number, a minus sign and the
 ending sector number.
+.TP
+.B \-notrunc
+Do not truncate the outputfile when opening it.
 
 .SH EXAMPLES
 .PP
@@ -269,6 +362,7 @@ Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00
 Sense Key: 0x5 Illegal Request, Segment 0
 Sense Code: 0x25 Qual 0x00 (logical unit not supported) Fru 0x0
 Sense flags: Blk 0 (not valid)
+cmd finished after 0.002s timeout 40s
 .fi
 .sp
 .RE
@@ -308,6 +402,9 @@ The text is followed by the error value for a field replaceable unit.
 .PP
 The seventh line prints the block number that is related to the failed command
 and text for several error flags. The block number may not be valid.
+.PP
+The eight line reports the timeout set up for this commans and the time
+that the command realy needed to be finished.
 
 .SH BUGS
 
@@ -342,13 +439,29 @@ Additional information can be found on:
 .br
 http://www.fokus.gmd.de/usr/schilling/cdrecord.html
 .PP
-Mail bugs and suggestions to:
+If you have support questions, send them to:
 .PP
 .B
-joerg@schily.isdn.cs.tu-berlin.de
+cdrecord-support@berlios.de
+.br
 or
 .B
-js@cs.tu-berlin.de
+other-cdwrite@lists.debian.org
+.PP
+Of you definitly found a bug, send a mail to:
+.PP
+.B
+cdrecord-developers@berlios.de
+.br
 or
 .B
 schilling@fokus.gmd.de
+.PP
+To subscribe, use:
+.PP
+.B
+http://lists.berlios.de/mailman/listinfo/cdrecord-developers 
+.br
+or
+.B
+http://lists.berlios.de/mailman/listinfo/cdrecord-support 

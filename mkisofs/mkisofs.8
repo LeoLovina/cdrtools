@@ -1,7 +1,7 @@
 '\" t
 .\" To print, first run through tbl
 .\" -*- nroff -*-
-.\" @(#)mkisofs.8	1.55 00/07/20 joerg
+.\" @(#)mkisofs.8	1.69 01/04/16 joerg
 .\"
 .if t .ds a \v'-0.55m'\h'0.00n'\z.\h'0.40n'\z.\v'0.55m'\h'-0.40n'a
 .if t .ds o \v'-0.55m'\h'0.00n'\z.\h'0.45n'\z.\v'0.55m'\h'-0.45n'o
@@ -15,7 +15,7 @@
 .if n .ds o oe
 .if n .ds u ue
 .if n .ds s sz
-.TH MKISOFS 8 "1 May 2000" "Version 1.13a01"
+.TH MKISOFS 8 "21 Jan 2001" "Version 1.14"
 .SH NAME
 mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Ridge attributes.
 .SH SYNOPSIS
@@ -33,6 +33,12 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 [
 .B \-biblio
 .I FILE
+]
+[
+.B \-cache-inodes
+]
+[
+.B \-no-cache-inodes
 ]
 [
 .B \-b
@@ -82,6 +88,10 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 .B \-check-oldnames
 ]
 [
+.B \-check-session
+.I FILE
+]
+[
 .B \-copyright
 .I FILE
 ]
@@ -97,6 +107,18 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 ]
 [
 .B \-D
+]
+[
+.B \-dir-mode
+.I mode
+]
+[
+.B \-file-mode
+.I mode
+]
+[
+.B \-gid
+.I gid
 ]
 [
 .B \-hide
@@ -133,6 +155,14 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 .I level
 ]
 [
+.B \-input-charset
+.I charset
+]
+[
+.B \-output-charset
+.I charset
+]
+[
 .B \-J
 ]
 [
@@ -157,6 +187,10 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 .I path | device
 ]
 [
+.B \-new-dir-mode
+.I mode
+]
+[
 .B \-nobak
 ]
 [
@@ -170,6 +204,9 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 ]
 [
 .B \-pad
+]
+[
+.B \-no\-pad
 ]
 [
 .B \-path-list
@@ -215,6 +252,10 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 [
 .B \-ucs-level
 .I level
+]
+[
+.B \-uid
+.I uid
 ]
 [
 .B \-use-fileversion
@@ -325,6 +366,21 @@ mkisofs \- create an hybrid ISO9660/JOLIET/HFS filesystem with optional Rock Rid
 [
 .B \-hfs-type
 .I TYPE
+]
+[
+.B \-input-hfs-charset
+.I charset
+]
+[
+.B \-output-hfs-charset
+.I charset
+]
+[
+.B \-hfs-unlock
+]
+[
+.B \-hfs-bless
+.I folder_name
 ]
 [
 .B \--cap
@@ -492,11 +548,11 @@ same sort of syntax can be used with directories as well.
 .B mkisofs
 will create any directories required such that the graft
 points exist on the cdrom image - the directories do not need to
-appear in one of the paths.  Any directories that are created on the
-fly like this will have permissions 0555 and appear to be owned by the
+appear in one of the paths.  By default, any directories that are created on 
+the fly like this will have permissions 0555 and appear to be owned by the
 person running mkisofs.  If you wish other permissions or owners of
-the intermediate directories, the easiest solution is to create real
-directories in the path such that mkisofs doesn't have to invent them.
+the intermediate directories, see \-uid, \-gid, \-dir-mode, \-file-mode and
+\-new-dir-mode.
 .PP
 .B mkisofs
 will also run on Win9X/NT4 machines when compiled with Cygnus' cygwin
@@ -546,6 +602,40 @@ This parameter can also be set in the file
 .B \&.m\&kisofsrc
 with BIBLO=filename.
 If specified in both places, the command line version is used.
+.TP
+.B \-cache-inodes
+Cache inode and device numbers to find hard links to files.
+If
+.B mkisofs
+finds a hard link (a file with multiple names), then the file will only
+appear once on the CD. This helps to save space on the CD.
+The option
+.B \-cache-inodes
+is default on UNIX like operating systems.
+Be careful when using this option on a filesystem without unique
+inode numbers as it may result in files containing the wrong content on CD.
+.TP
+.B \-no-cache-inodes
+Do not cache inode and device numbers.
+This option is needed whenever a filesystem does not have unique
+inode numbers. It is the default on
+.BR Cygwin .
+As the Microsoft operating system that runs below
+.B Cygwin
+is not POSIX compliant, it does not have unique inode numbers.
+Cygwin creates fake inode numbers from a hash algorithm that
+is not 100% correct.
+If
+.B mkisofs
+would cache inodes on Cygwin, it would believe that some files are
+identical although they are not. The result in this case are files
+that contain the wrong content if a significant amount of different
+files (> ~5000) is in inside the tree that is to be archived.
+This does not happen when the
+.B \-no-cache-inodes is used, but the disadvantage is that
+.B mkisofs
+cannot detect hardlinks anymore and the resulting CD image may be larger
+than expected.
 .TP
 .BI \-b " eltorito_boot_image
 Specifies the path and filename of the boot image to be used when making
@@ -648,8 +738,8 @@ section for a description of this table.
 .BI \-C " last_sess_start,next_sess_start
 This option is needed when
 .B mkisofs
-is used to create the image of a second session or a higher level session
-for a multi session disk.
+is used to create a CDextra or the image of a second session or a 
+higher level session for a multi session disk.
 The option
 .B \-C
 takes a pair of two numbers separated by a comma. The first number is the
@@ -658,11 +748,23 @@ that should be appended to.
 The second number is the starting sector number of the new session.
 The expected pair of numbers may be retrieved by calling
 .B "cdrecord \-msinfo ...
-the
+If the
 .B \-C
-option may only be uses in conjunction with the
+option is used in conjunction with the
 .B \-M
-option.
+option,
+.B mkisofs
+will create a filesystem image that is intended to be a continuation
+of the previous session.
+If the
+.B \-C
+option is used without the
+.B \-M
+option,
+.B mkisofs
+will create a filesystem image that is intended to be used for a second
+session on a CDextra. This is a multi session CD that holds audio data
+in the first session and a ISO9660 filesystem in the second session.
 .TP
 .BI \-c " boot_catalog
 Specifies the path and filename of the boot catalog to be used when making
@@ -684,6 +786,19 @@ iso9660 file naming rules.
 It his option is not present, only names with a length > 31 are checked
 as these files are a hard violation of the iso9660 standard.
 .TP
+.BI \-check-session " FILE
+Check all old sessions for compliance with
+actual 
+.B mkisofs 
+iso9660 file naming rules.
+This is a high level option that is a combination of the options:
+.BI \-M " FILE " "\-C 0,0 \-check-oldnames
+For the parameter 
+.I FILE
+see desciption of
+.B \-M
+option.
+.TP
 .BI \-copyright " FILE
 Specifies the Copyright file name.
 This parameter can also be set in the file
@@ -704,10 +819,25 @@ way we see them.
 This violates the ISO9660 standard, but it happens to work on many systems.
 Use with caution.
 .TP
+.BI \-dir-mode " mode
+Overrides the mode of directories used to create the image to
+.IR mode .
+Specifying this option automatically enables Rock Ridge extensions.
+.TP
 .B \-f
 Follow symbolic links when generating the filesystem.  When this option is not
 in use, symbolic links will be entered using Rock Ridge if enabled, otherwise
 the file will be ignored.
+.TP
+.BI \-file-mode " mode
+Overrides the mode of regular files used to create the image to
+.IR mode .
+Specifying this option automatically enables Rock Ridge extensions.
+.TP
+.BI \-gid " gid
+Overrides the gid read from the source files to the value of
+.IR gid . 
+Specifying this option automatically enables Rock Ridge extensions.
 .TP
 .B \-gui
 Switch the behaviour for a GUI. This currently makes the output more verbose
@@ -732,6 +862,8 @@ Multiple globs may be hidden.
 If
 .I glob
 matches a directory, then the contents of that directory will be hidden.
+In order to match a directory name, make sure the pathname does not include
+a trailing '/' character.
 All the hidden files will still be written to the output CD image file.
 Should be used with the
 .B \-hide-joliet
@@ -751,6 +883,8 @@ from being listed on DOS based systems if the /A flag is not used for the listin
 .I glob
 is a shell wild-card-style pattern that must match any part of the filename 
 or path.
+In order to match a directory name, make sure the pathname does not include
+a trailing '/' character.
 Multiple globs may be hidden.
 .TP
 .BI \-hidden-list " file
@@ -769,6 +903,8 @@ Multiple globs may be hidden.
 If
 .I glob
 matches a directory, then the contents of that directory will be hidden.
+In order to match a directory name, make sure the pathname does not include
+a trailing '/' character.
 All the hidden files will still be written to the output CD image file.
 Should be used with the
 .B \-hide
@@ -806,6 +942,11 @@ option. Note that in case that the
 .B \-D
 option has been specified, the resulting filesystem is not ISO9660
 level-1 compliant and will not be readable on MS-DOS.
+See also 
+.B NOTES
+section for more information on the 
+.B RR_MOVED
+directory.
 .TP
 .B \-l
 Allow full 31 character filenames.  Normally the ISO9660 filename will be in an
@@ -814,6 +955,27 @@ allows filenames of up to 31 characters.  If you use this option, the disc may
 be difficult to use on a MS-DOS system, but this comes in handy on some other
 systems (such as the Amiga).
 Use with caution.
+.TP
+.BI \-input-charset " charset
+Input charset that defines the characters used in local file names.
+To get a list of valid charset names, call
+.B "mkisofs \-input-charset help.
+To get a 1:1 mapping, you may use
+.B default
+as charset name. The default initial values are
+.I cp437
+on DOS based systems and
+.I iso8859-1
+on all other systems.
+See 
+.B "CHARACTER SETS
+section below for more details.
+.TP
+.BI \-output-charset " charset
+Output charset that defines the characters that will be used in Rock Ridge
+file names. Defaults to the input charset. See
+.B "CHARACTER SETS
+section below for more details.
 .TP
 .BI \-iso-level " level
 Set the iso9660 conformance level. Valid numbers are 1..3.
@@ -833,26 +995,23 @@ is restricted to 8 and the maximum path length is limited to 255 characters.
 .B \-J
 Generate Joliet directory records in addition to regular iso9660 file
 names.  This is primarily useful when the discs are to be used on Windows-NT
-or Windows-95 machines.   The Joliet filenames are specified in Unicode and
+or Windows-95 machines.  The Joliet filenames are specified in Unicode and
 each path component can be up to 64 Unicode characters long.
+Note that Joliet is no standard - CD's that use only Joliet extensions but no
+standard Rock Ridge extensions may usually only be used on Microsoft Win32
+systems. Furthermore, the fact that the filenames are limited to 64 characters
+and the fact that Joliet uses the UTF-16 coding for Unicode characters causes
+interoperability problems.
 .TP
 .BI \-jcharset " charset
-Local charset that should be used for translating local file names into
-Joliet Unicode directory records.
-To get a list of valid charset names, call
-.B "mkisofs \-jcharset help.
-To get a 1:1 mapping, you may use
-.B default
-as charset name. The default initial values are
-.I cp437
-on DOS based systems and
-.I iso8859-1
-on all other systems.
-If the
-.B \-jcharset
-option is specified, the
+Same as using
+.B \-input-charset
+.I charset
+and
 .B \-J
-option is implied.
+options. See
+.B "CHARACTER SETS
+section below for more details.
 .TP
 .B \-L
 Allow ISO9660 filenames to begin with a period.  Usually, a leading dot is
@@ -935,6 +1094,10 @@ This violates the ISO9660 standard, but no one really uses the
 version numbers anyway.
 Use with caution.
 .TP
+.BI \-new-dir-mode " mode
+Mode to use when creating new directories in the iso fs image.  The default
+mode is 0555.
+.TP
 .B \-nobak
 .TP
 .B \-no-bak
@@ -944,6 +1107,10 @@ If the
 option is specified, files that contain the characters '~' or '#'
 or end in '.bak' will not be included (these are typically backup files
 for editors under unix).
+.TP
+.B \-force-rr
+Do not use the automatic Rock Ridge attributes recognition for previous sessions.
+This helps to show rotten iso9660 extension records as e.g. created by NERO burning ROM.
 .TP
 .B \-no-rr
 Do not use the Rock Ridge attributes from previous sessions.
@@ -984,6 +1151,14 @@ errors on one or more files that are located at the end of a track. They are
 usually present when the CD is written in Track at Once mode or when
 the disk is written as mixed mode CD where an audio track follows the
 data track.
+.sp
+To avoid problems with I/O error on the last file on the filesystem,
+the 
+.B \-pad
+option has been made the default.
+.TP
+.B \-no\-pad
+Do not Pad the end of the ISO9660 by 16 sectors (32kB).
 .TP
 .BI \-path-list " file
 A file containing a list of
@@ -1022,6 +1197,23 @@ In this case it is needed to know the size of the filesystem before the
 actual CD-creation is done.
 The option \-print-size allows to get this size from a "dry-run" before
 the CD is actually written.
+Old versions of
+.B mkisofs
+did write this information (among other information) to 
+.IR stderr .
+As this turns out to be hard to parse, the number without any other information
+is now printed on 
+.B stdout
+too.
+If you like to write a simple shell script, redirect
+.B stderr
+and catch the number from
+.BR stdout .
+This may be done with:
+.sp
+.B "cdblocks=` mkisofs -print-size -quiet .\|.\|. `
+.sp
+.B "mkisofs .\|.\|. | cdrecord .\|.\|. tsize=${cdblocks}s -"
 .TP
 .B \-quiet
 This makes
@@ -1049,7 +1241,8 @@ gid 0.
 When used on Win32, the execute bit is set on
 .I all
 files. This is a result of the lack of file permissions on Win32 and the
-Cygwin POSIX emulation layer.
+Cygwin POSIX emulation layer.  See also \-uid \-gid, \-dir-mode, \-file-mode
+and \-new-dir-mode.
 .TP
 .B \-relaxed-filenames
 The option
@@ -1098,6 +1291,11 @@ as in the previous session.
 Set Unicode conformance level in the Joliet SVD. The default level is 3.
 It may be set to 1..3 using this option.
 .TP
+.BI \-uid " uid
+Overrides the uid read from the source files to the value of
+.IR uid . 
+Specifying this option automatically enables Rock Ridge extensions.
+.TP
 .B \-use-fileversion
 The option 
 .B \-use-fileversion
@@ -1135,7 +1333,7 @@ with VOLI=id.
 If specified in both places, the command line version is used.  Note that
 if you assign a volume ID, this is the name that will be used as the mount
 point used by the Solaris volume management system and the name that is
-assigned to the disc on a Windows or Mac platform.
+assigned to the disc on a Microsoft Win32 or Apple Mac platform.
 .TP
 .BI \-volset " ID
 Specifies the volset ID.
@@ -1325,6 +1523,8 @@ Should be used with the
 and/or
 .B \-hide-joliet
 options.
+In order to match a directory name, make sure the pathname does not include
+a trailing '/' character.
 .TP
 .BI \-hide-hfs-list " file
 A file containing a list of
@@ -1354,6 +1554,46 @@ root folder of an HFS volume. See README.rootinfo for more information.
 .TP
 .BI \-prep-boot " FILE
 PReP boot image file. Up to 4 are allowed. See README.prep_boot (Alpha)
+.TP
+.BI \-input-hfs-charset " charset
+Input charset that defines the characters used in HFS file names when
+used with the
+.I \-mac-name
+option.
+The default charset is cp10000 (Mac Roman)
+.I cp10000
+(Mac Roman)
+See
+.B "CHARACTER SETS
+and
+.B "HFS MACINTOSH FILE NAMES
+sections below for more details.
+.TP
+.BI \-output-hfs-charset " charset
+Output charset that defines the characters that will be used in the HFS
+file names. Defaults to the input charset. See
+.B "CHARACTER SETS
+section below for more details.
+.TP
+.B \-hfs-unlock
+By default,
+.B mkisofs
+will create an HFS volume that is
+.IR locked .
+This option leaves the volume unlocked so that other applications (e.g.
+hfsutils) can modify the volume. See the
+.B "HFS PROBLEMS/LIMITATIONS
+section below for warnings about using this option.
+.TP
+.BI \-hfs-bless " folder_name
+"Bless" the given directory (folder). This is usually the 
+.B System Folder
+and is used in creating HFS bootable CDs. The name of the directory must
+be the whole path name as
+.B mkisofs
+sees it. e.g. if the given pathspec is ./cddata and the required folder is
+called System Folder, then the whole path name is "./cddata/System Folder"
+(remember to use quotes if the name contains spaces).
 .TP
 .B \--cap
 Look for AUFS CAP Macintosh files. Search for CAP Apple/Unix file formats
@@ -1395,6 +1635,168 @@ Look for Thursby Software Systems DAVE Macintosh files
 .B \--sfm
 Look for Microsoft's Services for Macintosh files (NT only) (Alpha)
 
+.SH "CHARACTER SETS
+.B mkisofs
+processes file names in a POSIX compliant way as strings of 8-bit characters.
+To represent all codings for all languages, 8-bit characters are not
+sufficient. Unicode or
+.B ISO-10646
+define character codings that need at least 21 bits to represent all
+known languages. They may be represented with
+.BR UTF-32 ", " UTF-16 " or " UTF-8
+coding.
+.B UTF-32
+uses a plain 32-bit coding but seems to be uncommon. 
+.B UTF-16
+is used by Microsoft with Win32 with the disadvantage that it only supports
+a subset of all codes and that 16-bit characters are not compliant with
+the POSIX filesystem interface.
+.PP
+Modern UNIX operating systems use
+.B UTF-8
+coding for filenames. This coding allows to use the complete Unicode code set.
+Each 32-bit character is represented by one or more 8-bit characters.
+If a character is coded in
+.B ISO-8859-1
+(used in Central Europe and North America) is maps 1:1 to a Unicode character.
+Character codes that cannot be represented as a single byte in UTF-8
+(typically if the value is > 0x7F) use escape sequences that map to more than
+one 8-bit character.
+.PP
+If all operating systems would use 
+.B UTF-8
+coding,
+.B mkisofs
+would not need to recode characters in file names.
+Unfortunately, Apple uses completely nonstandard codings and Microsoft
+uses a Unicode coding that is not compatible with the POSIX filename
+interface.
+.PP
+For all non
+.B UTF-8
+coded operating systems, the actual character
+that each byte represents depends on the
+.I character set
+or
+.I codepage
+(which is the name used by Microsoft)
+used by the local operating system in use - the characters in a character
+set will reflect the region or natural language used by the user.
+.PP
+Usually character codes 0x00-0x1f are control characters, codes 0x20-0x7f
+are the 7 bit ASCII characters and (on PC's and Mac's) 0x80-0xff are used
+for other characters.
+Unfortunately even this does not follow ISO standards that reserve the
+range 0x80-0x9f for control characters and only allow 0xa0-0xff for other
+characters.
+.PP
+As there is a lot more than 256 characters/symbols in use, only a small
+subset are represented in a character set. Therefore the same character code
+may represent a different character in different character sets. So a file name
+generated, say in central Europe, may not display the same character
+when viewed on a machine in, say eastern Europe.
+.PP
+To make matters more complicated, different operating systems use
+different character sets for the region or language. For example the character
+code for "small e with acute accent" may be character code 0x82 on a PC, 
+code 0x8e on a Macintosh and code 0xe9 on a UNIX system.
+Note while the codings used on a PC or Mac are nonstandard,
+Unicode codes this character as 0x00000000e9 which is basically the
+same value as the value used by most UNIX systems.
+.PP
+As long as not all operating systems and applications will use the Unicode
+character set as the basis for file names in a unique way, it may be
+necessary to specify which character set your file names use in and which
+character set the file names should appear on the CD.
+.PP
+There are four options to specify the character sets you want to use:
+.IP \-input-charset
+Defines the local character set you are using on your host machine.
+Any character set conversions that take place will use this character
+set as the staring point. The default input character sets are
+.I cp437
+on DOS based systems and
+.I iso8859-1
+on all other systems.
+
+If the
+.I \-J
+option is given, then the Unicode equivalents of the input character set
+will be used in the Joliet directory. Using the 
+.I \-jcharset
+option is the same as using the
+.I \-input-charset
+and
+.I \-J
+options.
+.IP \-output-charset
+Defines the character set that will be used with for the Rock Ridge names
+on the CD. Defaults to the input character set. Only likely to be useful
+if used on a non-Unix platform. e.g. using
+.B mkisofs
+on a Microsoft Win32 machine to create Rock Ridge CDs. If you are using
+.B mkisofs
+on a Unix machine, it is likely that the output character set
+will be the same as the input character set.
+.IP \-input-hfs-charset
+Defines the HFS character set used for HFS file names decoded from
+any of the various Apple/Unix file formats. Only useful when used with
+.I \-mac-name
+option. See the
+.B HFS MACINTOSH FILE NAMES
+for more information. Defaults to
+.I cp10000
+(Mac Roman).
+.IP \-output-hfs-charset
+Defines the HFS character set used to create HFS file names from the input
+character set in use. In most cases this will be from the character set
+given with the
+.I \-input-charset
+option. Defaults to the input HFS character set.
+.PP
+There are a number of character sets built in to
+.IR mkisofs .
+To get a listing, use
+.B "mkisofs \-input-charset help.
+.PP
+Additional character sets can be read from file for any of the character
+set options by giving a filename as the argument to the options. The given
+file will only be read if its name does not match one of the built in
+character sets.
+.PP
+The format of the character set files is the same as the mapping files
+available from http://www.unicode.org/Public/MAPPINGS The format of these
+files is:
+
+	Column #1 is the input byte code (in hex as 0xXX)
+.br
+	Column #2 is the Unicode (in hex as 0xXXXX)
+.br
+	Rest of the line is ignored.
+
+Any blank line, line without two (or more) columns in the above format
+or comments lines (starting with the # character) are ignored without any
+warnings. Any missing input code is mapped to Unicode character 0x0000.
+.PP
+Note that there is no support for 16 bit UNICODE (UTF-16) or 32 bit UNICODE
+(UTF-32) coding because this coding is not POSIX compliant. There should 
+be support for UTF-8 UNICODE coding which is compatible to POSIX filenames
+and supported by moder UNIX implementations such as Solaris.
+.PP
+A 1:1 character set mapping can be defined by using the keyword
+.I default
+as the argument to any of the character set options. This is the behaviour
+of older (v1.12) versions of
+.BR mkisofs .
+.PP
+The ISO9660 file names generated from the input filenames are not converted
+from the input character set. The ISO9660 character set is a very limited
+subset of the ASCII characters, so any conversion would be pointless.
+.PP
+Any character that
+.B mkisofs
+can not convert will be replaced with a '_' character.
+.PP
 .SH "HFS CREATOR/TYPE
 A Macintosh file has two properties associated with it which define
 which application created the file, the
@@ -1801,6 +2203,21 @@ option will not currently work with the
 option - the Unix
 name will be used in the TRANS.TBL file, not the Macintosh name.
 .PP
+The character set used to convert any HFS file name to a Joliet/Rock Ridge
+file name defaults to
+.I cp10000
+(Mac Roman).
+The character set used can be specified using the
+.I -input-hfs-charset
+option. Other built in HFS character sets are: cp10006 (MacGreek),
+cp10007 (MacCyrillic), cp10029 (MacLatin2), cp10079 (MacIcelandandic) and
+cp10081 (MacTurkish).
+.PP
+Note: the character codes used by HFS file names taken from the various
+Apple/Unix formats will not be converted as they are assumed to be in the
+correct Apple character set. Only the Joliet/Rock Ridge names derived from
+the HFS file names will be converted.
+.PP
 The existing mkisofs code will filter out any illegal characters for the
 ISO9660 and Joliet filenames, but as mkisofs expects to be dealing
 directly with Unix names, it leaves the Rock Ridge names as is.
@@ -2059,13 +2476,13 @@ will become the root directory if the CD, call:
 .PP
 % mkisofs \-o cd.iso cd_dir
 .PP
-To create a HFS hybrid CD with Rock Ridge extensions of
+To create a CD with Rock Ridge extensions of
 the source directory
 .IR cd_dir :
 .PP
 % mkisofs \-o cd.iso \-R cd_dir
 .PP
-To create a HFS hybrid CD with Rock Ridge extensions of
+To create a CD with Rock Ridge extensions of
 the source directory
 .I cd_dir
 where all files have at least read permission and all files
@@ -2125,7 +2542,7 @@ on the
 CD along with the three README files - but only one will be seen from
 each of the three filesystems:
 .PP
-% mkisofs \-o cd.iso \-hfs \-J \-r \\
+% mkisofs \-o cd.iso \-hfs \-J \-r \-graft-points \\
 .br
         \-hide README.hfs \-hide README.joliet \\
 .br
@@ -2162,19 +2579,31 @@ J\*org Schilling wrote the SCSI transport library and it's adaptation layer to
 .B mkisofs
 and newer parts (starting from 1999) of the utility, this makes
 .B mkisofs
-Copyright (C) 1999, 2000 J\*org Schilling.
+Copyright (C) 1999, 2000, 2001 J\*org Schilling.
 .PP
-HFS hybrid code Copyright (C) James Pearson 1997, 1998, 1999, 2000
+HFS hybrid code Copyright (C) James Pearson 1997, 1998, 1999, 2000, 2001
 .br
 libhfs code Copyright (C) 1996, 1997 Robert Leslie
 .br
 libfile code Copyright (C) Ian F. Darwin 1986, 1987, 1989, 1990, 1991,
 1992, 1994, 1995.
 .SH NOTES
+.PP
 .B Mkisofs
 may safely be installed suid root. This may be needed to allow
 .B mkisofs
 to read the previous session when creating a multi session image.
+.PP
+If 
+.B mkisofs 
+is creating a filesystem image with Rock Ridge attributes and the
+directory nesting level of the source directory tree is too much
+for ISO-9660, 
+.B mkisofs 
+will do deep directory relocation.
+This results in a directory called
+.B RR_MOVED
+in the root directory of the CD. You cannot avoid this directory.
 .SH BUGS
 .TP
 \(bu
@@ -2236,7 +2665,7 @@ new name for an Apple/Unix encoded file/directory. e.g. If a Apple/Unix
 encoded file called "oldname" is to added to the CD, then you can not use
 the command line:
 .IP
-mkisofs \-o output.raw \-hfs newname=oldname cd_dir
+mkisofs \-o output.raw \-hfs \-graft-points newname=oldname cd_dir
 .LP
 mkisofs will be unable to decode "oldname". However, you can graft
 Apple/Unix encoded files or directories as long as you do not attempt to
@@ -2258,8 +2687,14 @@ Hybrid volumes may be larger than pure ISO9660 volumes
 containing the same data.
 .PP
 The resulting hybrid volume can be accessed on a Unix machine by using
-the hfsutils routines. However, no changes should be made to the
-contents of the volume as it's not a "real" HFS volume.
+the hfsutils routines. However, no changes can be made to the volume as it
+is set as
+.B locked.
+The option
+.B \-hfs-unlock
+will create an output image that is unlocked - however no changes should be
+made to the contents of the volume (unless you really know what you are
+doing) as it's not a "real" HFS volume.
 .PP
 Using the
 .B \-mac-name
@@ -2345,13 +2780,29 @@ James Pearson
 j.pearson@ge.ucl.ac.uk
 
 .PP
-Mail bugs and suggestions to:
+If you have support questions, send them to:
 .PP
 .B
+cdrecord-support@berlios.de
+.br
+or
+.B
+other-cdwrite@lists.debian.org
+.PP
+Of you definitly found a bug, send a mail to:
+.PP
+.B
+cdrecord-developers@berlios.de
+.br
+or
+.B
 schilling@fokus.gmd.de
+.PP
+To subscribe, use:
+.PP
+.B
+http://lists.berlios.de/mailman/listinfo/cdrecord-developers 
+.br
 or
 .B
-js@cs.tu-berlin.de
-or
-.B
-joerg@schily.isdn.cs.tu-berlin.de
+http://lists.berlios.de/mailman/listinfo/cdrecord-support 

@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.52 00/07/03 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.66 01/04/20 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.52 00/07/03 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.66 01/04/20 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -87,7 +87,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.52";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.66";	/* The version for this transport*/
 
 #ifndef	SCSI_IOCTL_GET_BUS_NUMBER
 #define SCSI_IOCTL_GET_BUS_NUMBER 0x5386
@@ -168,17 +168,20 @@ struct scg_local {
 #endif
 
 #ifdef	MISALIGN
-LOCAL	int	scsi_getint	__PR((int *ip));
+LOCAL	int	sg_getint	__PR((int *ip));
 #endif
-LOCAL	int	scsi_send	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
+LOCAL	int	scgo_send	__PR((SCSI *scgp));
 #ifdef	SG_IO
-LOCAL	int	scsi_rwsend	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
+LOCAL	int	sg_rwsend	__PR((SCSI *scgp));
 #endif
 LOCAL	BOOL	sg_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
 LOCAL	void	sg_initdev	__PR((SCSI *scgp, int f));
 LOCAL	int	sg_mapbus	__PR((SCSI *scgp, int busno, int ino));
 LOCAL	BOOL	sg_mapdev	__PR((SCSI *scgp, int f, int *busp, int *tgtp, int *lunp,
 							int *chanp, int *inop));
+#if defined(SG_SET_RESERVED_SIZE) && defined(SG_GET_RESERVED_SIZE)
+LOCAL	long	sg_raisedma	__PR((SCSI *scgp, long newmax));
+#endif
 LOCAL	void	sg_settimeout	__PR((int f, int timeout));
 
 /*
@@ -186,12 +189,22 @@ LOCAL	void	sg_settimeout	__PR((int f, int timeout));
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
 	if (scgp != (SCSI *)0) {
+#ifdef	USE_PG
+		/*
+		 * If we only have a Parallel port or only opened a handle
+		 * for PP, just return PP version.
+		 */
+		if (scglocal(scgp)->pgbus == 0 ||
+		    (scg_scsibus(scgp) >= 0 &&
+		     scg_scsibus(scgp) == scglocal(scgp)->pgbus))
+			return (pg_version(scgp, what));
+#endif
 		switch (what) {
 
 		case SCG_VERSION:
@@ -204,19 +217,33 @@ scg__version(scgp, what)
 			return (_scg_auth_schily);
 		case SCG_SCCS_ID:
 			return (__sccsid);
+		case SCG_KVERSION:
+			{
+				static	char kv[16];
+				int	n;
+
+				if (scglocal(scgp)->drvers >= 0) {
+					n = scglocal(scgp)->drvers;
+					js_snprintf(kv, sizeof(kv),
+                                        "%d.%d.%d",
+                                        n/10000, (n%10000)/100, n%100);
+
+					return (kv);
+				}
+			}
 		}
 	}
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+		 int	busno	= scg_scsibus(scgp);
+		 int	tgt	= scg_target(scgp);
+		 int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	i;
 	register int	b;
@@ -261,7 +288,7 @@ scsi_open(scgp, device, busno, tgt, tlun)
 		goto openbydev;
 
 	for (i=0; i < 32; i++) {
-		sprintf(devname, "/dev/sg%d", i);
+		js_snprintf(devname, sizeof(devname), "/dev/sg%d", i);
 		f = open(devname, 2);
 		if (f < 0) {
 			if (errno != ENOENT && errno != ENXIO && errno != ENODEV) {
@@ -278,7 +305,7 @@ scsi_open(scgp, device, busno, tgt, tlun)
 		}
 	}
 	if (nopen == 0) for (i=0; i <= 25; i++) {
-		sprintf(devname, "/dev/sg%c", i+'a');
+		js_snprintf(devname, sizeof(devname), "/dev/sg%c", i+'a');
 		f = open(devname, 2);
 		if (f < 0) {
 			if (errno != ENOENT && errno != ENXIO && errno != ENODEV) {
@@ -313,34 +340,42 @@ openbydev:
 			goto openpg;
 		}
 
-		if (scgp->scsibus < 0)
-			scgp->scsibus = busno;
-		if (scgp->target < 0)
-			scgp->target = tgt;
-		if (scgp->lun < 0)
-			scgp->lun = tlun;
+#ifdef	OOO
+		if (scg_scsibus(scgp) < 0)
+			scg_scsibus(scgp) = busno;
+		if (scg_target(scgp) < 0)
+			scg_target(scgp) = tgt;
+		if (scg_lun(scgp) < 0)
+			scg_lun(scgp) = tlun;
+#endif
 
+		scg_settarget(scgp, busno, tgt, tlun);
 		if (sg_setup(scgp, f, busno, tgt, tlun))
 			return (++nopen);
 	}
 openpg:
 #ifdef	USE_PG
-	nopen += pg_open(scgp, device, busno, tgt, tlun);
+	nopen += pg_open(scgp, device);
 #endif
-	if (scgp->debug) for (b=0; b < MAX_SCG; b++) {
-		printf("Bus: %d cookie: %X\n", b, scglocal(scgp)->buscookies[b]);
+	if (scgp->debug > 0) for (b=0; b < MAX_SCG; b++) {
+		js_fprintf((FILE *)scgp->errfile,
+			"Bus: %d cookie: %X\n",
+			b, scglocal(scgp)->buscookies[b]);
 		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++)
-				if (scglocal(scgp)->scgfiles[b][t][l] != (short)-1)
-					printf("file (%d,%d,%d): %d\n",
+			for (l=0; l < MAX_LUN ; l++) {
+				if (scglocal(scgp)->scgfiles[b][t][l] != (short)-1) {
+					js_fprintf((FILE *)scgp->errfile,
+						"file (%d,%d,%d): %d\n",
 						b, t, l, scglocal(scgp)->scgfiles[b][t][l]);
+				}
+			}
 		}
 	}
 	return (nopen);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	register int	f;
@@ -396,13 +431,15 @@ sg_setup(scgp, f, busno, tgt, tlun)
 		scglocal(scgp)->drvers = 0;
 		if (ioctl(f, SG_GET_VERSION_NUM, &n) >= 0) {
 			scglocal(scgp)->drvers = n;
-			if (scgp->overbose)
-				printf("Linux sg driver version: %d.%d.%d\n",
+			if (scgp->overbose) {
+				js_fprintf((FILE *)scgp->errfile,
+					"Linux sg driver version: %d.%d.%d\n",
         				n/10000, (n%10000)/100, n%100);
+			}
 		}
 	}
 #endif
-	if (scgp->scsibus >= 0 && scgp->target >= 0 && scgp->lun >= 0)
+	if (scg_scsibus(scgp) >= 0 && scg_target(scgp) >= 0 && scg_lun(scgp) >= 0)
 		onetarget = TRUE;
 
 	sg_mapdev(scgp, f, &Bus, &Target, &Lun, &Chan, &Ino);
@@ -414,8 +451,10 @@ sg_setup(scgp, f, busno, tgt, tlun)
 	n = sg_mapbus(scgp, Bus, Ino);
 	if (Bus == -1) {
 		Bus = n;
-		if (scgp->debug)
-			printf("SCSI Bus: %d (mapped from %d)\n", Bus, Ino);
+		if (scgp->debug > 0) {
+			js_fprintf((FILE *)scgp->errfile,
+				"SCSI Bus: %d (mapped from %d)\n", Bus, Ino);
+		}
 	}
 
 	if (Bus < 0 || Bus >= MAX_SCG || Target < 0 || Target >= MAX_TGT ||
@@ -528,8 +567,10 @@ sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop)
 
 	if (ioctl(f, SCSI_IOCTL_GET_IDLUN, &sg_id))
 		return (FALSE);
-	if (scgp->debug)
-		printf("l1: 0x%lX l2: 0x%lX\n", sg_id.l1, sg_id.l2);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"l1: 0x%lX l2: 0x%lX\n", sg_id.l1, sg_id.l2);
+	}
 	if (ioctl(f, SCSI_IOCTL_GET_BUS_NUMBER, &Bus) < 0) {
 		Bus = -1;
 	}
@@ -538,9 +579,10 @@ sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop)
 	Lun	= (sg_id.l1 >> 8) & 0xFF;
 	Chan	= (sg_id.l1 >> 16) & 0xFF;
 	Ino	= (sg_id.l1 >> 24) & 0xFF;
-	if (scgp->debug) {
-		printf("Bus: %d Target: %d Lun: %d Chan: %d Ino: %d\n",
-				Bus, Target, Lun, Chan, Ino);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"Bus: %d Target: %d Lun: %d Chan: %d Ino: %d\n",
+			Bus, Target, Lun, Chan, Ino);
 	}
 	*busp = Bus;
 	*tgtp = Target;
@@ -565,7 +607,7 @@ sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop)
  * is to use SG_GET_RESERVED_SIZE to read back the current values.
  */
 LOCAL long
-scsi_raisedma(scgp, newmax)
+sg_raisedma(scgp, newmax)
 	SCSI	*scgp;
 	long	newmax;
 {
@@ -586,7 +628,7 @@ scsi_raisedma(scgp, newmax)
 		for (b=0; b < MAX_SCG; b++) {
 			for (t=0; t < MAX_TGT; t++) {
 				for (l=0; l < MAX_LUN ; l++) {
-					if ((f = scsi_fileno(scgp, b, t, l)) < 0)
+					if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
 						continue;
 					old = 0;
 					if (ioctl(f, SG_GET_RESERVED_SIZE, &old) < 0)
@@ -606,7 +648,7 @@ scsi_raisedma(scgp, newmax)
 		for (b=0; b < MAX_SCG; b++) {
 			for (t=0; t < MAX_TGT; t++) {
 				for (l=0; l < MAX_LUN ; l++) {
-					if ((f = scsi_fileno(scgp, b, t, l)) < 0)
+					if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
 						continue;
 					old = 0;
 					if (ioctl(f, SG_GET_RESERVED_SIZE, &old) < 0)
@@ -625,13 +667,15 @@ scsi_raisedma(scgp, newmax)
 	for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
 			for (l=0; l < MAX_LUN ; l++) {
-				if ((f = scsi_fileno(scgp, b, t, l)) < 0)
+				if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
 					continue;
 				if (ioctl(f, SG_GET_RESERVED_SIZE, &val) < 0)
 					continue;
-				if (scgp->debug)
-					printf("Target (%d,%d,%d): DMA max %d old max: %ld\n",
-							b, t, l, val, newmax);
+				if (scgp->debug > 0) {
+					js_fprintf((FILE *)scgp->errfile,
+						"Target (%d,%d,%d): DMA max %d old max: %ld\n",
+						b, t, l, val, newmax);
+				}
 				if (val < newmax)
 					newmax = val;
 			}
@@ -642,7 +686,7 @@ scsi_raisedma(scgp, newmax)
 #endif
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -654,7 +698,7 @@ scsi_maxdma(scgp, amt)
 	 * This interface first appeared in 2.2.6 but it was not working.
 	 */
 	if (scglocal(scgp)->drvers >= 20134)
-		maxdma = scsi_raisedma(scgp, amt);
+		maxdma = sg_raisedma(scgp, amt);
 #endif
 #ifdef	SG_GET_BUFSIZE
 	/*
@@ -675,25 +719,25 @@ scsi_maxdma(scgp, amt)
 			maxdma = MAX_DMA_LINUX;
 	}
 #ifdef	USE_PG
-	if (scgp->scsibus == scglocal(scgp)->pgbus)
+	if (scg_scsibus(scgp) == scglocal(scgp)->pgbus)
 		return (pg_maxdma(scgp, amt));
-	if ((scgp->scsibus < 0) && (pg_maxdma(scgp, amt) < maxdma))
+	if ((scg_scsibus(scgp) < 0) && (pg_maxdma(scgp, amt) < maxdma))
 		return (pg_maxdma(scgp, amt));
 #endif
 	return (maxdma);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
 	char	*ret;
 
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"scgo_getbuf: %ld bytes\n", amt);
+	}
 	/*
 	 * For performance reason, we allocate pagesize()
 	 * bytes before the SCSI buffer to avoid
@@ -709,8 +753,8 @@ scsi_getbuf(scgp, amt)
 	return ((void *)ret);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -718,8 +762,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -740,8 +784,8 @@ BOOL scsi_havebus(scgp, busno)
 	return (FALSE);
 }
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -758,49 +802,49 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 	return ((int)scglocal(scgp)->scgfiles[busno][tgt][tlun]);
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 #ifdef	USE_PG
-	if (scgp->scsibus == scglocal(scgp)->pgbus)
+	if (scg_scsibus(scgp) == scglocal(scgp)->pgbus)
 		return (pg_initiator_id(scgp));
 #endif
 	return (-1);
 }
 
-EXPORT
-int scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 #ifdef	USE_PG
-	if (scgp->scsibus == scglocal(scgp)->pgbus)
+	if (scg_scsibus(scgp) == scglocal(scgp)->pgbus)
 		return (pg_isatapi(scgp));
 #endif
 
 #ifdef	SG_EMULATED_HOST
 	{
 	int	emulated = FALSE;
-	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
 
-	if (ioctl(f, SG_EMULATED_HOST, &emulated) >= 0)
+	if (ioctl(scgp->fd, SG_EMULATED_HOST, &emulated) >= 0)
 		return (emulated != 0);
 	}
 #endif
 	return (-1);
 }
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
 #ifdef	SG_SCSI_RESET
-	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
-	int	func = 0;
+	int	f = scgp->fd;
+	int	func = -1;
 #endif
 #ifdef	USE_PG
-	if (scgp->scsibus == scglocal(scgp)->pgbus)
-		return (pg_reset(scgp));
+	if (scg_scsibus(scgp) == scglocal(scgp)->pgbus)
+		return (pg_reset(scgp, what));
 #endif
 	/*
 	 * Do we have a SCSI reset in the Linux sg driver?
@@ -812,15 +856,21 @@ int scsireset(scgp)
 #ifdef	SG_SCSI_RESET_NOTHING
 	func = SG_SCSI_RESET_NOTHING;
 	if (ioctl(f, SG_SCSI_RESET, &func) >= 0) {
-#ifdef	SG_SCSI_RESET_DEVICE
-		func = SG_SCSI_RESET_DEVICE;
-		if (ioctl(f, SG_SCSI_RESET, &func) >= 0)
+		if (what == SCG_RESET_NOP)
 			return (0);
+#ifdef	SG_SCSI_RESET_DEVICE
+		if (what == SCG_RESET_TGT) {
+			func = SG_SCSI_RESET_DEVICE;
+			if (ioctl(f, SG_SCSI_RESET, &func) >= 0)
+				return (0);
+		}
 #endif
 #ifdef	SG_SCSI_RESET_BUS
-		func = SG_SCSI_RESET_BUS;
-		if (ioctl(f, SG_SCSI_RESET, &func) >= 0)
-			return (0);
+		if (what == SCG_RESET_BUS) {
+			func = SG_SCSI_RESET_BUS;
+			if (ioctl(f, SG_SCSI_RESET, &func) >= 0)
+				return (0);
+		}
 #endif
 	}
 #endif
@@ -849,7 +899,7 @@ sg_settimeout(f, tmo)
  */
 #ifdef	MISALIGN
 LOCAL int
-scsi_getint(ip)
+sg_getint(ip)
 	int	*ip;
 {
 		 int	ret;
@@ -862,28 +912,27 @@ scsi_getint(ip)
 	
 	return (ret);
 }
-#define	GETINT(a)	scsi_getint(&(a))
+#define	GETINT(a)	sg_getint(&(a))
 #else
 #define	GETINT(a)	(a)
 #endif
 
 #ifdef	SG_IO
 LOCAL int
-scsi_send(scgp, f, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	int		ret;
 	sg_io_hdr_t	sg_io;
 
-	if (f < 0) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EIO;
 		return (0);
 	}
 	if (scglocal(scgp)->isold > 0) {
-		return (scsi_rwsend(scgp, f, sp));
+		return (sg_rwsend(scgp));
 	}
 	fillbytes((caddr_t)&sg_io, sizeof(sg_io), '\0');
 
@@ -908,20 +957,26 @@ scsi_send(scgp, f, sp)
 	sg_io.timeout = sp->timeout*1000;
 	sg_io.flags |= SG_FLAG_DIRECT_IO;
 
-	ret = ioctl(f, SG_IO, &sg_io);
-	if (scgp->debug)
-		printf("ioctl ret: %d\n", ret);
+	ret = ioctl(scgp->fd, SG_IO, &sg_io);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"ioctl ret: %d\n", ret);
+	}
 
 	if (ret < 0) {
 		sp->ux_errno = geterrno();
 		/*
 		 * Check if SCSI command cound not be send at all.
+		 * Linux usually returns EINVAL for an unknoen ioctl.
+		 * In case somebody from the Linux kernel team learns that the
+		 * corect errno would be ENOTTY, we check for this errno too.
 		 */
-		if (sp->ux_errno == EINVAL && scglocal(scgp)->isold < 0) {
+		if ((sp->ux_errno == ENOTTY || sp->ux_errno == EINVAL)
+					&& scglocal(scgp)->isold < 0) {
 			scglocal(scgp)->isold = 1;
-			return (scsi_rwsend(scgp, f, sp));
+			return (sg_rwsend(scgp));
 		}
-		if (sp->ux_errno == ENOTTY || sp->ux_errno == ENXIO ||
+		if (sp->ux_errno == ENXIO ||
 		    sp->ux_errno == EINVAL || sp->ux_errno == EACCES) {
 			return (-1);
 		}
@@ -930,18 +985,43 @@ scsi_send(scgp, f, sp)
 	sp->u_scb.cmd_scb[0] = sg_io.status;
 	sp->sense_count = sg_io.sb_len_wr;
 
-	if (scgp->debug)
-		printf("host_status: %02X driver_status: %02X\n",
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"host_status: %02X driver_status: %02X\n",
 				sg_io.host_status, sg_io.driver_status);
+	}
 
 	switch (sg_io.host_status) {
 
 	case DID_OK:
-			if ((sg_io.driver_status & DRIVER_SENSE) != 0)
-				sp->error = SCG_RETRYABLE;
+			/*
+			 * If there is no DMA overrun and there is a
+			 * SCSI Status byte != 0 then the SCSI cdb transport
+			 * was OK and sp->error must be SCG_NO_ERROR.
+			 */
+			if ((sg_io.driver_status & DRIVER_SENSE) != 0) {
+				if (sp->ux_errno == 0)
+					sp->ux_errno = EIO;
+
+				if (sp->u_sense.cmd_sense != 0 &&
+				    sp->u_scb.cmd_scb[0] == 0) {
+					/*
+					 * The Linux SCSI system up to 2.4.xx
+					 * trashes the status byte in the
+					 * kernel. This is true at least for
+					 * ide-scsi emulation. Until this gets
+					 * fixed, we need this hack.
+					 */
+					sp->u_scb.cmd_scb[0] = ST_CHK_COND;
+					if (sp->sense_count == 0)
+						sp->sense_count = SG_MAX_SENSE;
+				}
+			}
 			break;
 
 	case DID_NO_CONNECT:	/* Arbitration won, retry NO_CONNECT? */
+			sp->error = SCG_RETRYABLE;
+			break;
 	case DID_BAD_TARGET:
 			sp->error = SCG_FATAL;
 			break;
@@ -961,15 +1041,15 @@ scsi_send(scgp, f, sp)
 	return (0);
 }
 #else
-#	define	scsi_rwsend	scsi_send
+#	define	sg_rwsend	scgo_send
 #endif
 
 LOCAL int
-scsi_rwsend(scgp, f, sp)
+sg_rwsend(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	int		f = scgp->fd;
+	struct scg_cmd	*sp = scgp->scmd;
 	struct sg_rq	*sgp;
 	struct sg_rq	*sgp2;
 	int	i;
@@ -993,8 +1073,8 @@ scsi_rwsend(scgp, f, sp)
 		return (0);
 	}
 #ifdef	USE_PG
-	if (scgp->scsibus == scglocal(scgp)->pgbus)
-		return (pg_send(scgp, f, sp));
+	if (scg_scsibus(scgp) == scglocal(scgp)->pgbus)
+		return (pg_send(scgp));
 #endif
 	if (sp->timeout != scgp->deftimeout)
 		sg_settimeout(f, sp->timeout);
@@ -1007,8 +1087,9 @@ scsi_rwsend(scgp, f, sp)
 		sgp2 = (struct sg_rq *)
 			(scglocal(scgp)->SCSIbuf - (sizeof(struct sg_header)));
 	} else {
-		if (scgp->debug) {
-			printf("DMA addr: 0x%8.8lX size: %d - using copy buffer\n",
+		if (scgp->debug > 0) {
+			js_fprintf((FILE *)scgp->errfile,
+				"DMA addr: 0x%8.8lX size: %d - using copy buffer\n",
 				(long)sp->addr, sp->size);
 		}
 		if (sp->size > (int)(sizeof(sg_rq.buf) - SCG_MAX_CMD)) {
@@ -1019,8 +1100,9 @@ scsi_rwsend(scgp, f, sp)
 					malloc(scglocal(scgp)->xbufsize +
 						SCG_MAX_CMD +
 						sizeof(struct sg_header));
-				if (scgp->debug) {
-					printf("Allocted DMA copy buffer, addr: 0x%8.8lX size: %ld\n",
+				if (scgp->debug > 0) {
+					js_fprintf((FILE *)scgp->errfile,
+						"Allocted DMA copy buffer, addr: 0x%8.8lX size: %ld\n",
 						(long)scglocal(scgp)->xbuf,
 						scgp->maxbuf);
 				}
@@ -1098,7 +1180,7 @@ scsi_rwsend(scgp, f, sp)
 		sg_settimeout(f, scgp->deftimeout);
 		return (-1);
 	} else if (amt != i) {
-		errmsg("scsi_send(%s) wrote %d bytes (expected %d).\n",
+		errmsg("scgo_send(%s) wrote %d bytes (expected %d).\n",
 						scgp->cmdname, amt, i);
 	}
 
@@ -1134,13 +1216,12 @@ scsi_rwsend(scgp, f, sp)
 				    sgp->hd.sense_buffer[0] != 0)
 							&& status_byte == 0) {
 					/*
-					 * The Linux SCSI system up to 2.1.xx
+					 * The Linux SCSI system up to 2.4.xx
 					 * trashes the status byte in the
 					 * kernel. This is true at least for
 					 * ide-scsi emulation. Until this gets
 					 * fixed, we need this hack.
 					 */
-					sp->error = SCG_RETRYABLE;
 					status_byte = ST_CHK_COND;
 					if (sgp->hd.sense_len == 0)
 						sgp->hd.sense_len = SG_MAX_SENSE;
@@ -1148,6 +1229,9 @@ scsi_rwsend(scgp, f, sp)
 				break;
 
 		case DID_NO_CONNECT:	/* Arbitration won, retry NO_CONNECT? */
+				sp->error = SCG_RETRYABLE;
+				break;
+
 		case DID_BAD_TARGET:
 				sp->error = SCG_FATAL;
 				break;
@@ -1161,10 +1245,14 @@ scsi_rwsend(scgp, f, sp)
 
 				if ((driver_byte & DRIVER_SENSE ||
 				    sgp->hd.sense_buffer[0] != 0)
-							&& status_byte == 0)
+							&& status_byte == 0) {
 					status_byte = ST_CHK_COND;
-				if (status_byte != 0 && sgp->hd.sense_len == 0)
+					sp->error = SCG_NO_ERROR;
+				}
+				if (status_byte != 0 && sgp->hd.sense_len == 0) {
 					sgp->hd.sense_len = SG_MAX_SENSE;
+					sp->error = SCG_NO_ERROR;
+				}
 				break;
 
 		}
@@ -1183,7 +1271,7 @@ scsi_rwsend(scgp, f, sp)
 
 			to.tv_sec = sp->timeout;
 			to.tv_usec = 500000;
-			scsitimes(scgp);
+			__scg_times(scgp);
 
 			if (scgp->cmdstop->tv_sec < to.tv_sec ||
 			    (scgp->cmdstop->tv_sec == to.tv_sec &&
@@ -1202,7 +1290,6 @@ scsi_rwsend(scgp, f, sp)
 			sp->resid = 0;	/* sg version1 cannot return DMA resid count */
 
 		if (sgp->hd.sense_buffer[0] != 0) {
-			sp->error = SCG_RETRYABLE;
 			sp->scb.chk = 1;
 			sp->sense_count = SG_MAX_SENSE;
 			movebytes(sgp->hd.sense_buffer, sp->u_sense.cmd_sense, sp->sense_count);
@@ -1211,9 +1298,10 @@ scsi_rwsend(scgp, f, sp)
 		}
 	}
 
-	if (scgp->verbose > 0 && scgp->debug) {
+	if (scgp->verbose > 0 && scgp->debug > 0) {
 #ifdef	SG_GET_BUFSIZE
-		printf("status: 0x%08X pack_len: %d, reply_len: %d pack_id: %d result: %d wn: %d gn: %d cdb_len: %d sense_len: %d sense[0]: %02X\n",
+		js_fprintf((FILE *)scgp->errfile,
+				"status: 0x%08X pack_len: %d, reply_len: %d pack_id: %d result: %d wn: %d gn: %d cdb_len: %d sense_len: %d sense[0]: %02X\n",
 				GETINT(sgp->hd.sg_cmd_status),
 				GETINT(sgp->hd.pack_len),
 				GETINT(sgp->hd.reply_len),
@@ -1225,7 +1313,8 @@ scsi_rwsend(scgp, f, sp)
 				sgp->hd.sense_len,	
 				sgp->hd.sense_buffer[0]);
 #else
-		printf("pack_len: %d, reply_len: %d pack_id: %d result: %d sense[0]: %02X\n",
+		js_fprintf((FILE *)scgp->errfile,
+				"pack_len: %d, reply_len: %d pack_id: %d result: %d sense[0]: %02X\n",
 				GETINT(sgp->hd.pack_len),
 				GETINT(sgp->hd.reply_len),
 				GETINT(sgp->hd.pack_id),
@@ -1233,10 +1322,10 @@ scsi_rwsend(scgp, f, sp)
 				sgp->hd.sense_buffer[0]);
 #endif
 #ifdef	DEBUG
-		printf("sense: ");
+		js_fprintf((FILE *)scgp->errfile, "sense: ");
 		for (i=0; i < 16; i++)
-			printf("%02X ", sgp->hd.sense_buffer[i]);
-		printf("\n");
+			js_fprintf((FILE *)scgp->errfile, "%02X ", sgp->hd.sense_buffer[i]);
+		js_fprintf((FILE *)scgp->errfile, "\n");
 #endif
 	}
 

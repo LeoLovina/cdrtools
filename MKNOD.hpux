@@ -37,9 +37,17 @@ bus=0
 target=0
 lun=0
 
-for bus in 0 1 2 3 4 5 6 7; do
+for bus in 0 1 2 3 4 5 6 7 8 9 a b c d e f; do
 	for target in 0 1 2 3 4 5 6 7 8 9 a b c d e f; do
 		for lun in 0 1 2 3 4 5 6 7; do
+#
+#	Newer HP-UX versions seem to have
+#	/dev/rscsi/citxdy
+#	but it uses the "non-raw" interface type
+#			dev=c${bus}t${target}d${lun} 
+#	We follow the HP-UX documentation and create
+#	/dev/rscsi/citxty with the raw bit set
+
 			dev=c${bus}t${target}l${lun} 
 
 			$mknod  ${scsi}/${dev} c 203 0x${bus}${target}${lun}00

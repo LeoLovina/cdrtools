@@ -1,0 +1,330 @@
+
+
+
+SCGCHECK(1)          Schily's USER COMMANDS           SCGCHECK(1)
+
+
+
+NNNNAAAAMMMMEEEE
+     scgcheck - check and validate the ABI of libscg
+
+SSSSYYYYNNNNOOOOPPPPSSSSIIIISSSS
+     ssssccccggggcccchhhheeeecccckkkk [ _o_p_t_i_o_n_s ]
+
+
+DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
+     SSSSccccggggcccchhhheeeecccckkkk is used to check and verify the Application  Binary
+     Interface of libscg.
+
+
+     The _d_e_v_i_c_e refers to _s_c_s_i_b_u_s/_t_a_r_g_e_t/_l_u_n of the  drive.  Com-
+     munication  on  _S_u_n_O_S  is  done with the SCSI general driver
+     ssssccccgggg.... Other operating systems are using a library  simulation
+     of    this    driver.     Possible    syntax    is:     ddddeeeevvvv====
+     _s_c_s_i_b_u_s,_t_a_r_g_e_t,_l_u_n or ddddeeeevvvv==== _t_a_r_g_e_t,_l_u_n.  In the latter  case,
+     the drive has to be connected to the default SCSI bus of the
+     machine.  _S_c_s_i_b_u_s, _t_a_r_g_e_t and _l_u_n are integer numbers.  Some
+     operating  systems  or  SCSI  transport  implementations may
+     require to specify a filename in addition.  In this case the
+     correct     syntax     for     the    device    is:     ddddeeeevvvv====
+     _d_e_v_i_c_e_n_a_m_e:_s_c_s_i_b_u_s,_t_a_r_g_e_t,  or  ddddeeeevvvv====  _d_e_v_i_c_e_n_a_m_e:_t_a_r_g_e_t,_l_u_n.
+     If  the  name  of the device node that has been specified on
+     such a system refers to exactly one SCSI device, a shorthand
+     in  the  form ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:@ or ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:@,_l_u_n may
+     be used instead of ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:_s_c_s_i_b_u_s,_t_a_r_g_e_t,
+
+
+     To access remote SCSI devices, you need to prepend the  SCSI
+     device  name by a remote device indicator. The remote device
+     indicator is either RRRREEEEMMMMOOOOTTTTEEEE::::_u_s_e_r@_h_o_s_t:  or  RRRREEEEMMMMOOOOTTTTEEEE::::_h_o_s_t:
+     A valid remote SCSI device name may  be:   RRRREEEEMMMMOOOOTTTTEEEE::::_u_s_e_r@_h_o_s_t:
+     to  allow remote SCSI bus scanning or RRRREEEEMMMMOOOOTTTTEEEE::::_u_s_e_r@_h_o_s_t:_1,_0,_0
+     to access the SCSI device at _h_o_s_t connected to  SCSI  bus  #
+     1,target 0 lun 0.
+
+
+     To make rrrreeeeaaaaddddccccdddd portable to all UNIX  platforms,  the  syntax
+     ddddeeeevvvv====  _d_e_v_i_c_e_n_a_m_e:_s_c_s_i_b_u_s,_t_a_r_g_e_t, is preferred as is hides OS
+     specific knowledge about device  names  from  the  user.   A
+     specific  OS must not necessarily support a way to specify a
+     real   device   file   name   nor   a   way    to    specify
+     _s_c_s_i_b_u_s,_t_a_r_g_e_t,_l_u_n.
+
+
+     _S_c_s_i_b_u_s 0 is the default SCSI bus on the machine. Watch  the
+     boot   messages   for   more   information   or   look  into
+     ////vvvvaaaarrrr////aaaaddddmmmm////mmmmeeeessssssssaaaaggggeeeessss for more information about the SCSI confi-
+     guration  of  your  machine.  If you have problems to figure
+     out what values for _s_c_s_i_b_u_s,_t_a_r_g_e_t,_l_u_n should be  used,  try
+     the ----ssssccccaaaannnnbbbbuuuussss option of ccccddddrrrreeeeccccoooorrrrdddd.
+
+
+
+Joerg Schilling     Last change: Version 1.10                   1
+
+
+
+
+
+
+SCGCHECK(1)          Schily's USER COMMANDS           SCGCHECK(1)
+
+
+
+OOOOPPPPTTTTIIIIOOOONNNNSSSS
+     ----vvvveeeerrrrssssiiiioooonnnn
+          Print version information and exit.
+
+     ddddeeeevvvv====_t_a_r_g_e_t
+          Sets the SCSI target  default  for  SCSI  Bus  scanning
+          test,  see notes above.  This allows e.g. to specify to
+          use Solaris USCSI or remote SCSI for the  bus  scanning
+          case.
+
+          For the non bus scanning case, a typical device specif-
+          ication  is  ddddeeeevvvv====_6,_0  .  If a filename must be provided
+          together with the numerical target  specification,  the
+          filename   is  implementation  specific.   The  correct
+          filename in this  case  can  be  found  in  the  system
+          specific  manuals of the target operating system.  On a
+          _F_r_e_e_B_S_D system without _C_A_M support, you need to use the
+          control device (e.g.  /_d_e_v/_r_c_d_0._c_t_l).  A correct device
+          specification in this case may be ddddeeeevvvv====/_d_e_v/_r_c_d_0._c_t_l:@ .
+
+          On Linux, drives connected to a parallel  port  adapter
+          are  mapped  to  a virtual SCSI bus. Different adapters
+          are mapped to different targets on  this  virtual  SCSI
+          bus.
+
+          If no _d_e_v option is present, ccccddddrrrreeeeccccoooorrrrdddd will try  to  get
+          the device from the CCCCDDDDRRRR____DDDDEEEEVVVVIIIICCCCEEEE environment.
+
+          If the argument to the ddddeeeevvvv==== option does not contain the
+          characters  ',',  '/', '@' or ':', it is interpreted as
+          an  label  name  that  may  be  found   in   the   file
+          /etc/default/cdrecord (see FILES section).
+
+     ttttiiiimmmmeeeeoooouuuutttt====#
+          Set  the  default  SCSI  command  timeout  value  to  #
+          seconds.   The  default  SCSI  command  timeout  is the
+          minimum timeout used for sending SCSI commands.   If  a
+          SCSI  command  fails  due  to a timeout, you may try to
+          raise  the  default  SCSI  command  timeout  above  the
+          timeout  value  of  the failed command.  If the command
+          runs correctly with a raised  command  timeout,  please
+          report  the  better timeout value and the corresponding
+          command to the author of the program.   If  no  _t_i_m_e_o_u_t
+          option  is  present, a default timeout of 40 seconds is
+          used.
+
+     ddddeeeebbbbuuuugggg====#, ----dddd
+          Set the misc debug value to # (with debug=#) or  incre-
+          ment  the  misc  debug  level  by one (with -d). If you
+          specify -_d_d, this equals to ddddeeeebbbbuuuugggg====_2.  This may help  to
+          find  problems  while  opening a driver for libscg.  as
+          well as with sector sizes and sector types.   Using   ----
+
+
+
+Joerg Schilling     Last change: Version 1.10                   2
+
+
+
+
+
+
+SCGCHECK(1)          Schily's USER COMMANDS           SCGCHECK(1)
+
+
+
+          ddddeeeebbbbuuuugggg  slows down the process and may be the reason for
+          a buffer underrun.
+
+     kkkkddddeeeebbbbuuuugggg====#, kkkkdddd====#
+          Tell the ssssccccgggg-driver to modify the  kernel  debug  value
+          while SCSI commands are running.
+
+     ----ssssiiiilllleeeennnntttt, ----ssss
+          Do not print out a status report for failed  SCSI  com-
+          mands.
+
+     ----vvvv    Increment the level of general verbosity by one.  This
+          is used e.g. to display the progress of the process.
+
+     ----VVVV    Increment the verbose level with respect of SCSI  com-
+          mand  transport  by  one.  This helps to debug problems
+          during the process, that occur in the  CD-Recorder.  If
+          you  get incomprehensible error messages you should use
+          this flag to get more detailed output.  ----VVVVVVVV  will  show
+          data buffer content in addition.  Using ----VVVV or ----VVVVVVVV slows
+          down the process.
+
+     ffff====_f_i_l_e
+          Specify the log file to be used instead of _c_h_e_c_k._l_o_g.
+
+
+EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
+FFFFIIIILLLLEEEESSSS
+SSSSEEEEEEEE AAAALLLLSSSSOOOO
+     ccccddddrrrreeeeccccoooorrrrdddd(1), rrrreeeeaaaaddddccccdddd(1), mmmmkkkkiiiissssooooffffssss(1), ssssccccgggg(7).
+
+
+NNNNOOOOTTTTEEEESSSS
+     When using ssssccccggggcccckkkkeeeecccckkkk  with  the  broken  LLLLiiiinnnnuuuuxxxx  SSSSCCCCSSSSIIII  ggggeeeennnneeeerrrriiiicccc
+     ddddrrrriiiivvvveeeerrrr....  You  should  note  that  ssssccccggggcccchhhheeeecccckkkk uses a hack, that
+     tries to  emulate  the  functionality  of  the  scg  driver.
+     Unfortunately,  the  sg  driver  on LLLLiiiinnnnuuuuxxxx has several severe
+     bugs:
+
+     +o     It cannot see if a SCSI command could not be  sent  at
+          all.
+
+     +o     It cannot get the SCSI status byte. SSSSccccggggcccchhhheeeecccckkkk for  that
+          reason  cannot  report  failing  SCSI  commands in some
+          situations.
+
+     +o     It cannot get real DMA  count  of  transfer.  SSSSccccggggcccchhhheeeecccckkkk
+          cannot tell you if there is an DMA residual count.
+
+     +o     It cannot get number of  bytes  valid  in  auto  sense
+          data.   SSSSccccggggcccchhhheeeecccckkkk cannot tell you if device transfers no
+          sense data at all.
+
+
+
+Joerg Schilling     Last change: Version 1.10                   3
+
+
+
+
+
+
+SCGCHECK(1)          Schily's USER COMMANDS           SCGCHECK(1)
+
+
+
+      +o     It  fetches  to  few  data  in  auto  request   sense
+          (CCS/SCSI-2/SCSI-3 needs >= 18).
+
+
+DDDDIIIIAAAAGGGGNNNNOOOOSSSSTTTTIIIICCCCSSSS
+     A typical error message for a SCSI command looks like:
+
+          readcd: I/O error. test unit ready: scsi sendcmd: no error
+          CDB:  00 20 00 00 00 00
+          status: 0x2 (CHECK CONDITION)
+          Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00
+          Sense Key: 0x5 Illegal Request, Segment 0
+          Sense Code: 0x25 Qual 0x00 (logical unit not supported) Fru 0x0
+          Sense flags: Blk 0 (not valid)
+          cmd finished after 0.002s timeout 40s
+
+     The first line gives information about the transport of  the
+     command.   The  text  after  the first colon gives the error
+     text for the system call from the view  of  the  kernel.  It
+     usually  is:   IIII////OOOO  eeeerrrrrrrroooorrrr  unless other problems happen. The
+     next words contain a short description for the SCSI  command
+     that fails. The rest of the line tells you if there were any
+     problems for the transport of the command over the SCSI bus.
+     ffffaaaattttaaaallll  eeeerrrrrrrroooorrrr means that it was not possible to transport the
+     command (i.e.  no  device  present  at  the  requested  SCSI
+     address).
+
+     The second line prints the SCSI command descriptor block for
+     the failed command.
+
+     The third line gives information on  the  SCSI  status  code
+     returned  by  the  command,  if the transport of the command
+     succeeds. This is error information from the SCSI device.
+
+     The fourth line is a hex dump  of  the  auto  request  sense
+     information for the command.
+
+     The fifth line is the error text for the sense key if avail-
+     able,  followed  by the segment number that is only valid if
+     the command was a _c_o_p_y command. If the error message is  not
+     directly  related  to the current command, the text _d_e_f_e_r_r_e_d
+     _e_r_r_o_r is appended.
+
+     The sixth line is the error text for the sense code and  the
+     sense  qualifier if available.  If the type of the device is
+     known, the sense data is decoded from tables in _s_c_s_i_e_r_r_s._c .
+     The text is followed by the error value for a field replace-
+     able unit.
+
+     The seventh line prints the block number that is related  to
+     the  failed  command  and  text for several error flags. The
+     block number may not be valid.
+
+
+
+Joerg Schilling     Last change: Version 1.10                   4
+
+
+
+
+
+
+SCGCHECK(1)          Schily's USER COMMANDS           SCGCHECK(1)
+
+
+
+     The eight line reports the timeout set up for  this  commans
+     and the time that the command realy needed to be finished.
+
+
+BBBBUUUUGGGGSSSS
+CCCCRRRREEEEDDDDIIIITTTTSSSS
+MMMMAAAAIIIILLLLIIIINNNNGGGG LLLLIIIISSSSTTTTSSSS
+AAAAUUUUTTTTHHHHOOOORRRR
+     Joerg Schilling
+     Seestr. 110
+     D-13353 Berlin
+     Germany
+
+     Additional information can be found on:
+     http://www.fokus.gmd.de/usr/schilling/cdrecord.html
+
+     If you have support questions, send them to:
+
+     ccccddddrrrreeeeccccoooorrrrdddd----ssssuuuuppppppppoooorrrrtttt@@@@bbbbeeeerrrrlllliiiioooossss....ddddeeee
+     or ooootttthhhheeeerrrr----ccccddddwwwwrrrriiiitttteeee@@@@lllliiiissssttttssss....ddddeeeebbbbiiiiaaaannnn....oooorrrrgggg
+
+     Of you definitly found a bug, send a mail to:
+
+     ccccddddrrrreeeeccccoooorrrrdddd----ddddeeeevvvveeeellllooooppppeeeerrrrssss@@@@bbbbeeeerrrrlllliiiioooossss....ddddeeee
+     or sssscccchhhhiiiilllllllliiiinnnngggg@@@@ffffooookkkkuuuussss....ggggmmmmdddd....ddddeeee
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Joerg Schilling     Last change: Version 1.10                   5
+
+
+

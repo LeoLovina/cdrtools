@@ -1,37 +1,34 @@
+# @(#)README.win32	1.3 01/03/05 Copyright 2000 J. Schilling
+
 cdrecord-1.8a22 or later can be compiled on Win9X/NT4 using Cygnus' cygwin
 which is freely available from:
 
 	http://sourceware.cygnus.com/cygwin/
+or
+	http://sources.redhat.com/cygwin/
 
-To compile on Cygwin32, get Cygwin32-beta20 or later and install it, 
-by executing full.exe
+To compile on Cygwin, get Cygwin by executing setup.exe
 
-You will need approx. 39 MB to install a full cygwin developer release.
+You will need approx. 120 MB to install a full cygwin developer release.
 
-Then create a symlink from /bin to the 'bin' directory 
-where bash is located and a symlink from /etc to the 'etc' directory 
-where termcap is located. This are very long paths (you may get the
-path for /bin by typing 'type bash' on the bash shell prompt but note 
-that the path you get with this command is clobbered for DOS).
+Get the tar'ed cdrtools source and unpack it with 'gnutar' or 'star',
 
-A typical command list for this could look like:
+e.g. Start a bash command line window and type:
 
-	cd /
-	ln -s /cygwin/cygwin-b20/etc etc
-	ln -s /cygwin/cygwin-b20/H-i586-cygwin32/bin bin
-
-Note that you may have to modify the paths for you local needs.
-
-Get the tar'ed source and unpack it with 'gnutar' or 'star',
+	star -xpz < cdrtools-1.10.tar.gz
 
 	don't use winzip to unpack the tar archive, it will not
 	unpack symlinks correctly.
 
-Now start a bash command line window and run 'make' ... 
+Then (from the bash command line window) run 'make' ... 
 
+If you have problems with GNU make, get 'smake' from:
+
+	ftp://ftp.fokus.gmd.de/unix/smake/alpha/
+
+/*--------------------------------------------------------------------------*/
 A bash window is available from the START -> Programs -> Cygnus Solutions
-menu.
-
+menu or by clicking at the Cygwin Logo on the desktop.
 /*--------------------------------------------------------------------------*/
 Pre-compiled current 'cdrtools' Win32 binaries which should run on
 W95, W98 and WNT are available from:
@@ -67,8 +64,11 @@ command e.g.
 i.e. files on the floppy disk are accessed as being in directory /a and
 files on the CDROM are accessed as /cdrom (assuming your CDROM is drive d:)
 
-If you don't like to use the mount command, you may use //a/dir as a 
-replacement for the DOS directory name a:\dir
+Yu may also use the new /cygpath notation by typing /cygpath/a for
+your local floppy.
+
+The notation //a/dir as a replacement for the DOS directory name a:\dir
+may not work in future releases of Cygwin.
 
 The following command creates a CD image in the current directory
 using a source directories on the CDROM drive, a sub-directory and the
@@ -94,6 +94,11 @@ If you don't like to create the image file 'hsfs.iso' you may use a PIPE
 to connect mkisofs's output to cdrecord's input by calling:
 
 	mkisofs -J -R /cdrom/subdir dir1 /a | cdrecord dev=6,0 -v speed=4 -
+
+IMPORTANT NOTE:	If you use PIPE's on Win32, you definitely need a POSIX
+		compliant shell to start the programs. Native Win32 PIPE's
+		are not POSIX compliant and will not work with POSIX compliant
+		programs.
 
 /*--------------------------------------------------------------------------*/
 If you don't know which target your CD-writer is, call
@@ -143,6 +148,14 @@ Jan 1st 1999 to be able to install it. Note that 'aspi_me' contains
 original Adaptec drivers and is banned from most ftp servers for this 
 reason. 
 
+You need a special ASPI driver version on NT-5.0 (Win2000)
+You may get one by downloading
+
+	http://www.poikosoft.com/writer/download.html
+
+and unpacking the file mightywriter121.exe using unzip.
+after you renamed ntaspi32.dll to wnaspi32.dll, cdrecord should work.
+
 
 			IMPORTANT
 
@@ -162,9 +175,11 @@ correct Registry entry for these systems.
 
 		For binary only users:
 
-If you like a DOS shell that allows to redirect stderr, look for 
-
-ftp://ftp.jpsoft.com/4dos
+Error messages and help output is directed to stderr. Win32 command
+interpreters don't know about stderr. I recommend to install bash.exe
+because it is a POSIX compliant shell and allow working PIPE's and
+it also gives you a command line history that may be edited using
+cursor commands.
 
 Otherwise you may want to install the Cygwin light version which
 only includes the user commands.

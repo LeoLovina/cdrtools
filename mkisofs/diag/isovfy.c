@@ -1,7 +1,7 @@
-/* @(#)isovfy.c	1.14 00/05/07 joerg */
+/* @(#)isovfy.c	1.15 00/12/09 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isovfy.c	1.14 00/05/07 joerg";
+	"@(#)isovfy.c	1.15 00/12/09 joerg";
 #endif
 /*
  * File isovfy.c - verify consistency of iso9660 filesystem.
@@ -25,11 +25,11 @@ static	char sccsid[] =
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "../config.h"
-
+#include <mconfig.h>
 #include <stdxlib.h>
 #include <unixstd.h>
 #include <strdefs.h>
+#include <utypes.h>
 
 #include <stdio.h>
 #include <standard.h>
@@ -102,7 +102,7 @@ int	isonum_732	__PR((char * p));
 int	isonum_733	__PR((unsigned char * p));
 int	parse_rr	__PR((unsigned char * pnt, int len, int cont_flag));
 int	dump_rr		__PR((struct iso_directory_record * idr));
-void	check_tree	__PR((int file_addr, int file_size, int parent_addr));
+void	check_tree	__PR((off_t file_addr, int file_size, off_t parent_addr));
 void	check_path_tables __PR((int typel_extent, int typem_extent, int path_table_size));
 void	usage		__PR((int excode));
 int	main		__PR((int argc, char *argv[]));
@@ -188,12 +188,14 @@ int parse_rr(pnt, len, cont_flag)
 	int flag1, flag2;
 	int extent;
 	unsigned char *pnts;
-	int cont_extent, cont_offset, cont_size;
+	off_t cont_extent;
+	int cont_offset, cont_size;
 	char symlinkname[1024];
 	sprintf(lbuffer+iline," RRlen=%d ", len);
 	iline += strlen(lbuffer+iline);
 
-	cont_extent = cont_offset = cont_size = 0;
+	cont_extent = (off_t)0;
+	cont_offset = cont_size = 0;
 
 	symlinkname[0] = 0;
 
@@ -232,11 +234,11 @@ int parse_rr(pnt, len, cont_flag)
 		if(strncmp((char *)pnt, "TF", 2) == 0) flag2 |= 128;
 
 		if(strncmp((char *)pnt, "CE", 2) == 0) {
-			cont_extent = isonum_733(pnt+4);
+			cont_extent = (off_t)isonum_733(pnt+4);
 			cont_offset = isonum_733(pnt+12);
 			cont_size = isonum_733(pnt+20);
 			sprintf(lbuffer+iline, "=[%x,%x,%d]",
-					 cont_extent, cont_offset, cont_size);
+					 (int)cont_extent, cont_offset, cont_size);
 			iline += strlen(lbuffer + iline);
 		      };
 
@@ -300,7 +302,7 @@ int parse_rr(pnt, len, cont_flag)
 		pnt += pnt[2];
 		if(len <= 3 && cont_extent) {
 		  unsigned char sector[2048];
-		  lseek(fileno(infile), cont_extent * blocksize, 0);
+		  lseek(fileno(infile), cont_extent * blocksize, SEEK_SET);
 		  read(fileno(infile), sector, sizeof(sector));
 		  flag2 |= parse_rr(&sector[cont_offset], cont_size, 1);
 		};
@@ -350,16 +352,16 @@ int ngoof = 0;
 
 void
 check_tree(file_addr, file_size, parent_addr)
-	int	file_addr;
+	off_t	file_addr;
 	int	file_size;
-	int	parent_addr;
+	off_t	parent_addr;
 {
   unsigned char buffer[2048];
   unsigned int k;
   int rflag = 0;
   int i, i1, j, goof;
   int extent, size;
-  int orig_file_addr, parent_file_addr;
+  off_t orig_file_addr, parent_file_addr;
   struct iso_directory_record * idr;
 
   i1 = 0;
@@ -369,7 +371,13 @@ check_tree(file_addr, file_size, parent_addr)
 
   if((dir_count % 100) == 0) printf("[%d %d]\n", dir_count, dir_size_count);
 #if 0
-  printf("Starting directory %d %d %d\n", file_addr, file_size, parent_addr);
+	if (sizeof(file_addr) > sizeof(long)) {
+		printf("Starting directory %ld %d %lld\n",
+				file_addr, file_size,
+				(Llong)parent_addr);
+	} else {
+		printf("Starting directory %ld %d %ld\n", file_addr, file_size, parent_addr);
+	}
 #endif
 
   dir_count++;
@@ -378,7 +386,7 @@ check_tree(file_addr, file_size, parent_addr)
   if(file_size & 0x3ff) printf("********Directory has unusual size\n");
 
   for(k=0; k < (file_size / sizeof(buffer)); k++){
-	  lseek(fileno(infile), file_addr, 0);
+	  lseek(fileno(infile), file_addr, SEEK_SET);
 	  read(fileno(infile), buffer, sizeof(buffer));
 	  i = 0;
 	  while(1==1){
@@ -407,7 +415,7 @@ check_tree(file_addr, file_size, parent_addr)
 			  sprintf(&lbuffer[iline],".             ");
 			  iline += strlen(lbuffer + iline);
 			  rflag = 0;
-			  if(orig_file_addr !=isonum_733(idr->extent) + isonum_711((char *) idr->ext_attr_length))
+			  if(orig_file_addr !=(off_t)(isonum_733(idr->extent) + isonum_711((char *) idr->ext_attr_length)))
 			    {
 			      sprintf(&lbuffer[iline],"***** Directory has null extent.");
 			      goof++;
@@ -423,7 +431,7 @@ check_tree(file_addr, file_size, parent_addr)
 			  sprintf(&lbuffer[iline],"..            ");
 			  iline += strlen(lbuffer + iline);
 			  rflag = 0;
-			  if(parent_file_addr !=isonum_733(idr->extent) + isonum_711((char *) idr->ext_attr_length))
+			  if(parent_file_addr != (off_t)(isonum_733(idr->extent) + isonum_711((char *) idr->ext_attr_length)))
 			    {
 			      sprintf(&lbuffer[iline],"***** Directory has null extent.");
 			      goof++;
@@ -506,12 +514,16 @@ check_tree(file_addr, file_size, parent_addr)
 		  if(goof){
 		          ngoof++;
 			  lbuffer[iline++] = 0;
-			  printf("%x: %s", orig_file_addr, lbuffer);
+			if (sizeof(orig_file_addr) > sizeof(long)) {
+				printf("%llx: %s", (Llong)orig_file_addr, lbuffer);
+			} else {
+				printf("%lx: %s", (long)orig_file_addr, lbuffer);
+			}
 		  };
 
 
 
-		  if(rflag && (idr->flags[0] & 2)) check_tree((isonum_733(idr->extent) + isonum_711((char *)idr->ext_attr_length)) * blocksize,
+		  if(rflag && (idr->flags[0] & 2)) check_tree((off_t)(isonum_733(idr->extent) + isonum_711((char *)idr->ext_attr_length)) * blocksize,
 						   isonum_733(idr->size),
 						   orig_file_addr * blocksize);
 		  i += buffer[i];
@@ -549,11 +561,11 @@ check_path_tables(typel_extent, typem_extent, path_table_size)
   /* Now read in the path tables */
 
   typel = (char *) malloc(path_table_size);
-  lseek(fileno(infile), typel_extent * blocksize, 0);
+  lseek(fileno(infile), (off_t)((off_t)typel_extent) * blocksize, SEEK_SET);
   read(fileno(infile), typel, path_table_size);
 
   typem = (char *) malloc(path_table_size);
-  lseek(fileno(infile), typem_extent * blocksize, 0);
+  lseek(fileno(infile), (off_t)((off_t)typem_extent) * blocksize, SEEK_SET);
   read(fileno(infile), typem, path_table_size);
 
   j = path_table_size;
@@ -610,7 +622,8 @@ main(argc, argv)
 	int	argc;
 	char	*argv[];
 {
-  int file_addr, file_size;
+  off_t file_addr;
+  int file_size;
   struct iso_primary_descriptor ipd;
   struct iso_directory_record * idr;
   int typel_extent, typem_extent;
@@ -631,8 +644,8 @@ main(argc, argv)
   }
 
 
-  file_addr = 32768;
-  lseek(fileno(infile), file_addr, 0);
+  file_addr = (off_t)32768;
+  lseek(fileno(infile), file_addr, SEEK_SET);
   read(fileno(infile), &ipd, sizeof(ipd));
 
   idr = (struct iso_directory_record *)ipd.root_directory_record;
@@ -643,10 +656,14 @@ main(argc, argv)
       blocksize = 2048;
     }
 
-  file_addr = isonum_733(idr->extent) + isonum_711((char *)idr->ext_attr_length);
+  file_addr = (off_t)isonum_733(idr->extent) + isonum_711((char *)idr->ext_attr_length);
   file_size = isonum_733(idr->size);
 
-  printf("Root at extent %x, %d bytes\n", file_addr, file_size);
+	if (sizeof(file_addr) > sizeof(long)) {
+		printf("Root at extent %llx, %d bytes\n", (Llong)file_addr, file_size);
+	} else {
+		printf("Root at extent %lx, %d bytes\n", (long)file_addr, file_size);
+	}
   file_addr = file_addr * blocksize;
 
   check_tree(file_addr, file_size, file_addr);

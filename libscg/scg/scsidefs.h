@@ -1,4 +1,4 @@
-/* @(#)scsidefs.h	1.21 99/05/10 Copyright 1988 J. Schilling */
+/* @(#)scsidefs.h	1.24 01/02/23 Copyright 1988 J. Schilling */
 /*
  *	Definitions for SCSI devices i.e. for error strings in scsierrs.c
  *
@@ -20,8 +20,12 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_SCSIDEFS_H
-#define	_SCSIDEFS_H
+#ifndef	_SCG_SCSIDEFS_H
+#define	_SCG_SCSIDEFS_H
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 /*
  * Disks
@@ -104,6 +108,10 @@
 			 ((d) == DEV_ACB4000) || ((d) == DEV_ACB4010) || \
 			 ((d) == DEV_ACB4070) || ((d) == DEV_ACB5500))
 
-#define	ccs(d)		(!old_acb(d))
+#define	is_ccs(d)	(!old_acb(d))
 
-#endif	/* _SCSIDEFS_H */
+#ifdef	__cplusplus
+}
+#endif
+
+#endif	/* _SCG_SCSIDEFS_H */

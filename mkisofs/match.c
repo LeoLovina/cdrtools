@@ -1,7 +1,7 @@
-/* @(#)match.c	1.11 00/06/27 joerg */
+/* @(#)match.c	1.13 00/12/05 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)match.c	1.11 00/06/27 joerg";
+	"@(#)match.c	1.13 00/12/05 joerg";
 #endif
 /*
  * 27-Mar-96: Jan-Piet Mens <jpm@mens.de>
@@ -12,16 +12,14 @@ static	char sccsid[] =
  * now uses a generic set of routines
  */
 
-#include "config.h"
-#include <prototyp.h>
+#include <mconfig.h>
 #include <stdio.h>
 #include <stdxlib.h>
+#include <unixstd.h>
 #include <strdefs.h>
 #include "match.h"
-#ifdef	USE_LIBSCHILY
 #include <standard.h>
 #include <schily.h>
-#endif
 
 static	int	add_sort_match	__PR((char *fn, int val));
 
@@ -214,6 +212,7 @@ gen_add_list(file, n)
 {
 	FILE	*fp;
 	char	name[4096];
+	int	len;
 
 	if ((fp = fopen(file, "r")) == NULL) {
 #ifdef	USE_LIBSCHILY
@@ -227,8 +226,11 @@ gen_add_list(file, n)
 	while (fgets(name, sizeof(name), fp) != NULL) {
 		/*
 		 * strip of '\n'
-		*/
-		name[strlen(name) - 1] = '\0';
+		 */
+		len = strlen(name);
+		if (name[len - 1] == '\n') {
+			name[len - 1] = '\0';
+		}
 		if (!gen_add_match(name, n)) {
 			fclose(fp);
 			return;

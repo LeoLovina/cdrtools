@@ -1,12 +1,111 @@
+People often ask me why do you depend on ATAPI-SCSI emulation, why don't you
+support generic IDE?
+
+	Well first a statement: There is no single IDE burner out!
+	Even a CD-ROM cannot be used decently if you use only IDE commands.
+	Opening/closing the door, playing audio and similar things
+	cannot be done using IDE commands - you will need SCSI commands
+	to do this. But how do we do this with a drive that uses an IDE
+	interface?
+
+	The ATAPI standard describes method of sending SCSI commands over IDE
+	with some small limitations to the "real" SCSI standard.
+	For this reason ATAPI-SCSI emulation is the native method of
+	supporting ATAPI devices. Just imagine that IDE is one of many SCSI
+	transport mechanisms.
+
+	This are some SCSI transports:
+
+	-	Parallel SCSI (what most people call SCSI)
+	-	SCSI over fiber optics
+	-	SCSI over IEEE 1394 (Fire Wire)
+	-	SCSI over USB
+	-	SCSI over IDE (ATAPI)
+
+	As you now see, the use of the naming convention "ATAPI-SCSI emulation"
+	is a 	little bit misleading. It should rather be called:
+		"IDE-SCSI host adapter emulation"
+
+Some naming explanations:
+
+	ATA	Attachment Adapter
+	IDE	Integrated Drive Electronics (A Drive that includes ATA)
+	ATAPI	ATA Packet Interface
+/*--------------------------------------------------------------------------*/
+Which Operating systems support ATAPI
+
+-	AIX: Status unknown! Please report your experience...
+
+-	Apple Mac OS X: Supported
+
+-	BeOS (libscg maps ATAPI to SCSI bus # >= 8
+
+-	BSD/OS: Status unknown! Please report your experience...
+
+-	FreeBSD: NO
+
+-	HP-UX: Status unknown! Please report your experience... 
+
+-	Linux (unfortunately not in the default configuration)
+
+-	NetBSD (releases 1.3 and newer)
+
+-	NeXT: Status unknown! Please report your experience...
+
+-	OpenBSD: NO
+
+-	OS/2 (you need to fetch and install ATAPI support first)
+	see: http://www.leo.org/pub/comp/os/os2/leo/drivers/dasd/daniatapi.zip/
+
+-	OSF-1 / True64 Status unknown! Please report your experience...
+
+-	SCO-OpenServer: Not supported, may change with next release.
+
+-	SCO-UnixWare: NO
+
+-	SGI/IRIX: Status unknown! Please report your experience...
+
+-	Solaris (you may need to use the USCSI transport interface to address ATAPI)
+
+-	VMS: probably not ;-)
+
+-	Win32 using a recent ASPI Layer
+/*--------------------------------------------------------------------------*/
+General hints:
+
+NOTE: IDE/ATAPI don't have disconnect! you cannot expect the needed performance
+	for CD-writing if you connect source and destination drive to the
+	same IDE cable.
+
+If you never like to directly write a CD from CD-ROM source, this configuration
+seems to be the best:
+
+IDE 0	MSTR	->	HD1
+IDE 0	SLAV	->	HD2
+
+IDE 1	MSTR	->	CD-writer
+IDE 1	SLAV	->	CD-ROM
+
+If you like to write from both HD source and CD-ROM source, you should have
+the following configuration:
+
+IDE 0	MSTR	->	HD1	(does _not_ hold CD mastering data)
+IDE 0	SLAV	->	CD-Writer
+
+IDE 1	MSTR	->	HD2	(holds CD mastering data)
+IDE 1	SLAV	->	CD-ROM
+
+
+/*--------------------------------------------------------------------------*/
+The rest of this file is only valid for Linux!
+
 This was taken out of mails from From: Dave Cohen <dcohen@richmond.infi.net>
 and From: Gadi Oxman <gadio@netvision.net.il>
 (slightly modified marked ***JS *** except typo corrects)
 
-It is only valid for Linux !
-
-As all actual Linux versions support ATAPI support for cdrecord,
+As all actual Linux versions have ATAPI support for cdrecord,
 I removed the patch section. If you are running a Linux version
-that does not support ATAPI SCSI command transport, please upgrade.
+that does not support ATAPI<->SCSI command transport, please upgrade.
 
 The basic driver design in Solaris would also allow to use ATAPI
 drives but unfortunately, Sun made a mistake in the mid-level design.
@@ -125,7 +224,7 @@ If you don't do this, the SCSI emulation will not work  *** JS ***
 You also need to enable SCSI and SCSI generic support   *** JS ***
 
 6. Make sure that /dev/sg* exists.
-If thet are missing, create them.
+If they are missing, create them.
 
 Dave Cohen
 dcohen@richmond.infi.net 
@@ -264,7 +363,7 @@ Situation:
 6. Call "modconf", load "sg" and "ide-scsi" from the SCSI-section
 7. Reboot Debian, watch while booting, you should see a line like this
    "Detected scsi CD-ROM sr0 at scsi0, channel 0, id 0, lun 0".
-   Your old ATAPI devices virtually don't exist any longer, use ther
+   Your old ATAPI devices virtually don't exist any longer, use the
    SCSI equivalents instead.
 8. Become root, setup devices:
       cd /dev
@@ -282,3 +381,38 @@ Situation:
    cdrecord-parameter or take a frontend with an own configuration
    scheme, then you don't need to modify /etc/default/cdrecord.
 9. It's done! Insert a CD and try "cdrecord -v -toc"
+/*--------------------------------------------------------------------------*/
+He had constant buffer underrun problems:
+
+From: "Trenton D. Adams" <trenton.adams@telusplanet.net>
+
+I enabled DMA, and 32-bit mode on the CD-Writer using "hdparm". 
+This fixed the writing problem.
+
+/*--------------------------------------------------------------------------*/
+From: "Mario Moder" <clay-man@freenet.de>
+-----
+TEAC CD-W54E
+
+I recently installed a TEAC CD-W54E (an ATAPI CD-RW-Recorder) and I had
+problems with buffer underruns and other errors when burning a CD (with
+Linux and Windows 2000). My system has an old ASUS P/I-P55T2P4 Pentium
+mainboard with Intel PCI-Bus-Master-IDE (I think the chipset is an Intel
+430HX and the IDE controller is an 82371SB). The harddisk is the master on
+the primary IDE channel, and the CD-Recorder is the master on the secondary
+IDE channel.
+
+After turning off DMA for the CD-Recorder AND the harddisk, the drive had no
+longer problems with burning a CD. You can try the following things to make
+it work, if you have similar problems with a similar hardware configuration:
+
+For Linux (Kernel 2.2.19):
+Turn off "Enable DMA by default" in the kernel (and then compile a new
+kernel), if you had it turned on or use "hdparm" to turn of DMA for both the
+CD-Recorder and the harddisk
+
+For Windows 2000:
+In the Device Manager go to "IDE ATA/ATAPI-Controller" and open the
+properties for the first and second IDE channel. There you change the mode
+of the devices from DMA to PIO.
+-----

@@ -324,21 +324,21 @@ mark
 10 R f
 (are integer numbers. Some)3 1115 1 4285 2304 t
 ( In)1 156( require to specify a \256lename in addition.)7 1747(operating systems or SCSI transport implementations may)6 2417 3 1080 2424 t
-( syntax for the device is:)5 1334(this case the corect)3 972 2 1080 2544 t
+( device is:)2 541(this case the correct syntax for the)6 1777 2 1080 2544 t
 10 B f
-(dev=)3515 2544 w
+(dev=)3524 2544 w
 10 I f
-(devicename)3818 2544 w
+(devicename)3824 2544 w
 10 R f
-(:)4296 2544 w
+(:)4302 2544 w
 10 I f
-(scsibus)4324 2544 w
+(scsibus)4330 2544 w
 10 R f
-(,)4621 2544 w
+(,)4627 2544 w
 10 I f
-(target)4646 2544 w
+(target)4652 2544 w
 10 R f
-(, or)1 204 1 4893 2544 t
+(, or)1 201 1 4899 2544 t
 10 B f
 (dev=)5193 2544 w
 10 I f
@@ -352,7 +352,7 @@ mark
 10 I f
 (lun)1858 2664 w
 10 R f
-( been speci\256ed on such a system referres)7 1696( the name of the device node that has)8 1552(. If)1 158 3 1994 2664 t
+( such a system refers)4 891( the name of the device node that has been speci\256ed on)11 2352(. If)1 163 3 1994 2664 t
 (to exactly one SCSI device, a shorthand in the form)9 2244 1 1080 2784 t
 10 B f
 (dev=)3369 2784 w
@@ -392,162 +392,182 @@ mark
 (target)3128 2904 w
 10 R f
 (,)3375 2904 w
-(To make)1 372 1 1080 3192 t
+( SCSI device name by a remote device indica-)8 1950(To access remote SCSI devices, you need to prepend the)9 2370 2 1080 3192 t
+(tor. The remote device indicator is either)6 1675 1 1080 3312 t
 10 B f
-(cdrecord)1497 3192 w
+(REMOTE:)2788 3312 w
+10 I f
+(user)3266 3312 w
+10 S1 f
+(@)3438 3312 w
+10 I f
+(host:)3530 3312 w
 10 R f
-(portable to all)2 595 1 1924 3192 t
+(or)3796 3312 w
+10 B f
+(REMOTE:)3945 3312 w
+10 I f
+(host:)4423 3312 w
+10 R f
+( be:)1 158(A valid remote SCSI device name may)6 1619 2 1080 3432 t
+10 B f
+(REMOTE:)2926 3432 w
+10 I f
+(user)3404 3432 w
+10 S1 f
+(@)3576 3432 w
+10 I f
+(host:)3668 3432 w
+10 R f
+(to allow remote SCSI bus scanning)5 1463 1 3937 3432 t
+(or)1080 3552 w
+10 B f
+(REMOTE:)1199 3552 w
+10 I f
+(user)1677 3552 w
+10 S1 f
+(@)1849 3552 w
+10 I f
+(host:1,0,0)1941 3552 w
+10 R f
+(to access the SCSI device at)5 1178 1 2377 3552 t
+10 I f
+(host)3590 3552 w
+10 R f
+(connected to SCSI bus)3 938 1 3792 3552 t
+10 S1 f
+(#)4765 3552 w
+10 R f
+(1,target 0 lun)2 550 1 4850 3552 t
+(0.)1080 3672 w
+(To make)1 372 1 1080 3960 t
+10 B f
+(cdrecord)1497 3960 w
+10 R f
+(portable to all)2 595 1 1924 3960 t
 8 R f
-(UNIX)2557 3192 w
+(UNIX)2557 3960 w
 10 R f
-(platforms, the syntax)2 881 1 2802 3192 t
+(platforms, the syntax)2 881 1 2802 3960 t
 10 B f
-(dev=)3728 3192 w
+(dev=)3728 3960 w
 10 I f
-(devicename)3981 3192 w
+(devicename)3981 3960 w
 10 R f
-(:)4459 3192 w
+(:)4459 3960 w
 10 I f
-(scsibus)4487 3192 w
+(scsibus)4487 3960 w
 10 R f
-(,)4784 3192 w
+(,)4784 3960 w
 10 I f
-(target)4809 3192 w
+(target)4809 3960 w
 10 R f
-(, is pre-)2 344 1 5056 3192 t
-( must not)2 409( speci\256c OS)2 521( A)1 149(ferred as is hides OS speci\256c knowledge about device names from the user.)12 3241 4 1080 3312 t
-(necessarily support a way to specify a real device \256le name nor a way to specify)15 3320 1 1080 3432 t
+(, is pre-)2 344 1 5056 3960 t
+( must not)2 409( speci\256c OS)2 521( A)1 149(ferred as is hides OS speci\256c knowledge about device names from the user.)12 3241 4 1080 4080 t
+(necessarily support a way to specify a real device \256le name nor a way to specify)15 3320 1 1080 4200 t
 10 I f
-(scsibus)4433 3432 w
+(scsibus)4433 4200 w
 10 R f
-(,)4730 3432 w
+(,)4730 4200 w
 10 I f
-(target)4755 3432 w
+(target)4755 4200 w
 10 R f
-(,)5002 3432 w
+(,)5002 4200 w
 10 I f
-(lun)5027 3432 w
+(lun)5027 4200 w
 10 R f
-(.)5163 3432 w
+(.)5163 4200 w
 10 I f
-(Scsibus)1080 3720 w
+(Scsibus)1080 4488 w
 10 R f
-( the boot messages for more information or)7 1868(0 is the default SCSI bus on the machine. Watch)9 2108 2 1424 3720 t
-(look into)1 378 1 1080 3840 t
+( the boot messages for more information or)7 1868(0 is the default SCSI bus on the machine. Watch)9 2108 2 1424 4488 t
+(look into)1 378 1 1080 4608 t
 10 B f
-(/var/adm/messages)1502 3840 w
+(/var/adm/messages)1502 4608 w
 10 R f
-( If)1 142(for more information about the SCSI con\256guration of your machine.)9 2907 2 2351 3840 t
-(you have problems to \256gure out what values for)8 2074 1 1080 3960 t
+( If)1 142(for more information about the SCSI con\256guration of your machine.)9 2907 2 2351 4608 t
+(you have problems to \256gure out what values for)8 2074 1 1080 4728 t
 10 I f
-(scsibus)3199 3960 w
+(scsibus)3199 4728 w
 10 R f
-(,)3496 3960 w
+(,)3496 4728 w
 10 I f
-(target)3521 3960 w
+(target)3521 4728 w
 10 R f
-(,)3768 3960 w
+(,)3768 4728 w
 10 I f
-(lun)3793 3960 w
+(lun)3793 4728 w
 10 R f
-( the)1 168(should be used, try)3 815 2 3966 3960 t
+( the)1 168(should be used, try)3 815 2 3966 4728 t
 10 S1 f
-(\261)4995 3960 w
+(\261)4995 4728 w
 10 B f
-(scanbus)5060 3960 w
+(scanbus)5060 4728 w
 10 R f
-(option of)1 372 1 1080 4080 t
+(option of)1 372 1 1080 4848 t
 10 B f
-(cdrecord)1485 4080 w
+(cdrecord)1485 4848 w
 10 R f
-(described below.)1 684 1 1900 4080 t
-(If a \256le /etc/default/cdrecord exists, the parameter to the)8 2324 1 1080 4368 t
+(described below.)1 684 1 1900 4848 t
+(If a \256le /etc/default/cdrecord exists, the parameter to the)8 2324 1 1080 5136 t
 10 B f
-(dev=)3440 4368 w
+(dev=)3440 5136 w
 10 R f
-(option may also be a drive name label in)8 1716 1 3684 4368 t
-(said \256le \(see FILES section\).)4 1189 1 1080 4488 t
-(On)1080 4776 w
+(option may also be a drive name label in)8 1716 1 3684 5136 t
+(said \256le \(see FILES section\).)4 1189 1 1080 5256 t
+(On)1080 5544 w
 10 B f
-(SVr4)1238 4776 w
+(SVr4)1237 5544 w
 10 R f
-(compliant systems,)1 778 1 1496 4776 t
+(compliant systems,)1 777 1 1494 5544 t
 10 B f
-(cdrecord)2310 4776 w
+(cdrecord)2306 5544 w
 10 R f
-(uses the the real time class to get the highest scheduling priotity)11 2672 1 2728 4776 t
-( systems with)2 603( On)1 209( than all kernel processes\).)4 1177(that is possible \(higher)3 998 4 1080 4896 t
+(uses the the real time class to get the highest scheduling priority)11 2677 1 2723 5544 t
+( systems with)2 603( On)1 209( than all kernel processes\).)4 1177(that is possible \(higher)3 998 4 1080 5664 t
 10 B f
-(POSIX real time scheduling)3 1279 1 4121 4896 t
+(POSIX real time scheduling)3 1279 1 4121 5664 t
 10 R f
-( ker-)1 196(cdrecord uses real time scheduling too, but may not be able to gain a priority that is higher than all)19 4124 2 1080 5016 t
-(nel processes.)1 562 1 1080 5136 t
-(In)1080 5304 w
+( ker-)1 196(cdrecord uses real time scheduling too, but may not be able to gain a priority that is higher than all)19 4124 2 1080 5784 t
+(nel processes.)1 562 1 1080 5904 t
+(In)1080 6072 w
 10 I f
-(Track At Once)2 610 1 1202 5304 t
+(Track At Once)2 610 1 1202 6072 t
 10 R f
-(mode, each)1 468 1 1851 5304 t
+(mode, each)1 468 1 1851 6072 t
 10 I f
-(track)2359 5304 w
+(track)2359 6072 w
 10 R f
-(corresponds to a single \256le that contains the prepared data for that)11 2796 1 2604 5304 t
-( the argument is `)4 763(track. If)1 364 2 1080 5424 t
+(corresponds to a single \256le that contains the prepared data for that)11 2796 1 2604 6072 t
+( the argument is `)4 763(track. If)1 364 2 1080 6192 t
 10 S1 f
-(\261)2207 5424 w
+(\261)2207 6192 w
 10 R f
-( Only one track may be taken from)7 1499(', standard input is used for that track.)7 1629 2 2272 5424 t
+( Only one track may be taken from)7 1499(', standard input is used for that track.)7 1629 2 2272 6192 t
 10 I f
-(stdin)1080 5544 w
+(stdin)1080 6312 w
 10 R f
-(.)1283 5544 w
+(.)1283 6312 w
 9 B f
-(GENERAL OPTIONS)1 880 1 720 5832 t
+(GENERAL OPTIONS)1 880 1 720 6600 t
 10 R f
-(General options must be before any track \256le name or track option.)11 2766 1 1080 5952 t
+(General options must be before any track \256le name or track option.)11 2766 1 1080 6720 t
 10 S1 f
-(\261)1080 6120 w
+(\261)1080 6888 w
 10 B f
-(version)1145 6120 w
+(version)1145 6888 w
 10 R f
-(Print version information and exit.)4 1412 1 1440 6240 t
+(Print version information and exit.)4 1412 1 1440 7008 t
 10 S1 f
-(\261)1080 6408 w
+(\261)1080 7176 w
 10 B f
-(v)1145 6408 w
+(v)1145 7176 w
 10 R f
-( used e.g. to display the progress of the)8 1639( is)1 101( This)1 245(Increment the level of general verbosity by one.)7 1975 4 1440 6408 t
-(writing process.)1 646 1 1440 6528 t
-10 S1 f
-(\261)1080 6696 w
-10 B f
-(V)1145 6696 w
-10 R f
-( helps to debug)3 638( This)1 245(Increment the verbose level in respect of SCSI command transport by one.)11 3077 3 1440 6696 t
-( in the CD-Recorder. If you get incomprehensi-)7 1987(problems during the writing process, that occur)6 1973 2 1440 6816 t
-( detailed output.)2 679(ble error messages you should use this \257ag to get more)10 2342 2 1440 6936 t
-10 S1 f
-(\261)4535 6936 w
-10 B f
-(VV)4600 6936 w
-10 R f
-(will show data)2 615 1 4785 6936 t
-( Using)1 312(buffer content in addition.)3 1088 2 1440 7056 t
-10 S1 f
-(\261)2879 7056 w
-10 B f
-(V)2944 7056 w
-10 R f
-(or)3055 7056 w
-10 S1 f
-(\261)3177 7056 w
-10 B f
-(VV)3242 7056 w
-10 R f
-(slows down the process and may be the reason)8 1975 1 3425 7056 t
-( Using)1 305(for a buffer underrun.)3 887 2 1440 7176 t
-(J)720 7680 w
-(. .)1 47 1 759 7625 t
-( 1)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+( used e.g. to display the progress of the)8 1639( is)1 101( This)1 245(Increment the level of general verbosity by one.)7 1975 4 1440 7176 t
+(writing process.)1 646 1 1440 7296 t
+(J)720 7776 w
+(. .)1 47 1 759 7721 t
+( 1)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7776 t
 cleartomark
 showpage
 restore
@@ -565,179 +585,215 @@ mark
 10 S1 f
 (\261)1080 960 w
 10 B f
-(debug)1145 960 w
+(V)1145 960 w
 10 R f
-( to \256nd out problems with sector sizes and sec-)9 1981(Print additional debug messages. This may help)6 1979 2 1440 960 t
-( Using)1 305(tor types.)1 380 2 1440 1080 t
+( helps to debug)3 638( This)1 245(Increment the verbose level in respect of SCSI command transport by one.)11 3077 3 1440 960 t
+( in the CD-Recorder. If you get incomprehensi-)7 1987(problems during the writing process, that occur)6 1973 2 1440 1080 t
+( detailed output.)2 679(ble error messages you should use this \257ag to get more)10 2342 2 1440 1200 t
 10 S1 f
-(\261)2158 1080 w
+(\261)4535 1200 w
 10 B f
-(debug)2223 1080 w
+(VV)4600 1200 w
 10 R f
-(slows down the process and may be the reason for a buffer underrun.)12 2847 1 2518 1080 t
+(will show data)2 615 1 4785 1200 t
+( Using)1 312(buffer content in addition.)3 1088 2 1440 1320 t
 10 S1 f
-(\261)1080 1248 w
+(\261)2879 1320 w
 10 B f
-(force)1145 1248 w
+(V)2944 1320 w
 10 R f
-( option currently implements some tricks that will allow)8 2324( This)1 246( on some errors.)3 673(Force to continue)2 717 4 1440 1248 t
-(you to blank bad CD-RW disks.)5 1323 1 1440 1368 t
+(or)3055 1320 w
 10 S1 f
-(\261)1080 1536 w
+(\261)3177 1320 w
 10 B f
-(dummy)1145 1536 w
+(VV)3242 1320 w
 10 R f
-( but the laser is turned off)6 1110(The CD-Recorder will go through all steps of the recording process,)10 2850 2 1440 1656 t
-( is recommended to run several tests before actually writing to a Com-)12 2932( It)1 129(during this procedure.)2 899 3 1440 1776 t
-(pact Disk, if the timing and load response of the system is not known.)13 2894 1 1440 1896 t
+(slows down the process and may be the reason)8 1975 1 3425 1320 t
+(for a buffer underrun.)3 887 1 1440 1440 t
+10 B f
+(debug=)1080 1608 w
 10 S1 f
-(\261)1080 2064 w
-10 B f
-(dao)1145 2064 w
-10 R f
-(Set)1440 2064 w
-10 B f
-(Disk At Once mode.)3 915 1 1613 2064 t
-10 R f
-( raw)1 195(This currently only works with MMC drives that support non)9 2632 2 2573 2064 t
-10 B f
-(Session At Once)2 705 1 1440 2184 t
-10 R f
-(mode.)2178 2184 w
-10 S1 f
-(\261)1080 2352 w
-10 B f
-(multi)1145 2352 w
-10 R f
-( multi)1 252(Allow multi session CD's to be made. This \257ag needs to be present on all sessions of a)17 3708 2 1440 2352 t
-( The)1 221( to create a session that will be the last session on the media.)13 2518(session disk, except you want)4 1221 3 1440 2472 t
-( later.)1 240(\256xation will be done in a way that allows the CD-Recorder to append additional sessions)14 3720 2 1440 2592 t
-( to the next program area. The so generated media)9 2072(This is done by generation a TOC with a link)9 1888 2 1440 2712 t
-( only for recording of)4 923(is not 100% compatible to manufactured CD's \(except for CDplus\). Use)10 3037 2 1440 2832 t
-( track type is)3 555( this option is present, the default)6 1420( If)1 139(multi session CD's.)2 817 4 1440 2952 t
-10 B f
-(CD-ROM XA mode 2)3 965 1 4410 2952 t
-10 R f
-(.)5375 2952 w
-(The)1440 3072 w
+(#)1399 1608 w
 10 I f
-(Sony)1628 3072 w
-10 R f
-( support for)2 484(drives have no hardware)3 1001 2 1855 3072 t
+(,)1449 1608 w
 10 B f
-(CD-ROM XA mode 2)3 950 1 3374 3072 t
+(-d)1515 1608 w
 10 R f
-( have to specify the)4 812(. You)1 264 2 4324 3072 t
+(Set the misc debug value to)5 1167 1 1440 1728 t
 10 S1 f
-(\261)1440 3192 w
-10 B f
-(data)1505 3192 w
+(#)2645 1728 w
 10 R f
-( long as cdrecord does)4 948( As)1 183( session disks on these drives.)5 1264(option in order to create multi)5 1271 4 1734 3192 t
-( coder for converting data sectors to audio sectors, you need to force)12 2873(not have a)2 432 2 1440 3312 t
-10 B f
-(CD-ROM)4782 3312 w
-10 R f
-(sec-)5240 3312 w
-(tors by including the)3 906 1 1440 3432 t
+(\(with debug=)1 549 1 2733 1728 t
 10 S1 f
-(\261)2398 3432 w
-10 B f
-(data)2463 3432 w
+(#)3282 1728 w
 10 R f
-( to record a multisession disk in DAO/SAO)7 1923(option if you like)3 773 2 2704 3432 t
-( all drives allow multisession CD's in DAO/SAO mode.)8 2311(mode. Not)1 463 2 1440 3552 t
+( the misc debug level by one \(with)7 1477(\) or increment)2 591 2 3332 1728 t
+(-d\). If you specify)3 756 1 1440 1848 t
+10 I f
+(-dd,)2233 1848 w
+10 R f
+(this equals to)2 550 1 2427 1848 t
+10 B f
+(debug=)3013 1848 w
+10 I f
+(2.)3332 1848 w
+10 R f
+(This may help to \256nd problems while opening)7 1924 1 3476 1848 t
+( Using)1 307( and sector types.)3 723(a driver for libscg as well as with sector sizes)9 1891 3 1440 1968 t
 10 S1 f
-(\261)1080 3720 w
+(\261)4396 1968 w
 10 B f
-(msinfo)1145 3720 w
+(debug)4461 1968 w
 10 R f
-(Retrieve multi session info in a form suitable for)8 2007 1 1440 3840 t
+(slows down the)2 642 1 4758 1968 t
+(process and may be the reason for a buffer underrun.)9 2176 1 1440 2088 t
 10 B f
-(mkisofs-1.10)3480 3840 w
-10 R f
-(or later.)1 318 1 4049 3840 t
-( makes only sense with a CD that contains at least one closed session and is)15 3472(This option)1 488 2 1440 4080 t
-( try to get the)4 625(appendable \(not \256nally closed yet\). Some drives create error messages if you)11 3335 2 1440 4200 t
-(multi session info for a disk that is not suitable for this operation.)12 2704 1 1440 4320 t
+(kdebug=)1080 2256 w
 10 S1 f
-(\261)1080 4488 w
-10 B f
-(toc)1145 4488 w
+(#)1455 2256 w
 10 R f
-( this option,)2 506( With)1 273(Retrieve and print out the table of content or PMA of a CD.)12 2563 3 1440 4488 t
+(,)1505 2256 w
 10 B f
-(cdrecord)4822 4488 w
-10 R f
-(will)5244 4488 w
-(work with CD-R drives and with CD-ROM drives.)7 2088 1 1440 4608 t
+(kd=)1563 2256 w
 10 S1 f
-(\261)1080 4776 w
-10 B f
-(atip)1145 4776 w
+(#)1732 2256 w
 10 R f
-( Time in Pregroove\) info of a CD recordable or CD)10 2211(Retrieve and print out the ATIP \(absolute)6 1749 2 1440 4776 t
-( this option,)2 512( With)1 276(rewritable media.)1 716 3 1440 4896 t
+(Tell the)1 316 1 1440 2376 t
 10 B f
-(cdrecord)2987 4896 w
+(scg)1789 2376 w
 10 R f
-( info. If the actual)4 780(will try to retrieve the ATIP)5 1208 2 3412 4896 t
-( only a reduced set of information)6 1437(drive does not support to read the ATIP info, it may be that)12 2523 2 1440 5016 t
-( a limited number of MMC compliant drives support)8 2193(records or even nothing is displayed. Only)6 1767 2 1440 5136 t
-(to read the ATIP info.)4 911 1 1440 5256 t
-(If)1440 5496 w
-10 B f
-(cdrecord)1548 5496 w
-10 R f
-( decode)1 325(is able to retrieve the lead-in start time for the \256rst session, it will try to)15 3103 2 1972 5496 t
-(and print the manufacturer info from the media.)7 1963 1 1440 5616 t
+(-driver to modify the kernel debug value while SCSI commands are running.)11 3156 1 1922 2376 t
 10 S1 f
-(\261)1080 5784 w
+(\261)1080 2544 w
 10 B f
-(\256x)1145 5784 w
+(silent)1145 2544 w
 10 R f
-( only be \256xated \(i.e. a TOC for a CD-Reader will be written\). This may be used,)16 3408(The disk will)2 552 2 1440 5784 t
-( not \256xated. This option currently does not)7 1859(if for some reason the disk has been written but)9 2101 2 1440 5904 t
-(work with TEAC drives.)3 1012 1 1440 6024 t
+(,)1373 2544 w
 10 S1 f
-(\261)1080 6192 w
+(\261)1431 2544 w
 10 B f
-(no\256x)1145 6192 w
+(s)1496 2544 w
 10 R f
-( the tracks. This may be used to create an audio disk in)12 2452(Do not \256xate the disk after writing)6 1508 2 1440 6192 t
-(steps. An un-\256xated disk can usually not be used on a non CD-writer type drive but there are)17 3960 1 1440 6312 t
-(audio CD players that will be able to play such a disk.)11 2247 1 1440 6432 t
+(Do not print out a status report for failed SCSI commands.)10 2420 1 1440 2664 t
 10 S1 f
-(\261)1080 6600 w
+(\261)1080 2832 w
 10 B f
-(waiti)1145 6600 w
+(force)1145 2832 w
 10 R f
-(Wait for input to become available on standard input before trying to open the SCSI driver.)15 3960 1 1440 6600 t
-(This allows)1 477 1 1440 6720 t
-10 B f
-(cdrecord)1955 6720 w
-10 R f
-( writing additional sessions to a)5 1324(to read it's input from a pipe even when)8 1701 2 2375 6720 t
-( disk,)1 226( writing another session to a multi session)7 1731( When)1 304(multi session disk.)2 759 4 1440 6840 t
-10 B f
-(mkisofs)4494 6840 w
-10 R f
-(needs to read)2 544 1 4856 6840 t
-( be done if)3 463( cannot)1 305( This)1 250(the old session from the device before writing output.)8 2251 4 1440 6960 t
-10 B f
-(cdrecord)4747 6960 w
-10 R f
-(opens)5167 6960 w
-(the SCSI driver at the same time.)6 1372 1 1440 7080 t
+( option currently implements some tricks that will allow)8 2324( This)1 246( on some errors.)3 673(Force to continue)2 717 4 1440 2832 t
+(you to blank bad CD-RW disks.)5 1323 1 1440 2952 t
 10 S1 f
-(\261)1080 7248 w
+(\261)1080 3120 w
 10 B f
-(load)1145 7248 w
+(dummy)1145 3120 w
 10 R f
-( works with a tray loading mechanism but seems to be)10 2420(Load the media and exit. This only)6 1540 2 1440 7248 t
-(J)720 7728 w
-(. .)1 47 1 759 7673 t
-( 2)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7728 t
+( but the laser is turned off)6 1110(The CD-Recorder will go through all steps of the recording process,)10 2850 2 1440 3240 t
+( is recommended to run several tests before actually writing to a Com-)12 2932( It)1 129(during this procedure.)2 899 3 1440 3360 t
+(pact Disk, if the timing and load response of the system is not known.)13 2894 1 1440 3480 t
+10 S1 f
+(\261)1080 3648 w
+10 B f
+(dao)1145 3648 w
+10 R f
+(Set)1440 3648 w
+10 B f
+(Disk At Once mode.)3 915 1 1613 3648 t
+10 R f
+( raw)1 195(This currently only works with MMC drives that support non)9 2632 2 2573 3648 t
+10 B f
+(Session At Once)2 705 1 1440 3768 t
+10 R f
+(mode.)2178 3768 w
+10 S1 f
+(\261)1080 3936 w
+10 B f
+(multi)1145 3936 w
+10 R f
+( multi)1 252(Allow multi session CD's to be made. This \257ag needs to be present on all sessions of a)17 3708 2 1440 3936 t
+( The)1 221( to create a session that will be the last session on the media.)13 2518(session disk, except you want)4 1221 3 1440 4056 t
+( later.)1 240(\256xation will be done in a way that allows the CD-Recorder to append additional sessions)14 3720 2 1440 4176 t
+( to the next program area. The so generated media)9 2072(This is done by generation a TOC with a link)9 1888 2 1440 4296 t
+( only for recording of)4 923(is not 100% compatible to manufactured CD's \(except for CDplus\). Use)10 3037 2 1440 4416 t
+( track type is)3 555( this option is present, the default)6 1420( If)1 139(multi session CD's.)2 817 4 1440 4536 t
+10 B f
+(CD-ROM XA mode 2)3 965 1 4410 4536 t
+10 R f
+(.)5375 4536 w
+(The)1440 4656 w
+10 I f
+(Sony)1628 4656 w
+10 R f
+( support for)2 484(drives have no hardware)3 1001 2 1855 4656 t
+10 B f
+(CD-ROM XA mode 2)3 950 1 3374 4656 t
+10 R f
+( have to specify the)4 812(. You)1 264 2 4324 4656 t
+10 S1 f
+(\261)1440 4776 w
+10 B f
+(data)1505 4776 w
+10 R f
+( long as cdrecord does)4 948( As)1 183( session disks on these drives.)5 1264(option in order to create multi)5 1271 4 1734 4776 t
+( coder for converting data sectors to audio sectors, you need to force)12 2873(not have a)2 432 2 1440 4896 t
+10 B f
+(CD-ROM)4782 4896 w
+10 R f
+(sec-)5240 4896 w
+(tors by including the)3 906 1 1440 5016 t
+10 S1 f
+(\261)2398 5016 w
+10 B f
+(data)2463 5016 w
+10 R f
+( to record a multisession disk in DAO/SAO)7 1923(option if you like)3 773 2 2704 5016 t
+( all drives allow multisession CD's in DAO/SAO mode.)8 2311(mode. Not)1 463 2 1440 5136 t
+10 S1 f
+(\261)1080 5304 w
+10 B f
+(msinfo)1145 5304 w
+10 R f
+(Retrieve multi session info in a form suitable for)8 2007 1 1440 5424 t
+10 B f
+(mkisofs-1.10)3480 5424 w
+10 R f
+(or later.)1 318 1 4049 5424 t
+( makes only sense with a CD that contains at least one closed session and is)15 3472(This option)1 488 2 1440 5664 t
+( try to get the)4 625(appendable \(not \256nally closed yet\). Some drives create error messages if you)11 3335 2 1440 5784 t
+(multi session info for a disk that is not suitable for this operation.)12 2704 1 1440 5904 t
+10 S1 f
+(\261)1080 6072 w
+10 B f
+(toc)1145 6072 w
+10 R f
+( this option,)2 506( With)1 273(Retrieve and print out the table of content or PMA of a CD.)12 2563 3 1440 6072 t
+10 B f
+(cdrecord)4822 6072 w
+10 R f
+(will)5244 6072 w
+(work with CD-R drives and with CD-ROM drives.)7 2088 1 1440 6192 t
+10 S1 f
+(\261)1080 6360 w
+10 B f
+(atip)1145 6360 w
+10 R f
+( Time in Pregroove\) info of a CD recordable or CD)10 2211(Retrieve and print out the ATIP \(absolute)6 1749 2 1440 6360 t
+( this option,)2 512( With)1 276(rewritable media.)1 716 3 1440 6480 t
+10 B f
+(cdrecord)2987 6480 w
+10 R f
+( info. If the actual)4 780(will try to retrieve the ATIP)5 1208 2 3412 6480 t
+( only a reduced set of information)6 1437(drive does not support to read the ATIP info, it may be that)12 2523 2 1440 6600 t
+( a limited number of MMC compliant drives support)8 2193(records or even nothing is displayed. Only)6 1767 2 1440 6720 t
+(to read the ATIP info.)4 911 1 1440 6840 t
+(If)1440 7080 w
+10 B f
+(cdrecord)1548 7080 w
+10 R f
+( decode)1 325(is able to retrieve the lead-in start time for the \256rst session, it will try to)15 3103 2 1972 7080 t
+(and print the manufacturer info from the media.)7 1963 1 1440 7200 t
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 2)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
 cleartomark
 showpage
 restore
@@ -752,204 +808,212 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(useful when using the Kodak disk transporter.)6 1887 1 1440 960 t
 10 S1 f
-(\261)1080 1128 w
+(\261)1080 960 w
 10 B f
-(eject)1145 1128 w
+(\256x)1145 960 w
 10 R f
-( Devices \(e.g. Philips\) need to eject the medium before)9 2328( Some)1 301( the work.)2 432(Eject disk after doing)3 899 4 1440 1128 t
-(creating a new disk. Doing a)5 1262 1 1440 1248 t
+( only be \256xated \(i.e. a TOC for a CD-Reader will be written\). This may be used,)16 3408(The disk will)2 552 2 1440 960 t
+( not \256xated. This option currently does not)7 1859(if for some reason the disk has been written but)9 2101 2 1440 1080 t
+(work with old TEAC drives \(CD-R50S and CD-R55S\).)7 2272 1 1440 1200 t
 10 S1 f
-(\261)2751 1248 w
-10 R f
-( a real disk would not)5 978(dummy test and immediately creating)4 1606 2 2816 1248 t
-(work on these devices.)3 933 1 1440 1368 t
+(\261)1080 1368 w
 10 B f
-(speed=)1080 1536 w
-10 S1 f
-(#)1376 1536 w
+(no\256x)1145 1368 w
 10 R f
-( speed factor of the writing process to)7 1596(Set the)1 287 2 1440 1656 t
+( the tracks. This may be used to create an audio disk in)12 2452(Do not \256xate the disk after writing)6 1508 2 1440 1368 t
+(steps. An un-\256xated disk can usually not be used on a non CD-writer type drive but there are)17 3960 1 1440 1488 t
+(audio CD players that will be able to play such a disk.)11 2247 1 1440 1608 t
 10 S1 f
-(#)3361 1656 w
+(\261)1080 1776 w
+10 B f
+(waiti)1145 1776 w
 10 R f
-(.)3411 1656 w
+(Wait for input to become available on standard input before trying to open the SCSI driver.)15 3960 1 1440 1776 t
+(This allows)1 477 1 1440 1896 t
+10 B f
+(cdrecord)1955 1896 w
+10 R f
+( writing additional sessions to a)5 1324(to read it's input from a pipe even when)8 1701 2 2375 1896 t
+( disk,)1 226( writing another session to a multi session)7 1731( When)1 304(multi session disk.)2 759 4 1440 2016 t
+10 B f
+(mkisofs)4494 2016 w
+10 R f
+(needs to read)2 544 1 4856 2016 t
+( be done if)3 463( cannot)1 305( This)1 250(the old session from the device before writing output.)8 2251 4 1440 2136 t
+10 B f
+(cdrecord)4747 2136 w
+10 R f
+(opens)5167 2136 w
+(the SCSI driver at the same time.)6 1372 1 1440 2256 t
 10 S1 f
-(#)3507 1656 w
+(\261)1080 2424 w
+10 B f
+(load)1145 2424 w
 10 R f
-(is an integer, representing a multiple of the)7 1805 1 3595 1656 t
-( no)1 139( If)1 138( for CD-ROM and about 172 KB/s for CD-Audio.)8 2113( is about 150 KB/s)4 805( This)1 251(audio speed.)1 514 6 1440 1776 t
+( media and exit. This only works with a tray loading mechanism but seems to be use-)16 3597(Load the)1 363 2 1440 2424 t
+(ful when using the Kodak disk transporter.)6 1754 1 1440 2544 t
+10 S1 f
+(\261)1080 2712 w
+10 B f
+(eject)1145 2712 w
+10 R f
+( Devices \(e.g. Philips\) need to eject the medium before)9 2328( Some)1 301( the work.)2 432(Eject disk after doing)3 899 4 1440 2712 t
+(creating a new disk. Doing a)5 1262 1 1440 2832 t
+10 S1 f
+(\261)2751 2832 w
+10 R f
+( a real disk would not)5 978(dummy test and immediately creating)4 1606 2 2816 2832 t
+(work on these devices.)3 933 1 1440 2952 t
+10 B f
+(speed=)1080 3120 w
+10 S1 f
+(#)1376 3120 w
+10 R f
+( speed factor of the writing process to)7 1596(Set the)1 287 2 1440 3240 t
+10 S1 f
+(#)3361 3240 w
+10 R f
+(.)3411 3240 w
+10 S1 f
+(#)3507 3240 w
+10 R f
+(is an integer, representing a multiple of the)7 1805 1 3595 3240 t
+( no)1 139( If)1 138( for CD-ROM and about 172 KB/s for CD-Audio.)8 2113( is about 150 KB/s)4 805( This)1 251(audio speed.)1 514 6 1440 3360 t
 10 I f
-(speed)1440 1896 w
+(speed)1440 3480 w
 10 R f
-(option is present,)2 746 1 1722 1896 t
+(option is present,)2 746 1 1722 3480 t
 10 B f
-(cdrecord)2523 1896 w
+(cdrecord)2523 3480 w
 10 R f
-( to get the speed value from the)7 1473(will try)1 322 2 2960 1896 t
+( to get the speed value from the)7 1473(will try)1 322 2 2960 3480 t
 10 B f
-(CDR)4811 1896 w
+(CDR)4811 3480 w
 10 S f
-(_)5027 1896 w
+(_)5027 3480 w
 10 B f
-(SPEED)5077 1896 w
+(SPEED)5077 3480 w
 10 R f
-( your drive has problems with)5 1236(environment. If)1 662 2 1440 2016 t
+( your drive has problems with)5 1236(environment. If)1 662 2 1440 3600 t
 10 I f
-(speed=2)3371 2016 w
+(speed=2)3371 3600 w
 10 R f
-(or)3749 2016 w
+(or)3749 3600 w
 10 I f
-(speed=4)3865 2016 w
+(speed=4)3865 3600 w
 10 R f
-(, you should try)3 652 1 4218 2016 t
+(, you should try)3 652 1 4218 3600 t
 10 I f
-(speed=0)4903 2016 w
+(speed=0)4903 3600 w
 10 R f
-(.)5256 2016 w
+(.)5256 3600 w
 10 B f
-(blank=)1080 2184 w
+(blank=)1080 3768 w
 10 I f
-(type)1383 2184 w
+(type)1383 3768 w
 10 R f
-(Blank a CD-RW and exit or blank a CD-RW before writing. The blanking type may be one of:)17 3919 1 1440 2304 t
-( a list of possible blanking types.)6 1362(help Display)1 911 2 1440 2472 t
-( the entire disk. This may take a long time.)9 1779(all Blank)1 839 2 1440 2640 t
-( erasing the PMA, the TOC and the pre-)8 1680( blank the disk. This results in)6 1257(fast Minimally)1 1023 3 1440 2808 t
-(gap.)2040 2928 w
-( a track.)2 334(track Blank)1 839 2 1440 3096 t
-( a reserved track.)3 704(unreserve Unreserve)1 1009 2 1440 3264 t
-( the tail of a track.)5 766(trtail Blank)1 839 2 1440 3432 t
-( last session.)2 519(unclose Unclose)1 927 2 1440 3600 t
-( the last session.)3 674(session Blank)1 839 2 1440 3768 t
-( the)1 167(If used together with)3 886 2 1080 3888 t
+(Blank a CD-RW and exit or blank a CD-RW before writing. The blanking type may be one of:)17 3919 1 1440 3888 t
+( a list of possible blanking types.)6 1362(help Display)1 911 2 1440 4056 t
+( the entire disk. This may take a long time.)9 1779(all Blank)1 839 2 1440 4224 t
+( erasing the PMA, the TOC and the pre-)8 1680( blank the disk. This results in)6 1257(fast Minimally)1 1023 3 1440 4392 t
+(gap.)2040 4512 w
+( a track.)2 334(track Blank)1 839 2 1440 4680 t
+( a reserved track.)3 704(unreserve Unreserve)1 1009 2 1440 4848 t
+( the tail of a track.)5 766(trtail Blank)1 839 2 1440 5016 t
+( last session.)2 519(unclose Unclose)1 927 2 1440 5184 t
+( the last session.)3 674(session Blank)1 839 2 1440 5352 t
+( the)1 167(If used together with)3 886 2 1080 5472 t
 10 S1 f
-(\261)2178 3888 w
+(\261)2178 5472 w
 10 B f
-(force)2243 3888 w
+(force)2243 5472 w
 10 R f
-(\257ag, this option may be used to blank CD-RW disks that otherwise)11 2897 1 2503 3888 t
-(cannot be blanked. Note that you may need to specify)9 2254 1 1080 4008 t
+(\257ag, this option may be used to blank CD-RW disks that otherwise)11 2897 1 2503 5472 t
+(cannot be blanked. Note that you may need to specify)9 2254 1 1080 5592 t
 10 B f
-(blank=)3371 4008 w
+(blank=)3371 5592 w
 10 I f
-(all)3674 4008 w
+(all)3674 5592 w
 10 R f
-(because some drives will not continue)5 1583 1 3817 4008 t
-(with certain types of bad CD-RW disks. Note also that)9 2280 1 1080 4128 t
+(because some drives will not continue)5 1583 1 3817 5592 t
+(with certain types of bad CD-RW disks. Note also that)9 2280 1 1080 5712 t
 10 B f
-(cdecord)3396 4128 w
+(cdecord)3396 5712 w
 10 R f
-( best if the)3 455(does it's)1 347 2 3770 4128 t
+( best if the)3 455(does it's)1 347 2 3770 5712 t
 10 S1 f
-(\261)4609 4128 w
+(\261)4609 5712 w
 10 B f
-(force)4674 4128 w
+(force)4674 5712 w
 10 R f
-(\257ag is used)2 474 1 4926 4128 t
-(but it \256nally depends on the drive's \256rmware whether the blanking operation will succeed or not.)15 3998 1 1080 4248 t
+(\257ag is used)2 474 1 4926 5712 t
+(but it \256nally depends on the drive's \256rmware whether the blanking operation will succeed or not.)15 3998 1 1080 5832 t
 10 B f
-(fs=)1080 4416 w
+(fs=)1080 6000 w
 10 S1 f
-(#)1209 4416 w
+(#)1209 6000 w
 10 R f
-(Set the \256fo \(ring buffer\) size to)6 1386 1 1440 4416 t
+(Set the \256fo \(ring buffer\) size to)6 1386 1 1440 6000 t
 10 S1 f
-(#)2875 4416 w
+(#)2875 6000 w
 10 R f
-( may use the same method as in)7 1443(. You)1 279 2 2925 4416 t
+( may use the same method as in)7 1443(. You)1 279 2 2925 6000 t
 10 B f
-(dd)4697 4416 w
+(dd)4697 6000 w
 10 R f
-(\(1\),)4809 4416 w
+(\(1\),)4809 6000 w
 10 B f
-(sdd)5000 4416 w
+(sdd)5000 6000 w
 10 R f
-(\(1\) or)1 249 1 5151 4416 t
+(\(1\) or)1 249 1 5151 6000 t
 10 B f
-(star)1440 4536 w
+(star)1440 6120 w
 10 R f
-( a)1 90( If)1 146( number representing the size is taken in bytes unless otherwise speci\256ed.)11 3182(\(1\). The)1 376 4 1606 4536 t
-( size is multiplied by 512,)5 1109(number is followed directly by the letter `b', `k', `m', `s' of `f', the)13 2851 2 1440 4656 t
-(1024, 1024)1 461 1 1440 4776 t
+( a)1 90( If)1 146( number representing the size is taken in bytes unless otherwise speci\256ed.)11 3182(\(1\). The)1 376 4 1606 6120 t
+( size is multiplied by 512,)5 1109(number is followed directly by the letter `b', `k', `m', `s' of `f', the)13 2851 2 1440 6240 t
+(1024, 1024)1 461 1 1440 6360 t
 10 S f
-(*)1901 4776 w
+(*)1901 6360 w
 10 R f
-( by `x' or `)4 472( the size consists of numbers separated)6 1613( If)1 135(1024, 2048 or 2352.)3 841 4 1951 4776 t
+( by `x' or `)4 472( the size consists of numbers separated)6 1613( If)1 135(1024, 2048 or 2352.)3 841 4 1951 6360 t
 10 S f
-(*)5012 4776 w
+(*)5012 6360 w
 10 R f
-(', multi-)1 338 1 5062 4776 t
-( Thus)1 296(plication of the two numbers is performed.)6 1934 2 1440 4896 t
+(', multi-)1 338 1 5062 6360 t
+( Thus)1 296(plication of the two numbers is performed.)6 1934 2 1440 6480 t
 10 I f
-(fs=10x63k)3733 4896 w
+(fs=10x63k)3733 6480 w
 10 R f
-( of)1 147(will specify a \256fo size)4 1034 2 4219 4896 t
-(630 kBytes.)1 486 1 1440 5016 t
-(The size speci\256ed by the)4 1031 1 1440 5256 t
+( of)1 147(will specify a \256fo size)4 1034 2 4219 6480 t
+(630 kBytes.)1 486 1 1440 6600 t
+(The size speci\256ed by the)4 1031 1 1440 6840 t
 10 I f
-(fs=)2507 5256 w
+(fs=)2507 6840 w
 10 R f
-( the shared memory that is needed for adminis-)8 1976(argument includes)1 746 2 2678 5256 t
-( no)1 139( If)1 138( of memory.)2 519(tration. This is at least one page)6 1358 4 1440 5376 t
+( the shared memory that is needed for adminis-)8 1976(argument includes)1 746 2 2678 6840 t
+( no)1 139( If)1 138( of memory.)2 519(tration. This is at least one page)6 1358 4 1440 6960 t
 10 I f
-(fs)3633 5376 w
+(fs)3633 6960 w
 10 R f
-(= option is present,)3 809 1 3708 5376 t
+(= option is present,)3 809 1 3708 6960 t
 10 B f
-(cdrecord)4556 5376 w
+(cdrecord)4556 6960 w
 10 R f
-(will try to)2 423 1 4977 5376 t
-(get the \256fo size value from the)6 1436 1 1440 5496 t
+(will try to)2 423 1 4977 6960 t
+(get the \256fo size value from the)6 1436 1 1440 7080 t
 10 B f
-(CDR)2938 5496 w
+(CDR)2938 7080 w
 10 S f
-(_)3154 5496 w
+(_)3154 7080 w
 10 B f
-(FIFOSIZE)3204 5496 w
+(FIFOSIZE)3204 7080 w
 10 R f
-( default \256fo size is)4 886(environment. The)1 780 2 3734 5496 t
-(currently 4 MB.)2 657 1 1440 5616 t
-( allows to run a pipe)5 878( It)1 132( to increase buffering for the real time writing process.)9 2295(The \256fo is used)3 655 4 1440 5856 t
-(from)1440 5976 w
-10 B f
-(mkisofs)1692 5976 w
-10 R f
-(directly into)1 519 1 2078 5976 t
-10 B f
-(cdrecord)2655 5976 w
-10 R f
-( from)1 251( the \256fo is active and a pipe)7 1332(. If)1 182 3 3037 5976 t
-10 B f
-(mkisofs)4859 5976 w
-10 R f
-(into)5244 5976 w
-10 B f
-(cdrecord)1440 6096 w
-10 R f
-(is used to create a CD,)5 953 1 1858 6096 t
-10 B f
-(cdrecord)2847 6096 w
-10 R f
-(will abort prior to do any modi\256cations on the disk)9 2135 1 3265 6096 t
-(if)1440 6216 w
-10 B f
-(mkisofs)1557 6216 w
-10 R f
-( is between 4 and 32)5 968( recommended \256fo size)3 1027( The)1 244(dies before it starts writing.)4 1220 4 1941 6216 t
-( a rule of thumb, the \256fo size should be at least equal to the size of the internal)18 3432(MBytes. As)1 528 2 1440 6336 t
-( no more than half of the physical amount of RAM available in)12 2675(buffer of the CD-Recorder and)4 1285 2 1440 6456 t
-( of)1 126( the \256fo size is big enough, the \256fo statistics will print a \256fo empty count)15 3166( If)1 141(the machine.)1 527 4 1440 6576 t
-( If)1 99( is not wise to use too much space for the \256fo.)11 1936( It)1 128(zero and the \256fo min \256ll is not below 20%.)9 1797 4 1440 6696 t
-( more than 8 MB to write a CD on an idle machine, your machine is either under-)17 3579(you need)1 381 2 1440 6816 t
-( sun4c architecture \(e.g. a)4 1224( The)1 263(powered, has hardware problems or is mis-con\256gured.)6 2473 3 1440 6936 t
-( entries for 16 MBytes per process. Using more than)9 2217(Sparcstation-2\) has only MMU page table)5 1743 2 1440 7056 t
-( the operating system in this case to spend much time to con-)12 2557(14 MBytes for the \256fo may cause)6 1403 2 1440 7176 t
-( tables. Newer machines from Sun do not have this MMU hardware)11 2937(stantly reload the MMU)3 1023 2 1440 7296 t
-(J)720 7776 w
-(. .)1 47 1 759 7721 t
-( 3)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7776 t
+( default \256fo size is)4 886(environment. The)1 780 2 3734 7080 t
+(currently 4 MB.)2 657 1 1440 7200 t
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 3)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
 cleartomark
 showpage
 restore
@@ -964,217 +1028,206 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(problem. I have no information on PC-hardware re\257ecting this problem.)9 2954 1 1440 960 t
-( and observe a zero)4 809(If you have buffer underruns or similar problems)7 2017 2 1440 1200 t
-10 I f
-(\256fo empty count)2 658 1 4301 1200 t
-10 R f
-(, you have)2 433 1 4967 1200 t
-(hardware problems. The \256fo size in this case is suf\256cient.)9 2371 1 1440 1320 t
+( allows to run a pipe)5 878( It)1 132( to increase buffering for the real time writing process.)9 2295(The \256fo is used)3 655 4 1440 960 t
+(from)1440 1080 w
 10 B f
-(dev=)1080 1488 w
-10 I f
-(target)1287 1488 w
+(mkisofs)1692 1080 w
 10 R f
-( typical device speci\256cation is)4 1284( A)1 150( above.)1 308(Sets the SCSI target for the CD-Recorder, see notes)8 2218 4 1440 1608 t
+(directly into)1 519 1 2078 1080 t
 10 B f
-(dev=)1440 1728 w
-10 I f
-(6,0)1647 1728 w
+(cdrecord)2655 1080 w
 10 R f
-( together with the numerical target speci\256cation, the)7 2185( a \256lename must be provided)5 1237(. If)1 165 3 1813 1728 t
-( this case can be found in the sys-)8 1446( correct \256lename in)3 809( The)1 225(\256lename is implementation speci\256c.)3 1480 4 1440 1848 t
-( a)1 81( On)1 192( operating system.)2 754(tem speci\256c manuals of the target)5 1410 4 1440 1968 t
-10 I f
-(FreeBSD)3914 1968 w
-10 R f
-(system without)1 621 1 4322 1968 t
-10 I f
-(CAM)4980 1968 w
-10 R f
-(sup-)5228 1968 w
-( to use the control device \(e.g.)6 1293(port, you need)2 602 2 1440 2088 t
-10 I f
-(/dev/rcd0.ctl)3408 2088 w
-10 R f
-( correct device speci\256cation in)4 1279(\). A)1 203 2 3918 2088 t
-(this case may be)3 681 1 1440 2208 t
+( from)1 251( the \256fo is active and a pipe)7 1332(. If)1 182 3 3037 1080 t
 10 B f
-(dev=)2154 2208 w
+(mkisofs)4859 1080 w
+10 R f
+(into)5244 1080 w
+10 B f
+(cdrecord)1440 1200 w
+10 R f
+(is used to create a CD,)5 953 1 1858 1200 t
+10 B f
+(cdrecord)2847 1200 w
+10 R f
+(will abort prior to do any modi\256cations on the disk)9 2135 1 3265 1200 t
+(if)1440 1320 w
+10 B f
+(mkisofs)1557 1320 w
+10 R f
+( is between 4 and 32)5 968( recommended \256fo size)3 1027( The)1 244(dies before it starts writing.)4 1220 4 1941 1320 t
+( a rule of thumb, the \256fo size should be at least equal to the size of the internal)18 3432(MBytes. As)1 528 2 1440 1440 t
+( no more than half of the physical amount of RAM available in)12 2675(buffer of the CD-Recorder and)4 1285 2 1440 1560 t
+( of)1 126( the \256fo size is big enough, the \256fo statistics will print a \256fo empty count)15 3166( If)1 141(the machine.)1 527 4 1440 1680 t
+( If)1 99( is not wise to use too much space for the \256fo.)11 1936( It)1 128(zero and the \256fo min \256ll is not below 20%.)9 1797 4 1440 1800 t
+( more than 8 MB to write a CD on an idle machine, your machine is either under-)17 3579(you need)1 381 2 1440 1920 t
+( sun4c architecture \(e.g. a)4 1224( The)1 263(powered, has hardware problems or is mis-con\256gured.)6 2473 3 1440 2040 t
+( entries for 16 MBytes per process. Using more than)9 2217(Sparcstation-2\) has only MMU page table)5 1743 2 1440 2160 t
+( the operating system in this case to spend much time to con-)12 2557(14 MBytes for the \256fo may cause)6 1403 2 1440 2280 t
+( tables. Newer machines from Sun do not have this MMU hardware)11 2937(stantly reload the MMU)3 1023 2 1440 2400 t
+(problem. I have no information on PC-hardware re\257ecting this problem.)9 2954 1 1440 2520 t
+( and observe a zero)4 809(If you have buffer underruns or similar problems)7 2017 2 1440 2760 t
 10 I f
-(/dev/rcd0.ctl:)2361 2208 w
+(\256fo empty count)2 658 1 4301 2760 t
+10 R f
+(, you have)2 433 1 4967 2760 t
+(hardware problems. The \256fo size in this case is suf\256cient.)9 2371 1 1440 2880 t
+10 B f
+(dev=)1080 3048 w
+10 I f
+(target)1287 3048 w
+10 R f
+( typical device speci\256cation is)4 1284( A)1 150( above.)1 308(Sets the SCSI target for the CD-Recorder, see notes)8 2218 4 1440 3168 t
+10 B f
+(dev=)1440 3288 w
+10 I f
+(6,0)1647 3288 w
+10 R f
+( together with the numerical target speci\256cation, the)7 2185( a \256lename must be provided)5 1237(. If)1 165 3 1813 3288 t
+( this case can be found in the sys-)8 1446( correct \256lename in)3 809( The)1 225(\256lename is implementation speci\256c.)3 1480 4 1440 3408 t
+( a)1 81( On)1 192( operating system.)2 754(tem speci\256c manuals of the target)5 1410 4 1440 3528 t
+10 I f
+(FreeBSD)3914 3528 w
+10 R f
+(system without)1 621 1 4322 3528 t
+10 I f
+(CAM)4980 3528 w
+10 R f
+(sup-)5228 3528 w
+( to use the control device \(e.g.)6 1293(port, you need)2 602 2 1440 3648 t
+10 I f
+(/dev/rcd0.ctl)3408 3648 w
+10 R f
+( correct device speci\256cation in)4 1279(\). A)1 203 2 3918 3648 t
+(this case may be)3 681 1 1440 3768 t
+10 B f
+(dev=)2154 3768 w
+10 I f
+(/dev/rcd0.ctl:)2361 3768 w
 10 S1 f
-(@)2896 2208 w
+(@)2896 3768 w
 10 R f
-(.)3021 2208 w
-( Dif-)1 210(On Linux, drives connected to a parallel port adapter are mapped to a virtual SCSI bus.)15 3750 2 1440 2448 t
-(ferent adapters are mapped to different targets on this virtual SCSI bus.)11 2933 1 1440 2568 t
-(If no)1 220 1 1440 2808 t
+(.)3021 3768 w
+( Dif-)1 210(On Linux, drives connected to a parallel port adapter are mapped to a virtual SCSI bus.)15 3750 2 1440 4008 t
+(ferent adapters are mapped to different targets on this virtual SCSI bus.)11 2933 1 1440 4128 t
+(If no)1 220 1 1440 4368 t
 10 I f
-(dev)1714 2808 w
+(dev)1714 4368 w
 10 R f
-(option is present,)2 744 1 1906 2808 t
+(option is present,)2 744 1 1906 4368 t
 10 B f
-(cdrecord)2704 2808 w
+(cdrecord)2704 4368 w
 10 R f
-(will try to get the device from the)7 1550 1 3140 2808 t
+(will try to get the device from the)7 1550 1 3140 4368 t
 10 B f
-(CDR)4745 2808 w
+(CDR)4745 4368 w
 10 S f
-(_)4961 2808 w
+(_)4961 4368 w
 10 B f
-(DEVICE)5011 2808 w
+(DEVICE)5011 4368 w
 10 R f
-(environment.)1440 2928 w
-(If the argument to the)4 905 1 1440 3168 t
+(environment.)1440 4488 w
+(If the argument to the)4 905 1 1440 4728 t
 10 B f
-(dev=)2380 3168 w
+(dev=)2380 4728 w
 10 R f
-(option does not contain the characters ',', '/', ')8 1934 1 2622 3168 t
+(option does not contain the characters ',', '/', ')8 1934 1 2622 4728 t
 10 S1 f
-(@)4556 3168 w
+(@)4556 4728 w
 10 R f
-( it is inter-)3 447(' or ':',)2 305 2 4648 3168 t
-(preted as an label name that may be found in the \256le /etc/default/cdrecord \(see FILES section\).)15 3901 1 1440 3288 t
+( it is inter-)3 447(' or ':',)2 305 2 4648 4728 t
+(preted as an label name that may be found in the \256le /etc/default/cdrecord \(see FILES section\).)15 3901 1 1440 4848 t
 10 B f
-(timeout=)1080 3456 w
+(timeout=)1080 5016 w
 10 S1 f
-(#)1464 3456 w
+(#)1464 5016 w
 10 R f
-(Set the default SCSI command timeout value to)7 1999 1 1440 3576 t
+(Set the default SCSI command timeout value to)7 2139 1 1440 5136 t
 10 S1 f
-(#)3478 3576 w
+(#)3637 5136 w
 10 R f
-( default SCSI command timeout is the)6 1612(. The)1 252 2 3536 3576 t
-( a)1 100( a SCSI command fails due to)6 1386( If)1 156(minimum timeout used for sending SCSI commands.)6 2318 4 1440 3696 t
-( timeout value of the)4 863(timeout, you may try to raise the default SCSI command timeout above the)12 3097 2 1440 3816 t
-( a raised command timeout, please report)6 1722( the command runs correctly with)5 1415( If)1 138(failed command.)1 685 4 1440 3936 t
-( no)1 143( If)1 142( author of the program.)4 995(the better timeout value and the corresponding command to the)9 2680 4 1440 4056 t
+( default SCSI command)3 1060(seconds. The)1 587 2 3753 5136 t
+( a SCSI command fails)4 982( If)1 139( commands.)1 498(timeout is the minimum timeout used for sending SCSI)8 2341 4 1440 5256 t
+( a timeout, you may try to raise the default SCSI command timeout above the timeout)15 3696(due to)1 264 2 1440 5376 t
+( runs correctly with a raised command timeout,)7 1991( the command)2 598( If)1 140(value of the failed command.)4 1231 4 1440 5496 t
+( the author of the pro-)5 933(please report the better timeout value and the corresponding command to)10 3027 2 1440 5616 t
+( no)1 133(gram. If)1 362 2 1440 5736 t
 10 I f
-(timeout)1440 4176 w
+(timeout)1968 5736 w
 10 R f
-(option is present, a default timeout of 40 seconds is used.)10 2367 1 1773 4176 t
+(option is present, a default timeout of 40 seconds is used.)10 2367 1 2301 5736 t
 10 B f
-(driver=)1080 4344 w
+(driver=)1080 5904 w
 10 I f
-(name)1403 4344 w
+(name)1403 5904 w
 10 R f
-( get a list of possible drivers use)7 1376( To)1 182( supplied driver name for the device.)6 1544(Allows to use a user)4 858 4 1440 4464 t
+( get a list of possible drivers use)7 1376( To)1 182( supplied driver name for the device.)6 1544(Allows to use a user)4 858 4 1440 6024 t
 10 B f
-(driver=help)1440 4584 w
+(driver=help)1440 6144 w
 10 R f
-( reason for the existence of this option is to allow users to use)13 2578(. The)1 247 2 1947 4584 t
+( reason for the existence of this option is to allow users to use)13 2578(. The)1 247 2 1947 6144 t
 10 B f
-(cdrecord)4806 4584 w
+(cdrecord)4806 6144 w
 10 R f
-(with)5222 4584 w
-( to supported drives but not known directly by)8 1929(drives that are similar)3 895 2 1440 4704 t
+(with)5222 6144 w
+( to supported drives but not known directly by)8 1929(drives that are similar)3 895 2 1440 6264 t
 10 B f
-(cdrecord)4299 4704 w
+(cdrecord)4299 6264 w
 10 R f
-( this option)2 471(. Use)1 248 2 4681 4704 t
-( used for a device, the possibility of creating corrupted)9 2314(with extreme care. If a wrong driver is)7 1646 2 1440 4824 t
-( wrong driver is that the)5 1012( minimum problem related to a)5 1291( The)1 223(disks is high.)2 546 4 1440 4944 t
+( this option)2 471(. Use)1 248 2 4681 6264 t
+( used for a device, the possibility of creating corrupted)9 2314(with extreme care. If a wrong driver is)7 1646 2 1440 6384 t
+( wrong driver is that the)5 1012( minimum problem related to a)5 1291( The)1 223(disks is high.)2 546 4 1440 6504 t
 10 S1 f
-(\261)4548 4944 w
+(\261)4548 6504 w
 10 B f
-(speed)4613 4944 w
+(speed)4613 6504 w
 10 R f
-(or)4888 4944 w
+(or)4888 6504 w
 10 S1 f
-(\261)5007 4944 w
+(\261)5007 6504 w
 10 B f
-(dummy)5072 4944 w
+(dummy)5072 6504 w
 10 R f
-(will not work.)2 580 1 1440 5064 t
-( special driver entries in the list:)6 1336(There are two)2 569 2 1440 5304 t
+(will not work.)2 580 1 1440 6624 t
+( special driver entries in the list:)6 1336(There are two)2 569 2 1440 6864 t
 10 B f
-(cdr)3412 5304 w
+(cdr)3412 6864 w
 10 S f
-(_)3556 5304 w
+(_)3556 6864 w
 10 B f
-(simul)3606 5304 w
+(simul)3606 6864 w
 10 R f
-(and)3874 5304 w
+(and)3874 6864 w
 10 B f
-(dvd)4052 5304 w
+(dvd)4052 6864 w
 10 S f
-(_)4214 5304 w
+(_)4214 6864 w
 10 B f
-(simul)4264 5304 w
+(simul)4264 6864 w
 10 R f
-( driver entries)2 572(. These)1 330 2 4498 5304 t
-( drives that do not support the)6 1248(are designed to make timing tests at any speed or timing tests for)12 2712 2 1440 5424 t
+( driver entries)2 572(. These)1 330 2 4498 6864 t
+( drives that do not support the)6 1248(are designed to make timing tests at any speed or timing tests for)12 2712 2 1440 6984 t
 10 S1 f
-(\261)1440 5544 w
+(\261)1440 7104 w
 10 B f
-(dummy)1505 5544 w
+(dummy)1505 7104 w
 10 R f
-( simulation drivers implement a drive with a buffer size of 1MB that can)13 3029(option. The)1 504 2 1867 5544 t
-(be changed via the)3 844 1 1440 5664 t
+( simulation drivers implement a drive with a buffer size of 1MB that can)13 3029(option. The)1 504 2 1867 7104 t
+(be changed via the)3 844 1 1440 7224 t
 10 B f
-(CDR)2342 5664 w
+(CDR)2342 7224 w
 10 S f
-(_)2558 5664 w
+(_)2558 7224 w
 10 B f
-(SIMUL)2608 5664 w
+(SIMUL)2608 7224 w
 10 S f
-(_)2936 5664 w
+(_)2936 7224 w
 10 B f
-(BUFSIZE)2986 5664 w
+(BUFSIZE)2986 7224 w
 10 R f
-( simultaion driver)2 775( The)1 245(environment variable.)1 908 3 3472 5664 t
-( the)1 170( If)1 147(correctly simulates even a buffer underrun condition.)6 2252 3 1440 5784 t
-10 S1 f
-(\261)4057 5784 w
-10 B f
-(dummy)4122 5784 w
-10 R f
-(option is present, the)3 902 1 4498 5784 t
-(simultaion is not aborted in case of a buffer underrun.)9 2218 1 1440 5904 t
-10 B f
-(driveropts=)1080 6072 w
-10 I f
-(option list)1 412 1 1581 6072 t
-10 R f
-( get a list of)4 540( To)1 186( a comma separated list.)4 1030(Set driver speci\256c options. The options are speci\256ed)7 2204 4 1440 6192 t
-(valid options use)2 726 1 1440 6312 t
-10 B f
-(driveropts=)2215 6312 w
-10 I f
-(help)2716 6312 w
-10 R f
-(together with the)2 725 1 2937 6312 t
-10 S1 f
-(\261)3711 6312 w
-10 I f
-(checkdrive)3776 6312 w
-10 R f
-( only the)2 398(option. Currently)1 746 2 4256 6312 t
-10 B f
-(burnproof)1440 6432 w
-10 R f
-( writing with drives that use)5 1164(option is implemented to support Buffer Underrun Proof)7 2318 2 1918 6432 t
-(the Sanyo BURN-Proof technology.)3 1473 1 1440 6552 t
-10 S1 f
-(\261)1080 6840 w
-10 B f
-(checkdrive)1145 6840 w
-10 R f
-( a known drive,)3 696( the drive is)3 541( If)1 148(Checks if a driver for the current drive is present and exit.)11 2575 4 1440 6960 t
-10 B f
-(cdrecord)1440 7080 w
-10 R f
-(uses exit code 0.)3 684 1 1855 7080 t
-10 S1 f
-(\261)1080 7248 w
-10 B f
-(prcap)1145 7248 w
-10 R f
-( for SCSI-3/mmc compliant drives as obtained from mode page)9 2818(Print the drive capabilities)3 1142 2 1440 7248 t
-(J)720 7728 w
-(. .)1 47 1 759 7673 t
-( 4)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7728 t
+( simulation driver)2 775( The)1 245(environment variable.)1 908 3 3472 7224 t
+(J)720 7704 w
+(. .)1 47 1 759 7649 t
+( 4)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7704 t
 cleartomark
 showpage
 restore
@@ -1189,186 +1242,209 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(0x2A. Values marked with)3 1133 1 1440 960 t
+( the)1 170( If)1 147(correctly simulates even a buffer underrun condition.)6 2252 3 1440 960 t
+10 S1 f
+(\261)4057 960 w
+10 B f
+(dummy)4122 960 w
+10 R f
+(option is present, the)3 902 1 4498 960 t
+(simulation is not aborted in case of a buffer underrun.)9 2218 1 1440 1080 t
+10 B f
+(driveropts=)1080 1248 w
 10 I f
-(kB)2616 960 w
+(option list)1 412 1 1581 1248 t
 10 R f
-(use 1000 bytes as kilo-byte, values marked with)7 2046 1 2764 960 t
+( get a list of)4 540( To)1 186( a comma separated list.)4 1030(Set driver speci\256c options. The options are speci\256ed)7 2204 4 1440 1368 t
+(valid options use)2 726 1 1440 1488 t
+10 B f
+(driveropts=)2215 1488 w
 10 I f
-(KB)4853 960 w
+(help)2716 1488 w
 10 R f
-(use 1024)1 376 1 5024 960 t
-(bytes as Kilo-byte.)2 768 1 1440 1080 t
+(together with the)2 725 1 2937 1488 t
 10 S1 f
-(\261)1080 1248 w
-10 B f
-(inq)1145 1248 w
+(\261)3711 1488 w
+10 I f
+(checkdrive)3776 1488 w
 10 R f
-(Do an inquiry for the drive, print the inquiry info and exit.)11 2416 1 1440 1248 t
+( only the)2 398(option. Currently)1 746 2 4256 1488 t
+10 B f
+(burnproof)1440 1608 w
+10 R f
+( writing with drives that use)5 1164(option is implemented to support Buffer Underrun Proof)7 2318 2 1918 1608 t
+(the Sanyo BURN-Proof technology.)3 1473 1 1440 1728 t
 10 S1 f
-(\261)1080 1416 w
+(\261)1080 2016 w
 10 B f
-(scanbus)1145 1416 w
+(checkdrive)1145 2016 w
 10 R f
-( be used)2 345(Scan all SCSI devices on all SCSI busses and print the inquiry strings. This option may)15 3615 2 1440 1536 t
-( numbers printed out as labels are)6 1432( The)1 228( on a system.)3 567(to \256nd SCSI address of the CD-Recorder)6 1733 4 1440 1656 t
-(computed by:)1 555 1 1440 1776 t
+( a known drive,)3 696( the drive is)3 541( If)1 148(Checks if a driver for the current drive is present and exit.)11 2575 4 1440 2136 t
 10 B f
-(bus)2028 1776 w
+(cdrecord)1440 2256 w
+10 R f
+(uses exit code 0.)3 684 1 1855 2256 t
+10 S1 f
+(\261)1080 2424 w
+10 B f
+(prcap)1145 2424 w
+10 R f
+( for SCSI-3/mmc compliant drives as obtained from mode page)9 2818(Print the drive capabilities)3 1142 2 1440 2424 t
+(0x2A. Values marked with)3 1133 1 1440 2544 t
+10 I f
+(kB)2616 2544 w
+10 R f
+(use 1000 bytes as kilo-byte, values marked with)7 2046 1 2764 2544 t
+10 I f
+(KB)4853 2544 w
+10 R f
+(use 1024)1 376 1 5024 2544 t
+(bytes as Kilo-byte.)2 768 1 1440 2664 t
+10 S1 f
+(\261)1080 2832 w
+10 B f
+(inq)1145 2832 w
+10 R f
+(Do an inquiry for the drive, print the inquiry info and exit.)11 2416 1 1440 2832 t
+10 S1 f
+(\261)1080 3000 w
+10 B f
+(scanbus)1145 3000 w
+10 R f
+( be used)2 345(Scan all SCSI devices on all SCSI busses and print the inquiry strings. This option may)15 3615 2 1440 3120 t
+( numbers printed out as labels are)6 1432( The)1 228( on a system.)3 567(to \256nd SCSI address of the CD-Recorder)6 1733 4 1440 3240 t
+(computed by:)1 555 1 1440 3360 t
+10 B f
+(bus)2028 3360 w
 10 S f
-(*)2212 1776 w
+(*)2212 3360 w
 10 B f
-(100 + target)2 527 1 2295 1776 t
+(100 + target)2 527 1 2295 3360 t
 10 S1 f
-(\261)1080 1944 w
+(\261)1080 3528 w
 10 B f
-(reset)1145 1944 w
+(reset)1145 3528 w
 10 R f
-( not on all operating)4 881(Try to reset the SCSI bus where the CD recorder is located. This works)13 3079 2 1440 1944 t
-(systems.)1440 2064 w
-10 S1 f
-(\261)1080 2232 w
-10 B f
-(ignsize)1145 2232 w
-10 R f
-( medium. This options should be used with extreme care, it exists)11 2761(Ignore the known size of the)5 1199 2 1440 2352 t
-( not needed to write disks with)6 1287( is)1 103( It)1 130(only for debugging purposes don't use it for other reasons.)9 2440 4 1440 2472 t
-(more than the nominal capacity.)4 1316 1 1440 2592 t
-10 S1 f
-(\261)1080 2760 w
-10 B f
-(useinfo)1145 2760 w
-10 R f
-(Use)1440 2880 w
-10 S f
-(*)1631 2880 w
-10 R f
-( this option is used, the pregap size information is)9 2096( If)1 136( audio options.)2 616(.inf \256les to overwrite)3 871 4 1681 2880 t
-(read from the)2 553 1 1440 3000 t
-10 S f
-(*)2026 3000 w
-10 R f
-(.inf \256le that is associated with the \256le that contains the audio data for a track.)15 3191 1 2076 3000 t
-10 B f
-(defpregap)1080 3168 w
-10 R f
-(=)1513 3168 w
-10 S1 f
-(#)1569 3168 w
-10 R f
-( only)1 224( option currently)2 706( This)1 256(Set the default pre-gap size for all tracks except track number 1.)11 2774 4 1440 3288 t
-( 2 second)2 433(makes sense with the TEAC drive when creating track-at-once disks without the)11 3527 2 1440 3408 t
-(silence before each track.)3 1036 1 1440 3528 t
-(This option may go away in future.)6 1455 1 1440 3648 t
+( not on all operating)4 881(Try to reset the SCSI bus where the CD recorder is located. This works)13 3079 2 1440 3528 t
+(systems.)1440 3648 w
 10 S1 f
 (\261)1080 3816 w
 10 B f
-(packet)1145 3816 w
+(ignsize)1145 3816 w
 10 R f
-(Set)1440 3936 w
-10 B f
-(Packet writing mode.)2 923 1 1601 3936 t
-10 R f
-(This is an experimental interface.)4 1365 1 2557 3936 t
-10 B f
-(pktsize)1080 4104 w
-10 R f
-(=)1380 4104 w
+( medium. This options should be used with extreme care, it exists)11 2761(Ignore the known size of the)5 1199 2 1440 3936 t
+( not needed to write disks with)6 1287( is)1 103( It)1 130(only for debugging purposes don't use it for other reasons.)9 2440 4 1440 4056 t
+(more than the nominal capacity.)4 1316 1 1440 4176 t
 10 S1 f
-(#)1436 4104 w
+(\261)1080 4344 w
+10 B f
+(useinfo)1145 4344 w
 10 R f
-(Set the paket size to)4 831 1 1440 4224 t
+(Use)1440 4464 w
+10 S f
+(*)1631 4464 w
+10 R f
+( this option is used, the pregap size information is)9 2096( If)1 136( audio options.)2 616(.inf \256les to overwrite)3 871 4 1681 4464 t
+(read from the)2 553 1 1440 4584 t
+10 S f
+(*)2026 4584 w
+10 R f
+(.inf \256le that is associated with the \256le that contains the audio data for a track.)15 3191 1 2076 4584 t
+10 B f
+(defpregap)1080 4752 w
+10 R f
+(=)1513 4752 w
 10 S1 f
-(#)2304 4224 w
+(#)1569 4752 w
 10 R f
-( is an experimental interface.)4 1187( This)1 244(, forces \256xed packet mode.)4 1107 3 2354 4224 t
+( only)1 224( option currently)2 706( This)1 256(Set the default pre-gap size for all tracks except track number 1.)11 2774 4 1440 4872 t
+( 2 second)2 433(makes sense with the TEAC drive when creating track-at-once disks without the)11 3527 2 1440 4992 t
+(silence before each track.)3 1036 1 1440 5112 t
+(This option may go away in future.)6 1455 1 1440 5232 t
 10 S1 f
-(\261)1080 4392 w
+(\261)1080 5400 w
 10 B f
-(noclose)1145 4392 w
+(packet)1145 5400 w
 10 R f
-( is an experimen-)3 717( This)1 245( useful only when in packet writing mode.)7 1750(Do not close the current track,)5 1248 4 1440 4512 t
-(tal interface.)1 506 1 1440 4632 t
+(Set)1440 5520 w
 10 B f
-(mcn=med)1080 4800 w
+(Packet writing mode.)2 923 1 1601 5520 t
+10 R f
+(This is an experimental interface.)4 1365 1 2557 5520 t
+10 B f
+(pktsize)1080 5688 w
+10 R f
+(=)1380 5688 w
+10 S1 f
+(#)1436 5688 w
+10 R f
+(Set the paket size to)4 831 1 1440 5808 t
+10 S1 f
+(#)2304 5808 w
+10 R f
+( is an experimental interface.)4 1187( This)1 244(, forces \256xed packet mode.)4 1107 3 2354 5808 t
+10 S1 f
+(\261)1080 5976 w
+10 B f
+(noclose)1145 5976 w
+10 R f
+( is an experimen-)3 717( This)1 245( useful only when in packet writing mode.)7 1750(Do not close the current track,)5 1248 4 1440 6096 t
+(tal interface.)1 506 1 1440 6216 t
+10 B f
+(mcn=med)1080 6384 w
 10 S f
-(_)1503 4800 w
+(_)1503 6384 w
 10 B f
-(cat)1553 4800 w
+(cat)1553 6384 w
 10 S f
-(_)1680 4800 w
+(_)1680 6384 w
 10 B f
-(nr)1730 4800 w
+(nr)1730 6384 w
 10 R f
-(Set the)1 283 1 1440 4920 t
+(Set the)1 283 1 1440 6504 t
 10 B f
-(Media Catalog Number)2 1026 1 1756 4920 t
+(Media Catalog Number)2 1026 1 1756 6504 t
 10 R f
-(of the CD to)3 521 1 2815 4920 t
+(of the CD to)3 521 1 2815 6504 t
 10 I f
-(med)3369 4920 w
+(med)3369 6504 w
 10 S f
-(_)3535 4920 w
+(_)3535 6504 w
 10 I f
-(cat)3585 4920 w
+(cat)3585 6504 w
 10 S f
-(_)3707 4920 w
+(_)3707 6504 w
 10 I f
-(nr)3757 4920 w
+(nr)3757 6504 w
 10 R f
-(.)3854 4920 w
+(.)3854 6504 w
 9 B f
-(TRACK OPTIONS)1 760 1 720 5208 t
+(TRACK OPTIONS)1 760 1 720 6792 t
 10 R f
-(Track options may be mixed with track \256le names.)8 2092 1 1080 5328 t
+(Track options may be mixed with track \256le names.)8 2092 1 1080 6912 t
 10 B f
-(isrc=ISRC)1080 5496 w
+(isrc=ISRC)1080 7080 w
 10 S f
-(_)1531 5496 w
+(_)1531 7080 w
 10 B f
-(number)1581 5496 w
+(number)1581 7080 w
 10 R f
-(Set the)1 283 1 1440 5616 t
+(Set the)1 283 1 1440 7200 t
 10 B f
-(International Standard Recording Number)3 1866 1 1756 5616 t
+(International Standard Recording Number)3 1866 1 1756 7200 t
 10 R f
-(for the next track to)4 819 1 3655 5616 t
+(for the next track to)4 819 1 3655 7200 t
 10 I f
-(ISRC)4507 5616 w
+(ISRC)4507 7200 w
 10 S f
-(_)4718 5616 w
+(_)4718 7200 w
 10 I f
-(number)4768 5616 w
+(number)4768 7200 w
 10 R f
-(.)5081 5616 w
-10 B f
-(index=)1080 5784 w
-10 I f
-(list)1371 5784 w
-10 R f
-( index list is a comma separated list of numbers that are)11 2332( In)1 150(Sets an index list for the next track.)7 1478 3 1440 5904 t
-( \256rst entry in this list must contain a 0, the following numbers must)13 2820(counting from index 1. The)4 1140 2 1440 6024 t
-( numbers \(counting in 1/75 seconds\) that represent the start of the)11 2951(be an ascending list of)4 1009 2 1440 6144 t
-( sets index 1 to the start of the track, index 2)11 1913( 0,7500,15000)1 621( index list in the form:)5 957(indices. An)1 469 4 1440 6264 t
-(100 seconds from the start of the track and index 3 200 seconds from the start of the track.)18 3751 1 1440 6384 t
-10 S1 f
-(\261)1080 6552 w
-10 B f
-(audio)1145 6552 w
-10 R f
-(If this \257ag is present, all subsequent tracks are written in)10 2385 1 1440 6552 t
-10 B f
-(CD-DA)3863 6552 w
-10 R f
-(\(similar to Red Book\) audio)4 1178 1 4222 6552 t
-( \256le with data for this tracks should contain stereo, 16-bit digital audio with 44100)14 3444(format. The)1 516 2 1440 6672 t
-( byte order should be the following: MSB left, LSB left, MSB right, LSB right,)14 3322(samples/s. The)1 638 2 1440 6792 t
-( It is not possible to put the)7 1164(MSB left and so on. The track should be a multiple of 2352 bytes.)13 2796 2 1440 6912 t
-( multiple of 2352)3 752(master image of an audio track on a raw disk because data will be read in)15 3208 2 1440 7032 t
-(bytes during the recording process.)4 1432 1 1440 7152 t
+(.)5081 7200 w
 (J)720 7680 w
 (. .)1 47 1 759 7625 t
-( 5)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+( 5)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
 cleartomark
 showpage
 restore
@@ -1383,272 +1459,235 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(If a \256lename ends in)4 923 1 1440 960 t
+10 B f
+(index=)1080 960 w
 10 I f
-(.au)2415 960 w
+(list)1371 960 w
 10 R f
-(or)2592 960 w
+( index list is a comma separated list of numbers that are)11 2332( In)1 150(Sets an index list for the next track.)7 1478 3 1440 1080 t
+( \256rst entry in this list must contain a 0, the following numbers must)13 2820(counting from index 1. The)4 1140 2 1440 1200 t
+( numbers \(counting in 1/75 seconds\) that represent the start of the)11 2951(be an ascending list of)4 1009 2 1440 1320 t
+( sets index 1 to the start of the track, index 2)11 1913( 0,7500,15000)1 621( index list in the form:)5 957(indices. An)1 469 4 1440 1440 t
+(100 seconds from the start of the track and index 3 200 seconds from the start of the track.)18 3751 1 1440 1560 t
+10 S1 f
+(\261)1080 1728 w
+10 B f
+(audio)1145 1728 w
+10 R f
+(If this \257ag is present, all subsequent tracks are written in)10 2385 1 1440 1728 t
+10 B f
+(CD-DA)3863 1728 w
+10 R f
+(\(similar to Red Book\) audio)4 1178 1 4222 1728 t
+( \256le with data for this tracks should contain stereo, 16-bit digital audio with 44100)14 3444(format. The)1 516 2 1440 1848 t
+( byte order should be the following: MSB left, LSB left, MSB right, LSB right,)14 3322(samples/s. The)1 638 2 1440 1968 t
+( It is not possible to put the)7 1164(MSB left and so on. The track should be a multiple of 2352 bytes.)13 2796 2 1440 2088 t
+( multiple of 2352)3 752(master image of an audio track on a raw disk because data will be read in)15 3208 2 1440 2208 t
+(bytes during the recording process.)4 1432 1 1440 2328 t
+(If a \256lename ends in)4 923 1 1440 2568 t
 10 I f
-(.wav)2727 960 w
+(.au)2415 2568 w
 10 R f
-(the \256le is considered to be a structured audio data \256le.)10 2435 1 2965 960 t
-10 B f
-(Cdrecord)1440 1080 w
-10 R f
-( or a Microsoft .WAV \256le and)6 1302(assumes that the \256le in this case is a Sun audio \256le)11 2206 2 1892 1080 t
-( all)1 136( In)1 152( non-audio header information.)3 1275(extracts the audio data from the \256les by skipping over the)10 2397 4 1440 1200 t
-( work correctly if the audio data stream does not have any)11 2622(other cases, cdrecord will only)4 1338 2 1440 1320 t
-( \256les do not have an integral number of blocks \(1/75th)10 2310( many structured audio)3 957(header. Because)1 693 3 1440 1440 t
-( it is often necessary to specify the)7 1511(second\) in length,)2 753 2 1440 1560 t
-10 S1 f
-(\261)3748 1560 w
-10 B f
-(pad)3813 1560 w
-10 R f
-(option as well.)2 624 1 4019 1560 t
-10 B f
-(cdrecord)4720 1560 w
-10 R f
-(recog-)5146 1560 w
-( a .WAV \256le is stored in Intel \(little-endian\) byte order, and will)12 2923(nizes that audio data in)4 1037 2 1440 1680 t
-( big-endian data.)2 710(automatically byte-swap the data if the CD recorder requires)8 2592 2 1440 1800 t
-10 B f
-(Cdrecord)4788 1800 w
-10 R f
-(will)5244 1800 w
-( audio \256le that does not match the Red Book requirements of 16-bit stereo samples in)15 3561(reject any)1 399 2 1440 1920 t
-(PCM coding at 44100 samples/second.)4 1590 1 1440 2040 t
-(Using other structured audio data formats as input to)8 2231 1 1440 2280 t
-10 B f
-(cdrecord)3712 2280 w
-10 R f
-(will usually work if the struc-)5 1265 1 4135 2280 t
-( How-)1 294( above \(raw pcm data in big-endian byte order\).)8 1975(ture of the data is the structure described)7 1691 3 1440 2400 t
-(ever, if the data format includes a header, you will hear a click at the start of a track.)18 3504 1 1440 2520 t
-(If neither)1 380 1 1440 2688 t
-10 S1 f
-(\261)1857 2688 w
+(or)2592 2568 w
 10 I f
-(data)1922 2688 w
+(.wav)2727 2568 w
 10 R f
-(nor)2137 2688 w
+(the \256le is considered to be a structured audio data \256le.)10 2435 1 2965 2568 t
+10 B f
+(Cdrecord)1440 2688 w
+10 R f
+( or a Microsoft .WAV \256le and)6 1302(assumes that the \256le in this case is a Sun audio \256le)11 2206 2 1892 2688 t
+( all)1 136( In)1 152( non-audio header information.)3 1275(extracts the audio data from the \256les by skipping over the)10 2397 4 1440 2808 t
+( work correctly if the audio data stream does not have any)11 2622(other cases, cdrecord will only)4 1338 2 1440 2928 t
+( \256les do not have an integral number of blocks \(1/75th)10 2310( many structured audio)3 957(header. Because)1 693 3 1440 3048 t
+( it is often necessary to specify the)7 1511(second\) in length,)2 753 2 1440 3168 t
 10 S1 f
-(\261)2307 2688 w
+(\261)3748 3168 w
+10 B f
+(pad)3813 3168 w
+10 R f
+(option as well.)2 624 1 4019 3168 t
+10 B f
+(cdrecord)4720 3168 w
+10 R f
+(recog-)5146 3168 w
+( a .WAV \256le is stored in Intel \(little-endian\) byte order, and will)12 2923(nizes that audio data in)4 1037 2 1440 3288 t
+( big-endian data.)2 710(automatically byte-swap the data if the CD recorder requires)8 2592 2 1440 3408 t
+10 B f
+(Cdrecord)4788 3408 w
+10 R f
+(will)5244 3408 w
+( audio \256le that does not match the Red Book requirements of 16-bit stereo samples in)15 3561(reject any)1 399 2 1440 3528 t
+(PCM coding at 44100 samples/second.)4 1590 1 1440 3648 t
+(Using other structured audio data formats as input to)8 2231 1 1440 3888 t
+10 B f
+(cdrecord)3712 3888 w
+10 R f
+(will usually work if the struc-)5 1265 1 4135 3888 t
+( How-)1 294( above \(raw pcm data in big-endian byte order\).)8 1975(ture of the data is the structure described)7 1691 3 1440 4008 t
+(ever, if the data format includes a header, you will hear a click at the start of a track.)18 3504 1 1440 4128 t
+(If neither)1 380 1 1440 4296 t
+10 S1 f
+(\261)1857 4296 w
 10 I f
-(audio)2372 2688 w
+(data)1922 4296 w
 10 R f
-(have been speci\256ed,)2 830 1 2637 2688 t
-10 B f
-(cdrecord)3504 2688 w
-10 R f
-(defaults to)1 432 1 3924 2688 t
+(nor)2137 4296 w
 10 S1 f
-(\261)4394 2688 w
+(\261)2307 4296 w
 10 I f
-(audio)4459 2688 w
+(audio)2372 4296 w
 10 R f
-(for all \256lenames)2 675 1 4725 2688 t
-(that end in)2 438 1 1440 2808 t
+(have been speci\256ed,)2 830 1 2637 4296 t
+10 B f
+(cdrecord)3504 4296 w
+10 R f
+(defaults to)1 432 1 3924 4296 t
+10 S1 f
+(\261)4394 4296 w
 10 I f
-(.au)1911 2808 w
+(audio)4459 4296 w
 10 R f
-(or)2069 2808 w
+(for all \256lenames)2 675 1 4725 4296 t
+(that end in)2 438 1 1440 4416 t
 10 I f
-(.wav)2185 2808 w
+(.au)1911 4416 w
 10 R f
-(and to)1 255 1 2404 2808 t
-10 S1 f
-(\261)2692 2808 w
+(or)2069 4416 w
 10 I f
-(data)2757 2808 w
+(.wav)2185 4416 w
 10 R f
-(for all other \256les.)3 712 1 2968 2808 t
+(and to)1 255 1 2404 4416 t
 10 S1 f
-(\261)1080 2976 w
-10 B f
-(swab)1145 2976 w
-10 R f
-( Some)1 300(If this \257ag is present, audio data is assumed to be in byte-swapped \(little-endian\) order.)14 3660 2 1440 2976 t
-( drives require audio data to)5 1182(types of CD-Writers e.g. Yamaha, Sony and the new SCSI-3/mmc)9 2778 2 1440 3096 t
-( to be presented in the)5 944(be presented in little-endian order, while other writers require audio data)10 3016 2 1440 3216 t
-( order normally used by the SCSI protocol.)7 1875(big-endian \(network\) byte)2 1088 2 1440 3336 t
-10 B f
-(Cdrecord)4483 3336 w
-10 R f
-(knows if a)2 460 1 4940 3336 t
-(CD-Recorder needs audio data in big- or little-endian order, and corrects the byte order of the)15 3960 1 1440 3456 t
-( only need the)3 623( You)1 250( recorder.)1 401(data stream to match the needs of the)7 1630 4 1440 3576 t
-10 S1 f
-(\261)4389 3576 w
+(\261)2692 4416 w
 10 I f
-(swab)4454 3576 w
+(data)2757 4416 w
 10 R f
-(\257ag if your data)3 695 1 4705 3576 t
-(stream is in Intel \(little-endian\) byte order.)6 1748 1 1440 3696 t
-(Note that the verbose output of)5 1310 1 1440 3936 t
-10 B f
-(cdrecord)2789 3936 w
-10 R f
-( you if swapping is necessary to make the)8 1784(will show)1 406 2 3210 3936 t
-( data \256t the required byte order of the recorder.)9 1953(byte order of the input)4 933 2 1440 4056 t
-10 B f
-(Cdrecord)4393 4056 w
-10 R f
-(will not show)2 563 1 4837 4056 t
-(you if the)2 399 1 1440 4176 t
+(for all other \256les.)3 712 1 2968 4416 t
 10 S1 f
-(\261)1872 4176 w
+(\261)1080 4584 w
+10 B f
+(swab)1145 4584 w
+10 R f
+( Some)1 300(If this \257ag is present, audio data is assumed to be in byte-swapped \(little-endian\) order.)14 3660 2 1440 4584 t
+( drives require audio data to)5 1182(types of CD-Writers e.g. Yamaha, Sony and the new SCSI-3/mmc)9 2778 2 1440 4704 t
+( to be presented in the)5 944(be presented in little-endian order, while other writers require audio data)10 3016 2 1440 4824 t
+( order normally used by the SCSI protocol.)7 1875(big-endian \(network\) byte)2 1088 2 1440 4944 t
+10 B f
+(Cdrecord)4483 4944 w
+10 R f
+(knows if a)2 460 1 4940 4944 t
+(CD-Recorder needs audio data in big- or little-endian order, and corrects the byte order of the)15 3960 1 1440 5064 t
+( only need the)3 623( You)1 250( recorder.)1 401(data stream to match the needs of the)7 1630 4 1440 5184 t
+10 S1 f
+(\261)4389 5184 w
 10 I f
-(swab)1937 4176 w
+(swab)4454 5184 w
 10 R f
-(\257ag was actually present for a track.)6 1491 1 2176 4176 t
+(\257ag if your data)3 695 1 4705 5184 t
+(stream is in Intel \(little-endian\) byte order.)6 1748 1 1440 5304 t
+(Note that the verbose output of)5 1310 1 1440 5544 t
+10 B f
+(cdrecord)2789 5544 w
+10 R f
+( you if swapping is necessary to make the)8 1784(will show)1 406 2 3210 5544 t
+( data \256t the required byte order of the recorder.)9 1953(byte order of the input)4 933 2 1440 5664 t
+10 B f
+(Cdrecord)4393 5664 w
+10 R f
+(will not show)2 563 1 4837 5664 t
+(you if the)2 399 1 1440 5784 t
 10 S1 f
-(\261)1080 4344 w
-10 B f
-(data)1145 4344 w
-10 R f
-( \257ag is present, all subsequent tracks are written in)9 2199(If this)1 255 2 1440 4344 t
-10 B f
-(CD-ROM mode 1)2 794 1 3939 4344 t
-10 R f
-(\(Yellow Book\))1 622 1 4778 4344 t
-( \256le with track data should contain an)7 1599( The)1 227( data is a multiple of 2048 bytes.)7 1403(format. The)1 486 4 1440 4464 t
-10 B f
-(ISO-)5194 4464 w
-(9660)1440 4584 w
-10 R f
-(or)1674 4584 w
-10 B f
-(Rock Ridge)1 506 1 1791 4584 t
-10 R f
-(\256lesystem image \(see)2 878 1 2331 4584 t
-10 B f
-(mkisofs)3243 4584 w
-10 R f
-( If the track data is an)6 924(for more details\).)2 708 2 3605 4584 t
-10 B f
-(ufs)5272 4584 w
-10 R f
-( size should be set to 2 KB or more to allow CR-drives with 2 KB)15 2845(\256lesystem image, fragment)2 1115 2 1440 4704 t
-(sector size to to be used for reading.)7 1497 1 1440 4824 t
-10 S1 f
-(\261)1440 4992 w
-10 R f
-(data is the default, if no other \257ag is present.)9 1850 1 1505 4992 t
-(If neither)1 380 1 1440 5160 t
-10 S1 f
-(\261)1857 5160 w
+(\261)1872 5784 w
 10 I f
-(data)1922 5160 w
+(swab)1937 5784 w
 10 R f
-(nor)2137 5160 w
+(\257ag was actually present for a track.)6 1491 1 2176 5784 t
 10 S1 f
-(\261)2307 5160 w
+(\261)1080 5952 w
+10 B f
+(data)1145 5952 w
+10 R f
+( \257ag is present, all subsequent tracks are written in)9 2199(If this)1 255 2 1440 5952 t
+10 B f
+(CD-ROM mode 1)2 794 1 3939 5952 t
+10 R f
+(\(Yellow Book\))1 622 1 4778 5952 t
+( \256le with track data should contain an)7 1599( The)1 227( data is a multiple of 2048 bytes.)7 1403(format. The)1 486 4 1440 6072 t
+10 B f
+(ISO-)5194 6072 w
+(9660)1440 6192 w
+10 R f
+(or)1674 6192 w
+10 B f
+(Rock Ridge)1 506 1 1791 6192 t
+10 R f
+(\256lesystem image \(see)2 878 1 2331 6192 t
+10 B f
+(mkisofs)3243 6192 w
+10 R f
+( If the track data is an)6 924(for more details\).)2 708 2 3605 6192 t
+10 B f
+(ufs)5272 6192 w
+10 R f
+( size should be set to 2 KB or more to allow CR-drives with 2 KB)15 2845(\256lesystem image, fragment)2 1115 2 1440 6312 t
+(sector size to to be used for reading.)7 1497 1 1440 6432 t
+10 S1 f
+(\261)1440 6600 w
+10 R f
+(data is the default, if no other \257ag is present.)9 1850 1 1505 6600 t
+(If neither)1 380 1 1440 6768 t
+10 S1 f
+(\261)1857 6768 w
 10 I f
-(audio)2372 5160 w
+(data)1922 6768 w
 10 R f
-(have been speci\256ed,)2 830 1 2637 5160 t
-10 B f
-(cdrecord)3504 5160 w
-10 R f
-(defaults to)1 432 1 3924 5160 t
+(nor)2137 6768 w
 10 S1 f
-(\261)4394 5160 w
+(\261)2307 6768 w
 10 I f
-(audio)4459 5160 w
+(audio)2372 6768 w
 10 R f
-(for all \256lenames)2 675 1 4725 5160 t
-(that end in)2 438 1 1440 5280 t
+(have been speci\256ed,)2 830 1 2637 6768 t
+10 B f
+(cdrecord)3504 6768 w
+10 R f
+(defaults to)1 432 1 3924 6768 t
+10 S1 f
+(\261)4394 6768 w
 10 I f
-(.au)1911 5280 w
+(audio)4459 6768 w
 10 R f
-(or)2069 5280 w
+(for all \256lenames)2 675 1 4725 6768 t
+(that end in)2 438 1 1440 6888 t
 10 I f
-(.wav)2185 5280 w
+(.au)1911 6888 w
 10 R f
-(and to)1 255 1 2404 5280 t
-10 S1 f
-(\261)2692 5280 w
+(or)2069 6888 w
 10 I f
-(data)2757 5280 w
+(.wav)2185 6888 w
 10 R f
-(for all other \256les.)3 712 1 2968 5280 t
+(and to)1 255 1 2404 6888 t
 10 S1 f
-(\261)1080 5448 w
-10 B f
-(mode2)1145 5448 w
+(\261)2692 6888 w
+10 I f
+(data)2757 6888 w
 10 R f
-( tracks are written in)4 856(If this \257ag is present, all subsequent)6 1483 2 1440 5568 t
-10 B f
-(CD-ROM mode 2)2 772 1 3813 5568 t
-10 R f
-(format. The data is)3 781 1 4619 5568 t
-(a multiple of 2048 bytes.)4 1029 1 1440 5688 t
+(for all other \256les.)3 712 1 2968 6888 t
 10 S1 f
-(\261)1080 5856 w
+(\261)1080 7056 w
 10 B f
-(xa1)1145 5856 w
+(mode2)1145 7056 w
 10 R f
-(If this \257ag is present, all subsequent tracks are written in)10 2415 1 1440 5856 t
+( tracks are written in)4 856(If this \257ag is present, all subsequent)6 1483 2 1440 7176 t
 10 B f
-(CD-ROM XA mode 1)3 974 1 3896 5856 t
+(CD-ROM mode 2)2 772 1 3813 7176 t
 10 R f
-(format. The)1 488 1 4912 5856 t
-(data is a multiple of 2048 bytes.)6 1328 1 1440 5976 t
-10 S1 f
-(\261)1080 6144 w
-10 B f
-(xa2)1145 6144 w
-10 R f
-(If this \257ag is present, all subsequent tracks are written in)10 2415 1 1440 6144 t
-10 B f
-(CD-ROM XA mode 2)3 974 1 3896 6144 t
-10 R f
-(format. The)1 488 1 4912 6144 t
-(data is a multiple of 2048 bytes.)6 1328 1 1440 6264 t
-10 S1 f
-(\261)1080 6432 w
-10 B f
-(cdi)1145 6432 w
-10 R f
-(If this \257ag is present, all subsequent tracks are written in)10 2355 1 1440 6432 t
-10 B f
-(CDI)3830 6432 w
-10 R f
-( multiple of)2 489(format. The data is a)4 863 2 4048 6432 t
-(2048 bytes.)1 469 1 1440 6552 t
-10 S1 f
-(\261)1080 6720 w
-10 B f
-(isosize)1145 6720 w
-10 R f
-(Use the)1 317 1 1440 6840 t
-10 B f
-(ISO-9660)1797 6840 w
-10 R f
-( option is needed if you)5 1021( This)1 252( next track.)2 478(\256le system size as the size of the)7 1406 4 2243 6840 t
-( a raw disk partition or on a master CD. In the \256rst case)13 2343(want to read the image of a track from)8 1617 2 1440 6960 t
-(the option)1 416 1 1440 7080 t
-10 S1 f
-(\261)1894 7080 w
-10 B f
-(isosize)1959 7080 w
-10 R f
-( In)1 155(is needed to limit the size of the CD to the size of the ISO \256lesystem.)15 2975 2 2270 7080 t
-(the second case the option)4 1084 1 1440 7200 t
-10 S1 f
-(\261)2558 7200 w
-10 B f
-(isosize)2623 7200 w
-10 R f
-(is needed to prevent)3 828 1 2929 7200 t
-10 B f
-(cdrecord)3791 7200 w
-10 R f
-( two run out)3 510(from reading the)2 683 2 4207 7200 t
-(J)720 7680 w
-(. .)1 47 1 759 7625 t
-( 6)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+(format. The data is)3 781 1 4619 7176 t
+(a multiple of 2048 bytes.)4 1029 1 1440 7296 t
+(J)720 7776 w
+(. .)1 47 1 759 7721 t
+( 6)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7776 t
 cleartomark
 showpage
 restore
@@ -1663,194 +1702,220 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-( once mode. These two run out blocks)7 1597(blocks that are appended by each CD-recorder in track at)9 2363 2 1440 960 t
-( not)1 165( Do)1 192( buffer under run that would cause a defective copy.)9 2185(cannot be read and would cause a)6 1418 4 1440 1080 t
-(use this option if)3 730 1 1440 1200 t
+10 S1 f
+(\261)1080 960 w
 10 B f
-(cdrecord)2215 1200 w
+(xa1)1145 960 w
 10 R f
-(reads the track data from)4 1071 1 2642 1200 t
+(If this \257ag is present, all subsequent tracks are written in)10 2415 1 1440 960 t
+10 B f
+(CD-ROM XA mode 1)3 974 1 3896 960 t
+10 R f
+(format. The)1 488 1 4912 960 t
+(data is a multiple of 2048 bytes.)6 1328 1 1440 1080 t
+10 S1 f
+(\261)1080 1248 w
+10 B f
+(xa2)1145 1248 w
+10 R f
+(If this \257ag is present, all subsequent tracks are written in)10 2415 1 1440 1248 t
+10 B f
+(CD-ROM XA mode 2)3 974 1 3896 1248 t
+10 R f
+(format. The)1 488 1 4912 1248 t
+(data is a multiple of 2048 bytes.)6 1328 1 1440 1368 t
+10 S1 f
+(\261)1080 1536 w
+10 B f
+(cdi)1145 1536 w
+10 R f
+(If this \257ag is present, all subsequent tracks are written in)10 2355 1 1440 1536 t
+10 B f
+(CDI)3830 1536 w
+10 R f
+( multiple of)2 489(format. The data is a)4 863 2 4048 1536 t
+(2048 bytes.)1 469 1 1440 1656 t
+10 S1 f
+(\261)1080 1824 w
+10 B f
+(isosize)1145 1824 w
+10 R f
+(Use the)1 317 1 1440 1944 t
+10 B f
+(ISO-9660)1797 1944 w
+10 R f
+( option is needed if you)5 1021( This)1 252( next track.)2 478(\256le system size as the size of the)7 1406 4 2243 1944 t
+( a raw disk partition or on a master CD. In the \256rst case)13 2343(want to read the image of a track from)8 1617 2 1440 2064 t
+(the option)1 416 1 1440 2184 t
+10 S1 f
+(\261)1894 2184 w
+10 B f
+(isosize)1959 2184 w
+10 R f
+( In)1 155(is needed to limit the size of the CD to the size of the ISO \256lesystem.)15 2975 2 2270 2184 t
+(the second case the option)4 1084 1 1440 2304 t
+10 S1 f
+(\261)2558 2304 w
+10 B f
+(isosize)2623 2304 w
+10 R f
+(is needed to prevent)3 828 1 2929 2304 t
+10 B f
+(cdrecord)3791 2304 w
+10 R f
+( two run out)3 510(from reading the)2 683 2 4207 2304 t
+( once mode. These two run out blocks)7 1597(blocks that are appended by each CD-recorder in track at)9 2363 2 1440 2424 t
+( not)1 165( Do)1 192( buffer under run that would cause a defective copy.)9 2185(cannot be read and would cause a)6 1418 4 1440 2544 t
+(use this option if)3 730 1 1440 2664 t
+10 B f
+(cdrecord)2215 2664 w
+10 R f
+(reads the track data from)4 1071 1 2642 2664 t
 10 I f
-(stdin)3758 1200 w
+(stdin)3758 2664 w
 10 R f
-( cannot be)2 452( option currently)2 706(. This)1 281 3 3961 1200 t
-(used to determine the size of a \256le system if the multi session option is present.)15 3285 1 1440 1320 t
+( cannot be)2 452( option currently)2 706(. This)1 281 3 3961 2664 t
+(used to determine the size of a \256le system if the multi session option is present.)15 3285 1 1440 2784 t
 10 S1 f
-(\261)1080 1488 w
+(\261)1080 2952 w
 10 B f
-(pad)1145 1488 w
+(pad)1145 2952 w
 10 R f
-( a data track, 15 sectors of zeroed data will be added to the end of this and each)18 3395(If the track is)3 565 2 1440 1488 t
-( this case, the)3 586( In)1 157( track.)1 265(subsequent data)1 652 4 1440 1608 t
+( a data track, 15 sectors of zeroed data will be added to the end of this and each)18 3395(If the track is)3 565 2 1440 2952 t
+( this case, the)3 586( In)1 157( track.)1 265(subsequent data)1 652 4 1440 3072 t
 10 S1 f
-(\261)3141 1608 w
+(\261)3141 3072 w
 10 B f
-(pad)3206 1608 w
+(pad)3206 3072 w
 10 R f
-(option is superseded by the)4 1152 1 3409 1608 t
+(option is superseded by the)4 1152 1 3409 3072 t
 10 B f
-(padsize=)4602 1608 w
+(padsize=)4602 3072 w
 10 R f
-(option. It)1 383 1 5017 1608 t
-(will remain however as a shorthand for)6 1689 1 1440 1728 t
+(option. It)1 383 1 5017 3072 t
+(will remain however as a shorthand for)6 1689 1 1440 3192 t
 10 B f
-(padsize=15s.)3175 1728 w
+(padsize=15s.)3175 3192 w
 10 R f
-(If the)1 235 1 3792 1728 t
+(If the)1 235 1 3792 3192 t
 10 S1 f
-(\261)4074 1728 w
+(\261)4074 3192 w
 10 I f
-(pad)4139 1728 w
+(pad)4139 3192 w
 10 R f
-(option refers to an audio)4 1064 1 4336 1728 t
-(track,)1440 1848 w
+(option refers to an audio)4 1064 1 4336 3192 t
+(track,)1440 3312 w
 10 B f
-(cdrecord)1700 1848 w
+(cdrecord)1700 3312 w
 10 R f
-( data padding)2 558(will pad the audio data to be a multiple of 2352 bytes. The audio)13 2724 2 2118 1848 t
-(is done with binary zeroes which is equal to absolute silence.)10 2518 1 1440 1968 t
+( data padding)2 558(will pad the audio data to be a multiple of 2352 bytes. The audio)13 2724 2 2118 3312 t
+(is done with binary zeroes which is equal to absolute silence.)10 2518 1 1440 3432 t
 10 S1 f
-(\261)1440 2208 w
+(\261)1440 3672 w
 10 B f
-(pad)1505 2208 w
+(pad)1505 3672 w
 10 R f
-(remains valid until disabled by)4 1265 1 1700 2208 t
+(remains valid until disabled by)4 1265 1 1700 3672 t
 10 S1 f
-(\261)2998 2208 w
+(\261)2998 3672 w
 10 B f
-(nopad)3063 2208 w
+(nopad)3063 3672 w
 10 R f
-(.)3331 2208 w
+(.)3331 3672 w
 10 B f
-(padsize=)1080 2376 w
+(padsize=)1080 3840 w
 10 S1 f
-(#)1454 2376 w
+(#)1454 3840 w
 10 R f
-( the next track to)4 771(Set the amount of data to be appended as padding to)10 2326 2 1440 2496 t
+( the next track to)4 771(Set the amount of data to be appended as padding to)10 2326 2 1440 3960 t
 10 S1 f
-(#)4587 2496 w
+(#)4587 3960 w
 10 R f
-( to the)2 300(. Opposed)1 463 2 4637 2496 t
-(behavior of the)2 638 1 1440 2616 t
+( to the)2 300(. Opposed)1 463 2 4637 3960 t
+(behavior of the)2 638 1 1440 4080 t
 10 S1 f
-(\261)2120 2616 w
+(\261)2120 4080 w
 10 B f
-(pad)2185 2616 w
+(pad)2185 4080 w
 10 R f
-(option, the value for)3 861 1 2389 2616 t
+(option, the value for)3 861 1 2389 4080 t
 10 I f
-(padsize=)3292 2616 w
+(padsize=)3292 4080 w
 10 R f
-( See)1 218( to zero for each new track.)6 1183(is reset)1 297 3 3702 2616 t
+( See)1 218( to zero for each new track.)6 1183(is reset)1 297 3 3702 4080 t
 10 B f
-(fs)1440 2736 w
+(fs)1440 4200 w
 10 R f
-( this option if your CD-drive is not able to read the last)12 2325( Use)1 224( possible arguments.)2 841(= option for)2 498 4 1512 2736 t
-( be able to read the CD on a)8 1234(sectors of a track or if you want to)8 1497 2 1440 2856 t
+( this option if your CD-drive is not able to read the last)12 2325( Use)1 224( possible arguments.)2 841(= option for)2 498 4 1512 4200 t
+( be able to read the CD on a)8 1234(sectors of a track or if you want to)8 1497 2 1440 4320 t
 10 B f
-(Linux)4211 2856 w
+(Linux)4211 4320 w
 10 R f
-(system with the ISO-)3 892 1 4508 2856 t
-( this option may be used)5 1020( an empty \256le is used for track data,)8 1492( If)1 132(9660 \256lesystem read ahead bug.)4 1316 4 1440 2976 t
-(to create a disk that is entirely made of padding.)9 1991 1 1440 3096 t
+(system with the ISO-)3 892 1 4508 4320 t
+( this option may be used)5 1020( an empty \256le is used for track data,)8 1492( If)1 132(9660 \256lesystem read ahead bug.)4 1316 4 1440 4440 t
+(to create a disk that is entirely made of padding.)9 1991 1 1440 4560 t
 10 S1 f
-(\261)1080 3264 w
+(\261)1080 4728 w
 10 B f
-(nopad)1145 3264 w
+(nopad)1145 4728 w
 10 R f
-(Do not pad the following tracks)5 1308 1 1440 3384 t
+(Do not pad the following tracks)5 1308 1 1440 4848 t
 10 S1 f
-(\261)2781 3384 w
+(\261)2781 4848 w
 10 R f
-(the default.)1 457 1 2879 3384 t
-10 B f
-(pregap)1080 3552 w
-10 R f
-(=)1380 3552 w
+(the default.)1 457 1 2879 4848 t
 10 S1 f
-(#)1436 3552 w
+(\261)1080 5016 w
+10 B f
+(shorttrack)1145 5016 w
 10 R f
-( with the TEAC)3 666( option currently only makes sense)5 1435( This)1 245( size for the next track.)5 959( pre-gap)1 371(Set the)1 284 6 1440 3672 t
-(drive when creating track-at-once disks without the 2 second silence before each track.)12 3561 1 1440 3792 t
-(This option may go away in future.)6 1455 1 1440 3912 t
+( Read Book track length standard which requires a)8 2186(Allow all subsequent tracks to violate the)6 1774 2 1440 5136 t
+( Not)1 218( only useful when used in DAO mode.)7 1607( option is)2 395( This)1 247(minimum track length of 4 seconds.)5 1493 5 1440 5256 t
+(all drives support this feature. The drive must be accept the resulting CUE sheet.)13 3324 1 1440 5376 t
 10 S1 f
-(\261)1080 4080 w
+(\261)1080 5544 w
 10 B f
-(preemp)1145 4080 w
+(noshorttrack)1145 5544 w
 10 R f
-( TOC entries for subsequent audio tracks will indicate that the audio)11 2914(If this \257ag is present, all)5 1046 2 1440 4200 t
-( however is not modi\256ed during)5 1330( data,)1 227( The)1 224(data has been sampled with 50/15 5sec preemphasis.)7 2179 4 1440 4320 t
-(the process of transferring from \256le to disk. This option has no effect on data tracks.)15 3478 1 1440 4440 t
+(Re-enforce the Red Book track length standard. Tracks must be at least 4 seconds.)13 3389 1 1440 5664 t
+10 B f
+(pregap)1080 5832 w
+10 R f
+(=)1380 5832 w
 10 S1 f
-(\261)1080 4608 w
-10 B f
-(nopreemp)1145 4608 w
+(#)1436 5832 w
 10 R f
-( TOC entries for subsequent audio tracks will indicate that the audio)11 2914(If this \257ag is present, all)5 1046 2 1440 4728 t
-(data has been mastered with linear data)6 1616 1 1440 4848 t
+( with the TEAC)3 666( option currently only makes sense)5 1435( This)1 245( size for the next track.)5 959( pre-gap)1 371(Set the)1 284 6 1440 5952 t
+(drive when creating track-at-once disks without the 2 second silence before each track.)12 3561 1 1440 6072 t
+(This option may go away in future.)6 1455 1 1440 6192 t
 10 S1 f
-(\261)3089 4848 w
-10 R f
-(this is the default.)3 735 1 3187 4848 t
+(\261)1080 6360 w
 10 B f
-(tsize=)1080 5016 w
+(preemp)1145 6360 w
+10 R f
+( TOC entries for subsequent audio tracks will indicate that the audio)11 2914(If this \257ag is present, all)5 1046 2 1440 6480 t
+( however is not modi\256ed during)5 1330( data,)1 227( The)1 224(data has been sampled with 50/15 5sec preemphasis.)7 2179 4 1440 6600 t
+(the process of transferring from \256le to disk. This option has no effect on data tracks.)15 3478 1 1440 6720 t
 10 S1 f
-(#)1325 5016 w
+(\261)1080 6888 w
+10 B f
+(nopreemp)1145 6888 w
 10 R f
-(If the master image for the next track has been stored on a raw disk, use this option to specify)19 3960 1 1440 5016 t
-( in a regular \256le,)4 709(the valid amount of data on this disk. If the image of the next track is stored)16 3251 2 1440 5136 t
-( the track contains an ISO)5 1104( If)1 138( this track.)2 447(the size of that \256le is taken to determine the length of)11 2271 4 1440 5256 t
-(9660 \256lesystem image use the)4 1237 1 1440 5376 t
+( TOC entries for subsequent audio tracks will indicate that the audio)11 2914(If this \257ag is present, all)5 1046 2 1440 7008 t
+(data has been mastered with linear data)6 1616 1 1440 7128 t
 10 S1 f
-(\261)2710 5376 w
-10 I f
-(isosize)2775 5376 w
+(\261)3089 7128 w
 10 R f
-(option to determine the length of that \256lesystem image.)8 2277 1 3075 5376 t
-( Once mode and with some drives that use the TEAC programming interface, even in)14 3548(In Disk at)2 412 2 1440 5496 t
-(Track at Once mode,)3 866 1 1440 5616 t
+(this is the default.)3 735 1 3187 7128 t
 10 B f
-(cdrecord)2341 5616 w
-10 R f
-( before starting to write the)5 1129(needs to know the size of each track)7 1513 2 2758 5616 t
-( this happens you will)4 954( If)1 142( now checks this and aborts before starting to write.)9 2225(disk. Cdrecord)1 639 4 1440 5736 t
-(need to run)2 479 1 1440 5856 t
-10 B f
-(mkisofs -print-size)1 806 1 1959 5856 t
-10 R f
-( output as an argument to the)6 1244(before and use the)3 773 2 2805 5856 t
-10 B f
-(tsize)4861 5856 w
-10 R f
-(= option)1 351 1 5049 5856 t
-(of)1440 5976 w
-10 B f
-(cdrecord)1556 5976 w
-10 R f
-(.)1938 5976 w
-(See)1440 6096 w
-10 B f
-(fs)1617 6096 w
-10 R f
-(= option for possible arguments.)4 1329 1 1689 6096 t
-9 B f
-(EXAMPLES)720 6384 w
-10 R f
-( the CD-Recorder is connected to the primary SCSI bus)9 2339(For all examples below, it will be assumed that)8 1981 2 1080 6504 t
-(of the machine. The SCSI target id is set to 2.)10 1901 1 1080 6624 t
-(To record a pure CD-ROM at double speed, using data from the \256le)12 2805 1 1080 6792 t
-10 I f
-(cdimage.raw)3918 6792 w
-10 R f
-(:)4445 6792 w
-(cdrecord)1212 6960 w
+(tsize=)1080 7296 w
 10 S1 f
-(\261)1593 6960 w
+(#)1325 7296 w
 10 R f
-(v speed=2 dev=2,0 cdimage.raw)3 1319 1 1658 6960 t
-(J)720 7680 w
-(. .)1 47 1 759 7625 t
-( 7)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+(If the master image for the next track has been stored on a raw disk, use this option to specify)19 3960 1 1440 7296 t
+(J)720 7776 w
+(. .)1 47 1 759 7721 t
+( 7)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7776 t
 cleartomark
 showpage
 restore
@@ -1865,195 +1930,170 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(To create an image for a ISO 9660 \256lesystem with Rock Ridge extensions:)12 3087 1 1080 960 t
-(mkisofs)1212 1128 w
+( in a regular \256le,)4 709(the valid amount of data on this disk. If the image of the next track is stored)16 3251 2 1440 960 t
+( the track contains an ISO)5 1104( If)1 138( this track.)2 447(the size of that \256le is taken to determine the length of)11 2271 4 1440 1080 t
+(9660 \256lesystem image use the)4 1237 1 1440 1200 t
 10 S1 f
-(\261)1562 1128 w
+(\261)2710 1200 w
+10 I f
+(isosize)2775 1200 w
 10 R f
-(R)1627 1128 w
-10 S1 f
-(\261)1727 1128 w
-10 R f
-(o cdimage.raw /home/joerg/master/tree)2 1582 1 1792 1128 t
-(To check the resulting \256le before writing to CD on Solaris:)10 2439 1 1080 1296 t
-(mount)1212 1464 w
-10 S1 f
-(\261)1501 1464 w
-10 R f
-(r)1566 1464 w
-10 S1 f
-(\261)1632 1464 w
-10 R f
-(F fbk)1 222 1 1697 1464 t
-10 S1 f
-(\261)1952 1464 w
-10 R f
-(o type=hsfs /dev/fbk0:cdimage.raw /mnt)3 1645 1 2017 1464 t
-(On Linux:)1 422 1 1080 1632 t
-(mount cdimage.raw)1 801 1 1212 1800 t
-10 S1 f
-(\261)2046 1800 w
-10 R f
-(r)2111 1800 w
-10 S1 f
-(\261)2177 1800 w
-10 R f
-(t iso9660)1 378 1 2242 1800 t
-10 S1 f
-(\261)2653 1800 w
-10 R f
-(o loop /mnt)2 478 1 2718 1800 t
-(Go on with:)2 494 1 1080 1968 t
-(ls)1212 2088 w
-10 S1 f
-(\261)1312 2088 w
-10 R f
-(lR /mnt)1 312 1 1377 2088 t
-(umount /mnt)1 523 1 1212 2208 t
-( the system is suf\256cient and the structure of the \256lesystem is not too complex,)14 3373(If the overall speed of)4 947 2 1080 2376 t
-(cdrecord will run without creating an image of the ISO 9660 \256lesystem. Simply run the pipeline:)15 3989 1 1080 2496 t
-(mkisofs)1212 2664 w
-10 S1 f
-(\261)1562 2664 w
-10 R f
-(R /master/tree)1 571 1 1627 2664 t
-10 S f
-(\372)2231 2664 w
-10 R f
-(cdrecord)2314 2664 w
-10 S1 f
-(\261)2695 2664 w
-10 R f
-(v fs=6m speed=2 dev=2,0 -)4 1129 1 2760 2664 t
-( the default \256fo size is 4)6 1014( As)1 178( size for running this pipeline is 4 MBytes.)8 1780(The recommended minimum \256fo)3 1348 4 1080 2832 t
-(MB, the)1 348 1 1080 2952 t
+(option to determine the length of that \256lesystem image.)8 2277 1 3075 1200 t
+( Once mode and with some drives that use the TEAC programming interface, even in)14 3548(In Disk at)2 412 2 1440 1320 t
+(Track at Once mode,)3 866 1 1440 1440 t
 10 B f
-(fs=)1473 2952 w
+(cdrecord)2341 1440 w
 10 R f
-( your system is)3 660( If)1 143(option needs only be present if you want to use a different \256fo size.)13 2950 3 1647 2952 t
-( raise the priority of)4 853( To)1 184( real time class too.)4 834(loaded, you should run mkisofs in the)6 1592 4 1080 3072 t
+( before starting to write the)5 1129(needs to know the size of each track)7 1513 2 2758 1440 t
+( this happens you will)4 954( If)1 142( now checks this and aborts before starting to write.)9 2225(disk. Cdrecord)1 639 4 1440 1560 t
+(need to run)2 479 1 1440 1680 t
 10 B f
-(mkisofs)4583 3072 w
+(mkisofs -print-size)1 806 1 1959 1680 t
 10 R f
-(replace the)1 449 1 4951 3072 t
-(command)1080 3192 w
-(mkisofs)1212 3360 w
-10 S1 f
-(\261)1562 3360 w
-10 R f
-(R /master/tree)1 571 1 1627 3360 t
-(by)1080 3480 w
-(priocntl)1212 3600 w
-10 S1 f
-(\261)1556 3600 w
-10 R f
-(e)1621 3600 w
-10 S1 f
-(\261)1698 3600 w
-10 R f
-(c RT)1 205 1 1763 3600 t
-10 S1 f
-(\261)2001 3600 w
-10 R f
-(p 59 mkisofs)2 533 1 2066 3600 t
-10 S1 f
-(\261)2632 3600 w
-10 R f
-(R /master/tree)1 571 1 2697 3600 t
-(on Solaris and by)3 721 1 1080 3840 t
-(nice --18 mkisofs)2 715 1 1212 4080 t
-10 S1 f
-(\261)1960 4080 w
-10 R f
-(R /master/tree)1 571 1 2025 4080 t
-(on systems that don't have)4 1098 1 1080 4320 t
+( output as an argument to the)6 1244(before and use the)3 773 2 2805 1680 t
 10 B f
-(UNIX International)1 855 1 2211 4320 t
+(tsize)4861 1680 w
 10 R f
-(compliant realtime scheduling.)2 1251 1 3099 4320 t
-( on Solaris, you should run mkisofs at no more than priority 58. On other)14 3145(Cdrecord runs at priority 59)4 1175 2 1080 4488 t
-(systems, you should run mkisofs at no less than nice --18.)10 2390 1 1080 4608 t
-( system image on disk has been tested on a Sparcstation-2 with a)12 2898(Creating a CD-ROM without \256le)4 1422 2 1080 4776 t
-( faster machine)2 637( A)1 144( up to quad speed when the machine was not loaded.)10 2239(Yamaha CDR-400. It did work)4 1300 4 1080 4896 t
-(may be able to handle quad speed also in the loaded case.)11 2383 1 1080 5016 t
-(To record a pure CD-DA \(audio\) at single speed, with each track contained in a \256le named)16 4320 1 1080 5184 t
+(= option)1 351 1 5049 1680 t
+(of)1440 1800 w
+10 B f
+(cdrecord)1556 1800 w
+10 R f
+(.)1938 1800 w
+(See)1440 1920 w
+10 B f
+(fs)1617 1920 w
+10 R f
+(= option for possible arguments.)4 1329 1 1689 1920 t
+9 B f
+(EXAMPLES)720 2208 w
+10 R f
+( the CD-Recorder is connected to the primary SCSI bus)9 2339(For all examples below, it will be assumed that)8 1981 2 1080 2328 t
+(of the machine. The SCSI target id is set to 2.)10 1901 1 1080 2448 t
+(To record a pure CD-ROM at double speed, using data from the \256le)12 2805 1 1080 2616 t
 10 I f
-(track01.cdaudio)1080 5304 w
+(cdimage.raw)3918 2616 w
 10 R f
-(,)1740 5304 w
-10 I f
-(track02.cdaudio)1798 5304 w
-10 R f
-(, etc:)1 202 1 2458 5304 t
-(cdrecord)1212 5472 w
+(:)4445 2616 w
+(cdrecord)1212 2784 w
 10 S1 f
-(\261)1593 5472 w
+(\261)1593 2784 w
 10 R f
-(v speed=1 dev=2,0 -audio track)4 1294 1 1658 5472 t
+(v speed=2 dev=2,0 cdimage.raw)3 1319 1 1658 2784 t
+(To create an image for a ISO 9660 \256lesystem with Rock Ridge extensions:)12 3087 1 1080 2952 t
+(mkisofs)1212 3120 w
+10 S1 f
+(\261)1562 3120 w
+10 R f
+(R)1627 3120 w
+10 S1 f
+(\261)1727 3120 w
+10 R f
+(o cdimage.raw /home/joerg/master/tree)2 1582 1 1792 3120 t
+(To check the resulting \256le before writing to CD on Solaris:)10 2439 1 1080 3288 t
+(mount)1212 3456 w
+10 S1 f
+(\261)1501 3456 w
+10 R f
+(r)1566 3456 w
+10 S1 f
+(\261)1632 3456 w
+10 R f
+(F fbk)1 222 1 1697 3456 t
+10 S1 f
+(\261)1952 3456 w
+10 R f
+(o type=hsfs /dev/fbk0:cdimage.raw /mnt)3 1645 1 2017 3456 t
+(On Linux:)1 422 1 1080 3624 t
+(mount cdimage.raw)1 801 1 1212 3792 t
+10 S1 f
+(\261)2046 3792 w
+10 R f
+(r)2111 3792 w
+10 S1 f
+(\261)2177 3792 w
+10 R f
+(t iso9660)1 378 1 2242 3792 t
+10 S1 f
+(\261)2653 3792 w
+10 R f
+(o loop /mnt)2 478 1 2718 3792 t
+(Go on with:)2 494 1 1080 3960 t
+(ls)1212 4080 w
+10 S1 f
+(\261)1312 4080 w
+10 R f
+(lR /mnt)1 312 1 1377 4080 t
+(umount /mnt)1 523 1 1212 4200 t
+( the system is suf\256cient and the structure of the \256lesystem is not too complex,)14 3373(If the overall speed of)4 947 2 1080 4368 t
+(cdrecord will run without creating an image of the ISO 9660 \256lesystem. Simply run the pipeline:)15 3989 1 1080 4488 t
+(mkisofs)1212 4656 w
+10 S1 f
+(\261)1562 4656 w
+10 R f
+(R /master/tree)1 571 1 1627 4656 t
 10 S f
-(*)2952 5472 w
+(\372)2231 4656 w
 10 R f
-(.cdaudio)3002 5472 w
-(To check if it will be ok to use double speed for the example above. Use the dummy write option:)19 4058 1 1080 5640 t
-(cdrecord)1212 5808 w
+(cdrecord)2314 4656 w
 10 S1 f
-(\261)1593 5808 w
+(\261)2695 4656 w
 10 R f
-(v)1658 5808 w
+(v fs=6m speed=2 dev=2,0 -)4 1129 1 2760 4656 t
+( the default \256fo size is 4)6 1014( As)1 178( size for running this pipeline is 4 MBytes.)8 1780(The recommended minimum \256fo)3 1348 4 1080 4824 t
+(MB, the)1 348 1 1080 4944 t
+10 B f
+(fs=)1473 4944 w
+10 R f
+( your system is)3 660( If)1 143(option needs only be present if you want to use a different \256fo size.)13 2950 3 1647 4944 t
+( raise the priority of)4 853( To)1 184( real time class too.)4 834(loaded, you should run mkisofs in the)6 1592 4 1080 5064 t
+10 B f
+(mkisofs)4583 5064 w
+10 R f
+(replace the)1 449 1 4951 5064 t
+(command)1080 5184 w
+(mkisofs)1212 5352 w
 10 S1 f
-(\261)1741 5808 w
+(\261)1562 5352 w
 10 R f
-(dummy speed=2 dev=2,0)2 1030 1 1806 5808 t
+(R /master/tree)1 571 1 1627 5352 t
+(by)1080 5472 w
+(priocntl)1212 5592 w
 10 S1 f
-(\261)2869 5808 w
+(\261)1556 5592 w
 10 R f
-(audio track)1 454 1 2934 5808 t
-10 S f
-(*)3388 5808 w
-10 R f
-(.cdaudio)3438 5808 w
-( from)1 229(To record a mixed-mode CD with an ISO 9660 \256lesystem)9 2398 2 1080 5976 t
-10 I f
-(cdimage.raw)3742 5976 w
-10 R f
-(on the \256rst track, the other)5 1104 1 4296 5976 t
-(tracks being audio tracks from the \256les)6 1601 1 1080 6096 t
-10 I f
-(track01.cdaudio)2714 6096 w
-10 R f
-(,)3374 6096 w
-10 I f
-(track02.cdaudio)3432 6096 w
-10 R f
-(, etc:)1 202 1 4092 6096 t
-(cdrecord)1212 6264 w
+(e)1621 5592 w
 10 S1 f
-(\261)1593 6264 w
+(\261)1698 5592 w
 10 R f
-(v)1658 6264 w
+(c RT)1 205 1 1763 5592 t
 10 S1 f
-(\261)1741 6264 w
+(\261)2001 5592 w
 10 R f
-(dummy dev=2,0 cdimage.raw)2 1209 1 1806 6264 t
+(p 59 mkisofs)2 533 1 2066 5592 t
 10 S1 f
-(\261)3048 6264 w
+(\261)2632 5592 w
 10 R f
-(audio track)1 454 1 3113 6264 t
-10 S f
-(*)3567 6264 w
+(R /master/tree)1 571 1 2697 5592 t
+(on Solaris and by)3 721 1 1080 5832 t
+(nice --18 mkisofs)2 715 1 1212 6072 t
+10 S1 f
+(\261)1960 6072 w
 10 R f
-(.cdaudio)3617 6264 w
-(To handle drives that need to know the size of a track before starting to write, \256rst run)17 3574 1 1080 6432 t
-(mkisofs -R -q -print-size /master/tree)4 1513 1 1212 6600 t
-(and then run)2 515 1 1080 6768 t
-(mkisofs -R /master/tree)2 954 1 1212 6936 t
-10 S f
-(\372)2199 6936 w
+(R /master/tree)1 571 1 2025 6072 t
+(on systems that don't have)4 1098 1 1080 6312 t
+10 B f
+(UNIX International)1 855 1 2211 6312 t
 10 R f
-(cdrecord speed=2 dev=2,0 tsize=XXXs -)4 1665 1 2282 6936 t
+(compliant realtime scheduling.)2 1251 1 3099 6312 t
+( on Solaris, you should run mkisofs at no more than priority 58. On other)14 3145(Cdrecord runs at priority 59)4 1175 2 1080 6480 t
+(systems, you should run mkisofs at no less than nice --18.)10 2390 1 1080 6600 t
+( system image on disk has been tested on a Sparcstation-2 with a)12 2898(Creating a CD-ROM without \256le)4 1422 2 1080 6768 t
+( faster machine)2 637( A)1 144( up to quad speed when the machine was not loaded.)10 2239(Yamaha CDR-400. It did work)4 1300 4 1080 6888 t
+(may be able to handle quad speed also in the loaded case.)11 2383 1 1080 7008 t
 (J)720 7680 w
 (. .)1 47 1 759 7625 t
-( 8)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+( 8)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
 cleartomark
 showpage
 restore
@@ -2068,155 +2108,193 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(where)1080 960 w
+(To record a pure CD-DA \(audio\) at single speed, with each track contained in a \256le named)16 4320 1 1080 960 t
 10 I f
-(XXX)1356 960 w
+(track01.cdaudio)1080 1080 w
 10 R f
-(is replaced by the output of the previous run of mkisofs.)10 2319 1 1572 960 t
-(To copy an audio CD in the most accurate way, \256rst run)11 2329 1 1080 1128 t
-(cdda2wav -v255 -D2,0 -B -Owav)4 1370 1 1212 1296 t
-(and then run)2 515 1 1080 1464 t
-(cdrecord -v dev=2,0 -dao -useinfo)4 1392 1 1212 1632 t
-10 S f
-(*)2670 1632 w
+(,)1740 1080 w
+10 I f
+(track02.cdaudio)1798 1080 w
 10 R f
-(.wav)2720 1632 w
-9 B f
-(ENVIRONMENT)720 1800 w
-10 R f
-(CDR)1080 1920 w
-10 S f
-(_)1286 1920 w
-10 R f
-(DEVICE)1336 1920 w
-( call of the SCSI transport)5 1126(This may either hold a device identi\256er that is suitable to the open)12 2834 2 1440 2040 t
-(library or a label in the \256le /etc/default/cdrecord.)7 1996 1 1440 2160 t
-(CDR)1080 2328 w
-10 S f
-(_)1286 2328 w
-10 R f
-(SPEED)1336 2328 w
-(Sets the default speed value for writing \(see also)8 1999 1 1440 2448 t
+(, etc:)1 202 1 2458 1080 t
+(cdrecord)1212 1248 w
 10 S1 f
-(\261)3472 2448 w
-10 B f
-(speed)3537 2448 w
+(\261)1593 1248 w
 10 R f
-(option\).)3809 2448 w
-(CDR)1080 2616 w
+(v speed=1 dev=2,0 -audio track)4 1294 1 1658 1248 t
 10 S f
-(_)1286 2616 w
+(*)2952 1248 w
 10 R f
-(FIFOSIZE)1336 2616 w
-(Sets the default size of the FIFO \(see also)8 1728 1 1440 2736 t
-10 B f
-(fs=)3201 2736 w
+(.cdaudio)3002 1248 w
+(To check if it will be ok to use double speed for the example above. Use the dummy write option:)19 4058 1 1080 1416 t
+(cdrecord)1212 1584 w
 10 S1 f
-(#)3330 2736 w
+(\261)1593 1584 w
 10 R f
-(option\).)3413 2736 w
+(v)1658 1584 w
+10 S1 f
+(\261)1741 1584 w
+10 R f
+(dummy speed=2 dev=2,0)2 1030 1 1806 1584 t
+10 S1 f
+(\261)2869 1584 w
+10 R f
+(audio track)1 454 1 2934 1584 t
+10 S f
+(*)3388 1584 w
+10 R f
+(.cdaudio)3438 1584 w
+( from)1 229(To record a mixed-mode CD with an ISO 9660 \256lesystem)9 2398 2 1080 1752 t
+10 I f
+(cdimage.raw)3742 1752 w
+10 R f
+(on the \256rst track, the other)5 1104 1 4296 1752 t
+(tracks being audio tracks from the \256les)6 1601 1 1080 1872 t
+10 I f
+(track01.cdaudio)2714 1872 w
+10 R f
+(,)3374 1872 w
+10 I f
+(track02.cdaudio)3432 1872 w
+10 R f
+(, etc:)1 202 1 4092 1872 t
+(cdrecord)1212 2040 w
+10 S1 f
+(\261)1593 2040 w
+10 R f
+(v)1658 2040 w
+10 S1 f
+(\261)1741 2040 w
+10 R f
+(dummy dev=2,0 cdimage.raw)2 1209 1 1806 2040 t
+10 S1 f
+(\261)3048 2040 w
+10 R f
+(audio track)1 454 1 3113 2040 t
+10 S f
+(*)3567 2040 w
+10 R f
+(.cdaudio)3617 2040 w
+(To handle drives that need to know the size of a track before starting to write, \256rst run)17 3574 1 1080 2208 t
+(mkisofs -R -q -print-size /master/tree)4 1513 1 1212 2376 t
+(and then run)2 515 1 1080 2544 t
+(mkisofs -R /master/tree)2 954 1 1212 2712 t
+10 S f
+(\372)2199 2712 w
+10 R f
+(cdrecord speed=2 dev=2,0 tsize=XXXs -)4 1665 1 2282 2712 t
+(where)1080 2880 w
+10 I f
+(XXX)1356 2880 w
+10 R f
+(is replaced by the output of the previous run of mkisofs.)10 2319 1 1572 2880 t
+(To copy an audio CD in the most accurate way, \256rst run)11 2329 1 1080 3048 t
+(cdda2wav -v255 -D2,0 -B -Owav)4 1370 1 1212 3216 t
+(and then run)2 515 1 1080 3384 t
+(cdrecord -v dev=2,0 -dao -useinfo)4 1392 1 1212 3552 t
+10 S f
+(*)2670 3552 w
+10 R f
+(.wav)2720 3552 w
 9 B f
-(FILES)720 3024 w
+(ENVIRONMENT)720 3720 w
 10 R f
-(/etc/default/cdrecord)1080 3144 w
-( example:)1 423( For)1 229( /etc/default/cdrecord.)1 907(Default values can be set for the following options in)9 2401 4 1440 3264 t
+(CDR)1080 3840 w
+10 S f
+(_)1286 3840 w
+10 R f
+(DEVICE)1336 3840 w
+( call of the SCSI transport)5 1126(This may either hold a device identi\256er that is suitable to the open)12 2834 2 1440 3960 t
+(library or a label in the \256le /etc/default/cdrecord.)7 1996 1 1440 4080 t
+(CDR)1080 4248 w
+10 S f
+(_)1286 4248 w
+10 R f
+(SPEED)1336 4248 w
+(Sets the default speed value for writing \(see also)8 1999 1 1440 4368 t
+10 S1 f
+(\261)3472 4368 w
+10 B f
+(speed)3537 4368 w
+10 R f
+(option\).)3809 4368 w
+(CDR)1080 4536 w
+10 S f
+(_)1286 4536 w
+10 R f
+(FIFOSIZE)1336 4536 w
+(Sets the default size of the FIFO \(see also)8 1728 1 1440 4656 t
+10 B f
+(fs=)3201 4656 w
+10 S1 f
+(#)3330 4656 w
+10 R f
+(option\).)3413 4656 w
+9 B f
+(FILES)720 4944 w
+10 R f
+(/etc/default/cdrecord)1080 5064 w
+( example:)1 423( For)1 229( /etc/default/cdrecord.)1 907(Default values can be set for the following options in)9 2401 4 1440 5184 t
 9 R f
-(CDR)1440 3384 w
+(CDR)1440 5304 w
 9 S f
-(_)1625 3384 w
+(_)1625 5304 w
 9 R f
-(FIFOSIZE=8m)1670 3384 w
+(FIFOSIZE=8m)1670 5304 w
 10 R f
-(or)2253 3384 w
+(or)2253 5304 w
 9 R f
-(CDR)2366 3384 w
+(CDR)2366 5304 w
 9 S f
-(_)2551 3384 w
+(_)2551 5304 w
 9 R f
-(SPEED=2)2596 3384 w
+(SPEED=2)2596 5304 w
 10 R f
-(CDR)1440 3552 w
+(CDR)1440 5472 w
 10 S f
-(_)1646 3552 w
+(_)1646 5472 w
 10 R f
-(DEVICE)1696 3552 w
-( is suitable to the open call of the SCSI)9 1729(This may either hold a device identi\256er that)7 1871 2 1800 3672 t
-( identify a)2 455(transport library or a label in the \256le /etc/default/cdrecord that allows to)11 3145 2 1800 3792 t
-(speci\256c drive on the system.)4 1167 1 1800 3912 t
-(CDR)1440 4080 w
+(DEVICE)1696 5472 w
+( is suitable to the open call of the SCSI)9 1729(This may either hold a device identi\256er that)7 1871 2 1800 5592 t
+( identify a)2 455(transport library or a label in the \256le /etc/default/cdrecord that allows to)11 3145 2 1800 5712 t
+(speci\256c drive on the system.)4 1167 1 1800 5832 t
+(CDR)1440 6000 w
 10 S f
-(_)1646 4080 w
+(_)1646 6000 w
 10 R f
-(SPEED)1696 4080 w
-(Sets the default speed value for writing \(see also)8 1999 1 1800 4200 t
+(SPEED)1696 6000 w
+(Sets the default speed value for writing \(see also)8 1999 1 1800 6120 t
 10 S1 f
-(\261)3832 4200 w
+(\261)3832 6120 w
 10 B f
-(speed)3897 4200 w
+(speed)3897 6120 w
 10 R f
-(option\).)4169 4200 w
-(CDR)1440 4368 w
+(option\).)4169 6120 w
+(CDR)1440 6288 w
 10 S f
-(_)1646 4368 w
+(_)1646 6288 w
 10 R f
-(FIFOSIZE)1696 4368 w
-(Sets the default size of the FIFO \(see also)8 1728 1 1800 4488 t
+(FIFOSIZE)1696 6288 w
+(Sets the default size of the FIFO \(see also)8 1728 1 1800 6408 t
 10 B f
-(fs=)3561 4488 w
+(fs=)3561 6408 w
 10 S1 f
-(#)3690 4488 w
+(#)3690 6408 w
 10 R f
-(option\).)3773 4488 w
-(Any other label)2 637 1 1440 4656 t
-( contain)1 335( an identi\256er may not)4 915( Such)1 273(is an identi\256er for a speci\256c drive on the system.)9 2077 4 1800 4776 t
-(the characters ',', '/', ')4 925 1 1800 4896 t
+(option\).)3773 6408 w
+(Any other label)2 637 1 1440 6576 t
+( contain)1 335( an identi\256er may not)4 915( Such)1 273(is an identi\256er for a speci\256c drive on the system.)9 2077 4 1800 6696 t
+(the characters ',', '/', ')4 925 1 1800 6816 t
 10 S1 f
-(@)2725 4896 w
+(@)2725 6816 w
 10 R f
-(' or ':'.)2 301 1 2817 4896 t
-( three)1 238( Currently,)1 479(Each line that follows a label contains a TAB separates list of items.)12 2883 3 1800 5136 t
-( SCSI ID of the drive, the default speed that should be used)12 2552(items are recognized: the)3 1048 2 1800 5256 t
-(for this drive and the default FIFO size that should be used for this drive. The values)16 3600 1 1800 5376 t
-(for)1800 5496 w
-10 I f
-(speed)1958 5496 w
-10 R f
-(and)2227 5496 w
-10 I f
-(\256fosize)2413 5496 w
-10 R f
-( A)1 147(may be set to -1 to tell cdrecord to use the global defaults.)12 2520 2 2733 5496 t
-(typical line may look this way:)5 1276 1 1800 5616 t
-( 8m)1 438( 4)1 271(teac1= 0,5,0)1 499 3 1800 5856 t
-( -1)1 360( -1)1 204(yamaha= 1,6,0)1 599 3 1800 6096 t
-(This tells)1 380 1 1800 6336 t
-10 B f
-(cdrecord)2215 6336 w
-10 R f
-(that a drive named)3 770 1 2632 6336 t
-10 I f
-(teac1)3437 6336 w
-10 R f
-( 0 and should)3 569(is at scsibus 0, target 5, lun)6 1143 2 3688 6336 t
-( second drive may be found at)6 1329( A)1 151( of 8 MB.)3 452(be used with speed 4 and a FIFO size)8 1668 4 1800 6456 t
-(scsibus 1, target 6, lun 0 and uses the default speed and the default FIFO size.)15 3221 1 1800 6576 t
-9 B f
-(SEE ALSO)1 460 1 720 6864 t
-10 B f
-(mkisofs)1080 6984 w
-10 R f
-(\(1\),)1408 6984 w
-10 B f
-(scg)1582 6984 w
-10 R f
-(\(7\),)1715 6984 w
-10 B f
-(fbk)1889 6984 w
-10 R f
-(\(7\).)2034 6984 w
-(J)720 7680 w
-(. .)1 47 1 759 7625 t
-( 9)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+(' or ':'.)2 301 1 2817 6816 t
+( three)1 237( Currently,)1 479( of items.)2 401(Each line that follows a label contains a TAB separated list)10 2483 4 1800 7056 t
+( SCSI ID of the drive, the default speed that should be used)12 2552(items are recognized: the)3 1048 2 1800 7176 t
+(for this drive and the default FIFO size that should be used for this drive. The values)16 3600 1 1800 7296 t
+(J)720 7776 w
+(. .)1 47 1 759 7721 t
+( 9)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7776 t
 cleartomark
 showpage
 restore
@@ -2231,126 +2309,156 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
+(for)1800 960 w
+10 I f
+(speed)1958 960 w
+10 R f
+(and)2227 960 w
+10 I f
+(\256fosize)2413 960 w
+10 R f
+( A)1 147(may be set to -1 to tell cdrecord to use the global defaults.)12 2520 2 2733 960 t
+(typical line may look this way:)5 1276 1 1800 1080 t
+( 8m)1 438( 4)1 271(teac1= 0,5,0)1 499 3 1800 1320 t
+( -1)1 360( -1)1 204(yamaha= 1,6,0)1 599 3 1800 1560 t
+(This tells)1 380 1 1800 1800 t
+10 B f
+(cdrecord)2215 1800 w
+10 R f
+(that a drive named)3 770 1 2632 1800 t
+10 I f
+(teac1)3437 1800 w
+10 R f
+( 0 and should)3 569(is at scsibus 0, target 5, lun)6 1143 2 3688 1800 t
+( second drive may be found at)6 1329( A)1 151( of 8 MB.)3 452(be used with speed 4 and a FIFO size)8 1668 4 1800 1920 t
+(scsibus 1, target 6, lun 0 and uses the default speed and the default FIFO size.)15 3221 1 1800 2040 t
 9 B f
-(NOTES)720 960 w
-10 R f
-(Disks made in)2 612 1 1080 1080 t
+(SEE ALSO)1 460 1 720 2328 t
 10 B f
-(Track At Once)2 678 1 1737 1080 t
+(cdda2wav)1080 2448 w
 10 R f
-( suitable as a master for direct mass production by CD)10 2379(mode are not)2 561 2 2460 1080 t
-( will need the)3 610(manufacturers. You)1 848 2 1080 1200 t
+(\(1\),)1508 2448 w
 10 B f
-(disk at once)2 552 1 2586 1200 t
+(readcd)1682 2448 w
 10 R f
-( the disks)2 424( Nevertheless)1 596(option to record such disks.)4 1194 3 3186 1200 t
-(made in)1 331 1 1080 1320 t
+(\(1\),)1976 2448 w
 10 B f
-(Track At Once)2 662 1 1448 1320 t
+(scg)2150 2448 w
 10 R f
-( be read in all CD players. Some old audio CD players however)12 2699(will normally)1 554 2 2147 1320 t
-(may produce a two second click between two audio tracks.)9 2422 1 1080 1440 t
-( If you write smaller tracks, the CD-Recorder)7 1931(The minimal size of a track is 4 seconds or 300 sectors.)11 2389 2 1080 1608 t
-(will add dummy blocks. This is not an error, even though the SCSI-error message looks this way.)16 4022 1 1080 1728 t
+(\(7\),)2283 2448 w
 10 B f
-(Cdrecord)1080 1896 w
+(fbk)2457 2448 w
 10 R f
-( a)1 88(has been tested on an upgraded Philips CDD-521 recorder at single and double speed on)14 3779 2 1533 1896 t
-(SparcStation 20/502 with no problems, slower computer systems should work also. The newer)12 4320 1 1080 2016 t
-( work also. The Plasmon)4 1035(Philips/HP/Plasmon/Grundig drives as well as Yamaha CDR-100 and CDR-102)8 3285 2 1080 2136 t
-( Philips CDD-521 that has not been upgraded will)8 2079( A)1 141(RF-4100 work, but has not tested in multi session.)8 2100 3 1080 2256 t
-( sony)1 224( The)1 223( CDU-924 has been tested, but does not support XA-mode2 in hardware.)11 3019( Sony)1 240( The)1 222(not work.)1 392 6 1080 2376 t
-( Ricoh RO-1420C works, but some people)6 1792( The)1 228(therefore cannot create conforming multi session disks.)6 2300 3 1080 2496 t
-(seem to have problems to use them with speed=2, try speed=0 in this case.)13 3082 1 1080 2616 t
-( are supported in single and multi-)6 1473(The Yamaha CDR-400 and all new SCSI-3/mmc conforming drives)8 2847 2 1080 2784 t
-(session.)1080 2904 w
-(You should run several tests in all supported speeds of your drive with the)13 3083 1 1080 3072 t
+(\(7\),)2602 2448 w
+10 B f
+(mkisofs)2776 2448 w
+10 R f
+(\(8\).)3104 2448 w
+9 B f
+(NOTES)720 2736 w
+10 R f
+( USCSI fallback SCSI tran-)4 1165(On Solaris you need to stop the volume management if you like to use the)14 3155 2 1080 2856 t
+(sport code. Even things like)4 1145 1 1080 2976 t
+10 B f
+(cdrecord -scanbus)1 788 1 2258 2976 t
+10 R f
+(will not work if the volume management is running.)8 2149 1 3079 2976 t
+(Disks made in)2 612 1 1080 3144 t
+10 B f
+(Track At Once)2 678 1 1737 3144 t
+10 R f
+( suitable as a master for direct mass production by CD)10 2379(mode are not)2 561 2 2460 3144 t
+( will need the)3 610(manufacturers. You)1 848 2 1080 3264 t
+10 B f
+(disk at once)2 552 1 2586 3264 t
+10 R f
+( the disks)2 424( Nevertheless)1 596(option to record such disks.)4 1194 3 3186 3264 t
+(made in)1 331 1 1080 3384 t
+10 B f
+(Track At Once)2 662 1 1448 3384 t
+10 R f
+( be read in all CD players. Some old audio CD players however)12 2699(will normally)1 554 2 2147 3384 t
+(may produce a two second click between two audio tracks.)9 2422 1 1080 3504 t
+( If you write smaller tracks, the CD-Recorder)7 1931(The minimal size of a track is 4 seconds or 300 sectors.)11 2389 2 1080 3672 t
+(will add dummy blocks. This is not an error, even though the SCSI-error message looks this way.)16 4022 1 1080 3792 t
+10 B f
+(Cdrecord)1080 3960 w
+10 R f
+( a)1 88(has been tested on an upgraded Philips CDD-521 recorder at single and double speed on)14 3779 2 1533 3960 t
+(SparcStation 20/502 with no problems, slower computer systems should work also. The newer)12 4320 1 1080 4080 t
+( work also. The Plasmon)4 1035(Philips/HP/Plasmon/Grundig drives as well as Yamaha CDR-100 and CDR-102)8 3285 2 1080 4200 t
+( Philips CDD-521 that has not been upgraded will)8 2079( A)1 141(RF-4100 work, but has not tested in multi session.)8 2100 3 1080 4320 t
+( sony)1 224( The)1 223( CDU-924 has been tested, but does not support XA-mode2 in hardware.)11 3019( Sony)1 240( The)1 222(not work.)1 392 6 1080 4440 t
+( Ricoh RO-1420C works, but some people)6 1792( The)1 228(therefore cannot create conforming multi session disks.)6 2300 3 1080 4560 t
+(seem to have problems to use them with speed=2, try speed=0 in this case.)13 3082 1 1080 4680 t
+( are supported in single and multi-)6 1473(The Yamaha CDR-400 and all new SCSI-3/mmc conforming drives)8 2847 2 1080 4848 t
+(session.)1080 4968 w
+(You should run several tests in all supported speeds of your drive with the)13 3083 1 1080 5136 t
 10 S1 f
-(\261)4197 3072 w
+(\261)4197 5136 w
 10 B f
-(dummy)4262 3072 w
+(dummy)4262 5136 w
 10 R f
-( on if)2 231(option turned)1 545 2 4624 3072 t
-(you are using)2 590 1 1080 3192 t
+( on if)2 231(option turned)1 545 2 4624 5136 t
+(you are using)2 590 1 1080 5256 t
 10 B f
-(cdrecord)1720 3192 w
+(cdrecord)1720 5256 w
 10 R f
-(on an unknown system. Writing a CD is a realtime process.)10 2625 1 2152 3192 t
+(on an unknown system. Writing a CD is a realtime process.)10 2625 1 2152 5256 t
 10 B f
-(NFS)4827 3192 w
+(NFS)4827 5256 w
 10 R f
-(will not)1 334 1 5066 3192 t
-( want to use)3 525( you)1 189( If)1 138(always deliver constantly the needed data rates.)6 1982 4 1080 3312 t
+(will not)1 334 1 5066 5256 t
+( want to use)3 525( you)1 189( If)1 138(always deliver constantly the needed data rates.)6 1982 4 1080 5376 t
 10 B f
-(cdrecord)3954 3312 w
+(cdrecord)3954 5376 w
 10 R f
-(with CD-images that are)3 1024 1 4376 3312 t
-(located on a)2 518 1 1080 3432 t
+(with CD-images that are)3 1024 1 4376 5376 t
+(located on a)2 518 1 1080 5496 t
 10 B f
-(NFS)1641 3432 w
+(NFS)1641 5496 w
 10 R f
-( used)1 225( I)1 108( enough.)1 361(mounted \256lesystem, be sure that the \256fo size is big)9 2189 4 1873 3432 t
+( used)1 225( I)1 108( enough.)1 361(mounted \256lesystem, be sure that the \256fo size is big)9 2189 4 1873 5496 t
 10 B f
-(cdrecord)4798 3432 w
+(cdrecord)4798 5496 w
 10 R f
-(with)5222 3432 w
-(with medium load on a SS20/502 and even at quad speed on a Sparcstation-2 which was heavily loaded,)17 4320 1 1080 3552 t
-( you want)2 410( If)1 132( the system as lightly loaded as possible while writing a CD.)11 2504(but it is recommended to leave)5 1274 4 1080 3672 t
-(to make sure that buffer underrungs are not caused by your source disk, you may use the command)17 4089 1 1080 3792 t
+(with)5222 5496 w
+(with medium load on a SS20/502 and even at quad speed on a Sparcstation-2 which was heavily loaded,)17 4320 1 1080 5616 t
+( you want)2 410( If)1 132( the system as lightly loaded as possible while writing a CD.)11 2504(but it is recommended to leave)5 1274 4 1080 5736 t
+(to make sure that buffer underrungs are not caused by your source disk, you may use the command)17 4089 1 1080 5856 t
 10 B f
-(cdrecord -dummy dev=2,0 padsize=600m /dev/null)4 2188 1 1212 3960 t
+(cdrecord -dummy dev=2,0 padsize=600m /dev/null)4 2188 1 1212 6024 t
 10 R f
-(to create a disk that is entirely made of dummy data.)10 2174 1 1080 4128 t
+(to create a disk that is entirely made of dummy data.)10 2174 1 1080 6192 t
 10 B f
-(Cdrecord)3320 4128 w
+(Cdrecord)3320 6192 w
 10 R f
-( get access to the)4 712(needs to run as root to)5 925 2 3763 4128 t
+( get access to the)4 712(needs to run as root to)5 925 2 3763 6192 t
 10 B f
-(/dev/scg?)1080 4248 w
+(/dev/scg?)1080 6312 w
 10 R f
-(device nodes and to be able to lock itself into memory.)10 2269 1 1502 4248 t
-(If you don't want to allow users to become root on your system,)12 2705 1 1080 4416 t
+(device nodes and to be able to lock itself into memory.)10 2269 1 1502 6312 t
+(If you don't want to allow users to become root on your system,)12 2705 1 1080 6480 t
 10 B f
-(cdrecord)3822 4416 w
+(cdrecord)3822 6480 w
 10 R f
-( suid)1 205(may safely be installed)3 954 2 4241 4416 t
-( privileges to use)3 707(root. This allows all users or a group of users with no root)12 2437 2 1080 4536 t
+( suid)1 205(may safely be installed)3 954 2 4241 6480 t
+( privileges to use)3 707(root. This allows all users or a group of users with no root)12 2437 2 1080 6600 t
 10 B f
-(cdrecord. Cdrecord)1 851 1 4258 4536 t
+(cdrecord. Cdrecord)1 851 1 4258 6600 t
 10 R f
-(in this)1 257 1 5143 4536 t
-( give all user access to)5 955( To)1 181( to read the speci\256ed \256les.)5 1103(case checks, if the real user would have been able)9 2081 4 1080 4656 t
-(use)1080 4776 w
+(in this)1 257 1 5143 6600 t
+( give all user access to)5 955( To)1 181( to read the speci\256ed \256les.)5 1103(case checks, if the real user would have been able)9 2081 4 1080 6720 t
+(use)1080 6840 w
 10 B f
-(cdrecord,)1246 4776 w
+(cdrecord,)1246 6840 w
 10 R f
-(enter:)1686 4776 w
-(chown root /usr/local/bin/cdrecord)2 1397 1 1440 4944 t
-(chmod 4711 /usr/local/bin/cdrecord)2 1442 1 1440 5064 t
-(To give a restricted group of users access to cdrecord enter:)10 2456 1 1080 5232 t
-(chown root /usr/local/bin/cdrecord)2 1397 1 1440 5400 t
-(chgrp cdburners /usr/local/bin/cdrecord)2 1590 1 1440 5520 t
-(chmod 4710 /usr/local/bin/cdrecord)2 1442 1 1440 5640 t
-(and add a group)3 664 1 1080 5808 t
-10 I f
-(cdburners)1777 5808 w
-10 R f
-(on your system.)2 652 1 2215 5808 t
-( to the)2 284(Never give write permissions for non root users)7 2017 2 1080 5976 t
-10 I f
-(/dev/scg?)3423 5976 w
-10 R f
-(devices unless you would allow any-)5 1558 1 3842 5976 t
-(body to read/write/format all your disks.)5 1655 1 1080 6096 t
-( not connect old drives that do not support disconnect/reconnect to either the SCSI bus that)15 3843(You should)1 477 2 1080 6264 t
-(is connected to the CD-Recorder or the source disk.)8 2129 1 1080 6384 t
-(A Compact Disc can have no more than 99 tracks.)9 2079 1 1080 6552 t
-( on track 1 otherwise you)5 1132(When creating a disc with both audio and data tracks, the data should be)13 3188 2 1080 6720 t
-(should create a CDplus disk which is a multi session disk with the \256rst session containing the audio)17 4320 1 1080 6840 t
-(tracks and the following session containing the data track.)8 2380 1 1080 6960 t
+(enter:)1686 6840 w
+(chown root /usr/local/bin/cdrecord)2 1397 1 1440 7008 t
+(chmod 4711 /usr/local/bin/cdrecord)2 1442 1 1440 7128 t
 (J)720 7680 w
 (. .)1 47 1 759 7625 t
-( 10)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+( 10)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
 cleartomark
 showpage
 restore
@@ -2365,100 +2473,101 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-( single data track, or need special software to)8 1918(Many operating systems are not able to read more than a)10 2402 2 1080 960 t
-(do so.)1 247 1 1080 1080 t
-(More information on the SCSI command set of a HP CD-Recorder can be found at:)14 3446 1 1080 1248 t
-(http://www.hp.com/isgsupport/cdr/index.html)1440 1416 w
-( have more information or SCSI command manuals for currently unsupported CD-Recorders)11 4049(If you)1 271 2 1080 1584 t
-(please contact the author.)3 1038 1 1080 1704 t
-( CDD 521 CD-Recorder \(even in the upgraded version\) has several \256rmware bugs. Some of)14 3849(The Philips)1 471 2 1080 1872 t
-(them will force you to power cycle the device or to reboot the machine.)13 2959 1 1080 1992 t
-(When using)1 489 1 1080 2160 t
-10 B f
-(cdrecord)1603 2160 w
+(To give a restricted group of users access to cdrecord enter:)10 2456 1 1080 960 t
+(chown root /usr/local/bin/cdrecord)2 1397 1 1440 1128 t
+(chgrp cdburners /usr/local/bin/cdrecord)2 1590 1 1440 1248 t
+(chmod 4710 /usr/local/bin/cdrecord)2 1442 1 1440 1368 t
+(and add a group)3 664 1 1080 1536 t
+10 I f
+(cdburners)1777 1536 w
 10 R f
-(with the broken)2 645 1 2019 2160 t
-10 B f
-(Linux SCSI generic driver.)3 1183 1 2698 2160 t
+(on your system.)2 652 1 2215 1536 t
+( to the)2 284(Never give write permissions for non root users)7 2017 2 1080 1704 t
+10 I f
+(/dev/scg?)3423 1704 w
 10 R f
-(You should note that)3 863 1 3915 2160 t
+(devices unless you would allow any-)5 1558 1 3842 1704 t
+(body to read/write/format all your disks.)5 1655 1 1080 1824 t
+( not connect old drives that do not support disconnect/reconnect to either the SCSI bus that)15 3843(You should)1 477 2 1080 1992 t
+(is connected to the CD-Recorder or the source disk.)8 2129 1 1080 2112 t
+(A Compact Disc can have no more than 99 tracks.)9 2079 1 1080 2280 t
+( on track 1 otherwise you)5 1132(When creating a disc with both audio and data tracks, the data should be)13 3188 2 1080 2448 t
+(should create a CDplus disk which is a multi session disk with the \256rst session containing the audio)17 4320 1 1080 2568 t
+(tracks and the following session containing the data track.)8 2380 1 1080 2688 t
+( single data track, or need special software to)8 1918(Many operating systems are not able to read more than a)10 2402 2 1080 2856 t
+(do so.)1 247 1 1080 2976 t
+(More information on the SCSI command set of a HP CD-Recorder can be found at:)14 3446 1 1080 3144 t
+(http://www.hp.com/isgsupport/cdr/index.html)1440 3312 w
+( have more information or SCSI command manuals for currently unsupported CD-Recorders)11 4049(If you)1 271 2 1080 3480 t
+(please contact the author.)3 1038 1 1080 3600 t
+( CDD 521 CD-Recorder \(even in the upgraded version\) has several \256rmware bugs. Some of)14 3849(The Philips)1 471 2 1080 3768 t
+(them will force you to power cycle the device or to reboot the machine.)13 2959 1 1080 3888 t
+(When using)1 489 1 1080 4056 t
 10 B f
-(cdrecord)4812 2160 w
+(cdrecord)1603 4056 w
 10 R f
-(uses)5228 2160 w
-( the sg driver on)4 709( Unfortunately,)1 658( scg driver.)2 476(a hack, that tries to emulate the functionality of the)9 2180 4 1080 2280 t
+(with the broken)2 645 1 2019 4056 t
 10 B f
-(Linux)5143 2280 w
+(Linux SCSI generic driver.)3 1183 1 2698 4056 t
 10 R f
-(has several severe bugs:)3 985 1 1080 2400 t
-( cannot see if a SCSI command could not be sent at all.)12 2302(\267 It)1 421 2 1080 2568 t
-( cannot get the SCSI status byte.)6 1399(\267 It)1 421 2 1080 2736 t
+(You should note that)3 863 1 3915 4056 t
 10 B f
-(Cdrecord)2942 2736 w
+(cdrecord)4812 4056 w
 10 R f
-( report failing SCSI com-)4 1088(for that reason cannot)3 918 2 3394 2736 t
-(mands in some situations.)3 1058 1 1440 2856 t
-( cannot get real DMA count of transfer.)7 1635(\267 It)1 421 2 1080 3024 t
+(uses)5228 4056 w
+( the sg driver on)4 709( Unfortunately,)1 658( scg driver.)2 476(a hack, that tries to emulate the functionality of the)9 2180 4 1080 4176 t
 10 B f
-(Cdrecord)3170 3024 w
+(Linux)5143 4176 w
 10 R f
-(cannot tell you if there is an DMA residual)8 1786 1 3614 3024 t
-(count.)1440 3144 w
-( valid in auto sense data.)5 1092( cannot get number of bytes)5 1217(\267 It)1 421 3 1080 3312 t
+(has several severe bugs:)3 985 1 1080 4296 t
+( cannot see if a SCSI command could not be sent at all.)12 2302(\267 It)1 421 2 1080 4464 t
+( cannot get the SCSI status byte.)6 1399(\267 It)1 421 2 1080 4632 t
 10 B f
-(Cdrecord)3890 3312 w
+(Cdrecord)2942 4632 w
 10 R f
-(cannot tell you if device)4 1053 1 4347 3312 t
-(transfers no sense data at all.)5 1187 1 1440 3432 t
-( fetches to few data in auto request sense \(CCS/SCSI-2/SCSI-3 needs)10 2855(\267 It)1 421 2 1080 3600 t
+( report failing SCSI com-)4 1088(for that reason cannot)3 918 2 3394 4632 t
+(mands in some situations.)3 1058 1 1440 4752 t
+( cannot get real DMA count of transfer.)7 1635(\267 It)1 421 2 1080 4920 t
+10 B f
+(Cdrecord)3170 4920 w
+10 R f
+(cannot tell you if there is an DMA residual)8 1786 1 3614 4920 t
+(count.)1440 5040 w
+( valid in auto sense data.)5 1092( cannot get number of bytes)5 1217(\267 It)1 421 3 1080 5208 t
+10 B f
+(Cdrecord)3890 5208 w
+10 R f
+(cannot tell you if device)4 1053 1 4347 5208 t
+(transfers no sense data at all.)5 1187 1 1440 5328 t
+( fetches to few data in auto request sense \(CCS/SCSI-2/SCSI-3 needs)10 2855(\267 It)1 421 2 1080 5496 t
 10 S1 f
-(>)4389 3600 w
+(>)4389 5496 w
 10 R f
-(= 18\).)1 247 1 4445 3600 t
-( the CD-Recorder. For)3 937(The \256fo percent output is computed just after a block of data has been written to)15 3383 2 1080 3768 t
-(this reason, there will never be 100% \256fo \256ll, while the \256fo is in streaming mode.)15 3373 1 1080 3888 t
+(= 18\).)1 247 1 4445 5496 t
+( the CD-Recorder. For)3 937(The \256fo percent output is computed just after a block of data has been written to)15 3383 2 1080 5664 t
+(this reason, there will never be 100% \256fo \256ll, while the \256fo is in streaming mode.)15 3373 1 1080 5784 t
 9 B f
-(DIAGNOSTICS)720 4176 w
+(DIAGNOSTICS)720 6072 w
 10 R f
-(You have 9 seconds to type)5 1141 1 1080 4296 t
+(You have 9 seconds to type)5 1141 1 1080 6192 t
 10 S1 f
-(\303)2254 4296 w
+(\303)2254 6192 w
 10 R f
-(C to abort)2 416 1 2287 4296 t
+(C to abort)2 416 1 2287 6192 t
 10 B f
-(cdrecord)2736 4296 w
+(cdrecord)2736 6192 w
 10 R f
-(after you see the message:)4 1079 1 3151 4296 t
-(Starting to write CD at speed %d in %s mode for %s session.)12 2541 1 1080 4464 t
-(A typical error message for a SCSI command looks like:)9 2333 1 1080 4632 t
-(cdrecord: I/O error. test unit ready: scsi sendcmd: no error)9 2394 1 1440 4872 t
-( 20 00 00 00 00)5 665(CDB: 00)1 400 2 1440 4992 t
-(status: 0x2 \(CHECK CONDITION\))3 1464 1 1440 5112 t
-(Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00)19 2938 1 1440 5232 t
-(Sense Key: 0x5 Illegal Request, Segment 0)6 1777 1 1440 5352 t
-(Sense Code: 0x25 Qual 0x00 \(logical unit not supported\) Fru 0x0)10 2701 1 1440 5472 t
-(Sense \257ags: Blk 0 \(not valid\))5 1204 1 1440 5592 t
-( text after the \256rst colon gives)6 1265( The)1 225( of the command.)3 735(The \256rst line gives information about the transport)7 2095 4 1080 5832 t
-( from the view of the kernel. It usually is:)9 1740(the error text for the system call)6 1335 2 1080 5952 t
-10 B f
-(I/O error)1 405 1 4222 5952 t
-10 R f
-(unless other prob-)2 739 1 4661 5952 t
-( a short description for the SCSI command that fails. The rest of)12 2753(lems happen. The next words contain)5 1567 2 1080 6072 t
-( if there were any problems for the transport of the command over the SCSI bus.)15 3361(the line tells you)3 697 2 1080 6192 t
-10 B f
-(fatal)5206 6192 w
-(error)1080 6312 w
-10 R f
-( was not possible to transport the command \(i.e. no device present at the requested)14 3513(means that it)2 541 2 1346 6312 t
-(SCSI address\).)1 602 1 1080 6432 t
-(The second line prints the SCSI command descriptor block for the failed command.)12 3439 1 1080 6600 t
-( transport of)2 522(The third line gives information on the SCSI status code returned by the command, if the)15 3798 2 1080 6768 t
-(the command succeeds. This is error information from the SCSI device.)10 2948 1 1080 6888 t
-(The fourth line is a hex dump of the auto request sense information for the command.)15 3537 1 1080 7056 t
-(J)720 7680 w
-(. .)1 47 1 759 7625 t
-( 11)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+(after you see the message:)4 1079 1 3151 6192 t
+(Starting to write CD at speed %d in %s mode for %s session.)12 2541 1 1080 6360 t
+(A typical error message for a SCSI command looks like:)9 2333 1 1080 6528 t
+(cdrecord: I/O error. test unit ready: scsi sendcmd: no error)9 2394 1 1440 6768 t
+( 20 00 00 00 00)5 665(CDB: 00)1 400 2 1440 6888 t
+(status: 0x2 \(CHECK CONDITION\))3 1464 1 1440 7008 t
+(Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00)19 2938 1 1440 7128 t
+(Sense Key: 0x5 Illegal Request, Segment 0)6 1777 1 1440 7248 t
+(J)720 7728 w
+(. .)1 47 1 759 7673 t
+( 11)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7728 t
 cleartomark
 showpage
 restore
@@ -2473,119 +2582,99 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-( is only)2 313(The \256fth line is the error text for the sense key if available, followed by the segment number that)18 4007 2 1080 960 t
-(valid if the command was a)5 1191 1 1080 1080 t
-10 I f
-(copy)2314 1080 w
+(Sense Code: 0x25 Qual 0x00 \(logical unit not supported\) Fru 0x0)10 2701 1 1440 960 t
+(Sense \257ags: Blk 0 \(not valid\))5 1204 1 1440 1080 t
+(cmd \256nished after 0.002s timeout 40s)5 1545 1 1440 1200 t
+( text after the \256rst colon gives)6 1265( The)1 225( of the command.)3 735(The \256rst line gives information about the transport)7 2095 4 1080 1440 t
+( from the view of the kernel. It usually is:)9 1740(the error text for the system call)6 1335 2 1080 1560 t
+10 B f
+(I/O error)1 405 1 4222 1560 t
 10 R f
-( error message is not directly related to the current)9 2162(command. If the)2 693 2 2545 1080 t
-(command, the text)2 757 1 1080 1200 t
-10 I f
-(deferred error)1 582 1 1870 1200 t
+(unless other prob-)2 739 1 4661 1560 t
+( a short description for the SCSI command that fails. The rest of)12 2753(lems happen. The next words contain)5 1567 2 1080 1680 t
+( if there were any problems for the transport of the command over the SCSI bus.)15 3361(the line tells you)3 697 2 1080 1800 t
+10 B f
+(fatal)5206 1800 w
+(error)1080 1920 w
 10 R f
-(is appended.)1 507 1 2485 1200 t
-( the type of the)4 651( If)1 137( the sense quali\256er if available.)5 1307(The sixth line is the error text for the sense code and)11 2225 4 1080 1368 t
-(device is known, the sense data is decoded from tables in)10 2402 1 1080 1488 t
+( was not possible to transport the command \(i.e. no device present at the requested)14 3513(means that it)2 541 2 1346 1920 t
+(SCSI address\).)1 602 1 1080 2040 t
+(The second line prints the SCSI command descriptor block for the failed command.)12 3439 1 1080 2208 t
+( transport of)2 522(The third line gives information on the SCSI status code returned by the command, if the)15 3798 2 1080 2376 t
+(the command succeeds. This is error information from the SCSI device.)10 2948 1 1080 2496 t
+(The fourth line is a hex dump of the auto request sense information for the command.)15 3537 1 1080 2664 t
+( is only)2 313(The \256fth line is the error text for the sense key if available, followed by the segment number that)18 4007 2 1080 2832 t
+(valid if the command was a)5 1191 1 1080 2952 t
 10 I f
-(scsierrs.c)3519 1488 w
+(copy)2314 2952 w
 10 R f
-( by the error)3 523( text is followed)3 683(. The)1 250 3 3944 1488 t
-(value for a \256eld replaceable unit.)5 1353 1 1080 1608 t
-( to the failed command and text for several error)9 2030(The seventh line prints the block number that is related)9 2290 2 1080 1776 t
-(\257ags. The block number may not be valid.)7 1746 1 1080 1896 t
-(The following message is not an error:)6 1590 1 1080 2064 t
-(Track 01: Total bytes read/written: 2048/2048 \(1 sectors\).)7 2369 1 1440 2184 t
-(cdrecord: I/O error. \257ush cache: scsi sendcmd: no error)8 2266 1 1440 2304 t
-( 00 00 00 00 00 00 00 00 00)9 1197(CDB: 35)1 400 2 1440 2424 t
-(status: 0x2 \(CHECK CONDITION\))3 1464 1 1440 2544 t
-(Sense Bytes: F0 00 05 80 00 00 27 0A 00 00 00 00 B5 00 00 00 00 00)19 2961 1 1440 2664 t
-(Sense Key: 0x5 Illegal Request, Segment 0)6 1777 1 1440 2784 t
-(Sense Code: 0xB5 Qual 0x00 \(dummy data blocks added\) Fru 0x0)10 2739 1 1440 2904 t
-(Sense \257ags: Blk -2147483609 \(valid\))4 1526 1 1440 3024 t
-(It simply noti\256es, that a track that is smaller than the minimum size has been expanded to 300 sectors.)18 4224 1 1080 3264 t
+( error message is not directly related to the current)9 2162(command. If the)2 693 2 2545 2952 t
+(command, the text)2 757 1 1080 3072 t
+10 I f
+(deferred error)1 582 1 1870 3072 t
+10 R f
+(is appended.)1 507 1 2485 3072 t
+( the type of the)4 651( If)1 137( the sense quali\256er if available.)5 1307(The sixth line is the error text for the sense code and)11 2225 4 1080 3240 t
+(device is known, the sense data is decoded from tables in)10 2402 1 1080 3360 t
+10 I f
+(scsierrs.c)3519 3360 w
+10 R f
+( by the error)3 523( text is followed)3 683(. The)1 250 3 3944 3360 t
+(value for a \256eld replaceable unit.)5 1353 1 1080 3480 t
+( to the failed command and text for several error)9 2030(The seventh line prints the block number that is related)9 2290 2 1080 3648 t
+(\257ags. The block number may not be valid.)7 1746 1 1080 3768 t
+( reports the timeout set up for this commans and the time that the command realy needed)16 3743(The eight line)2 577 2 1080 3936 t
+(to be \256nished.)2 580 1 1080 4056 t
+(The following message is not an error:)6 1590 1 1080 4224 t
+(Track 01: Total bytes read/written: 2048/2048 \(1 sectors\).)7 2369 1 1440 4344 t
+(cdrecord: I/O error. \257ush cache: scsi sendcmd: no error)8 2266 1 1440 4464 t
+( 00 00 00 00 00 00 00 00 00)9 1197(CDB: 35)1 400 2 1440 4584 t
+(status: 0x2 \(CHECK CONDITION\))3 1464 1 1440 4704 t
+(Sense Bytes: F0 00 05 80 00 00 27 0A 00 00 00 00 B5 00 00 00 00 00)19 2961 1 1440 4824 t
+(Sense Key: 0x5 Illegal Request, Segment 0)6 1777 1 1440 4944 t
+(Sense Code: 0xB5 Qual 0x00 \(dummy data blocks added\) Fru 0x0)10 2739 1 1440 5064 t
+(Sense \257ags: Blk -2147483609 \(valid\))4 1526 1 1440 5184 t
+(cmd \256nished after 0.002s timeout 40s)5 1545 1 1440 5304 t
+(It simply noti\256es, that a track that is smaller than the minimum size has been expanded to 300 sectors.)18 4224 1 1080 5544 t
 9 B f
-(BUGS)720 3432 w
+(BUGS)720 5712 w
 10 B f
-(Cdrecord)1080 3552 w
+(Cdrecord)1080 5832 w
 10 R f
-(has even more options than)4 1125 1 1523 3552 t
+(has even more options than)4 1125 1 1523 5832 t
 10 B f
-(ls)2681 3552 w
+(ls)2681 5832 w
 10 R f
-(.)2748 3552 w
+(.)2748 5832 w
 10 B f
-(Cdrecord)1080 3720 w
+(Cdrecord)1080 6000 w
 10 R f
-( you don't abort the com-)5 1108( If)1 142( disk.)1 235(currently only warns if the input data will not \256t on the)11 2383 4 1532 3720 t
-(mand you will get unpredictable results.)5 1644 1 1080 3840 t
-(There should be an option to write index numbers for audio tracks.)11 2756 1 1080 4008 t
-(There should be a recover option to make disks usable, that have been written during a power failure.)17 4180 1 1080 4176 t
+( you don't abort the com-)5 1108( If)1 142( disk.)1 235(currently only warns if the input data will not \256t on the)11 2383 4 1532 6000 t
+(mand you will get unpredictable results.)5 1644 1 1080 6120 t
+(There should be an option to write index numbers for audio tracks.)11 2756 1 1080 6288 t
+(There should be a recover option to make disks usable, that have been written during a power failure.)17 4180 1 1080 6456 t
 9 B f
-(CREDITS)720 4464 w
+(CREDITS)720 6744 w
 10 R f
-( \(Bill)1 443(Bill Swartz)1 461 2 1080 4584 t
+( \(Bill)1 443(Bill Swartz)1 461 2 1080 6864 t
 10 S f
-(_)1984 4584 w
+(_)1984 6864 w
 10 R f
-(Swartz)2034 4584 w
+(Swartz)2034 6864 w
 10 S1 f
-(@)2311 4584 w
+(@)2311 6864 w
 10 R f
-(twolf.com\))2403 4584 w
-(For helping me with the TEAC driver support)7 1891 1 1830 4704 t
-( \(aaron.d.newsome)1 770(Aaron Newsome)1 681 2 1080 4872 t
+(twolf.com\))2403 6864 w
+(For helping me with the TEAC driver support)7 1891 1 1830 6984 t
+( \(aaron.d.newsome)1 770(Aaron Newsome)1 681 2 1080 7152 t
 10 S1 f
-(@)2531 4872 w
+(@)2531 7152 w
 10 R f
-(wdc.com\))2623 4872 w
-(For letting me develop Sony support on his drive)8 2025 1 1830 4992 t
-( \(eric)1 265(Eric Youngdale)1 637 2 1080 5160 t
-10 S1 f
-(@)1982 5160 w
-10 R f
-(andante.jic.com\))2074 5160 w
-(For supplying mkisofs)2 917 1 1830 5280 t
-( \(gadio)1 454(Gadi Oxman)1 521 2 1080 5448 t
-10 S1 f
-(@)2055 5448 w
-10 R f
-(netvision.net.il\))2147 5448 w
-(For tips on the ATAPI standard)5 1303 1 1830 5568 t
-( \(\256nnag)1 537(Finn Arne Gangstad)2 826 2 1080 5736 t
-10 S1 f
-(@)2443 5736 w
-10 R f
-(guardian.no\))2535 5736 w
-(For the \256rst FIFO implementation.)4 1419 1 1830 5856 t
-( \(dplatt)1 554(Dave Platt)1 427 2 1080 6024 t
-10 S1 f
-(@)2061 6024 w
-10 R f
-(feghoot.ml.org\))2153 6024 w
-( implementation of CD-)3 1003(For creating the experimental packet writing support, the \256rst)8 2567 2 1830 6144 t
-( the \256rst .wav \256le decoder and many nice discussions on)10 2610(RW blanking support,)2 960 2 1830 6264 t
-(cdrecord.)1830 6384 w
-(Chris P. Ross \(cross)3 830 1 1080 6552 t
-10 S1 f
-(@)1910 6552 w
-10 R f
-(eng.us.uu.net\))2002 6552 w
-(For the \256rst implementation os a BSDI SCSI rtansport.)8 2262 1 1830 6672 t
-( \(grant)1 337(Grant R. Guenther)2 756 2 1080 6840 t
-10 S1 f
-(@)2173 6840 w
-10 R f
-(torque.net\))2265 6840 w
-(For creating the \256rst parallel port transport implementation for Linux.)9 2858 1 1830 6960 t
-(Kenneth D. Merry \(ken)3 960 1 1080 7128 t
-10 S1 f
-(@)2040 7128 w
-10 R f
-(kdm.org\))2132 7128 w
-( together with Michael Smith)4 1472(for providing the CAM port for FreeBSD)6 2098 2 1830 7248 t
-(J)720 7728 w
-(. .)1 47 1 759 7673 t
-( 12)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7728 t
+(wdc.com\))2623 7152 w
+(For letting me develop Sony support on his drive)8 2025 1 1830 7272 t
+(J)720 7752 w
+(. .)1 47 1 759 7697 t
+( 12)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7752 t
 cleartomark
 showpage
 restore
@@ -2600,69 +2689,129 @@ mark
 (\302)2696 480 w
 10 R f
 ( \( 1 \))3 164( CDRECORD)1 1557(s USER COMMANDS)2 950 3 2729 480 t
-(\(msmith)1830 960 w
+( \(eric)1 265(Eric Youngdale)1 637 2 1080 960 t
 10 S1 f
-(@)2164 960 w
+(@)1982 960 w
 10 R f
-(freebsd.org\))2256 960 w
+(andante.jic.com\))2074 960 w
+(For supplying mkisofs)2 917 1 1830 1080 t
+( \(gadio)1 454(Gadi Oxman)1 521 2 1080 1248 t
+10 S1 f
+(@)2055 1248 w
+10 R f
+(netvision.net.il\))2147 1248 w
+(For tips on the ATAPI standard)5 1303 1 1830 1368 t
+( \(\256nnag)1 537(Finn Arne Gangstad)2 826 2 1080 1536 t
+10 S1 f
+(@)2443 1536 w
+10 R f
+(guardian.no\))2535 1536 w
+(For the \256rst FIFO implementation.)4 1419 1 1830 1656 t
+( \(dplatt)1 554(Dave Platt)1 427 2 1080 1824 t
+10 S1 f
+(@)2061 1824 w
+10 R f
+(feghoot.ml.org\))2153 1824 w
+( implementation of CD-)3 1003(For creating the experimental packet writing support, the \256rst)8 2567 2 1830 1944 t
+( the \256rst .wav \256le decoder and many nice discussions on)10 2610(RW blanking support,)2 960 2 1830 2064 t
+(cdrecord.)1830 2184 w
+(Chris P. Ross \(cross)3 830 1 1080 2352 t
+10 S1 f
+(@)1910 2352 w
+10 R f
+(eng.us.uu.net\))2002 2352 w
+(For the \256rst implementation os a BSDI SCSI rtansport.)8 2262 1 1830 2472 t
+( \(grant)1 337(Grant R. Guenther)2 756 2 1080 2640 t
+10 S1 f
+(@)2173 2640 w
+10 R f
+(torque.net\))2265 2640 w
+(For creating the \256rst parallel port transport implementation for Linux.)9 2858 1 1830 2760 t
+(Kenneth D. Merry \(ken)3 960 1 1080 2928 t
+10 S1 f
+(@)2040 2928 w
+10 R f
+(kdm.org\))2132 2928 w
+( together with Michael Smith)4 1472(for providing the CAM port for FreeBSD)6 2098 2 1830 3048 t
+(\(msmith)1830 3168 w
+10 S1 f
+(@)2164 3168 w
+10 R f
+(freebsd.org\))2256 3168 w
 9 B f
-(MAILING LISTS)1 700 1 720 1248 t
+(MAILING LISTS)1 700 1 720 3456 t
 10 R f
-( to actively take part on the development of cdrecord, you may join the cdwriting mailing)15 3828(If you want)2 492 2 1080 1368 t
-(list by sending mail to:)4 950 1 1080 1488 t
-(other-cdwrite-request)1440 1728 w
+( to actively take part on the development of cdrecord, you may join the cdwriting mailing)15 3828(If you want)2 492 2 1080 3576 t
+(list by sending mail to:)4 950 1 1080 3696 t
+(other-cdwrite-request)1440 3936 w
 10 S1 f
-(@)2298 1728 w
+(@)2298 3936 w
 10 R f
-(lists.debian.org)2390 1728 w
-(and include the word)3 864 1 1080 1968 t
+(lists.debian.org)2390 3936 w
+(and include the word)3 864 1 1080 4176 t
 10 I f
-(subscribe)1977 1968 w
+(subscribe)1977 4176 w
 10 R f
-( mail address of the list is:)6 1098( The)1 221(in the body.)2 491 3 2393 1968 t
-(cdwrite)1440 2208 w
+( mail address of the list is:)6 1098( The)1 221(in the body.)2 491 3 2393 4176 t
+(other-cdwrite)1440 4416 w
 10 S1 f
-(@)1739 2208 w
+(@)1977 4416 w
 10 R f
-(lists.debian.org)1831 2208 w
+(lists.debian.org)2069 4416 w
 9 B f
-(AUTHOR)720 2496 w
+(AUTHOR)720 4704 w
 10 R f
-(J)1080 2616 w
-(. .)1 47 1 1119 2561 t
-(org Schilling)1 528 1 1119 2616 t
-(Seestr. 110)1 452 1 1080 2736 t
-(D-13353 Berlin)1 638 1 1080 2856 t
-(Germany)1080 2976 w
-(Additional information can be found on:)5 1658 1 1080 3144 t
-(http://www.fokus.gmd.de/usr/schilling/cdrecord.html)1080 3264 w
-(Mail bugs and suggestions to:)4 1227 1 1080 3432 t
+(J)1080 4824 w
+(. .)1 47 1 1119 4769 t
+(org Schilling)1 528 1 1119 4824 t
+(Seestr. 110)1 452 1 1080 4944 t
+(D-13353 Berlin)1 638 1 1080 5064 t
+(Germany)1080 5184 w
+(Additional information can be found on:)5 1658 1 1080 5352 t
+(http://www.fokus.gmd.de/usr/schilling/cdrecord.html)1080 5472 w
+(If you have support questions, send them to:)7 1827 1 1080 5640 t
 10 B f
-(joerg)1080 3600 w
+(cdrecord-support)1080 5808 w
 10 S1 f
-(@)1301 3600 w
+(@)1829 5808 w
 10 B f
-(schily.isdn.cs.tu-berlin.de)1393 3600 w
+(berlios.de)1921 5808 w
 10 R f
-(or)2511 3600 w
+(or)1080 5928 w
 10 B f
-(js)2627 3600 w
+(other-cdwrite)1196 5928 w
 10 S1 f
-(@)2699 3600 w
+(@)1777 5928 w
 10 B f
-(cs.tu-berlin.de)2791 3600 w
+(lists.debian.org)1869 5928 w
 10 R f
-(or)3435 3600 w
+(Of you de\256nitly found a bug, send a mail to:)9 1849 1 1080 6096 t
 10 B f
-(schilling)3551 3600 w
+(cdrecord-developers)1080 6264 w
 10 S1 f
-(@)3908 3600 w
+(@)1950 6264 w
 10 B f
-(fokus.gmd.de)4000 3600 w
+(berlios.de)2042 6264 w
+10 R f
+(or)1080 6384 w
+10 B f
+(schilling)1196 6384 w
+10 S1 f
+(@)1553 6384 w
+10 B f
+(fokus.gmd.de)1645 6384 w
+10 R f
+(To subscribe, use:)2 740 1 1080 6552 t
+10 B f
+(http://lists.berlios.de/mailman/listinfo/cdrecord-developers)1080 6720 w
+10 R f
+(or)1080 6840 w
+10 B f
+(http://lists.berlios.de/mailman/listinfo/cdrecord-support)1196 6840 w
 10 R f
 (J)720 7680 w
 (. .)1 47 1 759 7625 t
-( 13)1 1792( change: Version 1.8.1)3 925( Last)1 1396(org Schilling)1 528 4 759 7680 t
+( 13)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
 cleartomark
 showpage
 restore

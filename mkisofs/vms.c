@@ -1,7 +1,7 @@
-/* @(#)vms.c	1.5 00/04/02 joerg */
+/* @(#)vms.c	1.6 00/12/05 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)vms.c	1.5 00/04/02 joerg";
+	"@(#)vms.c	1.6 00/12/05 joerg";
 
 #endif
 /*
@@ -11,16 +11,14 @@ static	char sccsid[] =
  *
  */
 
+#include <mconfig.h>
 #ifdef VMS
-#include <rms.h>
-#include <descrip.h>
-#include <ssdef.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #define opendir fake_opendir
 #include "mkisofs.h"
 #undef opendir
-#include <stdio.h>
+#include <rms.h>
+#include <descrip.h>
+#include <ssdef.h>
 
 static struct RAB	*rab;		/* used for external mailfiles */
 static int		rms_status;

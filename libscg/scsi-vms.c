@@ -1,7 +1,7 @@
-/* @(#)scsi-vms.c	1.18 00/07/01 Copyright 1997 J. Schilling */
+/* @(#)scsi-vms.c	1.29 01/03/18 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-vms.c	1.18 00/07/01 Copyright 1997 J. Schilling";
+	"@(#)scsi-vms.c	1.29 01/03/18 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the VMS generic SCSI implementation.
@@ -47,21 +47,21 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.18";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.29";	/* The version for this transport*/
 
-#define MAX_SCG 	16	/* Max # of SCSI controllers */
+#define MAX_SCG 	16		/* Max # of SCSI controllers */
 #define MAX_TGT 	16
 #define MAX_LUN 	8
 
-#define MAX_DMA_VMS	(96*512)/* Check if this is not too big */
+#define MAX_DMA_VMS	(63*1024)	/* Check if this is not too big */
 #define MAX_PHSTMO_VMS	300
-#define MAX_DSCTMO_VMS	65535	/* max value for OpenVMS/AXP 7.1 ehh*/
+#define MAX_DSCTMO_VMS	((64*1024)-1)	/* max value for OpenVMS/AXP 7.1 ehh*/
 
 
-LOCAL	int	do_scsi_cmd	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
-LOCAL	int	do_scsi_sense	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
+LOCAL	int	do_scg_cmd	__PR((SCSI *scgp, struct scg_cmd *sp));
+LOCAL	int	do_scg_sense	__PR((SCSI *scgp, struct scg_cmd *sp));
 
-#define DEVICE_NAMELEN 7
+#define DEVICE_NAMELEN 8
 
 struct SCSI$DESC {
 	Uint	SCSI$L_OPCODE;		/* SCSI Operation Code */
@@ -135,8 +135,8 @@ struct scg_local {
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -158,17 +158,18 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+	int	busno	= scg_scsibus(scgp);
+	int	tgt	= scg_target(scgp);
+	int	tlun	= scg_lun(scgp);
 	char	devname[DEVICE_NAMELEN];
 	char	buschar;
 	char	buschar1;
+	char	buschar2;
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -196,28 +197,52 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	switch (busno) {
 
 	case 0:	buschar = 'd';
-		buschar1 = 'a';
+		buschar1 = 'k';
+		buschar2 = 'a';
 		break;
 	case 1:	buschar = 'd';
-		buschar1 = 'b';
+		buschar1 = 'k';
+		buschar2 = 'b';
 		break;
 	case 2:	buschar = 'd';
-		buschar1 = 'c';
+		buschar1 = 'k';
+		buschar2 = 'c';
 		break;
 	case 3:	buschar = 'd';
-		buschar1 = 'd';
+		buschar1 = 'k';
+		buschar2 = 'd';
 		break;
 	case 4:	buschar = 'g';
-		buschar1 = 'a';
+		buschar1 = 'k';
+		buschar2 = 'a';
 		break;
 	case 5:	buschar = 'g';
-		buschar1 = 'b';
+		buschar1 = 'k';
+		buschar2 = 'b';
 		break;
 	case 6:	buschar = 'g';
-		buschar1 = 'c';
+		buschar1 = 'k';
+		buschar2 = 'c';
 		break;
 	case 7:	buschar = 'g';
-		buschar1 = 'd';
+		buschar1 = 'k';
+		buschar2 = 'd';
+		break;
+	case 8:	buschar = 'd';
+		buschar1 = 'q';
+		buschar2 = 'a';
+		break;
+	case 9:	buschar = 'd';
+		buschar1 = 'q';
+		buschar2 = 'b';
+		break;
+	case 10: buschar = 'd';
+		buschar1 = 'q';
+		buschar2 = 'c';
+		break;
+	case 11: buschar = 'd';
+		buschar1 = 'q';
+		buschar2 = 'd';
 		break;
 	default :
 		if (scgp->errstr)
@@ -225,16 +250,18 @@ scsi_open(scgp, device, busno, tgt, tlun)
 					"Wrong scsibus-# (%d)", busno);
 		return (-1);
 	}
-	/* XXX JS XXX devname length snprintf ??? */
-	sprintf(devname, "%ck%c%d0%d:", buschar, buschar1, tgt, tlun);
+	js_snprintf(devname, sizeof(devname), "%c%c%c%d0%d:",
+					buschar, buschar1, buschar2,
+					tgt, tlun);
 	strcpy (gk_device, devname);
 	status = sys$assign(&gk_device_desc, &gk_chan, 0, 0);
 	if (!(status & 1)) {
-		printf("Unable to access scsi-device \"%s\"\n", &gk_device[0]);
+		js_fprintf((FILE *)scgp->errfile,
+			"Unable to access scsi-device \"%s\"\n", &gk_device[0]);
 		return (-1);
 	}
-	if (scgp->debug) {
-		fp = fopen("cdrecord_io.log","w","rfm=stmlf","rat=cr");
+	if (scgp->debug > 0) {
+		fp = fopen("cdrecord_io.log", "w", "rfm=stmlf", "rat=cr");
 		if (fp == NULL) {
 			perror("Failing opening i/o-logfile");
 			exit(SS$_NORMAL);
@@ -243,8 +270,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	return (status);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	/*
@@ -260,15 +287,15 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
 	return (MAX_DMA_VMS);
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -277,8 +304,8 @@ BOOL scsi_havebus(scgp, busno)
 	return (TRUE);
 }
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -289,42 +316,49 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 	return (gk_chan);
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
 }
 
-EXPORT
-int scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
+	int	busno = scg_scsibus(scgp);
+
+	if (busno >= 8) 
+		return (TRUE);
+	
 	return (FALSE);
 }
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
+	errno = EINVAL;
 	return (-1);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+				"scgo_getbuf: %ld bytes\n", amt);
+	}
 	scgp->bufbase = malloc((size_t)(amt));	/* XXX JS XXX valloc() ??? */
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -333,23 +367,23 @@ scsi_freebuf(scgp)
 }
 
 LOCAL int
-do_scsi_cmd(scgp, f, sp)
+do_scg_cmd(scgp, sp)
 	SCSI		*scgp;
-	int		f;
 	struct scg_cmd	*sp;
 {
 	char		*cmdadr;
 	int		notcmdretry;
 	int		len;
+	Uchar		scsi_sts;
 	int		severity;
 
 	/* XXX JS XXX This cannot be OK */
 	notcmdretry = (sp->flags & SCG_CMD_RETRY)^SCG_CMD_RETRY;
 	/* error corrected ehh	*/
 /* XXX JS Wenn das notcmdretry Flag bei VMS auch 0x08 ist und Du darauf hoffst,
-   XXX	Dasz ich den Wert nie aendere, dann ist das richtig.
-   XXX Siehe unten: Das gleiche gilt fuer SCG_RECV_DATA und SCG_DISRE_ENA !!!
-*/
+ * XXX	Dasz ich den Wert nie aendere, dann ist das richtig.
+ * XXX Siehe unten: Das gleiche gilt fuer SCG_RECV_DATA und SCG_DISRE_ENA !!!
+ */
 
 	cmdadr = (char *)sp->cdb.cmd_cdb;
 	/* XXX JS XXX This cannot be OK */
@@ -363,10 +397,10 @@ do_scsi_cmd(scgp, f, sp)
 	gk_desc.SCSI$L_CMD_LEN = sp->cdb_len;
 	gk_desc.SCSI$L_PH_CH_TMOUT = sp->timeout;
 	gk_desc.SCSI$L_DISCON_TMOUT = sp->timeout;
-        if (gk_desc.SCSI$L_PH_CH_TMOUT > MAX_PHSTMO_VMS)
-            gk_desc.SCSI$L_PH_CH_TMOUT = MAX_PHSTMO_VMS;
-        if (gk_desc.SCSI$L_DISCON_TMOUT > MAX_DSCTMO_VMS)
-            gk_desc.SCSI$L_DISCON_TMOUT = MAX_DSCTMO_VMS;
+	if (gk_desc.SCSI$L_PH_CH_TMOUT > MAX_PHSTMO_VMS)
+	    gk_desc.SCSI$L_PH_CH_TMOUT = MAX_PHSTMO_VMS;
+	if (gk_desc.SCSI$L_DISCON_TMOUT > MAX_DSCTMO_VMS)
+	    gk_desc.SCSI$L_DISCON_TMOUT = MAX_DSCTMO_VMS;
 	gk_desc.SCSI$L_OPCODE = 1;	/* SCSI Operation Code */
 	gk_desc.SCSI$L_PAD_LEN = 0;	/* SCSI pad length, bytes */
 	gk_desc.SCSI$L_RES_1 = 0;	/* Reserved */
@@ -375,30 +409,31 @@ do_scsi_cmd(scgp, f, sp)
 	gk_desc.SCSI$L_RES_4 = 0;	/* Reserved */
 	gk_desc.SCSI$L_RES_5 = 0;	/* Reserved */
 	gk_desc.SCSI$L_RES_6 = 0;	/* Reserved */
-	if (scgp->debug) {
-		fprintf(fp, "***********************************************************\n");
-		fprintf(fp, "SCSI VMS-I/O parameters\n");
-		fprintf(fp, "OPCODE: %d", gk_desc.SCSI$L_OPCODE);
-		fprintf(fp, " FLAGS: %d\n", gk_desc.SCSI$L_FLAGS);
-		fprintf(fp, "CMD:");
+	if (scgp->debug > 0) {
+		js_fprintf(fp, "***********************************************************\n");
+		js_fprintf(fp, "SCSI VMS-I/O parameters\n");
+		js_fprintf(fp, "OPCODE: %d", gk_desc.SCSI$L_OPCODE);
+		js_fprintf(fp, " FLAGS: %d\n", gk_desc.SCSI$L_FLAGS);
+		js_fprintf(fp, "CMD:");
 		for (i = 0; i < gk_desc.SCSI$L_CMD_LEN; i++) {
-			fprintf(fp, "%x ", sp->cdb.cmd_cdb[i]);
+			js_fprintf(fp, "%x ", sp->cdb.cmd_cdb[i]);
 		}
-		fprintf(fp, "\n");
-		fprintf(fp, "DATA_LEN: %d\n", gk_desc.SCSI$L_DATA_LEN);
-		fprintf(fp, "PH_CH_TMOUT: %d", gk_desc.SCSI$L_PH_CH_TMOUT);
-		fprintf(fp, " DISCON_TMOUT: %d\n", gk_desc.SCSI$L_DISCON_TMOUT);
+		js_fprintf(fp, "\n");
+		js_fprintf(fp, "DATA_LEN: %d\n", gk_desc.SCSI$L_DATA_LEN);
+		js_fprintf(fp, "PH_CH_TMOUT: %d", gk_desc.SCSI$L_PH_CH_TMOUT);
+		js_fprintf(fp, " DISCON_TMOUT: %d\n", gk_desc.SCSI$L_DISCON_TMOUT);
 	}
 	status = sys$qiow(GK_EFN, gk_chan, IO$_DIAGNOSE, &gk_iosb, 0, 0,
 			&gk_desc, sizeof(gk_desc), 0, 0, 0, 0);
 
-	if (scgp->debug) {
-		fprintf(fp, "qiow-status: %i\n", status);
-		fprintf(fp, "VMS status code %i\n",gk_iosb.SCSI$W_VMS_STAT);
-		fprintf(fp, "Actual #bytes transferred %i\n",gk_iosb.SCSI$L_IOSB_TFR_CNT);
-		fprintf(fp, "SCSI device status %i\n",gk_iosb.SCSI$B_IOSB_STS);
+
+	if (scgp->debug > 0) {
+		js_fprintf(fp, "qiow-status: %i\n", status);
+		js_fprintf(fp, "VMS status code %i\n", gk_iosb.SCSI$W_VMS_STAT);
+		js_fprintf(fp, "Actual #bytes transferred %i\n", gk_iosb.SCSI$L_IOSB_TFR_CNT);
+		js_fprintf(fp, "SCSI device status %i\n", gk_iosb.SCSI$B_IOSB_STS);
 		if (gk_iosb.SCSI$L_IOSB_TFR_CNT != gk_desc.SCSI$L_DATA_LEN) {
-			fprintf(fp,"#bytes transferred != DATA_LEN\n");
+			js_fprintf(fp, "#bytes transferred != DATA_LEN\n");
 		}
 	}
 
@@ -409,20 +444,27 @@ do_scsi_cmd(scgp, f, sp)
 		    sp->ux_errno == EINVAL || sp->ux_errno == EACCES) {
 			return (-1);
 		}
+		if (sp->ux_errno == 0)
+			sp->ux_errno == EIO;
 	} else {
 		sp->ux_errno = 0;
 	}
 
 	sp->resid = gk_desc.SCSI$L_DATA_LEN - gk_iosb.SCSI$L_IOSB_TFR_CNT;
 
-	if (gk_iosb.SCSI$W_VMS_STAT == SS$_NORMAL &&
-	    gk_iosb.SCSI$B_IOSB_STS == 0) {
+	if (scgo_isatapi(scgp)) {
+		scsi_sts = ((gk_iosb.SCSI$B_IOSB_STS >> 5) & 0x7);
+	} else {
+		scsi_sts = gk_iosb.SCSI$B_IOSB_STS;
+	}
 
+	if (gk_iosb.SCSI$W_VMS_STAT == SS$_NORMAL && scsi_sts == 0) {
 		sp->error = SCG_NO_ERROR;
-		if (scgp->debug) {
-			fprintf(fp,"gk_iosb.SCSI$B_IOSB_STS == 0\n");
-			fprintf(fp,"sp->error %i\n",sp->error);
-			fprintf(fp,"sp->resid %i\n",sp->resid);
+		if (scgp->debug > 0) {
+			js_fprintf(fp, "scsi_sts == 0\n");
+			js_fprintf(fp, "gk_iosb.SCSI$B_IOSB_STS == 0\n");
+			js_fprintf(fp, "sp->error %i\n", sp->error);
+			js_fprintf(fp, "sp->resid %i\n", sp->resid);
 		}
 		return(0);
 	}
@@ -431,44 +473,42 @@ do_scsi_cmd(scgp, f, sp)
 
 	if (severity == 4) {
 		sp->error = SCG_FATAL;
-		if (scgp->debug) {
-			fprintf(fp,"gk_iosb.SCSI$B_IOSB_STS & 2\n");
-			fprintf(fp,"gk_iosb.SCSI$W_VMS_STAT & 0x7 == SS$_FATAL\n");
-			fprintf(fp,"sp->error %i\n",sp->error);
+		if (scgp->debug > 0) {
+			js_fprintf(fp, "scsi_sts & 2\n");
+			js_fprintf(fp, "gk_iosb.SCSI$B_IOSB_STS & 2\n");
+			js_fprintf(fp, "gk_iosb.SCSI$W_VMS_STAT & 0x7 == SS$_FATAL\n");
+			js_fprintf(fp, "sp->error %i\n", sp->error);
 		}
 		return (0);
 	}
 	if (gk_iosb.SCSI$W_VMS_STAT == SS$_TIMEOUT) {
 		sp->error = SCG_TIMEOUT;
-		if (scgp->debug) {
-			fprintf(fp,"gk_iosb.SCSI$B_IOSB_STS & 2\n");
-			fprintf(fp,"gk_iosb.SCSI$W_VMS_STAT == SS$_TIMEOUT\n");
-			fprintf(fp,"sp->error %i\n",sp->error);
+		if (scgp->debug > 0) {
+			js_fprintf(fp, "scsi_sts & 2\n");
+			js_fprintf(fp, "gk_iosb.SCSI$B_IOSB_STS & 2\n");
+			js_fprintf(fp, "gk_iosb.SCSI$W_VMS_STAT == SS$_TIMEOUT\n");
+			js_fprintf(fp, "sp->error %i\n", sp->error);
 		}
 		return (0);
 	}
 	sp->error = SCG_RETRYABLE;
-	sp->ux_errno = EIO;
-	sp->u_scb.cmd_scb[0] = gk_iosb.SCSI$B_IOSB_STS;
-	if (scgp->debug) {
-		fprintf(fp,"gk_iosb.SCSI$B_IOSB_STS & 2\n");
-		fprintf(fp,"gk_iosb.SCSI$W_VMS_STAT != 0\n");
-		fprintf(fp,"sp->error %i\n",sp->error);
+	sp->u_scb.cmd_scb[0] = scsi_sts;
+	if (scgp->debug > 0) {
+		js_fprintf(fp, "scsi_sts & 2\n");
+		js_fprintf(fp, "gk_iosb.SCSI$B_IOSB_STS & 2\n");
+		js_fprintf(fp, "gk_iosb.SCSI$W_VMS_STAT != 0\n");
+		js_fprintf(fp, "sp->error %i\n", sp->error);
 	}
 	return(0);
 }
 
 LOCAL int
-do_scsi_sense(scgp, f, sp)
+do_scg_sense(scgp, sp)
 	SCSI		*scgp;
-	int		f;
 	struct scg_cmd	*sp;
 {
 	int		ret;
 	struct scg_cmd	s_cmd;
-
-	if (sp->sense_len > SCG_MAX_SENSE)
-		sp->sense_len = SCG_MAX_SENSE;
 
 	fillbytes((caddr_t)&s_cmd, sizeof(s_cmd), '\0');
 	s_cmd.addr = (char *)sp->u_sense.cmd_sense;
@@ -476,11 +516,10 @@ do_scsi_sense(scgp, f, sp)
 	s_cmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
 	s_cmd.cdb_len = SC_G0_CDBLEN;
 	s_cmd.sense_len = CCS_SENSE_LEN;
-	s_cmd.target = scgp->target;
 	s_cmd.cdb.g0_cdb.cmd = SC_REQUEST_SENSE;
 	s_cmd.cdb.g0_cdb.lun = sp->cdb.g0_cdb.lun;
 	s_cmd.cdb.g0_cdb.count = sp->sense_len;
-	ret = do_scsi_cmd(scgp, f, &s_cmd);
+	ret = do_scg_cmd(scgp, &s_cmd);
 
 	if (ret < 0)
 		return (ret);
@@ -492,21 +531,20 @@ do_scsi_sense(scgp, f, sp)
 }
 
 LOCAL int
-scsi_send(scgp, f, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	int	ret;
 
-	if (f < 0) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
-	ret = do_scsi_cmd(scgp, f, sp);
+	ret = do_scg_cmd(scgp, sp);
 	if (ret < 0)
 		return (ret);
 	if (sp->u_scb.cmd_scb[0] & 02)
-		ret = do_scsi_sense(scgp, f, sp);
+		ret = do_scg_sense(scgp, sp);
 	return (ret);
 }

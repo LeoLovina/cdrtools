@@ -1,4 +1,4 @@
-/* @(#)sigblk.h	1.6 99/11/14 Copyright 1985 J. Schilling */
+/* @(#)sigblk.h	1.7 00/11/08 Copyright 1985 J. Schilling */
 /*
  *	software signal block definition
  *
@@ -30,6 +30,10 @@
 #include <standard.h>
 #endif
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
 typedef struct sigblk {
 	long		**sb_savfp;
 	struct sigblk	*sb_signext;
@@ -46,5 +50,9 @@ extern	void	handlecond		__PR((const char *, SIGBLK *,
 									long));
 extern	void	raisecond		__PR((const char *, long));
 extern	void	unhandlecond		__PR((void));
+
+#ifdef	__cplusplus
+}
+#endif
 
 #endif	/* _SIGBLK_H */

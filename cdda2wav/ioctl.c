@@ -1,7 +1,7 @@
-/* @(#)ioctl.c	1.8 00/06/15 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)ioctl.c	1.9 00/12/09 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)ioctl.c	1.8 00/06/15 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)ioctl.c	1.9 00/12/09 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /***
@@ -122,7 +122,7 @@ static unsigned ReadToc_cooked ( x, toc )
 	err = ioctl( global.cooked_fd, CDROMREADTOCENTRY, &entry[i] );
 	if ( err != 0 ) {
 	    /* error handling */
-	    fprintf( stderr, "can't get TocEntry #%d (error %d).\n", i+1, err );
+	    fprintf( stderr, "can't get TocEntry #%d msf (error %d).\n", i+1, err );
 	    exit( -1 );
 	}
     }
@@ -131,16 +131,38 @@ static unsigned ReadToc_cooked ( x, toc )
     err = ioctl( global.cooked_fd, CDROMREADTOCENTRY, &entry[i] );
     if ( err != 0 ) {
 	/* error handling */
-	fprintf( stderr, "can't get TocEntry LEADOUT (error %d).\n", err );
+	fprintf( stderr, "can't get TocEntry LEADOUT msf (error %d).\n", err );
 	exit( -1 );
     }
     tracks = hdr.cdth_trk1+1;
     for (i = 0; i < tracks; i++) {
         toc[i].bFlags = (entry[i].cdte_adr << 4) | (entry[i].cdte_ctrl & 0x0f);
         toc[i].bTrack = entry[i].cdte_track;
-        toc[i].dwStartSector = -150 + 75*60*entry[i].cdte_addr.msf.minute+
-				      75*   entry[i].cdte_addr.msf.second+
-				            entry[i].cdte_addr.msf.frame;
+	toc[i].mins = entry[i].cdte_addr.msf.minute;
+	toc[i].secs = entry[i].cdte_addr.msf.second;
+	toc[i].frms = entry[i].cdte_addr.msf.frame;
+    }
+    /* get all TocEntries now in lba format */
+    for ( i = 0; i < hdr.cdth_trk1; i++ ) {
+	entry[i].cdte_track = 1+i;
+	entry[i].cdte_format = CDROM_LBA;
+	err = ioctl( global.cooked_fd, CDROMREADTOCENTRY, &entry[i] );
+	if ( err != 0 ) {
+	    /* error handling */
+	    fprintf( stderr, "can't get TocEntry #%d lba (error %d).\n", i+1, err );
+	    exit( -1 );
+	}
+    }
+    entry[i].cdte_track = CDROM_LEADOUT;
+    entry[i].cdte_format = CDROM_LBA;
+    err = ioctl( global.cooked_fd, CDROMREADTOCENTRY, &entry[i] );
+    if ( err != 0 ) {
+	/* error handling */
+	fprintf( stderr, "can't get TocEntry LEADOUT lba (error %d).\n", err );
+	exit( -1 );
+    }
+    for (i = 0; i < tracks; i++) {
+        toc[i].dwStartSector = entry[i].cdte_addr.lba;
     }
     bufferTOC[0] = '\0';
     bufferTOC[1] = '\0';

@@ -1,7 +1,7 @@
-/* @(#)usleep.c	1.14 99/10/16 Copyright 1995 J. Schilling */
+/* @(#)usleep.c	1.15 01/01/07 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)usleep.c	1.14 99/10/16 Copyright 1995 J. Schilling";
+	"@(#)usleep.c	1.15 01/01/07 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1995 J. Schilling
@@ -54,13 +54,45 @@ EXPORT	int	usleep		__PR((int usec));
 #undef	HAVE_USLEEP
 #endif
 
+#ifdef apollo
+/*
+ * Apollo sys5.3 usleep is broken.  Define a version based on time_$wait.
+ */
+#include <apollo/base.h>
+#include <apollo/time.h>
+#undef HAVE_USLEEP
+#endif
+
 #if	!defined(HAVE_USLEEP)
 
 EXPORT int
 usleep(usec)
 	int	usec;
 {
-#if	defined(HAVE_SELECT)
+#if defined(apollo)
+	/*
+	 * Need to check apollo before HAVE_SELECT, because Apollo has select,
+	 * but it's time wait feature is also broken :-(
+	 */
+#define HAVE_USLEEP
+	/*
+	 * XXX Do these vars need to be static on Domain/OS ???
+	 */
+	static time_$clock_t	DomainDelay;
+	static status_$t	DomainStatus;
+
+	/*
+	 * DomainDelay is a 48 bit value that defines how many 4uS periods to
+	 * delay.  Since the input value range is 32 bits, the upper 16 bits of
+	 * DomainDelay must be zero.  So we just divide the input value by 4 to
+	 * determine how many "ticks" to wait
+	 */
+	DomainDelay.c2.high16 = 0;
+	DomainDelay.c2.low32 = usec / 4;
+	time_$wait (time_$relative, DomainDelay, &DomainStatus);
+#endif	/* Apollo */
+
+#if	defined(HAVE_SELECT) && !defined(HAVE_USLEEP)
 #define	HAVE_USLEEP
 
 	struct timeval tv;

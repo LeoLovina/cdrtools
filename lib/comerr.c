@@ -1,4 +1,4 @@
-/* @(#)comerr.c	1.22 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)comerr.c	1.23 00/08/02 Copyright 1985 J. Schilling */
 /*
  *	Routines for printing command errors
  *
@@ -170,7 +170,8 @@ LOCAL int _comerr(exflg, err, msg, args)
 	} else {
 		errnam = errmsgstr(err);
 		if (errnam == NULL) {
-			(void)sprintf(errbuf, "Error %d", err);
+			(void)js_snprintf(errbuf, sizeof (errbuf),
+						"Error %d", err);
 			errnam = errbuf;
 		}
 		error("%s: %s. %r", prognam, errnam, msg, args);

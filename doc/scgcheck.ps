@@ -1,0 +1,924 @@
+%!PS
+%%Version: 3.15
+%%DocumentFonts: (atend)
+%%Pages: (atend)
+%%EndComments
+%ident	"@(#)lp:filter/postscript/postscript/dpost.ps	1.1"
+%
+% Version 3.16 prologue for troff files.
+%
+
+/#copies 1 store
+/aspectratio 1 def
+/formsperpage 1 def
+/landscape false def
+/linewidth .3 def
+/magnification 1 def
+/margin 0 def
+/orientation 0 def
+/resolution 720 def
+/xoffset 0 def
+/yoffset 0 def
+
+/roundpage true def
+/useclippath true def
+/pagebbox [0 0 612 792] def
+
+/R  /Times-Roman def
+/I  /Times-Italic def
+/B  /Times-Bold def
+/BI /Times-BoldItalic def
+/H  /Helvetica def
+/HI /Helvetica-Oblique def
+/HB /Helvetica-Bold def
+/HX /Helvetica-BoldOblique def
+/CW /Courier def
+/CO /Courier def
+/CI /Courier-Oblique def
+/CB /Courier-Bold def
+/CX /Courier-BoldOblique def
+/PA /Palatino-Roman def
+/PI /Palatino-Italic def
+/PB /Palatino-Bold def
+/PX /Palatino-BoldItalic def
+/Hr /Helvetica-Narrow def
+/Hi /Helvetica-Narrow-Oblique def
+/Hb /Helvetica-Narrow-Bold def
+/Hx /Helvetica-Narrow-BoldOblique def
+/KR /Bookman-Light def
+/KI /Bookman-LightItalic def
+/KB /Bookman-Demi def
+/KX /Bookman-DemiItalic def
+/AR /AvantGarde-Book def
+/AI /AvantGarde-BookOblique def
+/AB /AvantGarde-Demi def
+/AX /AvantGarde-DemiOblique def
+/NR /NewCenturySchlbk-Roman def
+/NI /NewCenturySchlbk-Italic def
+/NB /NewCenturySchlbk-Bold def
+/NX /NewCenturySchlbk-BoldItalic def
+/ZD /ZapfDingbats def
+/ZI /ZapfChancery-MediumItalic def
+/VR /Varitimes#Roman def
+/VI /Varitimes#Italic def
+/VB /Varitimes#Bold def
+/VX /Varitimes#BoldItalic def
+/S  /S def
+/S1 /S1 def
+/GR /Symbol def
+
+/inch {72 mul} bind def
+/min {2 copy gt {exch} if pop} bind def
+
+/setup {
+	counttomark 2 idiv {def} repeat pop
+
+	landscape {/orientation 90 orientation add def} if
+	/scaling 72 resolution div def
+	linewidth setlinewidth
+	1 setlinecap
+
+	pagedimensions
+	xcenter ycenter translate
+	orientation neg rotate
+	width 2 div neg height 2 div translate
+	xoffset inch yoffset inch translate
+	margin 2 div dup neg translate
+	magnification dup aspectratio mul scale
+	scaling scaling scale
+
+	/Symbol /S Sdefs cf
+	/Times-Roman /S1 S1defs cf
+	0 0 moveto
+} def
+
+/pagedimensions {
+	useclippath userdict /gotpagebbox known not and {
+		/pagebbox [clippath pathbbox newpath] def
+		roundpage currentdict /roundpagebbox known and {roundpagebbox} if
+	} if
+	pagebbox aload pop
+	4 -1 roll exch 4 1 roll 4 copy
+	landscape {4 2 roll} if
+	sub /width exch def
+	sub /height exch def
+	add 2 div /xcenter exch def
+	add 2 div /ycenter exch def
+	userdict /gotpagebbox true put
+} def
+
+/pagesetup {
+	/page exch def
+	currentdict /pagedict known currentdict page known and {
+		page load pagedict exch get cvx exec
+	} if
+} def
+
+/decodingdefs [
+	{counttomark 2 idiv {y moveto show} repeat}
+	{neg /y exch def counttomark 2 idiv {y moveto show} repeat}
+	{neg moveto {2 index stringwidth pop sub exch div 0 32 4 -1 roll widthshow} repeat}
+	{neg moveto {spacewidth sub 0.0 32 4 -1 roll widthshow} repeat}
+	{counttomark 2 idiv {y moveto show} repeat}
+	{neg setfunnytext}
+] def
+
+/setdecoding {/t decodingdefs 3 -1 roll get bind def} bind def
+
+/w {neg moveto show} bind def
+/m {neg dup /y exch def moveto} bind def
+/done {/lastpage where {pop lastpage} if} def
+
+/f {
+	dup /font exch def findfont exch
+	dup /ptsize exch def scaling div dup /size exch def scalefont setfont
+	linewidth ptsize mul scaling 10 mul div setlinewidth
+	/spacewidth ( ) stringwidth pop def
+} bind def
+
+/changefont {
+	/fontheight exch def
+	/fontslant exch def
+	currentfont [
+		1 0
+		fontheight ptsize div fontslant sin mul fontslant cos div
+		fontheight ptsize div
+		0 0
+	] makefont setfont
+} bind def
+
+/sf {f} bind def
+
+/cf {
+	dup length 2 idiv
+	/entries exch def
+	/chtab exch def
+	/newfont exch def
+
+	findfont dup length 1 add dict
+	/newdict exch def
+	{1 index /FID ne {newdict 3 1 roll put} {pop pop} ifelse} forall
+
+	newdict /Metrics entries dict put
+	newdict /Metrics get
+	begin
+		chtab aload pop
+		1 1 entries {pop def} for
+		newfont newdict definefont pop
+	end
+} bind def
+
+%
+% A few arrays used to adjust reference points and character widths in some
+% of the printer resident fonts. If square roots are too high try changing
+% the lines describing /radical and /radicalex to,
+%
+%	/radical	[0 -75 550 0]
+%	/radicalex	[-50 -75 500 0]
+%
+
+/Sdefs [
+	/bracketlefttp		[220 500]
+	/bracketleftbt		[220 500]
+	/bracketrighttp		[-70 380]
+	/bracketrightbt		[-70 380]
+	/braceleftbt		[220 490]
+	/bracketrightex		[220 -125 500 0]
+	/radical		[0 0 550 0]
+	% NeWSprint's \(br is too low, compensate
+	statusdict /product get (NeWS Server) eq {
+		/radicalex		[-50 100 500 0]
+		/parenleftex		[-20 100 0 0]
+
+	} {
+		/radicalex		[-50 0 500 0]
+		/parenleftex		[-20 -170 0 0]
+	} ifelse
+	/integral		[100 -50 500 0]
+	/infinity		[10 -75 730 0]
+] def
+
+/S1defs [
+	/underscore		[0 80 500 0]
+	/endash			[7 90 650 0]
+] def
+%%EndProlog
+%%BeginSetup
+mark
+/resolution 720 def
+setup
+2 setdecoding
+%%EndSetup
+%%Page: 1 1
+save
+mark
+1 pagesetup
+10 R f
+( Schily)1 1278(SCGCHECK \( 1 \))3 698 2 720 480 t
+10 S1 f
+(\302)2696 480 w
+10 R f
+( \( 1 \))3 164( SCGCHECK)1 1557(s USER COMMANDS)2 950 3 2729 480 t
+9 B f
+(NAME)720 960 w
+10 R f
+(scgcheck)1080 1080 w
+10 S1 f
+(\261)1478 1080 w
+10 R f
+(check and validate the ABI of libscg)6 1506 1 1576 1080 t
+9 B f
+(SYNOPSIS)720 1248 w
+10 B f
+(scgcheck)1080 1368 w
+10 R f
+([)1490 1368 w
+10 I f
+(options)1556 1368 w
+10 R f
+(])1884 1368 w
+9 B f
+(DESCRIPTION)720 1656 w
+10 B f
+(Scgcheck)1080 1776 w
+10 R f
+(is used to check and verify the Application Binary Interface of libscg.)11 2871 1 1507 1776 t
+(The)1080 2064 w
+10 I f
+(device)1278 2064 w
+10 R f
+(refers to)1 347 1 1575 2064 t
+10 I f
+(scsibus)1965 2064 w
+10 R f
+(/)2262 2064 w
+10 I f
+(target)2290 2064 w
+10 R f
+(/)2537 2064 w
+10 I f
+(lun)2565 2064 w
+10 R f
+( drive. Communication on)3 1107(of the)1 248 2 2736 2064 t
+10 I f
+(SunOS)4135 2064 w
+10 R f
+(is done with the SCSI)4 949 1 4451 2064 t
+(general driver)1 566 1 1080 2184 t
+10 B f
+(scg.)1681 2184 w
+10 R f
+( syntax)1 295( Possible)1 401( of this driver.)3 593(Other operating systems are using a library simulation)7 2237 4 1874 2184 t
+(is:)1080 2304 w
+10 B f
+(dev=)1247 2304 w
+10 I f
+(scsibus)1493 2304 w
+10 R f
+(,)1790 2304 w
+10 I f
+(target)1815 2304 w
+10 R f
+(,)2062 2304 w
+10 I f
+(lun)2087 2304 w
+10 R f
+(or)2254 2304 w
+10 B f
+(dev=)2376 2304 w
+10 I f
+(target)2622 2304 w
+10 R f
+(,)2869 2304 w
+10 I f
+(lun)2894 2304 w
+10 R f
+( to the)2 280( the latter case, the drive has to be connected)9 1910(. In)1 180 3 3030 2304 t
+( the machine.)2 559(default SCSI bus of)3 825 2 1080 2424 t
+10 I f
+(Scsibus)2534 2424 w
+10 R f
+(,)2842 2424 w
+10 I f
+(target)2904 2424 w
+10 R f
+(and)3180 2424 w
+10 I f
+(lun)3361 2424 w
+10 R f
+(are integer numbers. Some operating systems)5 1874 1 3526 2424 t
+( this case the correct)4 850( In)1 150( addition.)1 387(or SCSI transport implementations may require to specify a \256lename in)10 2933 4 1080 2544 t
+(syntax for the device is:)4 1010 1 1080 2664 t
+10 B f
+(dev=)2161 2664 w
+10 I f
+(devicename)2406 2664 w
+10 R f
+(:)2884 2664 w
+10 I f
+(scsibus)2912 2664 w
+10 R f
+(,)3209 2664 w
+10 I f
+(target)3234 2664 w
+10 R f
+(, or)1 146 1 3481 2664 t
+10 B f
+(dev=)3665 2664 w
+10 I f
+(devicename)3910 2664 w
+10 R f
+(:)4388 2664 w
+10 I f
+(target)4416 2664 w
+10 R f
+(,)4663 2664 w
+10 I f
+(lun)4688 2664 w
+10 R f
+( the name)2 414(. If)1 162 2 4824 2664 t
+( node that has been speci\256ed on such a system refers to exactly one SCSI device, a short-)17 3781(of the device)2 539 2 1080 2784 t
+( form)1 255(hand in the)2 518 2 1080 2904 t
+10 B f
+(dev=)1914 2904 w
+10 I f
+(devicename)2182 2904 w
+10 R f
+(:)2660 2904 w
+10 S1 f
+(@)2688 2904 w
+10 R f
+(or)2841 2904 w
+10 B f
+(dev=)2985 2904 w
+10 I f
+(devicename)3253 2904 w
+10 R f
+(:)3731 2904 w
+10 S1 f
+(@)3759 2904 w
+10 R f
+(,)3859 2904 w
+10 I f
+(lun)3884 2904 w
+10 R f
+(may be used instead of)4 1059 1 4073 2904 t
+10 B f
+(dev=)5193 2904 w
+10 I f
+(devicename)1080 3024 w
+10 R f
+(:)1558 3024 w
+10 I f
+(scsibus)1586 3024 w
+10 R f
+(,)1883 3024 w
+10 I f
+(target)1908 3024 w
+10 R f
+(,)2155 3024 w
+( SCSI device name by a remote device indica-)8 1950(To access remote SCSI devices, you need to prepend the)9 2370 2 1080 3312 t
+(tor. The remote device indicator is either)6 1675 1 1080 3432 t
+10 B f
+(REMOTE:)2788 3432 w
+10 I f
+(user)3266 3432 w
+10 S1 f
+(@)3438 3432 w
+10 I f
+(host:)3530 3432 w
+10 R f
+(or)3796 3432 w
+10 B f
+(REMOTE:)3945 3432 w
+10 I f
+(host:)4423 3432 w
+10 R f
+( be:)1 158(A valid remote SCSI device name may)6 1619 2 1080 3552 t
+10 B f
+(REMOTE:)2926 3552 w
+10 I f
+(user)3404 3552 w
+10 S1 f
+(@)3576 3552 w
+10 I f
+(host:)3668 3552 w
+10 R f
+(to allow remote SCSI bus scanning)5 1463 1 3937 3552 t
+(or)1080 3672 w
+10 B f
+(REMOTE:)1199 3672 w
+10 I f
+(user)1677 3672 w
+10 S1 f
+(@)1849 3672 w
+10 I f
+(host:1,0,0)1941 3672 w
+10 R f
+(to access the SCSI device at)5 1178 1 2377 3672 t
+10 I f
+(host)3590 3672 w
+10 R f
+(connected to SCSI bus)3 938 1 3792 3672 t
+10 S1 f
+(#)4765 3672 w
+10 R f
+(1,target 0 lun)2 550 1 4850 3672 t
+(0.)1080 3792 w
+(To make)1 363 1 1080 4080 t
+10 B f
+(readcd)1479 4080 w
+10 R f
+(portable to all)2 577 1 1809 4080 t
+8 R f
+(UNIX)2415 4080 w
+10 R f
+(platforms, the syntax)2 863 1 2651 4080 t
+10 B f
+(dev=)3551 4080 w
+10 I f
+(devicename)3795 4080 w
+10 R f
+(:)4273 4080 w
+10 I f
+(scsibus)4301 4080 w
+10 R f
+(,)4598 4080 w
+10 I f
+(target)4623 4080 w
+10 R f
+(, is preferred)2 530 1 4870 4080 t
+( not neces-)2 466( speci\256c OS must)3 757( A)1 148(as is hides OS speci\256c knowledge about device names from the user.)11 2949 4 1080 4200 t
+(sarily support a way to specify a real device \256le name nor a way to specify)15 3099 1 1080 4320 t
+10 I f
+(scsibus)4212 4320 w
+10 R f
+(,)4509 4320 w
+10 I f
+(target)4534 4320 w
+10 R f
+(,)4781 4320 w
+10 I f
+(lun)4806 4320 w
+10 R f
+(.)4942 4320 w
+10 I f
+(Scsibus)1080 4608 w
+10 R f
+( the boot messages for more information or)7 1868(0 is the default SCSI bus on the machine. Watch)9 2108 2 1424 4608 t
+(look into)1 378 1 1080 4728 t
+10 B f
+(/var/adm/messages)1502 4728 w
+10 R f
+( If)1 142(for more information about the SCSI con\256guration of your machine.)9 2907 2 2351 4728 t
+(you have problems to \256gure out what values for)8 2074 1 1080 4848 t
+10 I f
+(scsibus)3199 4848 w
+10 R f
+(,)3496 4848 w
+10 I f
+(target)3521 4848 w
+10 R f
+(,)3768 4848 w
+10 I f
+(lun)3793 4848 w
+10 R f
+( the)1 168(should be used, try)3 815 2 3966 4848 t
+10 S1 f
+(\261)4995 4848 w
+10 B f
+(scanbus)5060 4848 w
+10 R f
+(option of)1 372 1 1080 4968 t
+10 B f
+(cdrecord)1485 4968 w
+10 R f
+(.)1867 4968 w
+9 B f
+(OPTIONS)720 5256 w
+10 S1 f
+(\261)1080 5376 w
+10 B f
+(version)1145 5376 w
+10 R f
+(Print version information and exit.)4 1412 1 1440 5496 t
+10 B f
+(dev=)1080 5664 w
+10 I f
+(target)1287 5664 w
+10 R f
+( to)1 120( allows e.g.)2 487( This)1 252(Sets the SCSI target default for SCSI Bus scanning test, see notes above.)12 3101 4 1440 5784 t
+(specify to use Solaris USCSI or remote SCSI for the bus scanning case.)12 2957 1 1440 5904 t
+(For the non bus scanning case, a typical device speci\256cation is)10 2589 1 1440 6144 t
+10 B f
+(dev=)4063 6144 w
+10 I f
+(6,0)4270 6144 w
+10 R f
+( a \256lename must be)4 813(. If)1 158 2 4429 6144 t
+( with the numerical target speci\256cation, the \256lename is implementation)9 3211(provided together)1 749 2 1440 6264 t
+( of the)2 287( correct \256lename in this case can be found in the system speci\256c manuals)13 3115(speci\256c. The)1 558 3 1440 6384 t
+( a)1 79( On)1 190(target operating system.)2 977 3 1440 6504 t
+10 I f
+(FreeBSD)2721 6504 w
+10 R f
+(system without)1 618 1 3126 6504 t
+10 I f
+(CAM)3778 6504 w
+10 R f
+(support, you need to use the con-)6 1377 1 4023 6504 t
+(trol device \(e.g.)2 738 1 1440 6624 t
+10 I f
+(/dev/rcd0.ctl)2292 6624 w
+10 R f
+( in this case may be)5 1070( correct device speci\256cation)3 1284(\). A)1 244 3 2802 6624 t
+10 B f
+(dev=)1440 6744 w
+10 I f
+(/dev/rcd0.ctl:)1647 6744 w
+10 S1 f
+(@)2182 6744 w
+10 R f
+(.)2307 6744 w
+( Dif-)1 210(On Linux, drives connected to a parallel port adapter are mapped to a virtual SCSI bus.)15 3750 2 1440 6984 t
+(ferent adapters are mapped to different targets on this virtual SCSI bus.)11 2933 1 1440 7104 t
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 1)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
+cleartomark
+showpage
+restore
+%%EndPage: 1 1
+%%Page: 2 2
+save
+mark
+2 pagesetup
+10 R f
+( Schily)1 1278(SCGCHECK \( 1 \))3 698 2 720 480 t
+10 S1 f
+(\302)2696 480 w
+10 R f
+( \( 1 \))3 164( SCGCHECK)1 1557(s USER COMMANDS)2 950 3 2729 480 t
+(If no)1 220 1 1440 960 t
+10 I f
+(dev)1714 960 w
+10 R f
+(option is present,)2 744 1 1906 960 t
+10 B f
+(cdrecord)2704 960 w
+10 R f
+(will try to get the device from the)7 1550 1 3140 960 t
+10 B f
+(CDR)4745 960 w
+10 S f
+(_)4961 960 w
+10 B f
+(DEVICE)5011 960 w
+10 R f
+(environment.)1440 1080 w
+(If the argument to the)4 905 1 1440 1320 t
+10 B f
+(dev=)2380 1320 w
+10 R f
+(option does not contain the characters ',', '/', ')8 1934 1 2622 1320 t
+10 S1 f
+(@)4556 1320 w
+10 R f
+( it is inter-)3 447(' or ':',)2 305 2 4648 1320 t
+(preted as an label name that may be found in the \256le /etc/default/cdrecord \(see FILES section\).)15 3901 1 1440 1440 t
+10 B f
+(timeout=)1080 1608 w
+10 S1 f
+(#)1464 1608 w
+10 R f
+(Set the default SCSI command timeout value to)7 2139 1 1440 1728 t
+10 S1 f
+(#)3637 1728 w
+10 R f
+( default SCSI command)3 1060(seconds. The)1 587 2 3753 1728 t
+( a SCSI command fails)4 982( If)1 139( commands.)1 498(timeout is the minimum timeout used for sending SCSI)8 2341 4 1440 1848 t
+( a timeout, you may try to raise the default SCSI command timeout above the timeout)15 3696(due to)1 264 2 1440 1968 t
+( runs correctly with a raised command timeout,)7 1991( the command)2 598( If)1 140(value of the failed command.)4 1231 4 1440 2088 t
+( the author of the pro-)5 933(please report the better timeout value and the corresponding command to)10 3027 2 1440 2208 t
+( no)1 133(gram. If)1 362 2 1440 2328 t
+10 I f
+(timeout)1968 2328 w
+10 R f
+(option is present, a default timeout of 40 seconds is used.)10 2367 1 2301 2328 t
+10 B f
+(debug=)1080 2496 w
+10 S1 f
+(#)1399 2496 w
+10 I f
+(,)1449 2496 w
+10 B f
+(-d)1515 2496 w
+10 R f
+(Set the misc debug value to)5 1167 1 1440 2616 t
+10 S1 f
+(#)2645 2616 w
+10 R f
+(\(with debug=)1 549 1 2733 2616 t
+10 S1 f
+(#)3282 2616 w
+10 R f
+( the misc debug level by one \(with)7 1477(\) or increment)2 591 2 3332 2616 t
+(-d\). If you specify)3 756 1 1440 2736 t
+10 I f
+(-dd,)2233 2736 w
+10 R f
+(this equals to)2 550 1 2427 2736 t
+10 B f
+(debug=)3013 2736 w
+10 I f
+(2.)3332 2736 w
+10 R f
+(This may help to \256nd problems while opening)7 1924 1 3476 2736 t
+( Using)1 313( with sector sizes and sector types.)6 1474( well as)2 335( as)1 156(a driver for libscg.)3 782 5 1440 2856 t
+10 S1 f
+(\261)4541 2856 w
+10 B f
+(debug)4606 2856 w
+10 R f
+(slows down)1 491 1 4909 2856 t
+(the process and may be the reason for a buffer underrun.)10 2331 1 1440 2976 t
+10 B f
+(kdebug=)1080 3144 w
+10 S1 f
+(#)1455 3144 w
+10 R f
+(,)1505 3144 w
+10 B f
+(kd=)1563 3144 w
+10 S1 f
+(#)1732 3144 w
+10 R f
+(Tell the)1 316 1 1440 3264 t
+10 B f
+(scg)1789 3264 w
+10 R f
+(-driver to modify the kernel debug value while SCSI commands are running.)11 3156 1 1922 3264 t
+10 S1 f
+(\261)1080 3432 w
+10 B f
+(silent)1145 3432 w
+10 R f
+(,)1373 3432 w
+10 S1 f
+(\261)1431 3432 w
+10 B f
+(s)1496 3432 w
+10 R f
+(Do not print out a status report for failed SCSI commands.)10 2420 1 1440 3552 t
+10 S1 f
+(\261)1080 3720 w
+10 B f
+(v)1145 3720 w
+10 R f
+( used e.g. to display the progress of the)8 1639( is)1 101( This)1 245(Increment the level of general verbosity by one.)7 1975 4 1440 3720 t
+(process.)1440 3840 w
+10 S1 f
+(\261)1080 4008 w
+10 B f
+(V)1145 4008 w
+10 R f
+( helps to)2 383( This)1 258( verbose level with respect of SCSI command transport by one.)10 2747(Increment the)1 572 4 1440 4008 t
+( during the process, that occur in the CD-Recorder. If you get incomprehensible)12 3308(debug problems)1 652 2 1440 4128 t
+(error messages you should use this \257ag to get more detailed output.)11 2978 1 1440 4248 t
+10 S1 f
+(\261)4502 4248 w
+10 B f
+(VV)4567 4248 w
+10 R f
+(will show data)2 637 1 4763 4248 t
+( Using)1 305(buffer content in addition.)3 1067 2 1440 4368 t
+10 S1 f
+(\261)2845 4368 w
+10 B f
+(V)2910 4368 w
+10 R f
+(or)3015 4368 w
+10 S1 f
+(\261)3131 4368 w
+10 B f
+(VV)3196 4368 w
+10 R f
+(slows down the process.)3 995 1 3373 4368 t
+10 B f
+(f=)1080 4536 w
+10 I f
+(\256le)1170 4536 w
+10 R f
+(Specify the log \256le to be used instead of)8 1668 1 1440 4536 t
+10 I f
+(check.log)3141 4536 w
+10 R f
+(.)3528 4536 w
+9 B f
+(EXAMPLES)720 4824 w
+(FILES)720 4944 w
+(SEE ALSO)1 460 1 720 5064 t
+10 B f
+(cdrecord)1080 5184 w
+10 R f
+(\(1\),)1462 5184 w
+10 B f
+(readcd)1636 5184 w
+10 R f
+(\(1\),)1930 5184 w
+10 B f
+(mkisofs)2104 5184 w
+10 R f
+(\(1\),)2432 5184 w
+10 B f
+(scg)2606 5184 w
+10 R f
+(\(7\).)2739 5184 w
+9 B f
+(NOTES)720 5472 w
+10 R f
+(When using)1 489 1 1080 5592 t
+10 B f
+(scgckeck)1603 5592 w
+10 R f
+(with the broken)2 645 1 2014 5592 t
+10 B f
+(Linux SCSI generic driver.)3 1186 1 2694 5592 t
+10 R f
+(You should note that)3 866 1 3915 5592 t
+10 B f
+(scgcheck)4816 5592 w
+10 R f
+(uses)5228 5592 w
+( the sg driver on)4 709( Unfortunately,)1 658( scg driver.)2 476(a hack, that tries to emulate the functionality of the)9 2180 4 1080 5712 t
+10 B f
+(Linux)5143 5712 w
+10 R f
+(has several severe bugs:)3 985 1 1080 5832 t
+( cannot see if a SCSI command could not be sent at all.)12 2302(\267 It)1 421 2 1080 6000 t
+( cannot get the SCSI status byte.)6 1405(\267 It)1 421 2 1080 6168 t
+10 B f
+(Scgcheck)2949 6168 w
+10 R f
+( cannot report failing SCSI com-)5 1402(for that reason)2 612 2 3386 6168 t
+(mands in some situations.)3 1058 1 1440 6288 t
+( cannot get real DMA count of transfer.)7 1642(\267 It)1 421 2 1080 6456 t
+10 B f
+(Scgcheck)3177 6456 w
+10 R f
+(cannot tell you if there is an DMA residual)8 1794 1 3606 6456 t
+(count.)1440 6576 w
+( valid in auto sense data.)5 1097( cannot get number of bytes)5 1222(\267 It)1 421 3 1080 6744 t
+10 B f
+(Scgcheck)3901 6744 w
+10 R f
+(cannot tell you if device)4 1057 1 4343 6744 t
+(transfers no sense data at all.)5 1187 1 1440 6864 t
+( fetches to few data in auto request sense \(CCS/SCSI-2/SCSI-3 needs)10 2855(\267 It)1 421 2 1080 7032 t
+10 S1 f
+(>)4389 7032 w
+10 R f
+(= 18\).)1 247 1 4445 7032 t
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 2)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
+cleartomark
+showpage
+restore
+%%EndPage: 2 2
+%%Page: 3 3
+save
+mark
+3 pagesetup
+10 R f
+( Schily)1 1278(SCGCHECK \( 1 \))3 698 2 720 480 t
+10 S1 f
+(\302)2696 480 w
+10 R f
+( \( 1 \))3 164( SCGCHECK)1 1557(s USER COMMANDS)2 950 3 2729 480 t
+9 B f
+(DIAGNOSTICS)720 960 w
+10 R f
+(A typical error message for a SCSI command looks like:)9 2333 1 1080 1080 t
+(readcd: I/O error. test unit ready: scsi sendcmd: no error)9 2311 1 1440 1320 t
+( 20 00 00 00 00)5 665(CDB: 00)1 400 2 1440 1440 t
+(status: 0x2 \(CHECK CONDITION\))3 1464 1 1440 1560 t
+(Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00)19 2938 1 1440 1680 t
+(Sense Key: 0x5 Illegal Request, Segment 0)6 1777 1 1440 1800 t
+(Sense Code: 0x25 Qual 0x00 \(logical unit not supported\) Fru 0x0)10 2701 1 1440 1920 t
+(Sense \257ags: Blk 0 \(not valid\))5 1204 1 1440 2040 t
+(cmd \256nished after 0.002s timeout 40s)5 1545 1 1440 2160 t
+( text after the \256rst colon gives)6 1265( The)1 225( of the command.)3 735(The \256rst line gives information about the transport)7 2095 4 1080 2400 t
+( from the view of the kernel. It usually is:)9 1740(the error text for the system call)6 1335 2 1080 2520 t
+10 B f
+(I/O error)1 405 1 4222 2520 t
+10 R f
+(unless other prob-)2 739 1 4661 2520 t
+( a short description for the SCSI command that fails. The rest of)12 2753(lems happen. The next words contain)5 1567 2 1080 2640 t
+( if there were any problems for the transport of the command over the SCSI bus.)15 3361(the line tells you)3 697 2 1080 2760 t
+10 B f
+(fatal)5206 2760 w
+(error)1080 2880 w
+10 R f
+( was not possible to transport the command \(i.e. no device present at the requested)14 3513(means that it)2 541 2 1346 2880 t
+(SCSI address\).)1 602 1 1080 3000 t
+(The second line prints the SCSI command descriptor block for the failed command.)12 3439 1 1080 3168 t
+( transport of)2 522(The third line gives information on the SCSI status code returned by the command, if the)15 3798 2 1080 3336 t
+(the command succeeds. This is error information from the SCSI device.)10 2948 1 1080 3456 t
+(The fourth line is a hex dump of the auto request sense information for the command.)15 3537 1 1080 3624 t
+( is only)2 313(The \256fth line is the error text for the sense key if available, followed by the segment number that)18 4007 2 1080 3792 t
+(valid if the command was a)5 1191 1 1080 3912 t
+10 I f
+(copy)2314 3912 w
+10 R f
+( error message is not directly related to the current)9 2162(command. If the)2 693 2 2545 3912 t
+(command, the text)2 757 1 1080 4032 t
+10 I f
+(deferred error)1 582 1 1870 4032 t
+10 R f
+(is appended.)1 507 1 2485 4032 t
+( the type of the)4 651( If)1 137( the sense quali\256er if available.)5 1307(The sixth line is the error text for the sense code and)11 2225 4 1080 4200 t
+(device is known, the sense data is decoded from tables in)10 2402 1 1080 4320 t
+10 I f
+(scsierrs.c)3519 4320 w
+10 R f
+( by the error)3 523( text is followed)3 683(. The)1 250 3 3944 4320 t
+(value for a \256eld replaceable unit.)5 1353 1 1080 4440 t
+( to the failed command and text for several error)9 2030(The seventh line prints the block number that is related)9 2290 2 1080 4608 t
+(\257ags. The block number may not be valid.)7 1746 1 1080 4728 t
+( reports the timeout set up for this commans and the time that the command realy needed)16 3743(The eight line)2 577 2 1080 4896 t
+(to be \256nished.)2 580 1 1080 5016 t
+9 B f
+(BUGS)720 5304 w
+(CREDITS)720 5424 w
+(MAILING LISTS)1 700 1 720 5544 t
+(AUTHOR)720 5664 w
+10 R f
+(J)1080 5784 w
+(. .)1 47 1 1119 5729 t
+(org Schilling)1 528 1 1119 5784 t
+(Seestr. 110)1 452 1 1080 5904 t
+(D-13353 Berlin)1 638 1 1080 6024 t
+(Germany)1080 6144 w
+(Additional information can be found on:)5 1658 1 1080 6312 t
+(http://www.fokus.gmd.de/usr/schilling/cdrecord.html)1080 6432 w
+(If you have support questions, send them to:)7 1827 1 1080 6600 t
+10 B f
+(cdrecord-support)1080 6768 w
+10 S1 f
+(@)1829 6768 w
+10 B f
+(berlios.de)1921 6768 w
+10 R f
+(or)1080 6888 w
+10 B f
+(other-cdwrite)1196 6888 w
+10 S1 f
+(@)1777 6888 w
+10 B f
+(lists.debian.org)1869 6888 w
+10 R f
+(Of you de\256nitly found a bug, send a mail to:)9 1849 1 1080 7056 t
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 3)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
+cleartomark
+showpage
+restore
+%%EndPage: 3 3
+%%Page: 4 4
+save
+mark
+4 pagesetup
+10 R f
+( Schily)1 1278(SCGCHECK \( 1 \))3 698 2 720 480 t
+10 S1 f
+(\302)2696 480 w
+10 R f
+( \( 1 \))3 164( SCGCHECK)1 1557(s USER COMMANDS)2 950 3 2729 480 t
+10 B f
+(cdrecord-developers)1080 960 w
+10 S1 f
+(@)1950 960 w
+10 B f
+(berlios.de)2042 960 w
+10 R f
+(or)1080 1080 w
+10 B f
+(schilling)1196 1080 w
+10 S1 f
+(@)1553 1080 w
+10 B f
+(fokus.gmd.de)1645 1080 w
+10 R f
+(J)720 7680 w
+(. .)1 47 1 759 7625 t
+( 4)1 1804( change: Version 1.10)3 900( Last)1 1409(org Schilling)1 528 4 759 7680 t
+cleartomark
+showpage
+restore
+%%EndPage: 4 4
+%%Trailer
+done
+%%DocumentFonts: Times-Roman Times-Bold Times-Italic Symbol
+%%Pages: 4

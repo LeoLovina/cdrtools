@@ -1,4 +1,4 @@
-/* @(#)stdxlib.h	1.2 98/09/05 Copyright 1996 J. Schilling */
+/* @(#)stdxlib.h	1.3 01/02/19 Copyright 1996 J. Schilling */
 /*
  *	Definitions for stdlib
  *
@@ -33,6 +33,8 @@
 
 extern	char	*malloc();
 extern	char	*realloc();
+
+extern	double	atof();
 
 #endif	/* HAVE_STDLIB_H */
 

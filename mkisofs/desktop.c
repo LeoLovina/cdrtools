@@ -1,7 +1,7 @@
-/* @(#)desktop.c	1.2 00/04/27 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)desktop.c	1.3 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)desktop.c	1.2 00/04/27 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)desktop.c	1.3 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -46,7 +46,6 @@ static	char sccsid[] =
 #ifdef APPLE_HYB
 
 #include <mconfig.h>
-#include <strdefs.h>
 #include "mkisofs.h"
 
 #define	DB	"Desktop DB"

@@ -28,6 +28,12 @@ Workaround:
 If /dev/su0-0-0 ... does not exist on your system, you may try
 to create the devices with the MAKEDEV.su script below.
 
+If /dev/su0-0-0 ... do not work on your system, you may try
+use dev=/dev/rcd0a:@,0 od dev=/dev/rcd0a:@
+If the CD-Recorder is on /dev/cd0a
+
+Read the man page for more information.
+
 There is no way to get the device node entry from the numerical target
 specification on *BSD. You must specify the appropriate device node name:
 e.g. dev=/dev/cd0.ctl:6,0 together with the numerical target specification.

@@ -1,3 +1,4 @@
+/* @(#)hybrid.h	1.1 98/05/16 joerg */
 /*
 **	hybrid.h: extra info needed by libhfs and mkisofs
 **

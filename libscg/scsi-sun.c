@@ -1,7 +1,7 @@
-/* @(#)scsi-sun.c	1.54 00/07/01 Copyright 1988,1995,2000 J. Schilling */
+/* @(#)scsi-sun.c	1.69 01/03/18 Copyright 1988,1995,2000 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sun.c	1.54 00/07/01 Copyright 1988,1995,2000 J. Schilling";
+	"@(#)scsi-sun.c	1.69 01/03/18 Copyright 1988,1995,2000 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -57,20 +57,36 @@ static	char __sccsid[] =
 #	define	USE_USCSI
 #endif
 
-LOCAL	char	_scg_trans_version[] = "scg-1.54";	/* The version for /dev/scg	*/
+LOCAL	char	_scg_trans_version[] = "scg-1.69";	/* The version for /dev/scg	*/
+LOCAL	char	_scg_utrans_version[] = "uscsi-1.69";	/* The version for USCSI	*/
 
 #ifdef	USE_USCSI
-LOCAL	int	scsi_uopen	__PR((SCSI *scgp, char *device, int busno, int tgt, int tlun));
-LOCAL	int	scsi_uclose	__PR((SCSI *scgp));
-LOCAL	int	scsi_ucinfo	__PR((int f, struct dk_cinfo *cp, int debug));
-LOCAL	int	scsi_ugettlun	__PR((int f, int *tgtp, int *lunp));
-LOCAL	long	scsi_umaxdma	__PR((SCSI *scgp, long amt));
-LOCAL	BOOL	scsi_uhavebus	__PR((SCSI *scgp, int));
-LOCAL	int	scsi_ufileno	__PR((SCSI *scgp, int, int, int));
-LOCAL	int	scsi_uinitiator_id __PR((SCSI *scgp));
-LOCAL	int	scsi_uisatapi	__PR((SCSI *scgp));
-LOCAL	int	scsi_ureset	__PR((SCSI *scgp));
-LOCAL	int	scsi_usend	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
+LOCAL	int	scgo_uopen	__PR((SCSI *scgp, char *device));
+LOCAL	int	scgo_uclose	__PR((SCSI *scgp));
+LOCAL	int	scgo_ucinfo	__PR((int f, struct dk_cinfo *cp, int debug));
+LOCAL	int	scgo_ugettlun	__PR((int f, int *tgtp, int *lunp));
+LOCAL	long	scgo_umaxdma	__PR((SCSI *scgp, long amt));
+LOCAL	BOOL	scgo_uhavebus	__PR((SCSI *scgp, int));
+LOCAL	int	scgo_ufileno	__PR((SCSI *scgp, int, int, int));
+LOCAL	int	scgo_uinitiator_id __PR((SCSI *scgp));
+LOCAL	int	scgo_uisatapi	__PR((SCSI *scgp));
+LOCAL	int	scgo_ureset	__PR((SCSI *scgp, int what));
+LOCAL	int	scgo_usend	__PR((SCSI *scgp));
+
+LOCAL scg_ops_t sun_uscsi_ops = {
+	scgo_usend,
+	scgo_version,		/* Shared with SCG driver */
+	scgo_uopen,
+	scgo_uclose,
+	scgo_umaxdma,
+	scgo_getbuf,		/* Shared with SCG driver */
+	scgo_freebuf,		/* Shared with SCG driver */
+	scgo_uhavebus,
+	scgo_ufileno,
+	scgo_uinitiator_id,
+	scgo_uisatapi,
+	scgo_ureset,
+};
 #endif
 
 /*
@@ -98,32 +114,29 @@ LOCAL	int	scsi_usend	__PR((SCSI *scgp, int f, struct scg_cmd *sp));
 /*
  * We are using a "real" /dev/scg?
  */
-#define	scsi_xsend(scgp, f, cmdp)	ioctl((f), SCGIO_CMD, (cmdp))
+#define	scsi_xsend(scgp)	ioctl((scgp)->fd, SCGIO_CMD, (scgp)->scmd)
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
 #define	MAX_LUN		8
 
 struct scg_local {
 	union {
-		int	SCGfiles[MAX_SCG];
+		int	SCG_files[MAX_SCG];
 #ifdef	USE_USCSI
-		short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
+		short	scg_files[MAX_SCG][MAX_TGT][MAX_LUN];
 #endif
 	} u;
-#ifdef	USE_USCSI
-	int	isuscsi;
-#endif
 };
 #define scglocal(p)	((struct scg_local *)((p)->local))
-#define scgfiles(p)	(scglocal(p)->u.SCGfiles)
+#define scgfiles(p)	(scglocal(p)->u.SCG_files)
 
 /*
  * Return version information for the low level SCSI transport code.
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -131,6 +144,10 @@ scg__version(scgp, what)
 		switch (what) {
 
 		case SCG_VERSION:
+#ifdef	USE_USCSI
+			if (scgp->ops == &sun_uscsi_ops)
+				return (_scg_utrans_version);
+#endif
 			return (_scg_trans_version);
 		/*
 		 * If you changed this source, you are not allowed to
@@ -145,14 +162,14 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+		 int	busno	= scg_scsibus(scgp);
+		 int	tgt	= scg_target(scgp);
+/*		 int	tlun	= scg_lun(scgp);*/
 	register int	f;
 	register int	i;
 	register int	nopen = 0;
@@ -168,7 +185,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 
 	if ((device != NULL && *device != '\0') || (busno == -2 && tgt == -2)) {
 #ifdef	USE_USCSI
-		return (scsi_uopen(scgp, device, busno, tgt, tlun));
+		scgp->ops = &sun_uscsi_ops;
+		return (SCGO_OPEN(scgp, device));
 #else
 		errno = EINVAL;
 		if (scgp->errstr)
@@ -189,15 +207,11 @@ scsi_open(scgp, device, busno, tgt, tlun)
 		for (i=0; i < MAX_SCG; i++) {
 			scgfiles(scgp)[i] = -1;
 		}
-#ifdef	USE_USCSI
-		scglocal(scgp)->isuscsi = 0;
-#endif
-
 	}
 
 
 	for (i=0; i < MAX_SCG; i++) {
-		sprintf(devname, "/dev/scg%d", i);
+		js_snprintf(devname, sizeof(devname), "/dev/scg%d", i);
 		f = open(devname, 2);
 		if (f < 0) {
 			if (errno != ENOENT && errno != ENXIO) {
@@ -212,24 +226,27 @@ scsi_open(scgp, device, busno, tgt, tlun)
 		scgfiles(scgp)[i] = f;
 	}
 #ifdef	USE_USCSI
-	if (nopen <= 0)
-		return (scsi_uopen(scgp, device, busno, tgt, tlun));
+	if (nopen <= 0) {
+		if (scgp->local != NULL) { 
+			free(scgp->local);
+			scgp->local = NULL;
+		}
+		scgp->ops = &sun_uscsi_ops;
+		return (SCGO_OPEN(scgp, device));
+	}
 #endif
 	return (nopen);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	register int	i;
 
 	if (scgp->local == NULL)
 		return (-1);
-#ifdef	USE_USCSI
-	if (scglocal(scgp)->isuscsi == 1)
-		return (scsi_uclose(scgp));
-#endif
+
 	for (i=0; i < MAX_SCG; i++) {
 		if (scgfiles(scgp)[i] >= 0)
 			close(scgfiles(scgp)[i]);
@@ -239,23 +256,13 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
 	long	maxdma = MAX_DMA_OTHER;
 #if	!defined(__i386_) && !defined(i386)
 	int	cpu_type;
-#endif
-
-#ifdef	USE_USCSI
-	long	l;
-
-	if (scglocal(scgp)->isuscsi == 1) {
-		l = scsi_umaxdma(scgp, amt);
-		if (l > 0)
-			return (l);
-	}
 #endif
 
 #if	defined(__i386_) || defined(i386)
@@ -291,22 +298,19 @@ scsi_maxdma(scgp, amt)
 	return (maxdma);
 }
 
-EXPORT BOOL
-scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
 	if (scgp->local == NULL)
 		return (FALSE);
-#ifdef	USE_USCSI
-	if (scglocal(scgp)->isuscsi == 1)
-		return (scsi_uhavebus(scgp, busno));
-#endif
+
 	return (busno < 0 || busno >= MAX_SCG) ? FALSE : (scgfiles(scgp)[busno] >= 0);
 }
 
-EXPORT int
-scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -314,31 +318,23 @@ scsi_fileno(scgp, busno, tgt, tlun)
 {
 	if (scgp->local == NULL)
 		return (-1);
-#ifdef	USE_USCSI
-	if (scglocal(scgp)->isuscsi == 1)
-		return (scsi_ufileno(scgp, busno, tgt, tlun));
-#endif
 
 	return (busno < 0 || busno >= MAX_SCG) ? -1 : scgfiles(scgp)[busno];
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
-	int		f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
 	int		id = -1;
 #ifdef	DKIO_GETCINFO
 	struct dk_cinfo	conf;
 #endif
 
-#ifdef	USE_USCSI
-	if (scglocal(scgp)->isuscsi == 1)
-		return (scsi_uinitiator_id(scgp));
-#endif
-
 #ifdef	DKIO_GETCINFO
-	if (ioctl(f, DKIO_GETCINFO, &conf) < 0)
+	if (scgp->fd < 0)
+		return (id);
+	if (ioctl(scgp->fd, DKIO_GETCINFO, &conf) < 0)
 		return (id);
 	if (TARGET(conf.dki_slave) != -1)
 		id = TARGET(conf.dki_slave);
@@ -346,43 +342,38 @@ scsi_initiator_id(scgp)
 	return (id);
 }
 
-EXPORT int
-scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
-#ifdef	USE_USCSI
-	if (scglocal(scgp)->isuscsi == 1)
-		return (scsi_uisatapi(scgp));
-#endif
 	return (FALSE);
 }
 
-EXPORT int
-scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
-	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
-
-#ifdef	USE_USCSI
-	if (scglocal(scgp)->isuscsi == 1)
-		return (scsi_ureset(scgp));
-#endif
-	return (ioctl(f, SCGIORESET, 0));
+	if (what == SCG_RESET_NOP)
+		return (0);
+	if (what != SCG_RESET_BUS) {
+		errno = EINVAL;
+		return (-1);
+	}
+	return (ioctl(scgp->fd, SCGIORESET, 0));
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
 	scgp->bufbase = (void *)valloc((size_t)amt);
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -391,17 +382,11 @@ scsi_freebuf(scgp)
 }
 
 LOCAL int
-scsi_send(scgp, f, sp)
-	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
+scgo_send(scgp)
+	SCSI	*scgp;
 {
-#ifdef	USE_USCSI
-	if (scglocal(scgp)->isuscsi == 1)
-		return (scsi_usend(scgp, f, sp));
-#endif
-
-	return (ioctl(f, SCGIO_CMD, sp));
+	scgp->scmd->target = scg_target(scgp);
+	return (ioctl(scgp->fd, SCGIO_CMD, scgp->scmd));
 }
 
 /*--------------------------------------------------------------------------*/
@@ -409,8 +394,6 @@ scsi_send(scgp, f, sp)
  *	This is Sun USCSI interface code ...
  */
 #ifdef	USE_USCSI
-#include <strdefs.h>
-
 #include <sys/scsi/impl/uscsi.h>
 
 /*
@@ -440,13 +423,13 @@ scsi_send(scgp, f, sp)
 #endif
 
 LOCAL int
-scsi_uopen(scgp, device, busno, tgt, tlun)
+scgo_uopen(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+		 int	busno	= scg_scsibus(scgp);
+		 int	tgt	= scg_target(scgp);
+		 int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -468,18 +451,18 @@ scsi_uopen(scgp, device, busno, tgt, tlun)
 	}
 	if (scgp->local == NULL) {
 		scgp->local = malloc(sizeof(struct scg_local));
-		if (scgp->local == NULL)
+		if (scgp->local == NULL) {
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE, "No memory for scg_local");
 			return (0);
-		scglocal(scgp)->isuscsi = 0;
-	}
-	if (scglocal(scgp)->isuscsi == 0) {
+		}
+
 		for (b=0; b < MAX_SCG; b++) {
 			for (t=0; t < MAX_TGT; t++) {
 				for (l=0; l < MAX_LUN ; l++)
-					scglocal(scgp)->u.scgfiles[b][t][l] = (short)-1;
+					scglocal(scgp)->u.scg_files[b][t][l] = (short)-1;
 			}
 		}
-		scglocal(scgp)->isuscsi = 1;
 	}
 
 	if (device != NULL && strcmp(device, "USCSI") == 0)
@@ -503,7 +486,7 @@ uscsiscan:
 				"Cannot open '%s'", devname);
 			return (0);
 		}
-		scglocal(scgp)->u.scgfiles[busno][tgt][tlun] = f;
+		scglocal(scgp)->u.scg_files[busno][tgt][tlun] = f;
 		return 1;
 	} else {
 
@@ -526,8 +509,8 @@ uscsiscan:
 						break;
 					if (f >= 0) {
 						nopen ++;
-						if (scglocal(scgp)->u.scgfiles[b][t][l] == -1)
-						scglocal(scgp)->u.scgfiles[b][t][l] = f;
+						if (scglocal(scgp)->u.scg_files[b][t][l] == -1)
+						scglocal(scgp)->u.scg_files[b][t][l] = f;
 					else
 						close(f);
 					}
@@ -553,9 +536,8 @@ openbydev:
 
 		if (busno < 0)
 			busno = 0;	/* Use Fake number if not specified */
-		scgp->scsibus = busno;
 
-		if (scsi_ugettlun(f, &target, &lun) >= 0) {
+		if (scgo_ugettlun(f, &target, &lun) >= 0) {
 			if (tgt >= 0 && tlun >= 0) {
 				if (tgt != target || tlun != lun) {
 					close(f);
@@ -570,11 +552,10 @@ openbydev:
 				return (0);
 			}
 		}
-		scgp->target = tgt;
-		scgp->lun = tlun;
 
-		if (scglocal(scgp)->u.scgfiles[busno][tgt][tlun] == -1)
-			scglocal(scgp)->u.scgfiles[busno][tgt][tlun] = f;
+		if (scglocal(scgp)->u.scg_files[busno][tgt][tlun] == -1)
+			scglocal(scgp)->u.scg_files[busno][tgt][tlun] = f;
+		scg_settarget(scgp, busno, tgt, tlun);
 
 		return (++nopen);
 	}
@@ -582,7 +563,7 @@ openbydev:
 }
 
 LOCAL int
-scsi_uclose(scgp)
+scgo_uclose(scgp)
 	SCSI	*scgp;
 {
 	register int	f;
@@ -596,10 +577,10 @@ scsi_uclose(scgp)
 	for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
 			for (l=0; l < MAX_LUN ; l++) {
-				f = scglocal(scgp)->u.scgfiles[b][t][l];
+				f = scglocal(scgp)->u.scg_files[b][t][l];
 				if (f >= 0)
 					close(f);
-				scglocal(scgp)->u.scgfiles[b][t][l] = (short)-1;
+				scglocal(scgp)->u.scg_files[b][t][l] = (short)-1;
 			}
 		}
 	}
@@ -607,7 +588,7 @@ scsi_uclose(scgp)
 }
 
 LOCAL int
-scsi_ucinfo(f, cp, debug)
+scgo_ucinfo(f, cp, debug)
 	int		f;
 	struct dk_cinfo *cp;
 	int		debug;
@@ -620,37 +601,37 @@ scsi_ucinfo(f, cp, debug)
 	if (debug <= 0)
 		return (0);
 
-	printf("cname:		'%s'\n", cp->dki_cname);
-	printf("ctype:		0x%04hX %hd\n", cp->dki_ctype, cp->dki_ctype);
-	printf("cflags:		0x%04hX\n", cp->dki_flags);
-	printf("cnum:		%hd\n", cp->dki_cnum);
+	js_fprintf(stderr, "cname:		'%s'\n", cp->dki_cname);
+	js_fprintf(stderr, "ctype:		0x%04hX %hd\n", cp->dki_ctype, cp->dki_ctype);
+	js_fprintf(stderr, "cflags:		0x%04hX\n", cp->dki_flags);
+	js_fprintf(stderr, "cnum:		%hd\n", cp->dki_cnum);
 #ifdef	__EVER__
-	printf("addr:		%d\n", cp->dki_addr);
-	printf("space:		%d\n", cp->dki_space);
-	printf("prio:		%d\n", cp->dki_prio);
-	printf("vec:		%d\n", cp->dki_vec);
+	js_fprintf(stderr, "addr:		%d\n", cp->dki_addr);
+	js_fprintf(stderr, "space:		%d\n", cp->dki_space);
+	js_fprintf(stderr, "prio:		%d\n", cp->dki_prio);
+	js_fprintf(stderr, "vec:		%d\n", cp->dki_vec);
 #endif
-	printf("dname:		'%s'\n", cp->dki_dname);
-	printf("unit:		%d\n", cp->dki_unit);
-	printf("slave:		%d %04o Tgt: %d Lun: %d\n",
+	js_fprintf(stderr, "dname:		'%s'\n", cp->dki_dname);
+	js_fprintf(stderr, "unit:		%d\n", cp->dki_unit);
+	js_fprintf(stderr, "slave:		%d %04o Tgt: %d Lun: %d\n",
 				cp->dki_slave, cp->dki_slave,
 				TARGET(cp->dki_slave), LUN(cp->dki_slave));
-	printf("partition:	%hd\n", cp->dki_partition);
-	printf("maxtransfer:	%d (%d)\n",
+	js_fprintf(stderr, "partition:	%hd\n", cp->dki_partition);
+	js_fprintf(stderr, "maxtransfer:	%d (%d)\n",
 				cp->dki_maxtransfer,
 				cp->dki_maxtransfer * DEV_BSIZE);
 	return (0);
 }
 
 LOCAL int
-scsi_ugettlun(f, tgtp, lunp)
+scgo_ugettlun(f, tgtp, lunp)
 	int	f;
 	int	*tgtp;
 	int	*lunp;
 {
 	struct dk_cinfo ci;
 
-	if (scsi_ucinfo(f, &ci, 0) < 0)
+	if (scgo_ucinfo(f, &ci, 0) < 0)
 		return (-1);
 	if (tgtp)
 		*tgtp = TARGET(ci.dki_slave);
@@ -660,7 +641,7 @@ scsi_ugettlun(f, tgtp, lunp)
 }
 
 LOCAL long
-scsi_umaxdma(scgp, amt)
+scgo_umaxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -677,9 +658,9 @@ scsi_umaxdma(scgp, amt)
 	for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
 			for (l=0; l < MAX_LUN ; l++) {
-				if ((f = scglocal(scgp)->u.scgfiles[b][t][l]) < 0)
+				if ((f = scglocal(scgp)->u.scg_files[b][t][l]) < 0)
 					continue;
-				if (scsi_ucinfo(f, &ci, 0) < 0)
+				if (scgo_ucinfo(f, &ci, 0) < 0)
 					continue;
 				if (maxdma < 0)
 					maxdma = (long)(ci.dki_maxtransfer * DEV_BSIZE);
@@ -692,7 +673,7 @@ scsi_umaxdma(scgp, amt)
 }
 
 LOCAL BOOL
-scsi_uhavebus(scgp, busno)
+scgo_uhavebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -704,14 +685,14 @@ scsi_uhavebus(scgp, busno)
 
 	for (t=0; t < MAX_TGT; t++) {
 		for (l=0; l < MAX_LUN ; l++)
-			if (scglocal(scgp)->u.scgfiles[busno][t][l] >= 0)
+			if (scglocal(scgp)->u.scg_files[busno][t][l] >= 0)
 				return (TRUE);
 	}
 	return (FALSE);
 }
 
 LOCAL int
-scsi_ufileno(scgp, busno, tgt, tlun)
+scgo_ufileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -723,31 +704,30 @@ scsi_ufileno(scgp, busno, tgt, tlun)
 	    tlun < 0 || tlun >= MAX_LUN)
 		return (-1);
 
-	return ((int)scglocal(scgp)->u.scgfiles[busno][tgt][tlun]);
+	return ((int)scglocal(scgp)->u.scg_files[busno][tgt][tlun]);
 }
 
 LOCAL int
-scsi_uinitiator_id(scgp)
+scgo_uinitiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
 }
 
 LOCAL int 
-scsi_uisatapi(scgp)
+scgo_uisatapi(scgp)
 	SCSI	*scgp;
 {
 	char		devname[32];
 	char		symlinkname[MAXPATHLEN];
 	int		len;
-	int		f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
 	struct dk_cinfo ci;
 
-	if (ioctl(f, DKIOCINFO, &ci) < 0)
+	if (ioctl(scgp->fd, DKIOCINFO, &ci) < 0)
 		return (-1);
 
 	js_snprintf(devname, sizeof(devname), "/dev/rdsk/c%dt%dd%ds2",
-		scgp->scsibus, scgp->target, scgp->lun);
+		scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 
 	symlinkname[0] = '\0';
 	len = readlink(devname, symlinkname, sizeof(symlinkname));
@@ -761,35 +741,45 @@ scsi_uisatapi(scgp)
 }
 
 LOCAL int
-scsi_ureset(scgp)
+scgo_ureset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
-	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
 	struct uscsi_cmd req;
 
-	fillbytes(&req, sizeof(req), '\0');
-	req.uscsi_flags = USCSI_RESET | USCSI_SILENT;	/* reset target */
+	if (what == SCG_RESET_NOP)
+		return (0);
 
-	return (ioctl(f, USCSICMD, &req));
+	fillbytes(&req, sizeof(req), '\0');
+
+	if (what == SCG_RESET_TGT) {
+		req.uscsi_flags = USCSI_RESET | USCSI_SILENT;	/* reset target */
+	} else if (what != SCG_RESET_BUS) {
+		req.uscsi_flags = USCSI_RESET_ALL | USCSI_SILENT;/* reset bus */
+	} else {
+		errno = EINVAL;
+		return (-1);
+	}
+
+	return (ioctl(scgp->fd, USCSICMD, &req));
 }
 
 LOCAL int
-scsi_usend(scgp, f, sp)
+scgo_usend(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	struct uscsi_cmd req;
 	int		ret;
 
-	if (f < 0) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
 
 	fillbytes(&req, sizeof(req), '\0');
 
-	req.uscsi_flags = USCSI_SILENT | USCSI_RQENABLE;
+	req.uscsi_flags = USCSI_SILENT | USCSI_DIAGNOSE | USCSI_RQENABLE;
 
 	if (sp->flags & SCG_RECV_DATA) {
 		req.uscsi_flags |= USCSI_READ;
@@ -801,33 +791,35 @@ scsi_usend(scgp, f, sp)
 	req.uscsi_timeout	= sp->timeout;
 	req.uscsi_cdblen	= sp->cdb_len;
 	req.uscsi_rqbuf		= (caddr_t) sp->u_sense.cmd_sense;
-	req.uscsi_rqlen		= sizeof (sp->u_sense.cmd_sense);
+	req.uscsi_rqlen		= sp->sense_len;
 	req.uscsi_cdb		= (caddr_t) &sp->cdb;
 
 	errno = 0;
-	ret = ioctl(f, USCSICMD, &req);
+	ret = ioctl(scgp->fd, USCSICMD, &req);
 
-	if (scgp->debug) {
-		printf("ret: %d errno: %d (%s)\n", ret, errno, errmsgstr(errno));
-		printf("uscsi_flags:     0x%x\n", req.uscsi_flags);
-		printf("uscsi_status:    0x%x\n", req.uscsi_status);
-		printf("uscsi_timeout:   %d\n", req.uscsi_timeout);
-		printf("uscsi_bufaddr:   0x%lx\n", (long)req.uscsi_bufaddr);
-		printf("uscsi_buflen:    %d\n", req.uscsi_buflen);
-		printf("uscsi_resid:     %d\n", req.uscsi_resid);
-		printf("uscsi_rqlen:     %d\n", req.uscsi_rqlen);
-		printf("uscsi_rqstatus:  0x%x\n", req.uscsi_rqstatus);
-		printf("uscsi_rqresid:   %d\n", req.uscsi_rqresid);
-		printf("uscsi_rqbuf:     0x%lx\n", (long)req.uscsi_rqbuf);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile, "ret: %d errno: %d (%s)\n", ret, errno, errmsgstr(errno));
+		js_fprintf((FILE *)scgp->errfile, "uscsi_flags:     0x%x\n", req.uscsi_flags);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_status:    0x%x\n", req.uscsi_status);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_timeout:   %d\n", req.uscsi_timeout);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_bufaddr:   0x%lx\n", (long)req.uscsi_bufaddr);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_buflen:    %d\n", req.uscsi_buflen);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_resid:     %d\n", req.uscsi_resid);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_rqlen:     %d\n", req.uscsi_rqlen);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_rqstatus:  0x%x\n", req.uscsi_rqstatus);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_rqresid:   %d\n", req.uscsi_rqresid);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_rqbuf:     0x%lx\n", (long)req.uscsi_rqbuf);
 	}
 	if (ret < 0) {
 		sp->ux_errno = geterrno();
 		/*
 		 * Check if SCSI command cound not be send at all.
 		 */
-		if (sp->ux_errno == ENOTTY && scsi_isatapi(scgp) == TRUE) {
-			if (scgp->debug)
-				printf("ENOTTY atapi: %d\n", scsi_isatapi(scgp));
+		if (sp->ux_errno == ENOTTY && scgo_uisatapi(scgp) == TRUE) {
+			if (scgp->debug > 0) {
+				js_fprintf((FILE *)scgp->errfile,
+					"ENOTTY atapi: %d\n", scgo_uisatapi(scgp));
+			}
 			sp->error = SCG_FATAL;
 			return (0);
 		}
@@ -849,7 +841,7 @@ scsi_usend(scgp, f, sp)
 	}
 	if (req.uscsi_rqstatus == 0 &&
 	    ((req.uscsi_status & STATUS_MASK) == STATUS_CHECK)) {
-		sp->error = SCG_RETRYABLE;
+		sp->error = SCG_NO_ERROR;
 		return (0);
 	}
 	if (req.uscsi_status & (STATUS_TERMINATED |
@@ -857,6 +849,10 @@ scsi_usend(scgp, f, sp)
 		sp->error = SCG_FATAL;
 	}
 	if (req.uscsi_status != 0) {
+		/*
+		 * This is most likely wrong. There seems to be no way
+		 * to produce SCG_RETRYABLE with USCSI.
+		 */
 		sp->error = SCG_RETRYABLE;
 	}
 

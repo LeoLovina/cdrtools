@@ -1,7 +1,7 @@
-/* @(#)volume.c	1.6 00/04/27 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)volume.c	1.8 01/03/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)volume.c	1.6 00/04/27 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)volume.c	1.8 01/03/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -36,7 +36,7 @@ static	char sccsid[] =
 
 #ifdef APPLE_HYB
 
-#include "config.h"
+#include <mconfig.h>
 #include "mkisofs.h"
 #include <errno.h>
 
@@ -210,7 +210,7 @@ make_mac_volume(dpnt, start_extent)
 
 	/* umount volume if we have had a previous attempt */
 	if (vol_save)
-		if (hfs_umount(vol_save, 0) < 0)
+		if (hfs_umount(vol_save, 0, hfs_lock) < 0)
 			return (-1);
 
 	/* set the default clump size to the ISO block size */
@@ -317,7 +317,7 @@ make_mac_volume(dpnt, start_extent)
 		return (-1);
 
 	/* unmount and set the start blocks for the catalog/extents files */
-	if (hfs_umount(vol, (last_extent - session_start) * HFS_BLK_CONV) < 0)
+	if (hfs_umount(vol, (last_extent - session_start) * HFS_BLK_CONV, hfs_lock) < 0)
 		return (-1);
 
 	return (Csize);
@@ -621,6 +621,19 @@ copy_to_mac_vol(vol, node)
 				fprintf(stderr, "Using HFS name: %s for %s\n",
 							ent->name,
 							s_entry->whole_name);
+			}
+			/* see if we need to "bless" this folder */
+			if (hfs_bless && strcmp(s_entry->whole_name, hfs_bless)
+					== 0) {
+				hfs_stat(vol, ent->name, ent);
+				hfs_vsetbless(vol, ent->cnid);
+				if (verbose > 0) {
+					fprintf(stderr, "Blessing %s (%s)\n",
+							ent->name,
+							s_entry->whole_name);
+				}
+				/* stop any further checks */
+				hfs_bless = NULL;
 			}
 			/* change to sub-folder */
 			if (hfs_chdir(vol, ent->name) < 0)

@@ -1,7 +1,7 @@
-/* @(#)tree.c	1.53 00/05/07 joerg */
+/* @(#)tree.c	1.58 01/04/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)tree.c	1.53 00/05/07 joerg";
+	"@(#)tree.c	1.58 01/04/07 joerg";
 #endif
 /*
  * File tree.c - scan directory  tree and build memory structures for iso9660
@@ -10,7 +10,7 @@ static	char sccsid[] =
    Written by Eric Youngdale (1993).
 
    Copyright 1993 Yggdrasil Computing, Incorporated
-   Copyright (c) 1999,2000 J. Schilling
+   Copyright (c) 1999,2000,2001 J. Schilling
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,14 +30,15 @@ static	char sccsid[] =
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
-#include "config.h"
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <time.h>
+#include <mconfig.h>
+#include "mkisofs.h"
+#include "match.h"
+#include "exclude.h"
+#include <timedefs.h>
 #include <errno.h>
-#include <unixstd.h>
 #include <fctldefs.h>
 #include <device.h>
+#include <schily.h>
 
 #ifdef VMS
 #include <sys/file.h>
@@ -52,18 +53,6 @@ extern char	*strdup	__PR((const char *));
  */
 #ifndef HAVE_MEMMOVE
 #define memmove(d, s, n) bcopy ((s), (d), (n))
-#endif
-
-#include "mkisofs.h"
-#include "iso9660.h"
-#include "match.h"
-#include <sys/stat.h>
-#include "exclude.h"
-#include <statdefs.h>
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
-#include <schily.h>
 #endif
 
 #ifdef __SVR4
@@ -117,10 +106,10 @@ struct directory_entry *search_tree_file __PR((struct directory *node,
 	void	init_fstatbuf		__PR((void));
 
 extern int	verbose;
-struct stat	fstatbuf = {0,};	/* We use this for the artificial
+struct stat	fstatbuf;		/* We use this for the artificial
 						entries we create */
-struct stat	root_statbuf = {0,};	/* Stat buffer for root directory */
-struct directory *reloc_dir = NULL;
+struct stat	root_statbuf;		/* Stat buffer for root directory */
+struct directory *reloc_dir;
 
 static char *
 filetype(t)
@@ -186,26 +175,49 @@ static void
 stat_fix(st)
 	struct stat	*st;
 {
-	/*
-	 * Remove the uid and gid, they will only be useful on the author's
-	 * system.
-	 */
-	st->st_uid = 0;
-	st->st_gid = 0;
+	int adjust_modes = 0;
+
+	if (S_ISREG(st->st_mode))
+		adjust_modes = rationalize_filemode;
+	else if (S_ISDIR(st->st_mode))
+		adjust_modes = rationalize_dirmode;
+	else
+		adjust_modes = (rationalize_filemode || rationalize_dirmode);
 
 	/*
-	 * Make sure the file modes make sense.  Turn on all read bits.
-	 * Turn on all exec/search bits if any exec/search bit is set.
-	 * Turn off all write bits, and all special mode bits (on a r/o fs
-	 * lock bits are useless, and with uid+gid 0 don't want set-id bits,
-	 * either).
+	 * If rationalizing, override the uid and gid, since the
+	 * originals will only be useful on the author's system.
 	 */
-	st->st_mode |= 0444;
+	if (rationalize_uid)
+		st->st_uid = uid_to_use;
+	if (rationalize_gid)
+		st->st_gid = gid_to_use;
+
+	if (adjust_modes) {
+
+		if (S_ISREG(st->st_mode) && (filemode_to_use != 0)) {
+			st->st_mode = filemode_to_use | S_IFREG;
+		} else if (S_ISDIR(st->st_mode) && (dirmode_to_use != 0)) {
+			st->st_mode = dirmode_to_use | S_IFDIR;
+		} else {
+			/*
+			 * Make sure the file modes make sense.  Turn
+			 * on all read bits.  Turn on all exec/search
+			 * bits if any exec/search bit is set.  Turn
+			 * off all write bits, and all special mode
+			 * bits (on a r/o fs lock bits are useless,
+			 * and with uid+gid 0 don't want set-id bits,
+			 * either).
+			 */
+
+			st->st_mode |= 0444;
 #ifndef _WIN32	/* make all file "executable" */
-	if (st->st_mode & 0111)
+			if (st->st_mode & 0111)
 #endif	/* _WIN32 */
-		st->st_mode |= 0111;
-	st->st_mode &= ~07222;
+				st->st_mode |= 0111;
+			st->st_mode &= ~07222;
+		}
+	}
 }
 
 int
@@ -537,7 +549,7 @@ got_valid_name:
 		table->filedir = this_dir;
 		if (jhide_trans_tbl)
 			table->de_flags |= INHIBIT_JOLIET_ENTRY;
-/*      	table->name = strdup("<translation table>");*/
+/*		table->name = strdup("<translation table>");*/
 		table->name = strdup(trans_tbl);
 		table->table = (char *) e_malloc(ISO_ROUND_UP(tablesize));
 		memset(table->table, 0, ISO_ROUND_UP(tablesize));
@@ -889,7 +901,7 @@ attach_dot_entries(dirnode, parent_stat)
 		dirnode->contents->next = orig_contents;
 
 		if (use_RockRidge) {
-			fstatbuf.st_mode = 0555 | S_IFDIR;
+			fstatbuf.st_mode = new_dir_mode | S_IFDIR;
 			fstatbuf.st_nlink = 2;
 
 			if (dirnode == root) {
@@ -1354,7 +1366,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 		if ((status || !follow_links)) {
 			if (use_RockRidge) {
 				status = 0;
-				statbuf.st_size = 0;
+				statbuf.st_size = (off_t)0;
 				STAT_INODE(statbuf) = UNCACHED_INODE;
 				statbuf.st_dev = (dev_t) UNCACHED_DEVICE;
 				statbuf.st_mode =
@@ -1455,6 +1467,25 @@ insert_file_entry(this_dir, whole_path, short_name)
 		return 0;
 	}
 	/*
+	 * >= is required by the large file summit standard.
+	 */
+	if (S_ISREG(lstatbuf.st_mode) && (lstatbuf.st_size >= (off_t)0x7FFFFFFF)) {
+#ifdef	EOVERFLOW
+		errno = EOVERFLOW;
+#else
+		errno = EFBIG;
+#endif
+#ifdef	USE_LIBSCHILY
+		errmsg("File %s is too large - ignoring\n",
+			whole_path);
+#else
+		fprintf(stderr,
+			"File %s is too large (errno = %d) - ignoring\n",
+			whole_path, errno);
+#endif
+		return 0;
+	}
+	/*
 	 * Add this so that we can detect directory loops with hard links.
 	 * If we are set up to follow symlinks, then we skip this checking.
 	 */
@@ -1466,7 +1497,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 #ifdef	USE_LIBSCHILY
 /*			comerrno(EX_BAD,*/
 /*			"Directory loop - fatal goof (%s %lx %lu).\n",*/
-			comerrno(EX_BAD,
+			errmsgno(EX_BAD,
 			"Warning: Directory loop (%s dev: %lx ino: %lu).\n",
 				whole_path, (unsigned long) statbuf.st_dev,
 				(unsigned long) STAT_INODE(statbuf));
@@ -1477,7 +1508,6 @@ insert_file_entry(this_dir, whole_path, short_name)
 			"Warning: Directory loop (%s dev: %lx ino: %lu).\n",
 				whole_path, (unsigned long) statbuf.st_dev,
 				(unsigned long) STAT_INODE(statbuf));
-			exit(1);
 #endif
 		}
 		add_directory_hash(statbuf.st_dev, STAT_INODE(statbuf));
@@ -1587,9 +1617,9 @@ insert_file_entry(this_dir, whole_path, short_name)
 			lstatus = lstat_filter(rsrc_path, &rlstatbuf);
 
 /*			if (!status && !lstatus && S_ISREG(rlstatbuf.st_mode)*/
-/*					&& rlstatbuf.st_size > 0) { */
+/*					&& rlstatbuf.st_size > (off_t)0) { */
 			if (!status && !lstatus && S_ISREG(rstatbuf.st_mode)
-					&& rstatbuf.st_size > 0) {
+					&& rstatbuf.st_size > (off_t)0) {
 
 				/*
 				 * have a resource file - insert it into the
@@ -1681,7 +1711,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 	if (apple_both && !x_hfs) {
 		s_entry->hfs_ent = NULL;
 		s_entry->assoc = NULL;
-		s_entry->hfs_off = 0;
+		s_entry->hfs_off = (off_t)0;
 		s_entry->hfs_type = htype;
 		if (have_rsrc) {
 			s_entry->isorec.flags[0] |= ISO_ASSOCIATED;/* associated
@@ -1769,8 +1799,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 			S_ISFIFO(lstatbuf.st_mode) ||
 				S_ISSOCK(lstatbuf.st_mode)
 				|| S_ISLNK(lstatbuf.st_mode)) {
-			s_entry->size = 0;
-			statbuf.st_size = 0;
+			s_entry->size = (off_t)0;
+			statbuf.st_size = (off_t)0;
 		} else {
 			s_entry->size = statbuf.st_size;
 		}
@@ -1839,7 +1869,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 			scan_directory_tree(child, whole_path, s_entry1);
 		s_entry1->filedir = this_dir;
 
-		statbuf.st_size = 0;
+		statbuf.st_size = (off_t)0;
 		statbuf.st_mode &= 0777;
 		set_733((char *) s_entry->isorec.size, 0);
 		s_entry->size = 0;
@@ -2139,7 +2169,7 @@ find_or_create_directory(parent, path, de, flag)
 		 * It doesn't exist for real, so we cannot add any Rock Ridge.
 		 */
 		if (use_RockRidge) {
-			fstatbuf.st_mode = 0555 | S_IFDIR;
+			fstatbuf.st_mode = new_dir_mode | S_IFDIR;
 			fstatbuf.st_nlink = 2;
 			generate_rock_ridge_attributes("",
 				(char *) pnt, de,
@@ -2499,13 +2529,14 @@ init_fstatbuf()
 
 	if (fstatbuf.st_ctime == 0) {
 		time(&current_time);
-		if (rationalize) {
-			fstatbuf.st_uid = 0;
-			fstatbuf.st_gid = 0;
-		} else {
+		if (rationalize_uid)
+			fstatbuf.st_uid = uid_to_use;
+		else
 			fstatbuf.st_uid = getuid();
+		if (rationalize_gid)
+			fstatbuf.st_gid = gid_to_use;
+		else
 			fstatbuf.st_gid = getgid();
-		}
 		fstatbuf.st_ctime = current_time;
 		fstatbuf.st_mtime = current_time;
 		fstatbuf.st_atime = current_time;

@@ -17,6 +17,9 @@ Write the first session with:
 
 cdrecord -v speed=2 dev=2,0 -eject -multi isoimage.raw
 
+Note that all Sony drives do no support XA2 disks in firmware - read README.sony
+for more information.
+
 This must be a iso9660 image with Rock Ridge extensions (see above)
 
 Note the number of sectors written and check the disk, it should be mountable.
@@ -29,6 +32,14 @@ Next step is to check if cdrecord is able to retrieve the following data:
 	2) The next writable address in the unwritten session following the current.
 	   This should be the number of sectors written in the first
 	   run + ~ 11400 sectors for about 22MB lead out/in
+
+	   For the first additional session this is 11250 sectors lead-out/lead-in
+	   overhead + 150 sectors for the pre-gap of the first track after the
+	   lead-in = 11400 sectos.
+
+	   For all further session this is 6750 sectors lead-out/lead-in
+	   overhead + 150 sectors for the pre-gap of the first track after the
+	   lead-in = 6900 sectors.
 
 To get this information type:
 
@@ -62,6 +73,12 @@ mkisofs -o isoimage_2.raw -R  -C xx,yy -M /dev/cdwriter_blk_dev  first_dir
 On SunOS:
 mkisofs -o isoimage_2.raw -R  -C xx,yy -M target,lun first_dir
 
+Note that the name "first_dir" is not important.
+
+If you still keep the old raw image of the first session and there is only
+one previous session on the CD you may also call:
+
+mkisofs -o isoimage_2.raw -R  -C xx,yy -M isoimage.raw first_dir
 
 
 The argument of -C is the output of cdrecord -msinfo
@@ -79,6 +96,8 @@ mkisofs -o isoimage_3.raw -R  -C xx,0 -M /dev/cdwriter_blk_dev  first_dir
 
 On SunOS:
 mkisofs -o isoimage_2.raw -R  -C xx,0 -M target,lun first_dir
+
+Where xx is the first number of the pair returned by cdrecord -msinfo
 
 You may check ***this** image by mounting it with my "fbk" on Solaris 
 or the loopback driver on Linux.
@@ -120,5 +139,43 @@ Note: The first lead-out is 1:30 (6750 sectors) the lead-in is 1:00 (4500 sector
 All following sessions need only 0:30 for lead-out (2250 sectors), the lead-in
 is also 1:00. So in theory, the can be 44 sessions on s 74 minute disk if you
 take into account that the minimum track size is 4 seconds.
+
+The total amount of the overhead is 11250 + 150 sectors for the first additional
+session and 6750 + 150 sectors for all subsequent sessions.
+The 150 additional sectors are the pre-gap sectors for the first track after
+the current session.
+
+Some notes on multi-session CD's that contain only Joliet but no Rock Ridge:
+
+Joliet is a really bad idea in general:
+
+-	There is no way to find a relation between a ISO-9660 name and a Joliet
+	name. If the file has a size, you may try to match the starting sector #
+	but if the size in 0 it's impossible.
+
+
+-	Joliet does not allow long filenames (it limits names to 64 chars).
+
+-	Joliet does not allow all (usually used) characters in filenames.
+         
+	All code points between (00)(00) and (00)(1F), inclusive. (Control Characters)
+		(00)(2A) '*'(Asterisk)
+		(00)(2F) '/' (Forward Slash)
+		(00)(3A) ':' (Colon)
+		(00)(3B) ';' (Semicolon)
+		(00)(3F) '?' (Question Mark)
+		(00)(5C) '\' (Backslash) 
+
+	While '/' is not a real problem ;-) other characters may cause troube.
+ 
+All notes above prevent you from doing reliable multi-session if the CD does
+only contain Joliet but des not contain Rock Ridge attributes.
+
+In addition, please read README.joliet in the mkisofs directory.
+
+This is the answer to a commonly asked question is why can't I continue a
+multisession CD that has been started on a Microsoft system using mkisofs. 
+
+
 
 Joerg Schilling

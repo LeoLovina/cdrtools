@@ -24,12 +24,21 @@ DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
      machine.  _S_c_s_i_b_u_s, _t_a_r_g_e_t and _l_u_n are integer numbers.  Some
      operating  systems  or  SCSI  transport  implementations may
      require to specify a filename in addition.  In this case the
-     corect     syntax     for     the     device    is:     ddddeeeevvvv====
+     correct     syntax     for     the    device    is:     ddddeeeevvvv====
      _d_e_v_i_c_e_n_a_m_e:_s_c_s_i_b_u_s,_t_a_r_g_e_t,  or  ddddeeeevvvv====  _d_e_v_i_c_e_n_a_m_e:_t_a_r_g_e_t,_l_u_n.
      If  the  name  of the device node that has been specified on
-     such a system referres to exactly one SCSI device, a  short-
-     hand  in the form ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:@ or ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:@,_l_u_n
-     may be used instead of ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:_s_c_s_i_b_u_s,_t_a_r_g_e_t,
+     such a system refers to exactly one SCSI device, a shorthand
+     in  the  form ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:@ or ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:@,_l_u_n may
+     be used instead of ddddeeeevvvv==== _d_e_v_i_c_e_n_a_m_e:_s_c_s_i_b_u_s,_t_a_r_g_e_t,
+
+
+     To access remote SCSI devices, you need to prepend the  SCSI
+     device  name by a remote device indicator. The remote device
+     indicator is either RRRREEEEMMMMOOOOTTTTEEEE::::_u_s_e_r@_h_o_s_t:  or  RRRREEEEMMMMOOOOTTTTEEEE::::_h_o_s_t:
+     A valid remote SCSI device name may  be:   RRRREEEEMMMMOOOOTTTTEEEE::::_u_s_e_r@_h_o_s_t:
+     to  allow remote SCSI bus scanning or RRRREEEEMMMMOOOOTTTTEEEE::::_u_s_e_r@_h_o_s_t:_1,_0,_0
+     to access the SCSI device at _h_o_s_t connected to  SCSI  bus  #
+     1,target 0 lun 0.
 
 
      To make rrrreeeeaaaaddddccccdddd portable to all UNIX  platforms,  the  syntax
@@ -48,19 +57,10 @@ DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
      the ----ssssccccaaaannnnbbbbuuuussss option of ccccddddrrrreeeeccccoooorrrrdddd.
 
 
-OOOOPPPPTTTTIIIIOOOONNNNSSSS
-     If no options except the _d_e_v= option  have  been  specified,
-     rrrreeeeaaaaddddccccdddd  goes  into intercative mode.  Select a primary func-
-     tion and then follow the instructions.
-
-     ----vvvveeeerrrrssssiiiioooonnnn
-          Print version information and exit.
-
-     ----vvvv    Increment the level of general verbosity by one.
 
 
 
-Joerg Schilling    Last change: Version 1.8.1                   1
+Joerg Schilling     Last change: Version 1.10                   1
 
 
 
@@ -71,14 +71,95 @@ READCD(1)            Schily's USER COMMANDS             READCD(1)
 
 
 
-     ----VVVV    Increment the verbose level in respect of SCSI command
-          transport  by one.  This helps to debug problems during
-          the writing process, that occur in the drive.   If  you
-          get incomprehensible error messages you should use this
-          flag to get more detailed output.  ----VVVVVVVV will  show  data
-          buffer content in addition.  Using ----VVVV or ----VVVVVVVV slows down
-          the process and may be the reason for a  buffer  under-
-          run.
+OOOOPPPPTTTTIIIIOOOONNNNSSSS
+     If no options except the _d_e_v= option  have  been  specified,
+     rrrreeeeaaaaddddccccdddd  goes  into intercative mode.  Select a primary func-
+     tion and then follow the instructions.
+
+     ----vvvveeeerrrrssssiiiioooonnnn
+          Print version information and exit.
+
+     ddddeeeevvvv====_t_a_r_g_e_t
+          Sets the SCSI target for the drive, see notes above.  A
+          typical   device  specification  is  ddddeeeevvvv====_6,_0  .   If  a
+          filename must be provided together with  the  numerical
+          target  specification,  the  filename is implementation
+          specific.  The correct filename in  this  case  can  be
+          found  in  the  system  specific  manuals of the target
+          operating system.  On a _F_r_e_e_B_S_D system without _C_A_M sup-
+          port,   you  need  to  use  the  control  device  (e.g.
+          /_d_e_v/_r_c_d_0._c_t_l).  A correct device specification in this
+          case may be ddddeeeevvvv====/_d_e_v/_r_c_d_0._c_t_l:@ .
+
+          On Linux, drives connected to a parallel  port  adapter
+          are  mapped  to  a virtual SCSI bus. Different adapters
+          are mapped to different targets on  this  virtual  SCSI
+          bus.
+
+          If no _d_e_v option is present, ccccddddrrrreeeeccccoooorrrrdddd will try  to  get
+          the device from the CCCCDDDDRRRR____DDDDEEEEVVVVIIIICCCCEEEE environment.
+
+          If the argument to the ddddeeeevvvv==== option does not contain the
+          characters  ',',  '/', '@' or ':', it is interpreted as
+          an  label  name  that  may  be  found   in   the   file
+          /etc/default/cdrecord (see FILES section).
+
+     ttttiiiimmmmeeeeoooouuuutttt====#
+          Set  the  default  SCSI  command  timeout  value  to  #
+          seconds.   The  default  SCSI  command  timeout  is the
+          minimum timeout used for sending SCSI commands.   If  a
+          SCSI  command  fails  due  to a timeout, you may try to
+          raise  the  default  SCSI  command  timeout  above  the
+          timeout  value  of  the failed command.  If the command
+          runs correctly with a raised  command  timeout,  please
+          report  the  better timeout value and the corresponding
+          command to the author of the program.   If  no  _t_i_m_e_o_u_t
+          option  is  present, a default timeout of 40 seconds is
+          used.
+
+     ddddeeeebbbbuuuugggg====#, ----dddd
+          Set the misc debug value to # (with debug=#) or  incre-
+          ment  the  misc  debug  level  by one (with -d). If you
+          specify -_d_d, this equals to ddddeeeebbbbuuuugggg====_2.  This may help  to
+          find  problems  while  opening a driver for libscg.  as
+          well as with sector sizes and sector types.   Using   ----
+
+
+
+Joerg Schilling     Last change: Version 1.10                   2
+
+
+
+
+
+
+READCD(1)            Schily's USER COMMANDS             READCD(1)
+
+
+
+          ddddeeeebbbbuuuugggg  slows down the process and may be the reason for
+          a buffer underrun.
+
+     kkkkddddeeeebbbbuuuugggg====#, kkkkdddd====#
+          Tell the ssssccccgggg-driver to modify the  kernel  debug  value
+          while SCSI commands are running.
+
+     ----ssssiiiilllleeeennnntttt, ----ssss
+          Do not print out a status report for failed  SCSI  com-
+          mands.
+
+     ----vvvv    Increment the level of general verbosity by one.  This
+          is used e.g. to display the progress of the process.
+
+     ----VVVV    Increment the verbose level with respect of SCSI  com-
+          mand  transport  by  one.  This helps to debug problems
+          during the process, that occur in the  CD-Recorder.  If
+          you  get incomprehensible error messages you should use
+          this flag to get more detailed output.  ----VVVVVVVV  will  show
+          data buffer content in addition.  Using ----VVVV or ----VVVVVVVV slows
+          down the process.
+
+     ffff====_f_i_l_e
 
      ----wwww    Switch to write mode. If this option is  not  present,
           rrrreeeeaaaaddddccccdddd reads from the specified device.
@@ -87,6 +168,9 @@ READCD(1)            Schily's USER COMMANDS             READCD(1)
           Specify a sector range that should be read.  The  range
           is  specified  by  the  starting sector number, a minus
           sign and the ending sector number.
+
+     ----nnnnoooottttrrrruuuunnnncccc
+          Do not truncate the outputfile when opening it.
 
 
 EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
@@ -103,6 +187,21 @@ EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
      ing the data to the file _c_d_i_m_a_g_e._r_a_w:
 
          readcd dev=2,0 sectors=150-10000 f=cdimage.raw
+
+
+
+
+
+Joerg Schilling     Last change: Version 1.10                   3
+
+
+
+
+
+
+READCD(1)            Schily's USER COMMANDS             READCD(1)
+
+
 
      To write the data from the file _c_d_i_m_a_g_e._r_a_w (e.g. a filesys-
      tem image from mmmmkkkkiiiissssooooffffssss) to a DVD-RAM, call:
@@ -121,21 +220,6 @@ NNNNOOOOTTTTEEEESSSS
      all users or a group of users with no root privileges to use
      rrrreeeeaaaaddddccccdddd.... RRRReeeeaaaaddddccccdddd in this case will only allow access to CD-ROM
      type drives- To give all user access to use rrrreeeeaaaaddddccccdddd,,,, enter:
-
-
-
-
-
-Joerg Schilling    Last change: Version 1.8.1                   2
-
-
-
-
-
-
-READCD(1)            Schily's USER COMMANDS             READCD(1)
-
-
 
           chown root /usr/local/bin/readcd
           chmod 4711 /usr/local/bin/readcd
@@ -171,6 +255,20 @@ READCD(1)            Schily's USER COMMANDS             READCD(1)
      +o     It cannot get real DMA count of transfer. RRRReeeeaaaaddddccccdddd  can-
           not tell you if there is an DMA residual count.
 
+
+
+
+Joerg Schilling     Last change: Version 1.10                   4
+
+
+
+
+
+
+READCD(1)            Schily's USER COMMANDS             READCD(1)
+
+
+
      +o     It cannot get number of  bytes  valid  in  auto  sense
           data.   RRRReeeeaaaaddddccccdddd  cannot  tell you if device transfers no
           sense data at all.
@@ -189,19 +287,7 @@ DDDDIIIIAAAAGGGGNNNNOOOOSSSSTTTTIIIICCCCSSSS
           Sense Key: 0x5 Illegal Request, Segment 0
           Sense Code: 0x25 Qual 0x00 (logical unit not supported) Fru 0x0
           Sense flags: Blk 0 (not valid)
-
-
-
-Joerg Schilling    Last change: Version 1.8.1                   3
-
-
-
-
-
-
-READCD(1)            Schily's USER COMMANDS             READCD(1)
-
-
+          cmd finished after 0.002s timeout 40s
 
      The first line gives information about the transport of  the
      command.   The  text  after  the first colon gives the error
@@ -236,9 +322,25 @@ READCD(1)            Schily's USER COMMANDS             READCD(1)
      The text is followed by the error value for a field replace-
      able unit.
 
+
+
+Joerg Schilling     Last change: Version 1.10                   5
+
+
+
+
+
+
+READCD(1)            Schily's USER COMMANDS             READCD(1)
+
+
+
      The seventh line prints the block number that is related  to
      the  failed  command  and  text for several error flags. The
      block number may not be valid.
+
+     The eight line reports the timeout set up for  this  commans
+     and the time that the command realy needed to be finished.
 
 
 BBBBUUUUGGGGSSSS
@@ -256,19 +358,6 @@ MMMMAAAAIIIILLLLIIIINNNNGGGG LLLLIIIISSSSTTTTS
           cdwrite@lists.debian.org
 
 
-
-
-Joerg Schilling    Last change: Version 1.8.1                   4
-
-
-
-
-
-
-READCD(1)            Schily's USER COMMANDS             READCD(1)
-
-
-
 AAAAUUUUTTTTHHHHOOOORRRR
      Joerg Schilling
      Seestr. 110
@@ -278,22 +367,20 @@ AAAAUUUUTTTTHHHHOOOORRRR
      Additional information can be found on:
      http://www.fokus.gmd.de/usr/schilling/cdrecord.html
 
-     Mail bugs and suggestions to:
+     If you have support questions, send them to:
 
-     jjjjooooeeeerrrrgggg@@@@sssscccchhhhiiiillllyyyy....iiiissssddddnnnn....ccccssss....ttttuuuu----bbbbeeeerrrrlllliiiinnnn....ddddeeee or  jjjjssss@@@@ccccssss....ttttuuuu----bbbbeeeerrrrlllliiiinnnn....ddddeeee  or
-     sssscccchhhhiiiilllllllliiiinnnngggg@@@@ffffooookkkkuuuussss....ggggmmmmdddd....ddddeeee
+     ccccddddrrrreeeeccccoooorrrrdddd----ssssuuuuppppppppoooorrrrtttt@@@@bbbbeeeerrrrlllliiiioooossss....ddddeeee
+     or ooootttthhhheeeerrrr----ccccddddwwwwrrrriiiitttteeee@@@@lllliiiissssttttssss....ddddeeeebbbbiiiiaaaannnn....oooorrrrgggg
 
+     Of you definitly found a bug, send a mail to:
 
+     ccccddddrrrreeeeccccoooorrrrdddd----ddddeeeevvvveeeellllooooppppeeeerrrrssss@@@@bbbbeeeerrrrlllliiiioooossss....ddddeeee
+     or sssscccchhhhiiiilllllllliiiinnnngggg@@@@ffffooookkkkuuuussss....ggggmmmmdddd....ddddeeee
 
+     To subscribe, use:
 
-
-
-
-
-
-
-
-
+     hhhhttttttttpppp::::////////lllliiiissssttttssss....bbbbeeeerrrrlllliiiioooossss....ddddeeee////mmmmaaaaiiiillllmmmmaaaannnn////lllliiiissssttttiiiinnnnffffoooo////ccccddddrrrreeeeccccoooorrrrdddd----ddddeeeevvvveeeellllooooppppeeeerrrrssss
+     or hhhhttttttttpppp::::////////lllliiiissssttttssss....bbbbeeeerrrrlllliiiioooossss....ddddeeee////mmmmaaaaiiiillllmmmmaaaannnn////lllliiiissssttttiiiinnnnffffoooo////ccccddddrrrreeeeccccoooorrrrdddd----ssssuuuuppppppppoooorrrrtttt
 
 
 
@@ -303,28 +390,7 @@ AAAAUUUUTTTTHHHHOOOORRRR
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Joerg Schilling    Last change: Version 1.8.1                   5
+Joerg Schilling     Last change: Version 1.10                   6
 
 
 

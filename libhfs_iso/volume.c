@@ -1,3 +1,8 @@
+/* @(#)volume.c	1.1 00/03/06 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)volume.c	1.1 00/03/06 joerg";
+#endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie

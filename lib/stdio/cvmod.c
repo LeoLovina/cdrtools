@@ -1,4 +1,4 @@
-/* @(#)cvmod.c	2.4 98/09/05 Copyright 1986, 1995 J. Schilling */
+/* @(#)cvmod.c	2.7 00/12/03 Copyright 1986, 1995 J. Schilling */
 /*
  *	Copyright (c) 1986, 1995 J. Schilling
  */
@@ -18,14 +18,17 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <stdio.h>
 #include "io.h"
 
 #ifndef	O_BINARY
 #define	O_BINARY	0
 #endif
+#ifndef	O_LARGEFILE
+#define	O_LARGEFILE	0
+#endif
 
-int _cvmod(mode, omode, flag)
+EXPORT int
+_cvmod(mode, omode, flag)
 	const char	*mode;
 	int		*omode;
 	int		*flag;
@@ -42,6 +45,11 @@ int _cvmod(mode, omode, flag)
 		case 'u':			*flag |= FI_UNBUF;	break;
 			/* dummy on UNIX */
 		case 'b':   *omode |= O_BINARY; *flag |= FI_BINARY;	break;
+			/*
+			 * XXX do we need this ?
+			 * XXX May this be a problem?
+			 */
+		case 'l':   *omode |= O_LARGEFILE;			break;
 		default:    raisecond(_badmode, 0L);
 			    return 0;
 		}

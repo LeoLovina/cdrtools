@@ -1,4 +1,4 @@
-/* @(#)statdefs.h	1.1 98/11/22 Copyright 1998 J. Schilling */
+/* @(#)statdefs.h	1.2 01/01/18 Copyright 1998 J. Schilling */
 /*
  *	Definitions for stat() file mode
  *
@@ -25,6 +25,15 @@
 
 #ifndef _MCONFIG_H
 #include <mconfig.h>
+#endif
+
+/*
+ * Apollo Domain/OS has a broken sys/stat.h that defines
+ * S_IFIFO == S_IFSOCK and creates trouble if the constants
+ * are used as case labels.
+ */
+#if S_IFIFO == S_IFSOCK
+#	undef	S_IFSOCK
 #endif
 
 #ifdef	STAT_MACROS_BROKEN

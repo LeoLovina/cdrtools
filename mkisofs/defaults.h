@@ -1,4 +1,4 @@
-/* @(#)defaults.h	1.14 00/04/16 joerg */
+/* @(#)defaults.h	1.15 01/04/03 joerg */
 /*
  * Header file defaults.h - assorted default values for character strings in
  * the volume descriptor.
@@ -10,9 +10,9 @@
 #define  PUBLISHER_DEFAULT	NULL
 #ifndef	APPID_DEFAULT
 #ifdef APPLE_HYB
-#define  APPID_DEFAULT 		"MKISOFS ISO 9660/HFS FILESYSTEM BUILDER"
+#define  APPID_DEFAULT 		"MKISOFS ISO 9660/HFS FILESYSTEM BUILDER (C) 1993 E.YOUNGDALE (C) 1997 J.PEARSON/J.SCHILLING"
 #else
-#define  APPID_DEFAULT 		"MKISOFS ISO 9660 FILESYSTEM BUILDER"
+#define  APPID_DEFAULT 		"MKISOFS ISO 9660 FILESYSTEM BUILDER (C) 1993 E.YOUNGDALE (C) 1997 J.PEARSON/J.SCHILLING"
 #endif /* APPLE_HYB */
 #endif
 #define  COPYRIGHT_DEFAULT 	NULL

@@ -1,4 +1,4 @@
-/* @(#)interface.h	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)interface.h	1.6 00/12/09 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /***
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Heiko Eissfeldt
@@ -23,6 +23,9 @@ typedef struct TOC {	/* structure of table of contents (cdrom) */
   unsigned char bTrack;
   unsigned char reserved2;
   unsigned int dwStartSector;
+  int mins;
+  int secs;
+  int frms;
   unsigned char ISRC[15];
 } TOC;
 

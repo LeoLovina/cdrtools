@@ -1,7 +1,8 @@
-$! build_all.com Version 23.5.2000 for cdrecord 1.8.1 final
+$! build_all.com Version 29.11.2000 for cdrecord 1.10alpha
 $ create/dir [.vms]
 $ copy *.c [.vms]
 $ copy [-.libscg]*.c [.vms]
+$ copy [-.libscg]*.h [.vms]
 $ copy [-.libdeflt]*.c [.vms]
 $ set default [.vms]
 $ define scg [--.libscg.scg]
@@ -14,10 +15,13 @@ $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") DRV_SONY.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") FIFO.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") ISOSIZE.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") MODES.C
-$! cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") PORT.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCSIERRS.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCSITRANSP.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCSIOPEN.C
+$ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCSIHACK.C
+$ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") RDUMMY.C
+$ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCGSETTARGET.C
+$ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCGTIMES.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCSI_CDR.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") SCSI_SCAN.C
 $ cc/pref=all/obj/incl=([-],[--.include])/define=("VMS") WM_PACKET.C
@@ -65,6 +69,7 @@ $ cc/pref=all/obj/incl=([],[--],[---.include],[-.inc])/define=("VMS") jsprintf.C
 $ cc/pref=all/obj/incl=([],[--],[---.include],[-.inc])/define=("VMS") jssnprintf.C
 $ cc/pref=all/obj/incl=([--],[---.include])/define=("VMS") STREQL.C
 $ cc/pref=all/obj/incl=([--],[---.include])/define=("VMS") SWABBYTES.C
+$ cc/pref=all/obj/incl=([--],[---.include])/define=("VMS") SERRMSG.C
 $ libr/crea [-]lib.olb
 $ libr/ins [-]lib.olb *.obj
 $ delete *.obj;*

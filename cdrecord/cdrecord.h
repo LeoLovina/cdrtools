@@ -1,4 +1,4 @@
-/* @(#)cdrecord.h	1.62 00/07/02 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.h	1.68 01/04/11 Copyright 1995 J. Schilling */
 /*
  *	Definitions for cdrecord
  *
@@ -19,6 +19,14 @@
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+/*
+ * Make sure it is there. We need it for off_t.
+ */
+#ifndef	_INCL_SYS_TYPES_H
+#include <sys/types.h>
+#define	_INCL_SYS_TYPES_H
+#endif
 
 /*
  * Defines for option flags
@@ -67,7 +75,7 @@
 #define PAD_SECS	15	/* NOTE: pad must be less than BUF_SIZE */
 #define	PAD_SIZE	(PAD_SECS * DATA_SEC_SIZE)
 
-#define	DEFAULT_FIFOSIZE (4*1024*1024)
+#define	DEFAULT_FIFOSIZE (4L*1024L*1024L)
 
 #ifdef	nono
 typedef struct tindex {
@@ -78,11 +86,12 @@ typedef struct tindex {
 typedef struct track {
 	int	f;		/* Open file for this track		*/
 	char	*filename;	/* File name for this track		*/
-	long	trackstart;	/* Start of this track			*/
-	long	tracksize;	/* Size of this track (-1 == until EOF)	*/
-	long	padsize;	/* Pad size for this track (0 == none)	*/
-	long	pregapsize;	/* Pre-gap size for this track		*/
-	int	secsize;	/* Sector size for this track		*/
+	long	trackstart;	/* Start sector # of this track		*/
+	off_t	tracksize;	/* Size of track bytes (-1 == until EOF)*/
+	off_t	padsize;	/* Pad size for track bytes (0 == none)	*/
+				/* XXX pregapsize needs to be > long too*/
+	long	pregapsize;	/* Pre-gap size for this track (sectors)*/
+	int	secsize;	/* Sector size for this track (bytes)	*/
 	int	secspt;		/* # of sectors to copy for one transfer*/
 	int	pktsize;	/* # of blocks per write packet		*/
 	char	trackno;	/* Track number for this track		*/
@@ -259,8 +268,8 @@ extern	char	*db2name[];	/* Convert data block type to name	  */
 /*
  * Useful definitions for audio tracks
  */
-#define	sample		(44100 * 2)		/* one 16bit audio sample */
-#define	ssample		(sample * 2)		/* one stereo sample	*/
+#define	msample		(44100 * 2)		/* one 16bit audio sample */
+#define	ssample		(msample * 2)		/* one stereo sample	*/
 #define samples(v)	((v) / ssample)		/* # of stereo samples	*/
 #define hsamples(v)	((v) / (ssample/100))	/* 100* # of stereo samples/s*/
 #define fsamples(v)	((v) / (ssample/75))	/* 75* # of stereo samples/s */
@@ -349,7 +358,7 @@ struct disk_status {
 /*--------------------------------------------------------------------------*/
 typedef	struct cdr_cmd	cdr_t;
 
-#ifdef	_SCSITRANSP_H
+#ifdef	_SCG_SCSITRANSP_H
 struct cdr_cmd {
 	int	cdr_dev;
 	int	cdr_flags;
@@ -357,7 +366,7 @@ struct cdr_cmd {
 	char	*cdr_drtext;					/* Driver ID text */
 	struct cd_mode_page_2A *cdr_cdcap;
 /*	dstat_t	*cdr_dstat;*/
-#ifdef	_SCSIREG_H
+#ifdef	_SCG_SCSIREG_H
 	cdr_t	*(*cdr_identify)	__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *));	/* identify drive */
 #else
 	cdr_t	*(*cdr_identify)	__PR((SCSI *scgp, cdr_t *, void *));		/* identify drive */
@@ -407,10 +416,10 @@ struct cdr_cmd {
  */
 extern	int	read_buf	__PR((int f, char *bp, int size));
 extern	int	get_buf		__PR((int f, char **bpp, int size));
-#ifdef	_SCSITRANSP_H
+#ifdef	_SCG_SCSITRANSP_H
 extern	int	pad_track	__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp,
-				     long startsec, long amt,
-				     BOOL dolast, long *bytesp));
+				     long startsec, Llong amt,
+				     BOOL dolast, Llong *bytesp));
 extern	void	load_media	__PR((SCSI *scgp, cdr_t *, BOOL));
 extern	void	unload_media	__PR((SCSI *scgp, cdr_t *, int));
 #endif
@@ -457,14 +466,14 @@ extern	int	write_session_data __PR((cdr_t *dp, int track, track_t *trackp));
 /*
  * wm_packet.c
  */
-#ifdef	_SCSITRANSP_H
+#ifdef	_SCG_SCSITRANSP_H
 extern	int	write_packet_data __PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
 #endif
 
 /*
  * modes.c
  */
-#ifdef	_SCSITRANSP_H
+#ifdef	_SCG_SCSITRANSP_H
 extern	BOOL	get_mode_params	__PR((SCSI *scgp, int page, char *pagename,
 					Uchar *modep, Uchar *cmodep,
 					Uchar *dmodep, Uchar *smodep,
@@ -483,7 +492,7 @@ extern	void	timevaldiff	__PR((struct timeval *start, struct timeval *stop));
 /*
  * scsi_cdr.c
  */
-#ifdef	_SCSITRANSP_H
+#ifdef	_SCG_SCSITRANSP_H
 extern	BOOL	unit_ready	__PR((SCSI *scgp));
 extern	BOOL	wait_unit_ready	__PR((SCSI *scgp, int secs));
 extern	BOOL	scsi_in_progress __PR((SCSI *scgp));
@@ -492,6 +501,9 @@ extern	int	rezero_unit	__PR((SCSI *scgp));
 extern	int	request_sense	__PR((SCSI *scgp));
 extern	int	inquiry		__PR((SCSI *scgp, caddr_t, int));
 extern	int	read_capacity	__PR((SCSI *scgp));
+#ifdef	EOF	/* stdio.h has been included */
+extern	void	print_capacity	__PR((SCSI *scgp, FILE *f));
+#endif
 extern	int	scsi_load_unload __PR((SCSI *scgp, int));
 extern	int	scsi_prevent_removal __PR((SCSI *scgp, int));
 extern	int	scsi_start_stop_unit __PR((SCSI *scgp, int, int));
@@ -539,6 +551,9 @@ extern	int	read_scsi	__PR((SCSI *scgp, caddr_t, long, int));
 extern	int	read_g0		__PR((SCSI *scgp, caddr_t, long, int));
 extern	int	read_g1		__PR((SCSI *scgp, caddr_t, long, int));
 extern	BOOL	getdev		__PR((SCSI *scgp, BOOL));
+#ifdef	EOF	/* stdio.h has been included */
+extern	void	printinq	__PR((SCSI *scgp, FILE *f));
+#endif
 extern	void	printdev	__PR((SCSI *scgp));
 extern	BOOL	do_inquiry	__PR((SCSI *scgp, BOOL));
 extern	BOOL	recovery_needed	__PR((SCSI *scgp));
@@ -560,8 +575,8 @@ extern	void	print_capabilities	__PR((SCSI *scgp));
 /*
  * cdr_drv.c
  */
-#ifdef	_SCSITRANSP_H
-#ifdef	_SCSIREG_H
+#ifdef	_SCG_SCSITRANSP_H
+#ifdef	_SCG_SCSIREG_H
 extern	cdr_t	*drive_identify		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *ip));
 #else
 extern	cdr_t	*drive_identify		__PR((SCSI *scgp,cdr_t *, void *ip));
@@ -569,7 +584,7 @@ extern	cdr_t	*drive_identify		__PR((SCSI *scgp,cdr_t *, void *ip));
 extern	int	drive_attach		__PR((SCSI *scgp, cdr_t *));
 #endif
 extern	int	attach_unknown		__PR((void));
-#ifdef	_SCSITRANSP_H
+#ifdef	_SCG_SCSITRANSP_H
 extern	int	blank_dummy		__PR((SCSI *scgp, long addr, int blanktype));
 extern	int	drive_getdisktype	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
 extern	int	cmd_ill			__PR((SCSI *scgp));
@@ -578,7 +593,7 @@ extern	int	no_sendcue		__PR((SCSI *scgp, int tracks, track_t *trackp));
 extern	int	buf_dummy		__PR((SCSI *scgp, long *sp, long *fp));
 #endif
 extern	BOOL	set_cdrcmds		__PR((char *name, cdr_t **dpp));
-#ifdef	_SCSITRANSP_H
+#ifdef	_SCG_SCSITRANSP_H
 extern	cdr_t	*get_cdrcmds		__PR((SCSI *scgp));
 #endif
 
@@ -586,15 +601,15 @@ extern	cdr_t	*get_cdrcmds		__PR((SCSI *scgp));
 /*
  * isosize.c
  */
-extern	long	isosize		__PR((int f));
+extern	Llong	isosize		__PR((int f));
 
 /*
  * audiosize.c
  */
 extern	BOOL	is_auname	__PR((const char *name));
-extern	long	ausize		__PR((int f));
+extern	off_t	ausize		__PR((int f));
 extern	BOOL	is_wavname	__PR((const char *name));
-extern	long	wavsize		__PR((int f));
+extern	off_t	wavsize		__PR((int f));
 
 /*
  * auinfo.c

@@ -1,4 +1,4 @@
-/* @(#)scsisense.h	2.15 99/10/18 Copyright 1986 J. Schilling */
+/* @(#)scsisense.h	2.17 00/11/07 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI status code and sense structure
  *
@@ -22,6 +22,10 @@
 
 #ifndef	_SCG_SCSISENSE_H
 #define	_SCG_SCSISENSE_H
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 /*
  * SCSI status completion block.
@@ -48,7 +52,7 @@ struct	scsi_status {
 	Ucbit	reserved: 6;	/* reserved */
 	Ucbit	ext_st2	: 1;	/* extended status (next byte valid) */
 	/* byte 2 */
-	u_char	byte2;		/* third byte */
+	Uchar	byte2;		/* third byte */
 #endif	/* SCSI_EXTENDED_STATUS */
 };
 
@@ -71,7 +75,7 @@ struct	scsi_status {
 	Ucbit	reserved: 6;	/* reserved */
 	Ucbit	ha_er	: 1;	/* host adapter detected error */
 	/* byte 2 */
-	u_char	byte2;		/* third byte */
+	Uchar	byte2;		/* third byte */
 #endif	/* SCSI_EXTENDED_STATUS */
 };
 #endif
@@ -90,10 +94,10 @@ struct	scsi_sense {		/* scsi sense for error classes 0-6 */
 	Ucbit	high_addr:5;	/* high byte of block addr */
 	Ucbit	rsvd	: 3;
 #else
-	u_char	high_addr;	/* high byte of block addr */
+	Uchar	high_addr;	/* high byte of block addr */
 #endif
-	u_char	mid_addr;	/* middle byte of block addr */
-	u_char	low_addr;	/* low byte of block addr */
+	Uchar	mid_addr;	/* middle byte of block addr */
+	Uchar	low_addr;	/* low byte of block addr */
 };
 
 #else	/* Motorola byteorder */
@@ -105,10 +109,10 @@ struct	scsi_sense {		/* scsi sense for error classes 0-6 */
 	Ucbit	rsvd	: 3;
 	Ucbit	high_addr:5;	/* high byte of block addr */
 #else
-	u_char	high_addr;	/* high byte of block addr */
+	Uchar	high_addr;	/* high byte of block addr */
 #endif
-	u_char	mid_addr;	/* middle byte of block addr */
-	u_char	low_addr;	/* low byte of block addr */
+	Uchar	mid_addr;	/* middle byte of block addr */
+	Uchar	low_addr;	/* low byte of block addr */
 };
 #endif
 
@@ -126,7 +130,7 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	Ucbit	type	: 7;	/* fixed at 0x70 */
 	Ucbit	adr_val	: 1;	/* sense data is valid */
 	/* byte 1 */
-	u_char	seg_num;	/* segment number, applies to copy cmd only */
+	Uchar	seg_num;	/* segment number, applies to copy cmd only */
 	/* byte 2 */
 	Ucbit	key	: 4;	/* sense key, see below */
 	Ucbit		: 1;	/* reserved */
@@ -134,26 +138,26 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	Ucbit	eom	: 1;	/* end of media */
 	Ucbit	fil_mk	: 1;	/* file mark on device */
 	/* bytes 3 through 7 */
-	u_char	info_1;		/* information byte 1 */
-	u_char	info_2;		/* information byte 2 */
-	u_char	info_3;		/* information byte 3 */
-	u_char	info_4;		/* information byte 4 */
-	u_char	add_len;	/* number of additional bytes */
+	Uchar	info_1;		/* information byte 1 */
+	Uchar	info_2;		/* information byte 2 */
+	Uchar	info_3;		/* information byte 3 */
+	Uchar	info_4;		/* information byte 4 */
+	Uchar	add_len;	/* number of additional bytes */
 	/* bytes 8 through 13, CCS additions */
-	u_char	optional_8;	/* CCS search and copy only */
-	u_char	optional_9;	/* CCS search and copy only */
-	u_char	optional_10;	/* CCS search and copy only */
-	u_char	optional_11;	/* CCS search and copy only */
-	u_char 	sense_code;	/* sense code */
-	u_char	qual_code;	/* sense code qualifier */
-	u_char	fru_code;	/* Field replacable unit code */
+	Uchar	optional_8;	/* CCS search and copy only */
+	Uchar	optional_9;	/* CCS search and copy only */
+	Uchar	optional_10;	/* CCS search and copy only */
+	Uchar	optional_11;	/* CCS search and copy only */
+	Uchar 	sense_code;	/* sense code */
+	Uchar	qual_code;	/* sense code qualifier */
+	Uchar	fru_code;	/* Field replacable unit code */
 	Ucbit	bptr	: 3;	/* bit pointer for failure (if bpv) */
 	Ucbit	bpv	: 1;	/* bit pointer is valid */
 	Ucbit		: 2;
 	Ucbit	cd	: 1;	/* pointers refer to command not data */
 	Ucbit	sksv	: 1;	/* sense key specific valid */
-	u_char	field_ptr[2];	/* field pointer for failure */
-	u_char	add_info[2];	/* round up to 20 bytes */
+	Uchar	field_ptr[2];	/* field pointer for failure */
+	Uchar	add_info[2];	/* round up to 20 bytes */
 };
 
 #else	/* Motorola byteorder */
@@ -163,7 +167,7 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	Ucbit	adr_val	: 1;	/* sense data is valid */
 	Ucbit	type	: 7;	/* fixed at 0x70 */
 	/* byte 1 */
-	u_char	seg_num;	/* segment number, applies to copy cmd only */
+	Uchar	seg_num;	/* segment number, applies to copy cmd only */
 	/* byte 2 */
 	Ucbit	fil_mk	: 1;	/* file mark on device */
 	Ucbit	eom	: 1;	/* end of media */
@@ -171,27 +175,31 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	Ucbit		: 1;	/* reserved */
 	Ucbit	key	: 4;	/* sense key, see below */
 	/* bytes 3 through 7 */
-	u_char	info_1;		/* information byte 1 */
-	u_char	info_2;		/* information byte 2 */
-	u_char	info_3;		/* information byte 3 */
-	u_char	info_4;		/* information byte 4 */
-	u_char	add_len;	/* number of additional bytes */
+	Uchar	info_1;		/* information byte 1 */
+	Uchar	info_2;		/* information byte 2 */
+	Uchar	info_3;		/* information byte 3 */
+	Uchar	info_4;		/* information byte 4 */
+	Uchar	add_len;	/* number of additional bytes */
 	/* bytes 8 through 13, CCS additions */
-	u_char	optional_8;	/* CCS search and copy only */
-	u_char	optional_9;	/* CCS search and copy only */
-	u_char	optional_10;	/* CCS search and copy only */
-	u_char	optional_11;	/* CCS search and copy only */
-	u_char 	sense_code;	/* sense code */
-	u_char	qual_code;	/* sense code qualifier */
-	u_char	fru_code;	/* Field replacable unit code */
+	Uchar	optional_8;	/* CCS search and copy only */
+	Uchar	optional_9;	/* CCS search and copy only */
+	Uchar	optional_10;	/* CCS search and copy only */
+	Uchar	optional_11;	/* CCS search and copy only */
+	Uchar 	sense_code;	/* sense code */
+	Uchar	qual_code;	/* sense code qualifier */
+	Uchar	fru_code;	/* Field replacable unit code */
 	Ucbit	sksv	: 1;	/* sense key specific valid */
 	Ucbit	cd	: 1;	/* pointers refer to command not data */
 	Ucbit		: 2;
 	Ucbit	bpv	: 1;	/* bit pointer is valid */
 	Ucbit	bptr	: 3;	/* bit pointer for failure (if bpv) */
-	u_char	field_ptr[2];	/* field pointer for failure */
-	u_char	add_info[2];	/* round up to 20 bytes */
+	Uchar	field_ptr[2];	/* field pointer for failure */
+	Uchar	add_info[2];	/* round up to 20 bytes */
 };
+#endif
+
+#ifdef	__cplusplus
+}
 #endif
 
 #endif	/* _SCG_SCSISENSE_H */

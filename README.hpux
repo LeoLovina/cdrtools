@@ -1,3 +1,8 @@
+This cdrecord distribution contains a mkisofs release that runs on HP-UX
+and allows you to read a filesystem from a CD-R device with 2048 bytes 
+sector size regardless if it identifies as CD-ROM or WORM. 
+This is done with the SCSI user level library.
+
 HP-UX SCSI hints:
 
 On HP-UX 9.x you need gcc. On newer releases, you may compile with 

@@ -13,12 +13,12 @@ Short overview for those who don't read manuals:
 
 	All other make programs are either not smart enough or have bugs.
 
-	My "smake" is (in binary form) in the makefiles distribution 
+	My "smake" source is at:
 
-	on: ftp://ftp.fokus.gmd.de/pub/unix/makefiles/makefiles-*
+	ftp://ftp.fokus.gmd.de/pub/unix/smake/alpha/
 
-	The newest 'smake' binaries are
-	on: ftp://ftp.fokus.gmd.de/pub/unix/makefiles/bin/*
+	It is easy to compile and doesn't need a working make program
+	on your machine.
 
 	If you have the choice between all three make programs, the
 	preference would be 
@@ -63,7 +63,7 @@ PREFACE:
 	for a program called 'smake' Copyright 1985 by Jörg Schilling, but
 	SunPro make (the make program that comes with SunOS >= 4.0 and Solaris)
 	as well as newer versions of GNU make will work also.
-	BSDmake could be make working, if it supports pattern matching rules
+	BSDmake could be made working, if it supports pattern matching rules
 	correctly.
 
 	The makefile system allows simultaneous compilation on a wide
@@ -116,7 +116,17 @@ Using a different installation directory:
 	You may  use a different installation directory without editing the
 	DEFAULTS files. If you like to install everything in /usr/local, call:
 
-		env INS_BASE=/usr/local make install
+
+	If your make program supports to propagate make macros to sub make programs
+	which is the case for recent smake releases as well as for a recent gnumake:
+
+		smake INS_BASE=/usr/local install
+	or
+		gmake INS_BASE=/usr/local install
+
+	If you make program doesn't propagate make macros (e.g. SunPRO make) call:
+
+		env INS_BASE=/usr/local make -e install
 
 
 Using a different C-compiler:
@@ -129,6 +139,7 @@ Using a different C-compiler:
 	or
 		make CCOM=cc
 
+	This works even when your make program doen't propagate make macros.
 
 Getting help from make:
 
@@ -156,7 +167,7 @@ Hints for compilation:
 
 	Read README.gmake for more information on gmake.
 
-	To use GNU make create a file called 'Gmake' in you search path
+	To use GNU make create a file called 'Gmake' in your search path
 	that contains:
 
 		#!/bin/sh
@@ -173,22 +184,27 @@ Hints for compilation:
 	on some architectures that will not correctly recognize the default
 	target. In this case call 'make all' or ../Gmake all'.
 
-	If you like to use 'smake', you may obtain a copy of the makefile
-	system. Various newer releases contain precompiled versions of 'smake'.
+	Note that speudo error messages from gmake similar to:
+
+	gmake[1]: Entering directory `cdrtools-1.10/conf'
+	../RULES/rules.cnf:58: ../incs/sparc-sunos5-cc/Inull: No such file or directory
+	../RULES/rules.cnf:59: ../incs/sparc-sunos5-cc/rules.cnf: No such file or directory
+
+	Are a result of a bug un GNU make. The make file system itself is
+	correct (as you could proove by usingsmake).
+	If your gmake version still has this bug, send a bug report to:
+
+		"Paul D. Smith" <psmith@gnu.org>
+
+	He is the current GNU make maintainer.
+
+	If you like to use 'smake', please always compile it from source.
 	The packages are located on:
 
-		ftp://ftp.fokus.gmd.de/pub/unix/makefiles/
-
-	Actual binaries are also located on:
-
-		ftp://ftp.fokus.gmd.de/pub/unix/makefiles/bin/
-
-	Precompiled binaries of 'smake' are also located in
-	bins/<arch-name>/smake (e.g. bin/sparc-sunos5-cc/smake) of each
-	package.
+		ftp://ftp.fokus.gmd.de/pub/unix/smake/alpha/
 
 	Smake has a -D flag to see the actual makefile source used
-	and a -d flag that gives easy to read debugging. Use smake -xM
+	and a -d flag that gives easy to read debugging info. Use smake -xM
 	to get a makefile dependency list. Try smake -help
 
 
@@ -197,9 +213,9 @@ Compiling the project using engineering defaults:
 	The defaults found in the directory DEFAULTS are configured to
 	give minimum warnings. This is made because many people will
 	be irritated by warning messages and because the GNU c-compiler
-	will give warnings that are perfectly correct and portable c-code.
+	will give warnings for perfectly correct and portable c-code.
 
-	If you want to port code to new platforms or do engeneering
+	If you want to port code to new platforms or do engineering
 	on the code, you should use the alternate set of defaults found
 	in the directory DEFAULTS_ENG.
 	You may do this permanently by renaming the directories or

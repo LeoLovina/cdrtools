@@ -1,3 +1,196 @@
+210 Einträge
+Fri Apr  6 15:58:32 2001 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* interface.c 1.16
+	  bugfix symbolic constant 'linux' -> 'LINUX', code cleanup
+
+Sun Mar 11 17:55:25 2001 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* scsi_cmds.c 1.11
+	  schily changes
+
+Sun Mar 11 17:25:14 2001 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* semshm.c 1.6
+	  change to new shared memory scheme.
+
+Mon Dec 25 11:13:42 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* config.h 1.3
+	  get rid of PRETEND_TO_USE, use ARGSUSED instead
+
+Sun Dec 10 16:49:56 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* scsi_cmds.c 1.10
+	  Large file type fix: u_char -> Uchar
+
+Sat Dec  9 23:41:42 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* Makefile 1.2
+	  add libraries for remote scsi
+
+Sat Dec  9 23:39:59 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* ioctl.c 1.9
+	  read toc in msf AND lba format. Use mins,secs,frms fields.
+
+Sat Dec  9 23:38:25 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* interface.h 1.6
+	  portability fix: change signed char to int for mins,secs,frms
+
+Sat Dec  9 23:37:18 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* scsi_cmds.c 1.9
+	  change mins, secs, frms to type int; use conversion function lba_2_msf
+
+Sat Dec  9 23:35:43 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* toc.c 1.15
+	  add conversion function lba_2_msf
+
+Fri Dec  1 14:37:10 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* interface.c 1.15
+	  change ReadToc_sim to define new toc struc members mins, secs, frms.
+
+Fri Dec  1 14:36:22 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* scsi_cmds.c 1.8
+	  change ReadToc to read in MSF as well as in LBA format. Store seperately.
+
+Fri Dec  1 14:35:04 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* interface.h 1.5
+	  add seperate fields in toc structure: mins, secs, frms for 
+	  msf can hold different data than lba (as seen by dvds)
+
+Mon Nov  6 21:14:11 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.23
+	  fix from Joerg Schilling for better Cygwin old/new compatibility
+
+Wed Oct 25 23:48:02 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.22
+	  don't try to get cd text info on discs with data tracks only
+
+Wed Oct 25 23:47:20 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* interface.c 1.14
+	  disable Read TOC cd text for Sony CRX100E reported by George Fisher (fisher@ssl.berkeley.edu)
+
+Tue Sep 19 21:30:57 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.21
+	  fix from js for wait() declarations
+
+Fri Sep 15 12:51:43 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.20
+	  adapt for Cygwin 1.0 header files
+
+Wed Sep 13 23:06:25 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.19
+	* interface.c 1.13
+	* scsi_cmds.c 1.7
+	  (r)scsi interface changes
+
+Sun Aug 20 17:29:02 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* scsi_cmds.c 1.6
+	* cdda2wav.c 1.18
+	* interface.c 1.12
+	  adapt for new libscsi
+
+Sat Jun 24 07:57:38 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.17
+	  use setpriority if available before nice
+
+Sat Jun 24 07:56:40 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* toc.c 1.14
+	  ISRC hardening II
+
+Fri Jun 16 00:12:21 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* mycdrom.h 1.4
+	  bugfix: FreeBSD should get the ioctl interface again
+
+Fri Jun 16 00:11:39 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* ioctl.c 1.8
+	  bugfix: FreeBSD ioctl should work again
+
+Sat Jun 10 22:27:43 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* toc.c 1.13
+	  recorder id detection and extended character range for ISRC
+
+Fri Jun  2 08:56:22 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* interface.c 1.11
+	  added schily header files
+	  interface change for ReadCdRom* functions
+	  now allocate always a SCSI structure for use of silent and verbose
+	  thats it.
+
+Fri Jun  2 08:49:08 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.16
+	  added schily header files
+	  major changes for cds with illegal leadout positions
+	  moved nSamplesToDo into the shared memory segment
+	  added exit wrapper for portability under Max-OS-X
+	  cleaned up ring buffer handling
+	  bugfix for silent mode (call DisplayToc and Read_MCN_ISRC was needed)
+
+Fri Jun  2 08:37:12 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* toc.c 1.12
+	  added schily header files
+	  made cd text detection more reliable for plextor/sony non-mmc drives
+	  hardened cdda2wav against illegal ISRC codes
+	  major changes for cds with illegal leadout positions
+	  protected the index scan against illegal leadout positions
+	  *** CHANGED *** 00/06/02 07:43:08 heiko
+	  added schilys header files
+
+Fri Jun  2 08:33:44 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* aifc.c 1.4
+	* aiff.c 1.4
+	  include schilys header files
+
+Fri Jun  2 08:32:28 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* semshm.c 1.5
+	  added schily headerfile
+
+Fri Jun  2 08:31:53 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* interface.h 1.4
+	  interface change for ReadCdRom*. Return int instead of void
+
+Fri Jun  2 08:30:51 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* scsi_cmds.c 1.5
+	  interface change: Read* function do not exit the program, when
+	  sectors could not be read. Instead they signal this through the return value.
+
+Fri Jun  2 08:28:37 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* scsi_cmds.h 1.3
+	  interface change: Read* functions now return number of sectors read
+	  added myscsierr function for scsi result checking
+
+Fri Jun  2 08:26:46 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* ioctl.c 1.7
+	  interface change: ReadCdrom and ReadCdromData return number of read sectors
+	  schily include file added
+	  default buffer size set to 8 sectors for ide on Linux
+	  suppress errors when scgp->silent > 0
+
+Fri Jun  2 07:39:55 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* ringbuff.c 1.4
+	  added a pointer for the new shared memory reference eorecording
+
+Fri Jun  2 07:38:48 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* ringbuff.h 1.4
+	  new variables in shared memory:
+	  end_is_reached is set when the previously unknown leadout is encountered.
+	  nSamplesToDo has been moved into shared memory to be visible for the writer.
+
+Fri Jun  2 07:36:11 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* local.cnf.in 1.3
+	  bugfixes: SunOS sound device, NetBSD inclusion of extralibs
+
+Fri Jun  2 07:34:37 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* configure.in 1.2
+	  bugfix. include detected libs in EXTRALIBS
+
+Fri Jun  2 07:29:12 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* global.h 1.4
+	  added two globals for detection of cds with illegal lead out positions
+	  and one for a drive capability to read beyond the wrong leadout position.
+
+Tue May  2 21:41:40 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* resample.c 1.9
+	  fixed an signedness warning for buffer pointer for WriteSound()
+
+Thu Apr 27 23:53:49 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.c 1.15
+	  -t4+4 -B now records only one track +4 is interpreted as a limit
+
 Sat Apr 22 23:37:57 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
 	* setuid.c 1.3
 	  fixed a drop root forever bug, when we were currently nonroot
@@ -95,7 +288,7 @@ Tue Mar 21 20:17:28 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
 Tue Mar 21 20:06:19 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
 	* ioctl.c 1.5
 	  added rough debugging messages for -V 
-	  fixed index scanning for Linux and FreeBSD
+	  fixed index scanning for Linux and FreeBSD
 
 Tue Mar 21 18:45:30 2000 Heiko Eissfeldt <heiko@colossus.escape.de>
 	* interface.c 1.9
@@ -315,3 +508,63 @@ Sun Dec 19 21:52:00 1999 Heiko Eissfeldt <heiko@colossus.escape.de>
 	* aifc.h 1.2
 	* aiff.c 1.2
 	  first
+
+Sat Nov 13 19:30:21 1999 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* cdda2wav.1 1.1
+	  date and time created 99/11/13 19:30:21 by heiko
+
+Sat Nov 13 19:25:02 1999 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* lconfig.h.in 1.1
+	* local.cnf.in 1.1
+	  date and time created 99/11/13 19:25:02 by heiko
+
+Sat Nov 13 19:24:29 1999 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* aifc.h 1.1
+	* aiff.h 1.1
+	* base64.h 1.1
+	* byteorder.h 1.1
+	* cdda2wav.h 1.1
+	* config.h 1.1
+	* global.h 1.1
+	* interface.h 1.1
+	* ioctl.h 1.1
+	* lowlevel.h 1.1
+	* md5.h 1.1
+	* mycdrom.h 1.1
+	* mytype.h 1.1
+	* raw.h 1.1
+	* resample.h 1.1
+	* ringbuff.h 1.1
+	* saveargs.h 1.1
+	* scsi_cmds.h 1.1
+	* semshm.h 1.1
+	* setuid.h 1.1
+	* sha.h 1.1
+	* sndconfig.h 1.1
+	* sndfile.h 1.1
+	* sun.h 1.1
+	* toc.h 1.1
+	* wav.c 1.1
+	* wav.h 1.1
+	  date and time created 99/11/13 19:24:29 by heiko
+
+Sat Nov 13 19:24:28 1999 Heiko Eissfeldt <heiko@colossus.escape.de>
+	* aifc.c 1.1
+	* aiff.c 1.1
+	* base64.c 1.1
+	* cdda2wav.c 1.1
+	* interface.c 1.1
+	* ioctl.c 1.1
+	* md5c.c 1.1
+	* raw.c 1.1
+	* resample.c 1.1
+	* ringbuff.c 1.1
+	* scsi_cmds.c 1.1
+	* semshm.c 1.1
+	* setuid.c 1.1
+	* sha_func.c 1.1
+	* sndconfig.c 1.1
+	* sun.c 1.1
+	* toc.c 1.1
+	  date and time created 99/11/13 19:24:28 by heiko
+

@@ -1,4 +1,4 @@
-/* @(#)cvt.c	1.3 99/09/08 Copyright 1998 J. Schilling */
+/* @(#)cvt.c	1.4 01/02/23 Copyright 1998 J. Schilling */
 /*
  *	Compatibility routines for 4.4BSD based C-libraries ecvt()/fcvt()
  *	and a working gcvt() that is needed on 4.4BSD and GNU libc systems.
@@ -31,7 +31,11 @@
 #include <standard.h>
 
 #ifdef	HAVE_DTOA	/* 4.4BSD floating point implementation */
+#ifdef	HAVE_DTOA_R
+extern	char *__dtoa	__PR((double value, int mode, int ndigit, int *decpt, int *sign, char **ep, char **resultp));
+#else
 extern	char *__dtoa	__PR((double value, int mode, int ndigit, int *decpt, int *sign, char **ep));
+#endif
 #endif
 
 #ifndef	HAVE_ECVT
@@ -57,7 +61,20 @@ static	Uint	bufsize;
 static	char	*buf;
 	char	*bufend;
 	char	*ep;
-	char	*bp = __dtoa(value, 2, ndigit, decpt, sign, &ep);
+	char	*bp;
+#ifdef	HAVE_DTOA_R
+static	char	*result;
+#endif
+
+#ifdef	HAVE_DTOA_R
+	if (result) {
+		free(result);
+		result = NULL;
+	}
+	bp = __dtoa(value, 2, ndigit, decpt, sign, &ep, &result);
+#else
+	bp = __dtoa(value, 2, ndigit, decpt, sign, &ep);
+#endif
 
 	if (value == 0.0) {
 		/*
@@ -102,7 +119,20 @@ static	Uint	bufsize;
 static	char	*buf;
 	char	*bufend;
 	char	*ep;
-	char	*bp = __dtoa(value, 3, ndigit, decpt, sign, &ep);
+	char	*bp;
+#ifdef	HAVE_DTOA_R
+static	char	*result;
+#endif
+
+#ifdef	HAVE_DTOA_R
+	if (result) {
+		free(result);
+		result = NULL;
+	}
+	bp = __dtoa(value, 3, ndigit, decpt, sign, &ep, &result);
+#else
+	bp = __dtoa(value, 3, ndigit, decpt, sign, &ep);
+#endif
 
 	if (value == 0.0) {
 		/*

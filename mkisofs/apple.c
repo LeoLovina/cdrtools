@@ -1,7 +1,7 @@
-/* @(#)apple.c	1.5 00/04/27 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)apple.c	1.12 01/02/23 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)apple.c	1.5 00/04/27 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)apple.c	1.12 01/02/23 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -40,14 +40,11 @@ static	char sccsid[] =
 #ifdef APPLE_HYB
 
 #include <mconfig.h>
-#include <stdio.h>
+#include "mkisofs.h"
 #include <errno.h>
-#include <unixstd.h>
 #include <fctldefs.h>
-#include <mkisofs.h>
-#include <stdxlib.h>
+#include <utypes.h>
 #include <ctype.h>
-#include <sys/types.h>
 #include <netinet/in.h>
 #include <apple.h>
 
@@ -309,6 +306,7 @@ hex2char(s)
 	return (o);
 }
 
+
 /*
  *	hstrncpy: Unix name to HFS name with special character
  *	translation.
@@ -333,14 +331,14 @@ hstrncpy(t, f, c)
 		case ':':
 		case '%':
 			if ((o = hex2char(f)) == 0) {
-				*t = '%';
+				*t = conv_charset('%', in_nls, hfs_onls);
 			} else {
 				*t = o;
 				f += 2;
 			}
 			break;
 		default:
-			*t = *f;
+			*t = conv_charset(*f, in_nls, hfs_onls);
 			break;
 		}
 		t++;
@@ -634,13 +632,13 @@ get_es_dir(hname, dname, s_entry, ret)
 	num = read_info_file(hname, info, sizeof(info));
 
 	/* check finder info for EtherShare finderinfo */
-	if (num >= sizeof(es_FileInfo) &&
+	if (num >= (int)sizeof(es_FileInfo) &&
 		d_getl(einfo->magic) == ES_MAGIC &&
 		d_getw(einfo->version) == ES_VERSION) {
 
 		set_Dinfo(einfo->finderinfo, hfs_ent);
 
-	} else if (num >= sizeof(us_FileInfo)) {
+	} else if (num >= (int)sizeof(us_FileInfo)) {
 		/*
 		 * UShare has no magic number, so we assume that this is a valid
 		 * info/resource file ...
@@ -695,7 +693,7 @@ get_es_info(hname, dname, s_entry, ret)
 	num = read_info_file(hname, info, sizeof(info));
 
 	/* check finder info for EtherShare finderinfo */
-	if (num >= sizeof(es_FileInfo) &&
+	if (num >= (int)sizeof(es_FileInfo) &&
 		d_getl(einfo->magic) == ES_MAGIC &&
 		d_getw(einfo->version) == ES_VERSION) {
 
@@ -708,7 +706,7 @@ get_es_info(hname, dname, s_entry, ret)
 
 		hfs_ent->crdate = d_getl(einfo->createTime);
 
-	} else if (num >= sizeof(us_FileInfo)) {
+	} else if (num >= (int)sizeof(us_FileInfo)) {
 		/*
 		 * UShare has no magic number, so we assume that this is a valid
 		 * info/resource file ...
@@ -977,14 +975,14 @@ get_dbl_dir(hname, dname, s_entry, ret)
 			switch ((int)d_getl(ep->id)) {
 			case ID_FINDER:
 				/* get the finder info */
-				fseek(fp, d_getl(ep->offset), 0);
+				fseek(fp, (off_t)d_getl(ep->offset), SEEK_SET);
 				if (fread(&info, d_getl(ep->length), 1, fp) < 1) {
 					fail = 1;
 				}
 				break;
 			case ID_NAME:
 				/* get Mac file name */
-				fseek(fp, d_getl(ep->offset), 0);
+				fseek(fp, (off_t)d_getl(ep->offset), SEEK_SET);
 				if (fread(name, d_getl(ep->length), 1, fp) < 1)
 					*name = '\0';
 				len = d_getl(ep->length);
@@ -1098,7 +1096,7 @@ get_dbl_info(hname, dname, s_entry, ret)
 			switch ((int)d_getl(ep->id)) {
 			case ID_FINDER:
 				/* get the finder info */
-				fseek(fp, d_getl(ep->offset), 0);
+				fseek(fp, (off_t)d_getl(ep->offset), SEEK_SET);
 				if (fread(&info, d_getl(ep->length), 1, fp) < 1) {
 					fail = 1;
 				}
@@ -1114,7 +1112,7 @@ get_dbl_info(hname, dname, s_entry, ret)
 				break;
 			case ID_NAME:
 				/* get Mac file name */
-				fseek(fp, d_getl(ep->offset), 0);
+				fseek(fp, (off_t)d_getl(ep->offset), SEEK_SET);
 				if (fread(name, d_getl(ep->length), 1, fp) < 1)
 					*name = '\0';
 				len = d_getl(ep->length);
@@ -1211,7 +1209,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 
 		/* check we have TOC for the AppleSingle file */
 		nentries = (int) d_getw(hp->nentries);
-		if (p_num < (A_HDR_SIZE + nentries * A_ENTRY_SIZE))
+		if (p_num < (int)(A_HDR_SIZE + nentries * A_ENTRY_SIZE))
 			return (TYPE_NONE);
 
 		/* save the TOC */
@@ -1406,7 +1404,7 @@ get_hfs_fe_info(hfs_info, name)
 		 */
 		if (++c == fe_num) {
 			c = 0;
-			fseek(fp, fe_pad, 1);
+			fseek(fp, (off_t)fe_pad, SEEK_CUR);
 		}
 	}
 	fclose(fp);
@@ -1681,7 +1679,7 @@ get_sgi_info(hname, dname, s_entry, ret)
 
 			strcpy(hfs_ent->name, hfs_info->name);
 
-			set_Dinfo(hfs_info->finderinfo, hfs_ent);
+			set_Finfo(hfs_info->finderinfo, hfs_ent);
 
 			return (ret);
 		}
@@ -2158,13 +2156,13 @@ print_hfs_info(s_entry)
  */
 #ifdef	PROTOTYPES
 void
-hfs_init(char *name, u_short fdflags, u_int hfs_select)
+hfs_init(char *name, Ushort fdflags, Uint hfs_select)
 #else
 void
 hfs_init(name, fdflags, hfs_select)
 	char	*name;		/* afpfile name */
-	u_short	fdflags;	/* default finder flags */
-	u_int	hfs_select;	/* select certain mac files */
+	Ushort	fdflags;	/* default finder flags */
+	Uint	hfs_select;	/* select certain mac files */
 
 #endif
 {

@@ -1,4 +1,4 @@
-#ident @(#)isovfy.mk	1.2 99/12/27 
+#ident @(#)isovfy.mk	1.3 00/12/09 
 ###########################################################################
 #@@C@@
 ###########################################################################
@@ -9,8 +9,8 @@ include		$(SRCROOT)/$(RULESDIR)/rules.top
 
 INSDIR=		bin
 TARGET=		isovfy
-#CPPOPTS +=	-DADD_FILES
 CPPOPTS +=	-DUSE_LIBSCHILY
+CPPOPTS +=	-DUSE_LARGEFILES
 CFILES=		isovfy.c
 LIBS=		-lschily
 #XMK_FILE=	Makefile.man

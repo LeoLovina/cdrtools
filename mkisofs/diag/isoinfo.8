@@ -1,8 +1,8 @@
 .\"
-.\" @(#)isoinfo.8	1.3 00/01/03 eric
+.\" @(#)isoinfo.8	1.5 01/04/19 eric
 .\"
 .\" -*- nroff -*-
-.TH ISOINFO 8 "23 Feb 1997" "Version 1.12b5"
+.TH ISOINFO 8 "01/04/19" "Version 1.14"
 .SH NAME
 devdump, isoinfo, isovfy, isodump \- Utility programs for dumping and verifying iso9660
 images.
@@ -15,6 +15,9 @@ images.
 .PP
 .B isoinfo
 [
+.B \-d
+]
+[
 .B \-h
 ]
 [
@@ -22,6 +25,10 @@ images.
 ]
 [
 .B \-J
+]
+[
+.B \-j
+.I charset
 ]
 [
 .B \-f
@@ -97,6 +104,11 @@ program has any command line options. These are:
 .B \-h
 print a summary of all options.
 .TP
+.B \-d
+Print information from the primary volume descriptor (PVD) of the iso9660
+image. This includes information about Rock Ridge and Joliet extensions
+if present.
+.TP
 .B \-f
 generate output as if a 'find . -print' command had been run on the iso9660
 image. You should not use the
@@ -131,6 +143,11 @@ file names and ownerships.
 .TP
 .B \-J
 Extract information from Joliet extensions (if present) for file names.
+.TP
+.B \-j charset
+Convert Joliet file names (if present) to the supplied charset. See
+.BR mkisofs (8)
+for details.
 .TP
 .B \-T sector
 Quick hack to help examine multi-session images that have already been burned

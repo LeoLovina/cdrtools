@@ -1,3 +1,8 @@
+/* @(#)data.c	1.2 01/01/21 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)data.c	1.2 01/01/21 joerg";
+#endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie
@@ -33,6 +38,7 @@ static	void	calctzdiff	__PR((void));
 static
 unsigned long tzdiff = TZNONE;
 
+static
 unsigned char hfs_charorder[256] = {
   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
   0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,

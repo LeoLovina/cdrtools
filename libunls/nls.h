@@ -1,4 +1,4 @@
-/* @(#)nls.h	1.2 00/04/26 2000 J. Schilling */
+/* @(#)nls.h	1.3 01/01/18 2000 J. Schilling */
 /*
  *	Modifications to make the code portable Copyright (c) 2000 J. Schilling
  *	Thanks to Georgy Salnikov <sge@nmr.nioch.nsc.ru>
@@ -62,7 +62,12 @@
 #define CONFIG_NLS_ISO8859_15
 #define CONFIG_NLS_KOI8_R
 
-#define CONFIG_NLS_MAC_ROMAN
+#define CONFIG_NLS_CODEPAGE_10000
+#define CONFIG_NLS_CODEPAGE_10006
+#define CONFIG_NLS_CODEPAGE_10007
+#define CONFIG_NLS_CODEPAGE_10029
+#define CONFIG_NLS_CODEPAGE_10079
+#define CONFIG_NLS_CODEPAGE_10081
 
 extern int init_nls_iso8859_1	__PR((void));
 extern int init_nls_iso8859_2	__PR((void));
@@ -93,6 +98,12 @@ extern int init_nls_cp869	__PR((void));
 extern int init_nls_cp874	__PR((void));
 extern int init_nls_koi8_r	__PR((void));
 
-extern int init_nls_mac_roman	__PR((void));
+extern int init_nls_cp10000	__PR((void));
+extern int init_nls_cp10006	__PR((void));
+extern int init_nls_cp10007	__PR((void));
+extern int init_nls_cp10029	__PR((void));
+extern int init_nls_cp10079	__PR((void));
+extern int init_nls_cp10081	__PR((void));
+extern int init_nls_file	__PR((char * name));
 
 #endif	/* _NLS_H */

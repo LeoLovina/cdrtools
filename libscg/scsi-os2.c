@@ -1,7 +1,7 @@
-/* @(#)scsi-os2.c	1.14 00/07/01 Copyright 1998 J. Schilling, C. Wohlgemuth */
+/* @(#)scsi-os2.c	1.21 00/09/02 Copyright 1998 J. Schilling, C. Wohlgemuth */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-os2.c	1.14 00/07/01 Copyright 1998 J. Schilling, C. Wohlgemuth";
+	"@(#)scsi-os2.c	1.21 00/09/02 Copyright 1998 J. Schilling, C. Wohlgemuth";
 #endif
 /*
  *	Interface for the OS/2 ASPI-Router ASPIROUT.SYS ((c) D. Dorau).
@@ -49,7 +49,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.14";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.21";	/* The version for this transport*/
 
 #define FILE_OPEN			0x0001
 #define OPEN_SHARE_DENYREADWRITE	0x0010
@@ -84,19 +84,19 @@ LOCAL	void	*buffer		= NULL;
 LOCAL	HFILE	driver_handle	= 0;
 LOCAL	HEV	postSema	= 0;
 
-LOCAL	BOOL	open_driver	__PR((void));
+LOCAL	BOOL	open_driver	__PR((SCSI *scgp));
 LOCAL	BOOL	close_driver	__PR((void));
 LOCAL	ULONG	wait_post	__PR((ULONG ulTimeOut));
 LOCAL	BOOL 	init_buffer	__PR((void* mem));
-EXPORT	void	exit_func	__PR((void));
+LOCAL	void	exit_func	__PR((void));
 LOCAL	void	set_error	__PR((SRB *srb, struct scg_cmd *sp));
 
 
-EXPORT void
+LOCAL void
 exit_func()
 {
 	if (!close_driver())
-		fprintf(stderr, "Cannot close OS/2-ASPI-Router!\n");
+		js_fprintf(stderr, "Cannot close OS/2-ASPI-Router!\n");
 }
 
 /*
@@ -104,8 +104,8 @@ exit_func()
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -127,14 +127,15 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+	int	busno	= scg_scsibus(scgp);
+	int	tgt	= scg_target(scgp);
+	int	tlun	= scg_lun(scgp);
+
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
 		if (scgp->errstr)
@@ -158,7 +159,7 @@ scsi_open(scgp, device, busno, tgt, tlun)
 			return (0);
 	}
 
-	if (!open_driver())	/* Try to open ASPI-Router */
+	if (!open_driver(scgp))	/* Try to open ASPI-Router */
 		return (-1);
 	atexit(exit_func);	/* Install Exit Function which closes the ASPI-Router */
   
@@ -168,8 +169,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	return (1);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	exit_func();
@@ -177,7 +178,7 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -185,51 +186,51 @@ scsi_maxdma(scgp, amt)
 	return (maxdma);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
 	ULONG rc;
 
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
 #ifdef DEBUG
-	printf("scsi_getbuf: %ld bytes\n", amt);
+	js_fprintf((FILE *)scgp->errfile, "scgo_getbuf: %ld bytes\n", amt);
 #endif
 	rc = DosAllocMem(&buffer, amt, OBJ_TILE | PAG_READ | PAG_WRITE | PAG_COMMIT);
 
 	if (rc) {
-		fprintf(stderr, "Cannot allocate buffer.\n");
+		js_fprintf((FILE *)scgp->errfile, "Cannot allocate buffer.\n");
 		return ((void *)0);
 	}
 	scgp->bufbase = buffer;
 
 #ifdef DEBUG
-	printf("Buffer allocated at: 0x%x\n", scgp->bufbase);
+	js_fprintf((FILE *)scgp->errfile, "Buffer allocated at: 0x%x\n", scgp->bufbase);
 #endif
 
 	/* Lock memory */
 	if (init_buffer(scgp->bufbase))
 		return (scgp->bufbase);
 
-	fprintf(stderr, "Cannot lock memory buffer.\n");
+	js_fprintf((FILE *)scgp->errfile, "Cannot lock memory buffer.\n");
 	return ((void *)0); /* Error */
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
-	if (scgp->bufbase && DosFreeMem(scgp->bufbase))
-		fprintf(stderr, "Cannot free buffer memory for ASPI-Router!\n"); /* Free our memory buffer if not already done */
+	if (scgp->bufbase && DosFreeMem(scgp->bufbase)) {
+		js_fprintf((FILE *)scgp->errfile,
+		"Cannot free buffer memory for ASPI-Router!\n"); /* Free our memory buffer if not already done */
+	}
 	if (buffer == scgp->bufbase)
 		buffer = NULL;
 	scgp->bufbase = NULL;
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -242,8 +243,8 @@ BOOL scsi_havebus(scgp, busno)
 	return (TRUE);
 }
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -261,24 +262,25 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 }
 
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
 }
 
-EXPORT int
-scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 	return (FALSE);
 }
 
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
 	ULONG	rc;				/* return value */
 	ULONG	cbreturn;
@@ -286,16 +288,26 @@ int scsireset(scgp)
 	BOOL	success;
 static	SRB	SRBlock;			/* XXX makes it non reentrant */
 
-	SRBlock.cmd		= SRB_Reset;	/* reset device */
-	SRBlock.ha_num		= scgp->scsibus;/* host adapter number	*/
-	SRBlock.flags		= SRB_Post;	/* posting enabled	*/
-	SRBlock.u.res.target	= scgp->target;	/* target id		*/
-	SRBlock.u.res.lun	= scgp->lun;	/* target LUN		*/
+	if (what == SCG_RESET_NOP)
+		return (0);
+	if (what != SCG_RESET_BUS) {
+		errno = EINVAL;
+		return (-1);
+	}
+	/*
+	 * XXX Does this reset TGT or BUS ???
+	 */
+	SRBlock.cmd	     = SRB_Reset;	/* reset device */
+	SRBlock.ha_num	     = scg_scsibus(scgp);/* host adapter number	*/
+	SRBlock.flags	     = SRB_Post;	/* posting enabled	*/
+	SRBlock.u.res.target = scg_target(scgp);/* target id		*/
+	SRBlock.u.res.lun    = scg_lun(scgp);	/* target LUN		*/
 
 	rc = DosDevIOCtl(driver_handle, 0x92, 0x02, (void*) &SRBlock, sizeof(SRB), &cbParam,
 			(void*) &SRBlock, sizeof(SRB), &cbreturn);
 	if (rc) {
-		fprintf(stderr, "DosDevIOCtl() failed in resetDevice.\n");
+		js_fprintf((FILE *)scgp->errfile,
+				"DosDevIOCtl() failed in resetDevice.\n");
 		return (1);			/* DosDevIOCtl failed */
 	} else {
 		success = wait_post(40000);	/** wait for SRB being processed */
@@ -305,8 +317,10 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 	if (SRBlock.status != SRB_Done)
 		return (3);
 #ifdef DEBUG
-	printf("resetDevice of host: %d target: %d lun: %d successful.\n", scgp->scsibus, scgp->target, scgp->lun);
-	printf("SRBlock.ha_status: 0x%x, SRBlock.target_status: 0x%x, SRBlock.satus: 0x%x\n",
+	js_fprintf((FILE *)scgp->errfile,
+		"resetDevice of host: %d target: %d lun: %d successful.\n", scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
+	js_fprintf((FILE *)scgp->errfile,
+		"SRBlock.ha_status: 0x%x, SRBlock.target_status: 0x%x, SRBlock.satus: 0x%x\n",
 				 SRBlock.u.cmd.ha_status, SRBlock.u.cmd.target_status, SRBlock.status);
 #endif
 	return (0);
@@ -342,18 +356,17 @@ set_error(srb, sp)
 }
 
 LOCAL int
-scsi_send(scgp, f, sp)
-	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
+scgo_send(scgp)
+	SCSI	*scgp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	ULONG	rc;				/* return value */
 static	SRB	SRBlock;			/* XXX makes it non reentrant */
 	Ulong	cbreturn;
 	Ulong	cbParam;
 	UCHAR*	ptr;
 
-	if (!f) {				/* Set in scsi_open() */
+	if (scgp->fd < 0) {			/* Set in scgo_open() */
 		sp->error = SCG_FATAL;
 		return (-1);
 	}
@@ -361,7 +374,8 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 	if (sp->cdb_len > sizeof(SRBlock.u.cmd.cdb_st)) { /* commandsize too big */
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EINVAL;
-		fprintf(stderr, "sp->cdb_len > SRBlock.u.cmd.cdb_st. Fatal error in scsi_send, exiting...\n");
+		js_fprintf((FILE *)scgp->errfile,
+			"sp->cdb_len > SRBlock.u.cmd.cdb_st. Fatal error in scgo_send, exiting...\n");
 		return (-1);
 	}
 
@@ -372,12 +386,12 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 
 	/* Build SRB command block */
 	SRBlock.cmd = SRB_Command;
-	SRBlock.ha_num = scgp->scsibus;		/* host adapter number */
+	SRBlock.ha_num = scg_scsibus(scgp);	/* host adapter number */
 
 	SRBlock.flags = SRB_Post;		/* flags */
 
-	SRBlock.u.cmd.target	= scgp->target;	/* Target SCSI ID */
-	SRBlock.u.cmd.lun	= scgp->lun;	/* Target SCSI LUN */
+	SRBlock.u.cmd.target	= scg_target(scgp);/* Target SCSI ID */
+	SRBlock.u.cmd.lun	= scg_lun(scgp);/* Target SCSI LUN */
 	SRBlock.u.cmd.data_len	= sp->size;	/* # of bytes transferred */
 	SRBlock.u.cmd.data_ptr	= 0;		/* pointer to data buffer */
 	SRBlock.u.cmd.sense_len	= sp->sense_len;/* length of sense buffer */
@@ -409,7 +423,8 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 			 (void*) &SRBlock, sizeof(SRB), &cbreturn);
 
 	if (rc) {		/* An error occured */
-		fprintf(stderr, "DosDevIOCtl() in sendCommand failed.\n");
+		js_fprintf((FILE *)scgp->errfile,
+				"DosDevIOCtl() in sendCommand failed.\n");
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EIO;	/* Später vielleicht errno einsetzen */
 		return (rc);
@@ -421,19 +436,22 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 				/* Timeout */
 				sp->error = SCG_TIMEOUT;
 				sp->ux_errno = EIO;
-				fprintf(stderr, "Timeout during SCSI-Command.\n");
+				js_fprintf((FILE *)scgp->errfile,
+						"Timeout during SCSI-Command.\n");
 				return (1);
 			}
 			sp->error = SCG_FATAL;
 			sp->ux_errno = EIO;
-			fprintf(stderr, "Fatal Error during DosWaitEventSem().\n");
+			js_fprintf((FILE *)scgp->errfile,
+					"Fatal Error during DosWaitEventSem().\n");
 			return (1);
 		}
 
 		/* The command is processed */
 		if (SRBlock.status == SRB_Done) {	/* succesful completion */
 #ifdef DEBUG
-			printf("Command successful finished. SRBlock.status=0x%x\n\n", SRBlock.status);
+			js_fprintf((FILE *)scgp->errfile,
+				"Command successful finished. SRBlock.status=0x%x\n\n", SRBlock.status);
 #endif
 			sp->sense_count = 0;
 			sp->resid = 0;
@@ -505,7 +523,8 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
  *                                                                         *
  ***************************************************************************/
 LOCAL BOOL
-open_driver()
+open_driver(scgp)
+	SCSI	*scgp;
 {
 	ULONG	rc;			/* return value */
 	ULONG	ActionTaken;		/* return value	*/
@@ -525,7 +544,9 @@ open_driver()
 			OPEN_SHARE_DENYREADWRITE | OPEN_ACCESS_READWRITE,
 			NULL);
 	if (rc) {
-		fprintf(stderr, "Cannot open ASPI-Router!\n");
+		js_fprintf((FILE *)scgp->errfile,
+				"Cannot open ASPI-Router!\n");
+
 		return (FALSE);		/* opening failed -> return false*/
 	}
 
@@ -533,7 +554,9 @@ open_driver()
 	if (DosCreateEventSem(NULL, &postSema,	/* create event semaphore */
 				 DC_SEM_SHARED, 0)) {
 		DosClose(driver_handle);
-		fprintf(stderr, "Cannot create event semaphore!\n");
+		js_fprintf((FILE *)scgp->errfile,
+				"Cannot create event semaphore!\n");
+
 		return (FALSE);
 	}
 	rc = DosDevIOCtl(driver_handle, 0x92, 0x03,	/* pass semaphore handle */
@@ -572,9 +595,11 @@ close_driver()
 			return (FALSE);		/* closing failed -> return false */
 		driver_handle = 0;
 		if (DosCloseEventSem(postSema))
-			fprintf(stderr, "Cannot close event semaphore!\n");
-		if (buffer && DosFreeMem(buffer))
-			fprintf(stderr, "Cannot free buffer memory for ASPI-Router!\n"); /* Free our memory buffer if not already done */
+			js_fprintf(stderr, "Cannot close event semaphore!\n");
+		if (buffer && DosFreeMem(buffer)) {
+			js_fprintf(stderr,
+			"Cannot free buffer memory for ASPI-Router!\n"); /* Free our memory buffer if not already done */
+		}
 		buffer = NULL;
 	}
 	return (TRUE);

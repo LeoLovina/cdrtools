@@ -1,4 +1,4 @@
-/* @(#)unls.h	1.1 00/03/25 2000 J. Schilling */
+/* @(#)unls.h	1.3 01/01/18 2000 J. Schilling */
 /*
  *	Modifications to make the code portable Copyright (c) 2000 J. Schilling
  *
@@ -27,6 +27,10 @@
 #include <mconfig.h>
 #endif
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
 struct nls_unicode {
 	unsigned char uni1;
 	unsigned char uni2;
@@ -50,5 +54,10 @@ extern void		list_nls		__PR((void));
 extern struct nls_table *load_nls		__PR((char *));
 extern void 		unload_nls		__PR((struct nls_table *));
 extern struct nls_table *load_nls_default	__PR((void));
+extern int		init_nls_file		__PR((char * name));
+
+#ifdef	__cplusplus
+}
+#endif
 
 #endif	/* _UNLS_H */

@@ -1,7 +1,7 @@
-/* @(#)scsi-unixware.c	1.14 00/07/01 Copyright 1998 J. Schilling, Santa Cruz Operation */
+/* @(#)scsi-unixware.c	1.25 01/03/18 Copyright 1998 J. Schilling, Santa Cruz Operation */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-unixware.c	1.14 00/07/01 Copyright 1998 J. Schilling, Santa Cruz Operation";
+	"@(#)scsi-unixware.c	1.25 01/03/18 Copyright 1998 J. Schilling, Santa Cruz Operation";
 #endif
 /*
  *	Interface for the SCO UnixWare SCSI implementation.
@@ -46,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.14";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.25";	/* The version for this transport*/
 
 /* Max. number of scg scsibusses.  The real limit would be           */
 /* MAX_HBA * MAX_BUS (which would be 32 * 8 on UnixWare 2.1/7.x),    */
@@ -73,6 +73,7 @@ LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.14";	/* The version for thi
 #define PRIM_HBA	"/dev/hba/hba1"
 #define	SCSI_CFG	"LC_ALL=C /etc/scsi/pdiconfig -l"
 
+#define	SCAN_ALL	"LIBSCG_SCAN_ALL"
 
 typedef struct scg2sdi {
 	int	valid;
@@ -102,8 +103,8 @@ struct scg_local {
 #define scglocal(p)	((struct scg_local *)((p)->local)) 
 
 LOCAL	int	unixware_init	__PR((SCSI *scgp));
-LOCAL	int	do_scsi_cmd	__PR((SCSI *scgp, int fd, struct scg_cmd *sp));
-LOCAL	int	do_scsi_sense	__PR((SCSI *scgp, int fd, struct scg_cmd *sp));
+LOCAL	int	do_scg_cmd	__PR((SCSI *scgp, struct scg_cmd *sp));
+LOCAL	int	do_scg_sense	__PR((SCSI *scgp, struct scg_cmd *sp));
 
 /* -------------------------------------------------------------------------
 ** SCO UnixWare 2.1.x / UnixWare 7 provides a scsi pass-through mechanism, 
@@ -126,8 +127,8 @@ LOCAL	int	do_scsi_sense	__PR((SCSI *scgp, int fd, struct scg_cmd *sp));
  * in applications.
  *
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -167,6 +168,7 @@ unixware_init(scgp)
 	int		nscg = -1, lhba = -1, lbus = 0;
 	int		atapi, fd, nopen = 0, pos = 0, len = 0;
 	int		s, t, l;
+	int		scan_disks;
 	char		lines[MAXLINE];
 	char		class[MAXLINE];
 	char		ident[MAXLINE];
@@ -196,6 +198,15 @@ extern	char		**environ;
 
 	major = getmajor(stbuf.st_rdev);
 
+	/*
+	 * Check whether we want to scan all devices
+	 */
+	if (getenv(SCAN_ALL) != NULL) {
+		scan_disks = 1;		
+	} else {
+		scan_disks = 0;
+	}
+
 	/* read pdiconfig output and get all attached scsi devices ! */
 
 	evsave = environ;
@@ -215,10 +226,10 @@ extern	char		**environ;
 		if (fgets(lines, MAXLINE, cmd) == NULL) 
 			break;
 
-		memset( class, '\0', sizeof(class));
-		memset( ident, '\0', sizeof(ident));
+		memset(class, '\0', sizeof(class));
+		memset(ident, '\0', sizeof(ident));
 
-		if (lines[0] == ' ' ) {
+		if (lines[0] == ' ') {
 			sscanf(lines, SCAN_DEV, &bus, &tgt, &lun, class, &pos);
 			hba = lhba;
 		} else {
@@ -236,12 +247,12 @@ extern	char		**environ;
 
 		strncpy(ident, &lines[pos], len);
 
-		if (scgp->debug) {
-			printf("SDI -> %d:%d,%d,%d: %-7s : %s\n", 
+		if (scgp->debug > 0) {
+			js_fprintf((FILE *)scgp->errfile,
+				"SDI -> %d:%d,%d,%d: %-7s : %s\n", 
 				hba, bus, tgt, lun, class, ident);
 		}
-
-		if ( bus != lbus ) { 
+		if (bus != lbus) { 
 			nscg++;
 			lbus = bus;
 		}
@@ -252,17 +263,27 @@ extern	char		**environ;
 		/* let HBA's be valid device for cdrecord, but mark     */
 		/* them as a controller (initiator = 1).                */
 
-		if ( strstr(class, "HBA") == NULL ){
-			sdidevs[scg][tgt][lun].valid = 1;
+		/* Don't detect disks, opening a mounted disk can hang  */
+		/* the disk subsystem !!! So unless we set an           */
+		/* environment variable LIBSCG_SCAN_ALL, we will ignore */
+		/* disks                                                */
+
+		if (strstr(class, "HBA") == NULL) {
+			if (strstr(class, "DISK") != NULL) {
+				sdidevs[scg][tgt][lun].valid = scan_disks;
+			} else {
+				sdidevs[scg][tgt][lun].valid = 1;
+			}
 		} else {
 			sdidevs[scg][tgt][lun].initiator = 1;
 		}
+
 
 		/* There is no real flag that shows a HBA as an ATAPI   */
 		/* controller, so as we know the driver is called 'ide' */
 		/* we can check the ident string for the occurence of it*/
 
-		if ( strstr(ident, "(ide,") != NULL ){
+		if (strstr(ident, "(ide,") != NULL) {
 			atapi = 1;
 		}
 
@@ -279,7 +300,9 @@ extern	char		**environ;
 		strcpy(sdidevs[scg][tgt][lun].type, class);
 		strcpy(sdidevs[scg][tgt][lun].vend, ident);
 
-		sprintf(sdidevs[scg][tgt][lun].devn, DEV_NAME, scg, tgt, lun);
+		js_snprintf(sdidevs[scg][tgt][lun].devn,
+				sizeof(sdidevs[scg][tgt][lun].devn),
+				DEV_NAME, scg, tgt, lun);
 
 		minor = SDI_MINOR(hba, tgt, lun, bus);
 		node  = makedevice(major, minor);	
@@ -288,15 +311,16 @@ extern	char		**environ;
 		sdidevs[scg][tgt][lun].minor = minor;
 		sdidevs[scg][tgt][lun].node  = node;
 
-		if (scgp->debug) {
+		if (scgp->debug > 0) {
 
-			printf("h = %d; b = %d, s = %d, t = %d, l = %d, a = %d, ma = %d, mi = %2d, dev = %s, id = %s\n", 
+			js_fprintf((FILE *)scgp->errfile,
+			"h = %d; b = %d, s = %d, t = %d, l = %d, a = %d, ma = %d, mi = %2d, dev = %s, id = %s\n", 
 			hba, bus, scg, tgt, lun, 
 			sdidevs[scg][tgt][lun].atapi, 
 			sdidevs[scg][tgt][lun].major, 
 			sdidevs[scg][tgt][lun].minor, 
 			sdidevs[scg][tgt][lun].devn,
-			sdidevs[scg][tgt][lun].vend );
+			sdidevs[scg][tgt][lun].vend);
 		}			
 
 
@@ -317,14 +341,15 @@ extern	char		**environ;
 		for (t = 0; t < MAX_TGT; t++) {
 			for (l = 0; l < MAX_LUN ; l++) {
 
-			  if ( sdidevs[s][t][l].valid == 0) {
+			  if (sdidevs[s][t][l].valid == 0) {
 			  	sdidevs[s][t][l].fd = -1;
 			  	continue;
 			  }
 
 			  /* Make pass-through interface device node */
 
-			  sprintf(dname, "%s/%s", DEV_DIR, sdidevs[s][t][l].devn);
+			  js_snprintf(dname, sizeof(dname),
+				"%s/%s", DEV_DIR, sdidevs[s][t][l].devn);
 
 			  ptdev = sdidevs[s][t][l].node;
 
@@ -360,12 +385,13 @@ extern	char		**environ;
   			  nopen++;
 			  scglocal(scgp)->scgfiles[s][t][l] = (short) fd;
 
-			  if (scgp->debug) {
+			  if (scgp->debug > 0) {
 
-				printf("s = %d, t = %d, l = %d, dev = %s, fd = %d\n", 
+				js_fprintf((FILE *)scgp->errfile,
+					"s = %d, t = %d, l = %d, dev = %s, fd = %d\n", 
 		    		    	s, t, l, 
 					sdidevs[s][t][l].devn,
-					sdidevs[s][t][l].fd );
+					sdidevs[s][t][l].fd);
 			  }
 
 			}
@@ -376,15 +402,15 @@ extern	char		**environ;
 }
 
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
-	int		c, b, t;
+	int	busno	= scg_scsibus(scgp);
+	int	tgt	= scg_target(scgp);
+	int	tlun	= scg_lun(scgp);
+	int	c, b, t;
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -430,8 +456,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 }
 
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	register int	f;
@@ -462,7 +488,7 @@ scsi_close(scgp)
 }
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -470,23 +496,22 @@ scsi_maxdma(scgp, amt)
 }
 
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
-
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"scgo_getbuf: %ld bytes\n", amt);
+	}
 	scgp->bufbase = (void *) valloc((size_t)(amt));
 
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -494,8 +519,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -516,8 +541,8 @@ BOOL scsi_havebus(scgp, busno)
 	return (FALSE);
 }
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -534,15 +559,15 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 	return ((int)scglocal(scgp)->scgfiles[busno][tgt][tlun]);
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	register int	t;
 	register int	l;
 	register int	busno;
 
-	busno = scgp->scsibus;
+	busno = scg_scsibus(scgp);
 
 	if (busno < 0 || busno >= MAX_SCG)
 		return (FALSE);
@@ -550,8 +575,10 @@ scsi_initiator_id(scgp)
 	for (t=0; t < MAX_TGT; t++) {
 		for (l=0; l < MAX_LUN ; l++)
 			if (sdidevs[busno][t][l].initiator == 1){
-				if (scgp->debug)
-					printf("scsi_initiator_id: id = %d\n", t);
+				if (scgp->debug > 0) {
+					js_fprintf((FILE *)scgp->errfile,
+						"scgo_initiator_id: id = %d\n", t);
+				}
 				return (t);
 			}
 	}
@@ -559,26 +586,27 @@ scsi_initiator_id(scgp)
 	return (-1);
 }
 
-EXPORT
-int scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 	/* if the new address method is used we know if this is ATAPI*/
 
-	return (sdidevs[scgp->scsibus][scgp->target][scgp->lun].atapi);
+	return (sdidevs[scg_scsibus(scgp)][scg_target(scgp)][scg_lun(scgp)].atapi);
 }
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
+	errno = EINVAL;
 	return(-1);
 }
 
 LOCAL int
-do_scsi_cmd(scgp, fd, sp)
+do_scg_cmd(scgp, sp)
 	SCSI		*scgp;
-	int		fd;
 	struct scg_cmd	*sp;
 {
 	int			ret;
@@ -606,7 +634,7 @@ do_scsi_cmd(scgp, fd, sp)
 
 	errno = 0;
 	for (;;) {
-		if ((ret = ioctl(fd, SDI_SEND, &scsi_cmd)) < 0) {
+		if ((ret = ioctl(scgp->fd, SDI_SEND, &scsi_cmd)) < 0) {
 			if (errno == EAGAIN){
 				sleep(1);
 				continue;
@@ -631,16 +659,12 @@ do_scsi_cmd(scgp, fd, sp)
 
 
 LOCAL int
-do_scsi_sense(scgp, fd, sp)
+do_scg_sense(scgp, sp)
 	SCSI		*scgp;
-	int		fd;
 	struct scg_cmd	*sp;
 {
 	int		ret;
 	struct scg_cmd	s_cmd;
-
-	if (sp->sense_len > SCG_MAX_SENSE)
-		sp->sense_len = SCG_MAX_SENSE;
 
 	memset((caddr_t)&s_cmd, 0, sizeof(s_cmd));
 
@@ -649,13 +673,12 @@ do_scsi_sense(scgp, fd, sp)
 	s_cmd.flags     = SCG_RECV_DATA|SCG_DISRE_ENA;
 	s_cmd.cdb_len   = SC_G0_CDBLEN;
 	s_cmd.sense_len = CCS_SENSE_LEN;
-	s_cmd.target    = scgp->target;
 
 	s_cmd.cdb.g0_cdb.cmd   = SC_REQUEST_SENSE;
 	s_cmd.cdb.g0_cdb.lun   = sp->cdb.g0_cdb.lun;
 	s_cmd.cdb.g0_cdb.count = sp->sense_len;
 
-	ret = do_scsi_cmd(scgp, fd, &s_cmd);
+	ret = do_scg_cmd(scgp, &s_cmd);
 
 	if (ret < 0)
 		return (ret);
@@ -665,25 +688,24 @@ do_scsi_sense(scgp, fd, sp)
 }
 
 LOCAL int
-scsi_send(scgp, fd, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		fd;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	int	ret;
 
-	if ( fd < 0 ) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	} else {
 
-		ret = do_scsi_cmd(scgp, fd, sp);
+		ret = do_scg_cmd(scgp, sp);
 
 		if (ret < 0)
 			return (ret);
 
 		if (sp->u_scb.cmd_scb[0] & S_CKCON)
-			ret = do_scsi_sense(scgp, fd, sp);
+			ret = do_scg_sense(scgp, sp);
 
 		return (ret);
 	}

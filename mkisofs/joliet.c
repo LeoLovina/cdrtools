@@ -1,14 +1,14 @@
-/* @(#)joliet.c	1.24 00/05/07 joerg */
+/* @(#)joliet.c	1.28 01/01/23 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)joliet.c	1.24 00/05/07 joerg";
+	"@(#)joliet.c	1.28 01/01/23 joerg";
 #endif
 /*
  * File joliet.c - handle Win95/WinNT long file/unicode extensions for iso9660.
 
    Copyright 1997 Eric Youngdale.
    APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 22/2/2000
-   Copyright (c) 1999,2000 J. Schilling
+   Copyright (c) 1999,2000,2001 J. Schilling
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -81,23 +81,15 @@ static	char sccsid[] =
  *	(00)(3f) '?'
  *	(00)(5c) '\'
  */
-#include "config.h"
+#include <mconfig.h>
 #include "mkisofs.h"
-#include "iso9660.h"
-
-#include <stdxlib.h>
-#include <time.h>
-
-#include <unls.h>	/* For UNICODE translation */
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
-#include <schily.h>
-#endif
+#include <timedefs.h>
 #include <utypes.h>
 #include <intcvt.h>
+#include <unls.h>	/* For UNICODE translation */
+#include <schily.h>
 
-static int      jpath_table_index;
+static Uint	jpath_table_index;
 static struct directory **jpathlist;
 static int      next_jpath_index = 1;
 static int      sort_goof;
@@ -110,7 +102,7 @@ static	char	ucs_codes[] = {
 };	
 
 static void	convert_to_unicode	__PR((unsigned char *buffer,
-						int size, char *source));
+		int size, char *source, struct nls_table *inls));
 static int	joliet_strlen		__PR((const char *string));
 static void	get_joliet_vol_desc	__PR((struct iso_primary_descriptor *jvol_desc));
 static void	assign_joliet_directory_addresses __PR((struct directory *node));
@@ -134,21 +126,65 @@ static int	jdirtree_write		__PR((FILE *outfile));
 static int	jvd_write		__PR((FILE *outfile));
 static int	jpathtab_size		__PR((int starting_extent));
 
-extern struct nls_table *nls;	/* Current UNICODE conversion table */
+/*
+ *	conv_charset: convert to/from charsets via Unicode.
+ *
+ *	Any unknown character is set to '_'
+ *
+ */
+#ifdef	PROTOTYPES
+unsigned char 
+conv_charset(unsigned char c,
+	struct nls_table *inls,
+	struct nls_table *onls)
+#else
+unsigned char 
+conv_charset(c, inls, onls)
+	unsigned char c;
+	struct nls_table *inls;
+	struct nls_table *onls;
+#endif
+{
+	unsigned char uh,
+		      ul,
+		      uc,
+		      *up;
+
+	/* if we have a null mapping, just return the input character */
+	if (inls == onls)
+		return c;
+
+	/* get high and low UNICODE bytes */
+	uh = inls->charset2uni[c].uni2;
+	ul = inls->charset2uni[c].uni1;
+
+	/* get the backconverted page from the output charset */
+	up = onls->page_uni2charset[uh];
+
+	/* if the page exists, get the backconverted character */
+	if (up == NULL)
+		uc = '\0';
+	else
+		uc = up[ul];
+
+	/* return the backconverted, if it's not NULL */
+	return (uc ? uc : '_');
+}
 
 /*
  * Function:		convert_to_unicode
  *
- * Purpose:		Perform a 1/2 assed unicode conversion on a text
- *			string.
+ * Purpose:		Perform a unicode conversion on a text string
+ *			using the supplied input character set.
  *
  * Notes:
  */
 static void
-convert_to_unicode(buffer, size, source)
+convert_to_unicode(buffer, size, source, inls)
 	unsigned char	*buffer;
 	int		size;
 	char		*source;
+	struct nls_table *inls;
 {
 	unsigned char	*tmpbuf;
 	int		i;
@@ -163,10 +199,10 @@ convert_to_unicode(buffer, size, source)
 	 * inplace copy, and we need to make a temporary working copy first.
 	 */
 	if (source == NULL) {
-		tmpbuf = (u_char *) e_malloc(size);
+		tmpbuf = (Uchar *) e_malloc(size);
 		memcpy(tmpbuf, buffer, size);
 	} else {
-		tmpbuf = (u_char *) source;
+		tmpbuf = (Uchar *) source;
 	}
 
 	/*
@@ -183,10 +219,10 @@ convert_to_unicode(buffer, size, source)
 		 */
 		uc = tmpbuf[j];			/* temporary copy */
 		if (uc != '\0') {		/* must be converted */
-			uh = nls->charset2uni[uc].uni2;	/* convert forward:
+			uh = inls->charset2uni[uc].uni2;	/* convert forward:
 							   hibyte...	     */
-			ul = nls->charset2uni[uc].uni1;	/* ...lobyte	     */
-			up = nls->page_uni2charset[uh];	/* convert backward:
+			ul = inls->charset2uni[uc].uni1;	/* ...lobyte	     */
+			up = inls->page_uni2charset[uh];	/* convert backward:
 							   page...	     */
 			if (up == NULL)
 				uc = '\0';	/* ...wrong unicode page     */
@@ -213,9 +249,9 @@ convert_to_unicode(buffer, size, source)
 				uc = '_';
 			}
 		}
-		buffer[i] = nls->charset2uni[uc].uni2;	/* final UNICODE
+		buffer[i] = inls->charset2uni[uc].uni2;	/* final UNICODE
 							   conversion */
-		buffer[i + 1] = nls->charset2uni[uc].uni1;
+		buffer[i + 1] = inls->charset2uni[uc].uni1;
 	}
 
 	if (size & 1) {	/* beautification */
@@ -295,24 +331,24 @@ get_joliet_vol_desc(jvol_desc)
 	 * so we will just be really lazy and do a char -> short conversion.
 	 *  We probably will want to filter any characters >= 0x80.
 	 */
-	convert_to_unicode((u_char *) jvol_desc->system_id,
-			sizeof(jvol_desc->system_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->volume_id,
-			sizeof(jvol_desc->volume_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->volume_set_id,
-			sizeof(jvol_desc->volume_set_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->publisher_id,
-			sizeof(jvol_desc->publisher_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->preparer_id,
-			sizeof(jvol_desc->preparer_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->application_id,
-			sizeof(jvol_desc->application_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->copyright_file_id,
-			sizeof(jvol_desc->copyright_file_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->abstract_file_id,
-			sizeof(jvol_desc->abstract_file_id), NULL);
-	convert_to_unicode((u_char *) jvol_desc->bibliographic_file_id,
-			sizeof(jvol_desc->bibliographic_file_id), NULL);
+	convert_to_unicode((Uchar *) jvol_desc->system_id,
+			sizeof(jvol_desc->system_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->volume_id,
+			sizeof(jvol_desc->volume_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->volume_set_id,
+			sizeof(jvol_desc->volume_set_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->publisher_id,
+			sizeof(jvol_desc->publisher_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->preparer_id,
+			sizeof(jvol_desc->preparer_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->application_id,
+			sizeof(jvol_desc->application_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->copyright_file_id,
+			sizeof(jvol_desc->copyright_file_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->abstract_file_id,
+			sizeof(jvol_desc->abstract_file_id), NULL, in_nls);
+	convert_to_unicode((Uchar *) jvol_desc->bibliographic_file_id,
+			sizeof(jvol_desc->bibliographic_file_id), NULL, in_nls);
 }
 
 static void
@@ -377,6 +413,7 @@ joliet_compare_paths(r, l)
 			*lpnt;
 	unsigned char	rtmp[2],
 			ltmp[2];
+	struct nls_table *rinls, *linls;
 
 	/* make sure root directory is first */
 	if (rr == root)
@@ -401,29 +438,37 @@ joliet_compare_paths(r, l)
 	}
 #ifdef APPLE_HYB
 	/*
-	 * we may be using the HFS name - characters >128 *may* get translated
-	 * to incorrect Unicode charcters (as far as MacOS is concerned)
-	 * - but we won't worry about that case at the moment
+	 * we may be using the HFS name - so select the correct input
+	 * charset
 	 */
-	if (USE_MAC_NAME(rr->self))
+	if (USE_MAC_NAME(rr->self)) {
 		rpnt = rr->self->hfs_ent->name;
-	else
+		rinls = hfs_inls;
+	}
+	else {
 		rpnt = rr->self->name;
+		rinls = in_nls;
+	}
 
-	if (USE_MAC_NAME(ll->self))
+	if (USE_MAC_NAME(ll->self)) {
 		lpnt = ll->self->hfs_ent->name;
-	else
+		linls = hfs_inls;
+	}
+	else {
 		lpnt = ll->self->name;
+		linls = in_nls;
+	}
 #else
 	rpnt = rr->self->name;
 	lpnt = ll->self->name;
+	linls = rinls = in_nls;
 #endif	/* APPLE_HYB */
 
 	/* compare the Unicode names */
 
 	while (*rpnt && *lpnt) {
-		convert_to_unicode(rtmp, 2, rpnt);
-		convert_to_unicode(ltmp, 2, lpnt);
+		convert_to_unicode(rtmp, 2, rpnt, rinls);
+		convert_to_unicode(ltmp, 2, lpnt, linls);
 
 		if (a_to_u_2_byte(rtmp) < a_to_u_2_byte(ltmp))
 			return -1;
@@ -571,20 +616,20 @@ generate_joliet_path_tables()
 		} else {
 #ifdef APPLE_HYB
 			if (USE_MAC_NAME(de)) {
-				convert_to_unicode((u_char *) jpath_table_l +
+				convert_to_unicode((Uchar *) jpath_table_l +
 					jpath_table_index,
-					namelen, de->hfs_ent->name);
-				convert_to_unicode((u_char *) jpath_table_m +
+					namelen, de->hfs_ent->name, hfs_inls);
+				convert_to_unicode((Uchar *) jpath_table_m +
 					jpath_table_index,
-					namelen, de->hfs_ent->name);
+					namelen, de->hfs_ent->name, hfs_inls);
 			} else {
 #endif	/* APPLE_HYB */
-				convert_to_unicode((u_char *) jpath_table_l +
+				convert_to_unicode((Uchar *) jpath_table_l +
 					jpath_table_index,
-					namelen, de->name);
-				convert_to_unicode((u_char *) jpath_table_m +
+					namelen, de->name, in_nls);
+				convert_to_unicode((Uchar *) jpath_table_m +
 					jpath_table_index,
-					namelen, de->name);
+					namelen, de->name, in_nls);
 #ifdef APPLE_HYB
 			}
 #endif	/* APPLE_HYB */
@@ -758,15 +803,15 @@ generate_one_joliet_directory(dpnt, outfile)
 			if (USE_MAC_NAME(s_entry1)) {
 				/* Use the HFS name if it exists */
 				convert_to_unicode(
-					(u_char *) directory_buffer+dir_index,
+					(Uchar *) directory_buffer+dir_index,
 					cvt_len,
-					s_entry1->hfs_ent->name);
+					s_entry1->hfs_ent->name, hfs_inls);
 			} else 
 #endif	/* APPLE_HYB */
 				convert_to_unicode(
-					(u_char *) directory_buffer+dir_index,
+					(Uchar *) directory_buffer+dir_index,
 					cvt_len,
-					s_entry1->name);
+					s_entry1->name, in_nls);
 			dir_index += cvt_len;
 		}
 
@@ -930,28 +975,37 @@ joliet_compare_dirs(rr, ll)
 			**l;
 	unsigned char	rtmp[2],
 			ltmp[2];
+	struct nls_table *linls, *rinls;
 
 	r = (struct directory_entry **) rr;
 	l = (struct directory_entry **) ll;
 
 #ifdef APPLE_HYB
 	/*
-	 * we may be using the HFS name - characters >128 *may* get translated
-	 * to incorrect Unicode charcters (as far as MacOS is concerned)
-	 *  - but we won't worry about that case at the moment
+	 * we may be using the HFS name - so select the correct input
+	 * charset
 	 */
-	if (USE_MAC_NAME(*r))
+	if (USE_MAC_NAME(*r)) {
 		rpnt = (*r)->hfs_ent->name;
-	else
+		rinls = hfs_inls;
+	}
+	else {
 		rpnt = (*r)->name;
+		rinls = in_nls;
+	}
 
-	if (USE_MAC_NAME(*l))
+	if (USE_MAC_NAME(*l)) {
 		lpnt = (*l)->hfs_ent->name;
-	else
+		linls = hfs_inls;
+	}
+	else {
 		lpnt = (*l)->name;
+		linls = in_nls;
+	}
 #else
 	rpnt = (*r)->name;
 	lpnt = (*l)->name;
+	rinls = linls = in_nls;
 #endif	/* APPLE_HYB */
 
 	/*
@@ -1006,8 +1060,8 @@ joliet_compare_dirs(rr, ll)
 			return 1;
 #endif
 
-		convert_to_unicode(rtmp, 2, rpnt);
-		convert_to_unicode(ltmp, 2, lpnt);
+		convert_to_unicode(rtmp, 2, rpnt, rinls);
+		convert_to_unicode(ltmp, 2, lpnt, linls);
 
 		if (a_to_u_2_byte(rtmp) < a_to_u_2_byte(ltmp))
 			return -1;

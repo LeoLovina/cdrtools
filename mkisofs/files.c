@@ -1,7 +1,7 @@
-/* @(#)files.c	1.8 00/04/02 joerg */
+/* @(#)files.c	1.9 00/12/05 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)files.c	1.8 00/04/02 joerg";
+	"@(#)files.c	1.9 00/12/05 joerg";
 
 #endif
 /*
@@ -27,16 +27,11 @@ static	char sccsid[] =
 
 /* ADD_FILES changes made by Ross Biro biro@yggdrasil.com 2/23/95 */
 
-#include "config.h"
-#include <errno.h>
+#include <mconfig.h>
 #include "mkisofs.h"
-
-#include <stdxlib.h>
+#include <errno.h>
 #include <ctype.h>
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
-#endif
+#include <schily.h>
 
 #ifdef ADD_FILES
 

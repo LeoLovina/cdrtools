@@ -1,4 +1,4 @@
-#ident "@(#)rules1.top	1.21 99/12/20 "
+#ident "@(#)rules1.top	1.22 01/02/04 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -209,6 +209,7 @@ OINCSDIR=	$(SRCROOT)/incs/$(OARCH)
 # Location for targets:
 #
 # - all						: see appropriate rules
+# - lint					: rules.lnt
 # - clean, clobber, distclean, relink, rmtarget	: rules.clr
 # - install, ibins				: rules.ins
 # - depend, rmdep				: rules.dep
@@ -218,5 +219,5 @@ OINCSDIR=	$(SRCROOT)/incs/$(OARCH)
 # - tinfo					: rules.dir/rules.rdi
 #
 ###########################################################################
-ALLTARGETS=	all clean clobber distclean install ibins depend rmdep \
+ALLTARGETS=	all lint clean clobber distclean install ibins depend rmdep \
 		config TAGS tags rmtarget relink

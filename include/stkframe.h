@@ -1,4 +1,4 @@
-/* @(#)stkframe.h	1.5 99/09/11 Copyright 1995 J. Schilling */
+/* @(#)stkframe.h	1.6 00/11/08 Copyright 1995 J. Schilling */
 /*
  * Common definitions for routines that parse the stack frame.
  *
@@ -39,6 +39,10 @@
 #	include <machine/frame.h>
 #else
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
 /*
  * XXX: I hope this will be useful on other machines (no guarantee)
  * XXX: It is taken from a sun Motorola system, but should also be useful
@@ -52,6 +56,10 @@ struct frame {
 	int		fr_savpc;	/* saved program counter */
 	int		fr_arg[1];	/* array of arguments */
 };
+
+#ifdef	__cplusplus
+}
+#endif
 
 #endif
 

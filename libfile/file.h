@@ -1,3 +1,4 @@
+/* @(#)file.h	1.5 01/02/17 joerg */
 /*
  * file.h - definitions for file(1) program
  * @(#)$Id: file.h,v 1.25 1997/01/15 19:28:35 christos Exp $
@@ -29,12 +30,7 @@
 #ifndef __file_h__
 #define __file_h__
 
-#ifndef __BEOS__
-typedef int int32;
-typedef unsigned int uint32;
-#else
-#include <SupportDefs.h>
-#endif /* __BEOS__ */
+#include <utypes.h>
 
 #ifndef HOWMANY
 # define HOWMANY 8192		/* how much of the file to look at */
@@ -51,9 +47,9 @@ struct magic {
 	short cont_level;	/* level of ">" */
 	struct {
 		char type;	/* byte short long */
-		int32 offset;	/* offset from indirection */
+		Int32_t offset;	/* offset from indirection */
 	} in;
-	int32 offset;		/* offset to magic number */
+	Int32_t offset;		/* offset to magic number */
 	unsigned char reln;	/* relation (0=eq, '>'=gt, etc) */
 	char type;		/* int, short, long or string. */
 	char vallen;		/* length of string value, if any */
@@ -71,12 +67,12 @@ struct magic {
 	union VALUETYPE {
 		unsigned char b;
 		unsigned short h;
-		uint32 l;
+		UInt32_t l;
 		char s[MAXstring];
 		unsigned char hs[2];	/* 2 bytes of a fixed-endian "short" */
 		unsigned char hl[4];	/* 2 bytes of a fixed-endian "long" */
 	} value;		/* either number or string */
-	uint32 mask;	/* mask before comparison with value */
+	UInt32_t mask;	/* mask before comparison with value */
 	char nospflag;		/* supress space character */
 	char desc[MAXDESC];	/* description */
 };
@@ -109,20 +105,18 @@ extern int   tryit		__P((unsigned char *, int, int));
 extern int   zmagic		__P((unsigned char *, int));
 extern void  ckfprintf		__P((FILE *, const char *, ...));
 #ifndef __BEOS__
-extern uint32 signextend	__P((struct magic *, uint32));
+extern UInt32_t signextend	__P((struct magic *, UInt32_t));
 #endif /* __BEOS__ */
 extern int internatmagic	__P((unsigned char *, int));
 extern void tryelf		__P((int, char *, int));
 
 
-extern int errno;		/* Some unixes don't define this..	*/
-
 extern char *progname;		/* the program name 			*/
 extern char *magicfile;		/* name of the magic file		*/
 extern int lineno;		/* current line number in magic file	*/
 
-extern struct magic *magic;	/* array of magic entries		*/
-extern int nmagic;		/* number of valid magic[]s 		*/
+extern struct magic *__f_magic;	/* array of magic entries		*/
+extern int __f_nmagic;		/* number of valid magic[]s 		*/
 
 
 extern int debug;		/* enable debugging?			*/
@@ -147,10 +141,6 @@ extern char *sys_errlist[];
 #define strerror(e) \
 	(((e) >= 0 && (e) < sys_nerr) ? sys_errlist[(e)] : "Unknown error")
 #define strtoul(a, b, c)	strtol(a, b, c)
-#endif
-
-#ifndef MAXPATHLEN
-#define	MAXPATHLEN	512
 #endif
 
 #endif /* __file_h__ */

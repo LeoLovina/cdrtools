@@ -1,4 +1,4 @@
-/* @(#)scgio.h	2.14 98/11/29 Copyright 1986 J. Schilling */
+/* @(#)scgio.h	2.16 00/11/07 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI general driver 'scg'
  *
@@ -20,16 +20,21 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_SCGIO_H
-#define	_SCGIO_H
+#ifndef	_SCG_SCGIO_H
+#define	_SCG_SCGIO_H
 
-#ifndef	_SCGCMD_H
+#ifndef	_SCG_SCGCMD_H
 #include <scg/scgcmd.h>
 #endif
 
 #if	defined(SVR4)
 #include <sys/ioccom.h>
 #endif
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
 #if	defined(__STDC__) || defined(SVR4)
 #define	SCGIOCMD	_IOWR('G', 1, struct scg_cmd)	/* do a SCSI cmd   */
 #define	SCGIORESET	_IO('G', 2)			/* reset SCSI bus  */
@@ -56,4 +61,8 @@
 
 #define	SCGIO_CMD	SCGIOCMD	/* backward ccompatibility */
 
-#endif	/* _SCGIO_H */
+#ifdef	__cplusplus
+}
+#endif
+
+#endif	/* _SCG_SCGIO_H */

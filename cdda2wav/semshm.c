@@ -68,7 +68,7 @@ static char     sccsid[] =
 
 #ifdef  USE_MMAP
 #if defined(HAVE_SMMAP) && defined(USE_MMAP)
-#include <sys/mman.h>
+#include <mmapdefs.h>
 #endif
 #endif
 
@@ -228,14 +228,12 @@ int semrequest(dummy, semnum)
   return 0;
 }
 
+/* ARGSUSED */
 int semrelease(dummy, semnum, amount)
 	int dummy;
 	int semnum;
 	int amount;
 {
-
-  PRETEND_TO_USE(dummy);
-
   if (semnum == FREE_SEM /* 0 */)  {
     if (*parent_waits == 1) {
       int retval;
@@ -272,11 +270,11 @@ int flush_buffers()
 
 #ifdef  USE_USGSHM
 #if defined(HAVE_SHMAT) && (HAVE_SHMAT == 1)
-static int shm_request	__PR((unsigned int size, unsigned char **memptr));
+static int shm_request	__PR((int size, unsigned char **memptr));
 
 /* request a shared memory block */
 static int shm_request(size, memptr)
-	unsigned int size;
+	int size;
 	unsigned char **memptr;
 {
   int   ret_val;
@@ -287,7 +285,7 @@ static int shm_request(size, memptr)
   key_t key = IPC_PRIVATE;
 
   shmflag = IPC_CREAT | 0600;
-  ret_val = shmget(key,(int)size,shmflag);
+  ret_val = shmget(key,size,shmflag);
   if ( ret_val == -1 )
   {
     perror("shmget");
@@ -307,7 +305,7 @@ static int shm_request(size, memptr)
   *memptr = (unsigned char *) shmat(SHMEM_ID, NULL, 0);
   if (*memptr == (unsigned char *) -1) {
     *memptr = NULL;
-    fprintf( stderr, "shmat failed for %u bytes\n", size);
+    fprintf( stderr, "shmat failed for %d bytes\n", size);
     return -1;
   }
 
@@ -321,7 +319,7 @@ static int shm_request(size, memptr)
   start_of_shm = *memptr;
   end_of_shm = (char *)(*memptr) + size;
 
-  fprintf(stderr, "Shared memory from %p to %p (%u bytes)\n", start_of_shm, end_of_shm, size);
+  fprintf(stderr, "Shared memory from %p to %p (%d bytes)\n", start_of_shm, end_of_shm, size);
 #endif
   return 0;
 }
@@ -350,12 +348,12 @@ void free_sem()
 
 #ifdef  USE_MMAP
 #if defined(HAVE_SMMAP) && defined(USE_MMAP)
-static int shm_request	__PR((unsigned int size, unsigned char **memptr));
+static int shm_request	__PR((int size, unsigned char **memptr));
 
 int shm_id;
 /* request a shared memory block */
 static int shm_request(size, memptr)
-	unsigned int size;
+	int size;
 	unsigned char **memptr;
 {
 	int     f;
@@ -363,15 +361,15 @@ static int shm_request(size, memptr)
 
 #ifdef  MAP_ANONYMOUS   /* HP/UX */
 	f = -1;
-	addr = mmap(0, (int) size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, f, 0);
+	addr = mmap(0, mmap_sizeparm(size), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, f, 0);
 #else
 	if ((f = open("/dev/zero", O_RDWR)) < 0)
 		comerr("Cannot open '/dev/zero'.\n");
-	addr = mmap(0, (int) size, PROT_READ|PROT_WRITE, MAP_SHARED, f, 0);
+	addr = mmap(0, mmap_sizeparm(size), PROT_READ|PROT_WRITE, MAP_SHARED, f, 0);
 #endif
 
 	if (addr == (char *)-1)
-		comerr("Cannot get mmap for %u Bytes on /dev/zero.\n", size);
+		comerr("Cannot get mmap for %d Bytes on /dev/zero.\n", size);
 	close(f);
 
 	if (memptr != NULL)
@@ -383,11 +381,11 @@ static int shm_request(size, memptr)
 #endif
 
 #ifdef	USE_OS2SHM
-static int shm_request	__PR((unsigned int size, unsigned char **memptr));
+static int shm_request	__PR((int size, unsigned char **memptr));
 
 /* request a shared memory block */
 static int shm_request(size, memptr)
-	unsigned int size;
+	int size;
 	unsigned char **memptr;
 {
 	char    *addr;

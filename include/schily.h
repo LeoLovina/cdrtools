@@ -1,4 +1,4 @@
-/* @(#)schily.h	1.27 00/05/28 Copyright 1985 J. Schilling */
+/* @(#)schily.h	1.39 01/02/23 Copyright 1985 J. Schilling */
 /*
  *	Definitions for libschily
  *
@@ -7,8 +7,8 @@
  *	mconfig.h / config.h
  *	standard.h
  *	stdio.h
- *	stdlib.h
- *	unistd.h
+ *	stdlib.h	(better use stdxlib.h)
+ *	unistd.h	(better use unixstd.h) needed LARGEFILE support
  *	string.h
  *	sys/types.h
  *
@@ -34,7 +34,25 @@
 #define _SCHILY_H
 
 #ifndef _STANDARD_H
-#include <standard.h.h>
+#include <standard.h>
+#endif
+#ifndef _CCOMDEFS_H
+#include <ccomdefs.h>
+#endif
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+#if	defined(_INCL_SYS_TYPES_H) || defined(off_t)
+#	ifndef	FOUND_OFF_T
+#	define	FOUND_OFF_T
+#	endif
+#endif
+#if	defined(_INCL_SYS_TYPES_H) || defined(size_t)
+#	ifndef	FOUND_SIZE_T
+#	define	FOUND_SIZE_T
+#	endif
 #endif
 
 #if	defined(_SIZE_T)     || defined(_T_SIZE_) || defined(_T_SIZE) || \
@@ -42,9 +60,22 @@
 	defined(_GCC_SIZE_T) || defined(_SIZET_)  || \
 	defined(__sys_stdtypes_h) || defined(___int_size_t_h) || defined(size_t)
 
-#ifndef	HAVE_SIZE_T
-#	define	HAVE_SIZE_T	/* We already included a size_t definition */
+#ifndef	FOUND_SIZE_T
+#	define	FOUND_SIZE_T	/* We already included a size_t definition */
 #endif
+#endif
+
+#if	defined(HAVE_LARGEFILES)
+#	define	_fcons		_fcons64
+#	define	fdup		fdup64
+#	define	fileluopen	fileluopen64
+#	define	fileopen	fileopen64
+#	define	filepos		filepos64
+#	define	filereopen	filereopen64
+#	define	fileseek	fileseek64
+#	define	filesize	filesize64
+#	define	filestat	filestat64
+#	define	_openfd		_openfd64
 #endif
 
 #ifdef	EOF	/* stdio.h has been included */
@@ -67,12 +98,16 @@ extern	void	file_raise __PR((FILE *, int));
 extern	int	fileclose __PR((FILE *));
 extern	FILE	*fileluopen __PR((int, const char *));
 extern	FILE	*fileopen __PR((const char *, const char *));
-extern	long	filepos __PR((FILE *));
+#ifdef	FOUND_OFF_T
+extern	off_t	filepos __PR((FILE *));
+#endif
 extern	int	fileread __PR((FILE *, void *, int));
 extern	int	ffileread __PR((FILE *, void *, int));
 extern	FILE	*filereopen __PR((const char *, const char *, FILE *));
-extern	long	fileseek __PR((FILE *, long));
-extern	long	filesize __PR((FILE *));
+#ifdef	FOUND_OFF_T
+extern	int	fileseek __PR((FILE *, off_t));
+extern	off_t	filesize __PR((FILE *));
+#endif
 #ifdef	S_IFMT
 extern	int	filestat __PR((FILE *, struct stat *));
 #endif
@@ -80,7 +115,7 @@ extern	int	filewrite __PR((FILE *, void *, int));
 extern	int	ffilewrite __PR((FILE *, void *, int));
 extern	int	flush __PR((void));
 extern	int	fpipe __PR((FILE **));
-extern	int	fprintf __PR((FILE *, const char *, ...));
+extern	int	fprintf __PR((FILE *, const char *, ...)) __printflike__(2, 3);
 extern	int	getbroken __PR((FILE *, char *, char, char **, int));
 extern	int	ofindline __PR((FILE *, char, const char *, int,
 							char **, int));
@@ -96,14 +131,26 @@ extern	int	spawnv_nowait __PR((FILE *, FILE *, FILE *,
 extern	int	_niread __PR((int, void *, int));
 extern	int	_openfd __PR((const char *, int));
 extern	int	on_comerr __PR((void (*fun)(int, void *), void *arg));
-extern	void	comerr __PR((const char *, ...));
-extern	void	comerrno __PR((int, const char *, ...));
-extern	int	errmsg __PR((const char *, ...));
-extern	int	errmsgno __PR((int, const char *, ...));
+/*PRINTFLIKE1*/
+extern	void	comerr __PR((const char *, ...)) __printflike__(1, 2);
+/*PRINTFLIKE2*/
+extern	void	comerrno __PR((int, const char *, ...)) __printflike__(2, 3);
+/*PRINTFLIKE1*/
+extern	int	errmsg __PR((const char *, ...)) __printflike__(1, 2);
+/*PRINTFLIKE2*/
+extern	int	errmsgno __PR((int, const char *, ...)) __printflike__(2, 3);
+#ifdef	FOUND_SIZE_T
+/*PRINTFLIKE3*/
+extern	int	serrmsg __PR((char *, size_t, const char *, ...)) __printflike__(3, 4);
+/*PRINTFLIKE4*/
+extern	int	serrmsgno __PR((int, char *, size_t, const char *, ...)) __printflike__(4, 5);
+#endif
 extern	void	comexit	__PR((int));
 extern	char	*errmsgstr __PR((int));
-extern	int	error __PR((const char *, ...));
+/*PRINTFLIKE1*/
+extern	int	error __PR((const char *, ...)) __printflike__(1, 2);
 extern	char	*fillbytes __PR((void *, int, char));
+extern	char	*findbytes __PR((const void *, int, char));
 extern	int	findline __PR((const char *, char, const char *,
 							int, char **, int));
 extern	int	getline __PR((char *, int));
@@ -114,15 +161,20 @@ extern	int	getargs __PR((int *, char * const**, const char *, ...));
 extern	int	getfiles __PR((int *, char * const**, const char *));
 extern	char	*astoi __PR((const char *, int *));
 extern	char	*astol __PR((const char *, long *));
+#ifdef	_UTYPES_H
+extern	char	*astoll __PR((const char *, Llong *));
+#endif
 
 /*extern	void	handlecond __PR((const char *, SIGBLK *, int(*)(const char *, long, long), long));*/
 extern	void	unhandlecond __PR((void));
 
 extern	int		patcompile __PR((const unsigned char *, int, int *));
 extern	unsigned char	*patmatch __PR((const unsigned char *, const int *,
-					const unsigned char *, int, int, int));
+					const unsigned char *, int, int, int, int[]));
+extern	unsigned char	*patlmatch __PR((const unsigned char *, const int *,
+					const unsigned char *, int, int, int, int[]));
 
-extern	int	printf __PR((const char *, ...));
+extern	int	printf __PR((const char *, ...)) __printflike__(1, 2);
 extern	char	*movebytes __PR((const void *, void *, int));
 
 extern	void	save_args __PR((int, char**));
@@ -139,13 +191,14 @@ extern	void	setfp __PR((void * const *));
 extern	int	wait_chld __PR((int));
 extern	int	geterrno __PR((void));
 extern	void	raisecond __PR((const char *, long));
-#ifdef	HAVE_SIZE_T
+#ifdef	FOUND_SIZE_T
 /*
  * We currently cannot define this here because there IXIX has a definition
  * than violates the standard.
  */
 #ifndef	HAVE_SNPRINTF
-extern	int	snprintf __PR((char *, size_t, const char *, ...));
+/*PRINTFLIKE3*/
+extern	int	snprintf __PR((char *, size_t, const char *, ...)) __printflike__(3, 4);
 #endif
 #endif
 /*extern	int	sprintf __PR((char *, const char *, ...)); ist woanders falsch deklariert !!!*/
@@ -161,12 +214,16 @@ extern	int	ftoes __PR((char *, double, int, int));
 extern	int	ftofs __PR((char *, double, int, int));
 
 #ifdef	EOF	/* stdio.h has been included */
-extern	int	js_fprintf	__PR((FILE *, const char *, ...));
-extern	int	js_printf	__PR((const char *, ...));
-#ifdef	HAVE_SIZE_T
-extern	int	js_snprintf	__PR((char *, size_t, const char *, ...));
+/*PRINTFLIKE2*/
+extern	int	js_fprintf	__PR((FILE *, const char *, ...)) __printflike__(2, 3);
+/*PRINTFLIKE1*/
+extern	int	js_printf	__PR((const char *, ...)) __printflike__(1, 2);
+#ifdef	FOUND_SIZE_T
+/*PRINTFLIKE3*/
+extern	int	js_snprintf	__PR((char *, size_t, const char *, ...)) __printflike__(3, 4);
 #endif
-extern	int	js_sprintf	__PR((char *, const char *, ...));
+/*PRINTFLIKE2*/
+extern	int	js_sprintf	__PR((char *, const char *, ...)) __printflike__(2, 3);
 #endif	/* EOF */
 
 extern	void	swabbytes __PR((void *, int));
@@ -175,6 +232,34 @@ extern	char	**getavp __PR((void));
 extern	void	**getfp __PR((void));
 extern	int	flush_reg_windows __PR((int));
 extern	int	cmpbytes __PR((const void *, const void *, int));
+
+#ifdef	nonono
+#if	defined(HAVE_LARGEFILES)
+/*
+ * To allow this, we need to figure out how to do autoconfiguration for off64_t
+ */
+extern	FILE	*_fcons64	__PR((FILE *, int, int));
+extern	FILE	*fdup64		__PR((FILE *));
+extern	FILE	*fileluopen64	__PR((int, const char *));
+extern	FILE	*fileopen64	__PR((const char *, const char *));
+#ifdef	FOUND_OFF_T
+extern	off64_t	filepos64	__PR((FILE *));
+#endif
+extern	FILE	*filereopen64	__PR((const char *, const char *, FILE *));
+#ifdef	FOUND_OFF_T
+extern	int	fileseek64	__PR((FILE *, off64_t));
+extern	off64_t	filesize64	__PR((FILE *));
+#endif
+#ifdef	S_IFMT
+extern	int	filestat64	__PR((FILE *, struct stat *));
+#endif
+extern	int	_openfd64	__PR((const char *, int));
+#endif
+#endif
+
+#ifdef	__cplusplus
+}
+#endif
 
 #if defined(_JOS) || defined(JOS)
 #	include <jos_io.h>

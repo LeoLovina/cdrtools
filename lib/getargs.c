@@ -1,7 +1,7 @@
-/* @(#)getargs.c	2.28 00/05/20 Copyright 1985, 1988, 1995 J. Schilling */
+/* @(#)getargs.c	2.29 00/12/30 Copyright 1985, 1988, 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getargs.c	2.28 00/05/20 Copyright 1985, 1988, 1995 J. Schilling";
+	"@(#)getargs.c	2.29 00/12/30 Copyright 1985, 1988, 1995 J. Schilling";
 #endif
 #define	NEW
 /*
@@ -37,6 +37,7 @@ static	char sccsid[] =
 /* LINTLIBRARY */
 #include <mconfig.h>
 #include <standard.h>
+#include <utypes.h>
 #include <getargs.h>
 #include <ctype.h>
 #include <vadefs.h>
@@ -251,7 +252,9 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, oargs)
 		BOOL		setargs;
 		va_list		oargs;
 {
+	char	argstr[2];
 	long	val;
+	Llong	llval;
 	int	singlecharflag	= 0;
 	BOOL	isspec;
 	BOOL	hasdash		= FALSE;
@@ -487,9 +490,15 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, oargs)
 				goto nextchance;
 
 			if (fmt[1] == 'l' || fmt[1] == 'L') {
-				if (setargs)
-					*((long *)curarg) += 1;
-				fmt++;
+				if (fmt[2] == 'l' || fmt[2] == 'L') {
+					if (setargs)
+						*((Llong *)curarg) += 1;
+					fmt += 2;
+				} else {
+					if (setargs)
+						*((long *)curarg) += 1;
+					fmt++;
+				}
 			} else if (fmt[1] == 's' || fmt[1] == 'S') {
 				if (setargs)
 					*((short *)curarg) += 1;
@@ -501,6 +510,8 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, oargs)
 					*((int *)curarg) += 1;
 			}
 
+			argstr[0] = *fmt;
+			argstr[1] = '\0';
 
 			return (checkfmt(fmt));
 
@@ -514,7 +525,7 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, oargs)
 					return (BADFLAG);
 				}
 			}
-			if (*astol(argp, &val) != '\0') {
+			if (*astoll(argp, &llval) != '\0') {
 				/*
 				 * arg is not a valid number!
 				 * go to next format in the format string
@@ -532,20 +543,29 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, oargs)
 				*pav = spav;
 				continue;
 			}
+			val = (long)llval;
 			if (fmt[1] == 'l' || fmt[1] == 'L') {
-				if (setargs)
-					*((long *)curarg) = val;
-				fmt++;
+				if (fmt[2] == 'l' || fmt[2] == 'L') {
+					if (setargs)
+						*((Llong *)curarg) = llval;
+					fmt += 2;
+				} else {
+					if (setargs)
+						*((long *)curarg) = val;
+					fmt++;
+				}
 			} else if (fmt[1] == 's' || fmt[1] == 'S') {
 				if (setargs)
-					*((short *)curarg) = val;
+					*((short *)curarg) = (short)val;
 				fmt++;
 			} else {
 				if (fmt[1] == 'i' || fmt[1] == 'I')
 					fmt++;
 				if (setargs)
-					*((int *)curarg) = val;
+					*((int *)curarg) = (int)val;
 			}
+			argstr[0] = *fmt;
+			argstr[1] = '\0';
 
 			return (checkfmt(fmt));
 
@@ -657,6 +677,12 @@ LOCAL int dosflags(argp, fmt, setargs, oargs)
 						if (fmt[1] == ',' ||
 						    fmt[1] == '\0') {
 							rsf[i].type = 'i';
+						} else if ((fmt[1] == 'l' ||
+							    fmt[1] == 'L') &&
+							   (fmt[2] == 'l' ||
+							    fmt[2] == 'L')) {
+							rsf[i].type = 'Q';
+							fmt++;
 						} else {
 							rsf[i].type = fmt[1];
 						}
@@ -690,6 +716,8 @@ LOCAL int dosflags(argp, fmt, setargs, oargs)
 				*((int *)rsf[i].curarg) += rsf[i].count;
 			} else if (rsf[i].type == 'l' || rsf[i].type == 'L') {
 				*((long *)rsf[i].curarg) += rsf[i].count;
+			} else if (rsf[i].type == 'Q') {
+				*((Llong *)rsf[i].curarg) += rsf[i].count;
 			} else if (rsf[i].type == 's' || rsf[i].type == 'S') {
 				*((short *)rsf[i].curarg) += rsf[i].count;
 			} else {

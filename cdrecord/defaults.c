@@ -1,7 +1,7 @@
-/* @(#)defaults.c	1.5 00/06/02 Copyright 1998 J. Schilling */
+/* @(#)defaults.c	1.6 01/02/21 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)defaults.c	1.5 00/06/02 Copyright 1998 J. Schilling";
+	"@(#)defaults.c	1.6 01/02/21 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -24,6 +24,7 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include <stdxlib.h>
+#include <unixstd.h>
 #include <strdefs.h>
 #include <stdio.h>
 #include <standard.h>

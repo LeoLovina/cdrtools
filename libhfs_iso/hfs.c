@@ -1,3 +1,8 @@
+/* @(#)hfs.c	1.4 01/03/20 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)hfs.c	1.4 01/03/20 joerg";
+#endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie
@@ -38,11 +43,6 @@
 #include "node.h"
 #include "record.h"
 #include "volume.h"
-
-char *hfs_error = "no error";	/* static error string */
-
-hfsvol *hfs_mounts;		/* linked list of mounted volumes */
-hfsvol *hfs_curvol;		/* current volume */
 
 /* High-Level Volume Routines ============================================== */
 
@@ -300,9 +300,10 @@ void hfs_flushall()
  */
 #ifdef APPLE_HYB
 /* extra argument used to alter the position of the extents/catalog files */
-int hfs_umount(vol, end)
+int hfs_umount(vol, end, locked)
 	hfsvol	*vol;
 	long	end;
+	long	locked;
 #else
 int hfs_umount(vol)
 	hfsvol	*vol;
@@ -363,6 +364,9 @@ int hfs_umount(vol)
 	vol->flags |= HFS_UPDATE_VBM;
 	vol->flags |= HFS_UPDATE_MDB;
 	vol->mdb.drAtrb |= HFS_ATRB_HLOCKED;
+	if (locked) {
+	    vol->mdb.drAtrb |= HFS_ATRB_SLOCKED;
+	}
 	vol->ext.flags |= HFS_UPDATE_BTHDR;
 	vol->cat.flags |= HFS_UPDATE_BTHDR;
   }
@@ -2143,5 +2147,26 @@ hfs_set_drAllocPtr(file, drAllocPtr, size)
   vol->flags |= HFS_UPDATE_MDB;
 
   return result;
+}
+
+/*
+ * NAME:        hfs->vsetbless()
+ * DESCRIPTION: set blessed folder
+ *
+ * adapted from vsetattr() from v3.2.6
+ */
+#ifdef  PROTOTYPES
+void
+hfs_vsetbless(hfsvol *vol, unsigned long cnid)
+#else
+void
+hfs_vsetbless(vol, cnid)
+	hfsvol		*vol;
+	unsigned long	cnid;
+#endif
+{
+  vol->mdb.drFndrInfo[0] = cnid;
+
+  vol->flags |= HFS_UPDATE_MDB;
 }
 #endif /* APPLE_HYB */

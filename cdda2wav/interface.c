@@ -1,7 +1,7 @@
-/* @(#)interface.c	1.11 00/06/02 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)interface.c	1.15 00/12/01 Copyright 1998-2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)interface.c	1.11 00/06/02 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)interface.c	1.15 00/12/01 Copyright 1998-2000 Heiko Eissfeldt";
 
 #endif
 /***
@@ -279,11 +279,12 @@ lost_toshibas:
          ReadLastAudio = ReadFirstSessionTOCMMC;
          SelectSpeed = SpeedSelectSCSIMMC;
     	 ReadTocText = ReadTocTextSCSIMMC;
+	 if (!memcmp(p+8,"SONY    CD-RW  CRX100E  1.0", 27)) ReadTocText = NULL;
 	 if (!global.quiet) fprintf(stderr, "MMC+CDDA\n");
        break;
        case -1: /* "MMC drive does not support cdda reading, sorry\n." */
-	/* fall through */
 	 if (!global.quiet) fprintf(stderr, "MMC-CDDA\n");
+	 /* FALLTHROUGH */
        case 0:      /* non SCSI-3 cdrom drive */
 	 if (!global.quiet) fprintf(stderr, "no MMC\n");
          ReadLastAudio = NULL;
@@ -483,10 +484,16 @@ static int OpenCdRom ( pdev_name )
 
       needroot(0);
       needgroup(0);
+	/*
+	 * Call scg_remote() to force loading the remote SCSI transport library
+	 * code that is located in librscg instead of the dummy remote routines
+	 * that are located inside libscg.
+	 */
+	scg_remote();
 		/* device name, debug, verboseopen */
-      scgp = open_scsi(pdev_name, errstr, sizeof(errstr), 0, 0);
+	scgp = scg_open(pdev_name, errstr, sizeof(errstr), 0, 0);
 
-      if (scgp == NULL) {
+	if (scgp == NULL) {
 		errmsg("%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
 
         fprintf(stderr, "open(%s) in file %s, line %d\n",pdev_name, __FILE__, __LINE__);
@@ -505,15 +512,15 @@ static int OpenCdRom ( pdev_name )
         fprintf(stderr, "You can also define the default device in the Makefile.\n");
         exit(1);
       }
-	scsi_settimeout(scgp, 300);
+	scg_settimeout(scgp, 300);
 	if (scgp) {
 		scgp->silent = global.scsi_silent;
 		scgp->verbose = global.scsi_verbose;
 	}
       dontneedgroup();
       dontneedroot();
-      if (global.nsectors > (unsigned) scsi_bufsize(scgp, 100*1024*1024)/CD_FRAMESIZE_RAW)
-        global.nsectors = scsi_bufsize(scgp, 100*1024*1024)/CD_FRAMESIZE_RAW;
+      if (global.nsectors > (unsigned) scg_bufsize(scgp, 100*1024*1024)/CD_FRAMESIZE_RAW)
+        global.nsectors = scg_bufsize(scgp, 100*1024*1024)/CD_FRAMESIZE_RAW;
       if (global.overlap >= global.nsectors)
         global.overlap = global.nsectors-1;
 
@@ -521,7 +528,7 @@ static int OpenCdRom ( pdev_name )
   } else {
       needgroup(0);
       retval = open(pdev_name,O_RDONLY
-#ifdef	LINUX
+#ifdef	linux
 				| O_NONBLOCK
 #endif
 	);
@@ -574,7 +581,7 @@ static int ReadCdRom_sim (x, p, lSector, SectorBurstVal )
 	unsigned SectorBurstVal;
 {
   unsigned int loop=0;
-  short *q = (short *) p;
+  Int16_t *q = (Int16_t *) p;
   int joffset = 0;
 
   if (lSector > g_toc[cdtracks].dwStartSector || lSector + SectorBurstVal > g_toc[cdtracks].dwStartSector + 1) {
@@ -674,9 +681,15 @@ static unsigned ReadToc_sim ( x, toc )
         toc[i].bFlags = (scenario == 6 && i == 0) ? 0x4 : 0x1b;
         toc[i].bTrack = i + 1;
         toc[i].dwStartSector = i * scen[scenario][2];
+        toc[i].mins = (toc[i].dwStartSector+150) / (60*75);
+        toc[i].secs = (toc[i].dwStartSector+150 / 75) % (60);
+        toc[i].frms = (toc[i].dwStartSector+150) % (75);
     }
     toc[i].bTrack = 0xaa;
     toc[i].dwStartSector = i * scen[scenario][2];
+    toc[i].mins = (toc[i].dwStartSector+150) / (60*75);
+    toc[i].secs = (toc[i].dwStartSector+150 / 75) % (60);
+    toc[i].frms = (toc[i].dwStartSector+150) % (75);
 #else
     {
       int starts[15] = { 23625, 30115, 39050, 51777, 67507, 
@@ -689,9 +702,15 @@ static unsigned ReadToc_sim ( x, toc )
         toc[i].bFlags = 0x0;
         toc[i].bTrack = i + 1;
         toc[i].dwStartSector = starts[i];
+        toc[i].mins = (starts[i]+150) / (60*75);
+        toc[i].secs = (starts[i]+150 / 75) % (60);
+        toc[i].frms = (starts[i]+150) % (75);
       }
       toc[i].bTrack = 0xaa;
       toc[i].dwStartSector = starts[i];
+      toc[i].mins = (starts[i]) / (60*75);
+      toc[i].secs = (starts[i] / 75) % (60);
+      toc[i].frms = (starts[i]) % (75);
     }
 #endif
     return --trcks;           /* without lead-out */
@@ -736,24 +755,21 @@ static subq_chnl *ReadSubQ_sim ( scgp, sq_format, track )
 }
 
 static void SelectSpeed_sim __PR(( SCSI *x, unsigned sp));
+/* ARGSUSED */
 static void SelectSpeed_sim(x, sp)
 	SCSI *x;
 	unsigned sp;
 {
-	PRETEND_TO_USE(x);
-	PRETEND_TO_USE(sp);
 }
 
 static void trash_cache_sim __PR((UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
 
+/* ARGSUSED */
 static void trash_cache_sim(p, lSector, SectorBurstVal)
 	UINT4 *p;
 	unsigned lSector;
 	unsigned SectorBurstVal;
 {
-	PRETEND_TO_USE(p);
-	PRETEND_TO_USE(lSector);
-	PRETEND_TO_USE(SectorBurstVal);
 }
 
 static void SetupSimCd __PR((void));

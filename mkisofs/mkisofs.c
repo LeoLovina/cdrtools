@@ -1,7 +1,7 @@
-/* @(#)mkisofs.c	1.70 00/07/20 joerg */
+/* @(#)mkisofs.c	1.93 01/04/20 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)mkisofs.c	1.70 00/07/20 joerg";
+	"@(#)mkisofs.c	1.93 01/04/20 joerg";
 #endif
 /*
  * Program mkisofs.c - generate iso9660 filesystem  based upon directory
@@ -10,7 +10,7 @@ static	char sccsid[] =
    Written by Eric Youngdale (1993).
 
    Copyright 1993 Yggdrasil Computing, Incorporated
-   Copyright (c) 1999,2000 J. Schilling
+   Copyright (c) 1999,2000,2001 J. Schilling
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -28,10 +28,16 @@ static	char sccsid[] =
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 22/2/2000 */
 
-#include "config.h"
-#include <errno.h>
+#include <mconfig.h>
 #include "mkisofs.h"
+#include <errno.h>
+#include <timedefs.h>
+#include <fctldefs.h>
+#include <ctype.h>
 #include "match.h"
+#include "exclude.h"
+#include <unls.h>	/* For UNICODE translation */
+#include <schily.h>
 
 #ifdef linux
 #include <getopt.h>
@@ -39,39 +45,19 @@ static	char sccsid[] =
 #include "getopt.h"
 #endif
 
-#include "iso9660.h"
-#include <ctype.h>
-
-#ifndef VMS
-#include <time.h>
-#else
-#include <sys/time.h>
+#ifdef VMS
 #include "vms.h"
 #endif
 
-#include <stdxlib.h>
-#include <sys/stat.h>
-#include <unixstd.h>
-#include <fctldefs.h>
-#include "exclude.h"
-
 #ifdef	no_more_needed
 #ifdef __NetBSD__
-#include <sys/time.h>
 #include <sys/resource.h>
 #endif
 #endif	/* no_more_needed */
 
-#include <unls.h>	/* For UNICODE translation */
-
-#ifdef	USE_LIBSCHILY
-#include <standard.h>
-#include <schily.h>
-#endif
-
 struct directory *root = NULL;
 
-char	version_string[] = "mkisofs 1.13";
+char	version_string[] = "mkisofs 1.14";
 
 char		*outfile;
 FILE		*discimage;
@@ -96,6 +82,7 @@ int	extension_record_size = 0;
 
 /* These variables are associated with command line options */
 int	check_oldnames = 0;
+int	check_session = 0;
 int	use_eltorito = 0;
 int	hard_disk_boot = 0;
 int	not_bootable = 0;
@@ -111,13 +98,27 @@ int	verbose = 1;
 int	gui = 0;
 int	all_files = 1;	/* New default is to include all files */
 int	follow_links = 0;
+#ifdef	IS_CYGWIN
+int	cache_inodes = 0;/* Do not cache inodes on Cygwin by default */
+#else
+int	cache_inodes = 1;/* Cache inodes if OS has unique inodes */
+#endif
 int	rationalize = 0;
+int	rationalize_uid = 0;
+int	rationalize_gid = 0;
+int	rationalize_filemode = 0;
+int	rationalize_dirmode = 0;
+uid_t	uid_to_use = 0;		/* when rationalizing uid */
+gid_t	gid_to_use = 0;		/* when rationalizing gid */
+int	filemode_to_use = 0;	/* if non-zero, when rationalizing file mode */
+int	dirmode_to_use = 0;	/* if non-zero, when rationalizing dir mode */
+int	new_dir_mode = 0555;
 int	generate_tables = 0;
-int	dopad = 0;
+int	dopad = 1;	/* Now default to do padding */
 int	print_size = 0;
 int	split_output = 0;
-char	*jcharset = NULL;	/* Original charset to convert to
-					   UNICODE */
+char	*icharset = NULL;	/* input charset to convert to UNICODE */
+char	*ocharset = NULL;	/* output charset to convert from UNICODE */
 char	*preparer = PREPARER_DEFAULT;
 char	*publisher = PUBLISHER_DEFAULT;
 char	*appid = APPID_DEFAULT;
@@ -144,7 +145,8 @@ int	omit_period = 0;	/* Violates iso9660, but these are a pain */
 int	transparent_compression = 0; /* So far only works with linux */
 int	omit_version_number = 0;/* May violate iso9660, but noone uses vers */
 int	no_rr = 0;		/* Do not use RR attributes from old session */
-int	RR_relocation_depth = 6;/* Violates iso9660, but most systems work */
+int	force_rr = 0;		/* Force to use RR attributes from old session */
+Uint	RR_relocation_depth = 6;/* Violates iso9660, but most systems work */
 int	iso9660_level = 1;
 int	iso9660_namelen = LEN_ISONAME; /* 31 characters, may be set to 37 */
 int	full_iso9660_filenames = 0; /* Full 31 character iso9660 filenames */
@@ -183,6 +185,10 @@ char	*deftype = APPLE_TYPE_DEFAULT;	/* default Apple TYPE */
 char	*defcreator = APPLE_CREATOR_DEFAULT;	/* default Apple CREATOR */
 char	*hfs_volume_id = NULL;	/* HFS volume ID */
 int	icon_pos = 0;		/* Keep icon position */
+char	*hfs_icharset = NULL;	/* input HFS charset name */
+char    *hfs_ocharset = NULL;	/* output HFS charset name */
+int	hfs_lock = 1;		/* lock HFS volume (read-only) */
+char	*hfs_bless = NULL;	/* name of folder to 'bless' (System Folder) */
 
 #ifdef PREP_BOOT
 char	*prep_boot_image[4];
@@ -195,7 +201,12 @@ int	use_prep_boot = 0;
 int	do_sort = 0;		/* sort file data */
 #endif /* SORTING */
 
-struct nls_table *nls = NULL;	/* UNICODE conversion table */
+struct nls_table *in_nls = NULL;  /* input UNICODE conversion table */
+struct nls_table *out_nls = NULL; /* output UNICODE conversion table */
+#ifdef APPLE_HYB
+struct nls_table *hfs_inls = NULL; /* input HFS UNICODE conversion table */
+struct nls_table *hfs_onls = NULL; /* output HFS UNICODE conversion table */
+#endif /* APPLE_HYB */
 
 struct rcopts {
 	char		*tag;
@@ -246,102 +257,123 @@ struct ld_option {
 };
 
 /*
- * Codes used for the long options with no short synonyms.  150 isn't
- * special; it's just an arbitrary non-ASCII char value.
+ * Codes used for the long options with no short synonyms. Note that all these
+ * values must not be ASCII or EBCDIC.
  */
-#define OPTION_HELP			150
-#define OPTION_QUIET			151
-#define OPTION_NOSPLIT_SL_COMPONENT	152
-#define OPTION_NOSPLIT_SL_FIELD		153
-#define OPTION_PRINT_SIZE		154
-#define OPTION_SPLIT_OUTPUT		155
-#define OPTION_ABSTRACT			156
-#define OPTION_BIBLIO			157
-#define OPTION_COPYRIGHT		158
-#define OPTION_SYSID			159
-#define OPTION_VOLSET			160
-#define OPTION_VOLSET_SIZE		161
-#define OPTION_VOLSET_SEQ_NUM		162
-#define OPTION_I_HIDE			163
-#define OPTION_J_HIDE			164
-#define OPTION_LOG_FILE			165
-#define OPTION_PVERSION			166
-#define OPTION_NOBAK			167
-#define OPTION_SPARCLABEL		168
-#define OPTION_HARD_DISK_BOOT		169
-#define OPTION_NO_EMUL_BOOT		170
-#define OPTION_NO_BOOT			171
-#define OPTION_BOOT_LOAD_ADDR		172
-#define OPTION_BOOT_LOAD_SIZE		173
-#define OPTION_BOOT_INFO_TABLE		174
-#define OPTION_HIDE_TRANS_TBL		175
-#define OPTION_HIDE_RR_MOVED		176
-#define OPTION_GUI			177
-#define OPTION_TRANS_TBL		178
-#define OPTION_P_LIST			179
-#define OPTION_I_LIST			180
-#define OPTION_J_LIST			181
-#define OPTION_X_LIST			182
-#define OPTION_NO_RR			183
-#define OPTION_JCHARSET			184
-#define OPTION_PAD			185
-#define OPTION_H_HIDE			186
-#define OPTION_H_LIST			187
-#define OPTION_CHECK_OLDNAMES		188
+#define OPTION_HELP			1000
+#define OPTION_QUIET			1001
+#define OPTION_NOSPLIT_SL_COMPONENT	1002
+#define OPTION_NOSPLIT_SL_FIELD		1003
+#define OPTION_PRINT_SIZE		1004
+#define OPTION_SPLIT_OUTPUT		1005
+#define OPTION_ABSTRACT			1006
+#define OPTION_BIBLIO			1007
+#define OPTION_COPYRIGHT		1008
+#define OPTION_SYSID			1009
+#define OPTION_VOLSET			1010
+#define OPTION_VOLSET_SIZE		1011
+#define OPTION_VOLSET_SEQ_NUM		1012
+#define OPTION_I_HIDE			1013
+#define OPTION_J_HIDE			1014
+#define OPTION_LOG_FILE			1015
+#define OPTION_PVERSION			1016
+#define OPTION_NOBAK			1017
+#define OPTION_SPARCLABEL		1018
+#define OPTION_HARD_DISK_BOOT		1019
+#define OPTION_NO_EMUL_BOOT		1020
+#define OPTION_NO_BOOT			1021
+#define OPTION_BOOT_LOAD_ADDR		1022
+#define OPTION_BOOT_LOAD_SIZE		1023
+#define OPTION_BOOT_INFO_TABLE		1024
+#define OPTION_HIDE_TRANS_TBL		1025
+#define OPTION_HIDE_RR_MOVED		1026
+#define OPTION_GUI			1027
+#define OPTION_TRANS_TBL		1028
+#define OPTION_P_LIST			1029
+#define OPTION_I_LIST			1030
+#define OPTION_J_LIST			1031
+#define OPTION_X_LIST			1032
+#define OPTION_NO_RR			1033
+#define OPTION_JCHARSET			1034
+#define OPTION_PAD			1035
+#define OPTION_H_HIDE			1036
+#define OPTION_H_LIST			1037
+#define OPTION_CHECK_OLDNAMES		1038
 
 #ifdef SORTING
-#define OPTION_SORT			189
+#define OPTION_SORT			1039
 #endif /* SORTING */
-#define OPTION_UCS_LEVEL		190
-#define OPTION_ISO_TRANSLATE		191
-#define OPTION_ISO_LEVEL		192
-#define OPTION_RELAXED_FILENAMES	193
-#define OPTION_ALLOW_LOWERCASE		194
-#define OPTION_ALLOW_MULTIDOT		195
-#define OPTION_USE_FILEVERSION		196
-#define OPTION_MAX_FILENAMES		197
-#define OPTION_ALT_BOOT			198
-#define OPTION_USE_GRAFT		199
+#define OPTION_UCS_LEVEL		1040
+#define OPTION_ISO_TRANSLATE		1041
+#define OPTION_ISO_LEVEL		1042
+#define OPTION_RELAXED_FILENAMES	1043
+#define OPTION_ALLOW_LOWERCASE		1044
+#define OPTION_ALLOW_MULTIDOT		1045
+#define OPTION_USE_FILEVERSION		1046
+#define OPTION_MAX_FILENAMES		1047
+#define OPTION_ALT_BOOT			1048
+#define OPTION_USE_GRAFT		1049
+
+#define OPTION_INPUT_CHARSET		1050
+#define OPTION_OUTPUT_CHARSET		1051
+
+#define OPTION_NOPAD			1052
+#define OPTION_UID			1053
+#define OPTION_GID			1054
+#define OPTION_FILEMODE			1055
+#define OPTION_DIRMODE			1056
+#define OPTION_NEW_DIR_MODE		1057
+#define OPTION_CACHE_INODES		1058
+#define OPTION_NOCACHE_INODES		1059
+
+#define OPTION_CHECK_SESSION		1060
+#define OPTION_FORCE_RR			1061
 
 #ifdef APPLE_HYB
-#define OPTION_CAP			200
-#define OPTION_NETA			201
-#define OPTION_DBL			202
-#define OPTION_ESH			203
-#define OPTION_FE			204
-#define OPTION_SGI			205
-#define OPTION_MBIN			206
-#define OPTION_SGL			207
+#define OPTION_CAP			2000
+#define OPTION_NETA			2001
+#define OPTION_DBL			2002
+#define OPTION_ESH			2003
+#define OPTION_FE			2004
+#define OPTION_SGI			2005
+#define OPTION_MBIN			2006
+#define OPTION_SGL			2007
 /* aliases */
-#define OPTION_USH			208
-#define OPTION_XIN			209
+#define OPTION_USH			2008
+#define OPTION_XIN			2009
 
-#define OPTION_DAVE			210
-#define OPTION_SFM			211
+#define OPTION_DAVE			2010
+#define OPTION_SFM			2011
 
-#define OPTION_PROBE			220
-#define OPTION_MACNAME			221
-#define OPTION_NOMACFILES		222
-#define OPTION_BOOT_HFS_FILE		223
-#define OPTION_MAGIC_FILE		224
+#define OPTION_PROBE			2020
+#define OPTION_MACNAME			2021
+#define OPTION_NOMACFILES		2022
+#define OPTION_BOOT_HFS_FILE		2023
+#define OPTION_MAGIC_FILE		2024
 
-#define OPTION_HFS_LIST			225
+#define OPTION_HFS_LIST			2025
 
-#define OPTION_GEN_PT			226
+#define OPTION_GEN_PT			2026
 
-#define OPTION_CREATE_DT		227
-#define OPTION_HFS_HIDE			228
+#define OPTION_CREATE_DT		2027
+#define OPTION_HFS_HIDE			2028
 
-#define OPTION_AUTOSTART		229
-#define OPTION_BSIZE			230
-#define OPTION_HFS_VOLID		231
-#define OPTION_PREP_BOOT		232
-#define OPTION_ICON_POS			233
+#define OPTION_AUTOSTART		2029
+#define OPTION_BSIZE			2030
+#define OPTION_HFS_VOLID		2031
+#define OPTION_PREP_BOOT		2032
+#define OPTION_ICON_POS			2033
 
-#define OPTION_HFS_TYPE			234
-#define OPTION_HFS_CREATOR		235
+#define OPTION_HFS_TYPE			2034
+#define OPTION_HFS_CREATOR		2035
 
-#define OPTION_ROOT_INFO		236
+#define OPTION_ROOT_INFO		2036
+
+#define OPTION_HFS_INPUT_CHARSET	2037
+#define OPTION_HFS_OUTPUT_CHARSET	2038
+
+#define OPTION_HFS_UNLOCK		2039
+#define OPTION_HFS_BLESS		2040
 
 #endif	/* APPLE_HYB */
 
@@ -359,8 +391,14 @@ static const struct ld_option ld_options[] =
 	'A', "ID", "Set Application ID", ONE_DASH},
 	{{"biblio", required_argument, NULL, OPTION_BIBLIO},
 	'\0', "FILE", "Set Bibliographic filename", ONE_DASH},
+	{{"cache-inodes", no_argument, NULL, OPTION_CACHE_INODES},
+	'\0', NULL, "Cache inodes (needed to detect hard links)", ONE_DASH},
+	{{"no-cache-inodes", no_argument, NULL, OPTION_NOCACHE_INODES},
+	'\0', NULL, "Do not cache inodes (if filesystem has no unique unides)", ONE_DASH},
 	{{"check-oldnames", no_argument, NULL, OPTION_CHECK_OLDNAMES},
 	'\0', NULL, "Check all imported ISO9660 names from old session", ONE_DASH},
+	{{"check-session", required_argument, NULL, OPTION_CHECK_SESSION},
+	'\0', "FILE", "Check all ISO9660 names from previous session", ONE_DASH},
 	{{"copyright", required_argument, NULL, OPTION_COPYRIGHT},
 	'\0', "FILE", "Set Copyright filename", ONE_DASH},
 	{{"eltorito-boot", required_argument, NULL, 'b'},
@@ -379,10 +417,17 @@ static const struct ld_option ld_options[] =
 	'C', "PARAMS", "Magic paramters from cdrecord", ONE_DASH},
 	{{"omit-period", no_argument, NULL, 'd'},
 	'd', NULL, "Omit trailing periods from filenames (violates ISO9660)", ONE_DASH},
+	{{"dir-mode", required_argument, NULL, OPTION_DIRMODE},
+	 '\0', "mode", "Make the mode of all directories this mode.", ONE_DASH},
 	{{"disable-deep-relocation", no_argument, NULL, 'D'},
 	'D', NULL, "Disable deep directory relocation (violates ISO9660)", ONE_DASH},
+	{{"file-mode", required_argument, NULL, OPTION_FILEMODE},
+	 '\0', "mode", "Make the mode of all plain files this mode.", ONE_DASH},
 	{{"follow-links", no_argument, NULL, 'f'},
 	'f', NULL, "Follow symbolic links", ONE_DASH},
+	{{"gid", required_argument, NULL, OPTION_GID},
+	 '\0', "gid", "Make the group owner of all files this gid.",
+	 ONE_DASH},
 	{{"graft-points", no_argument, NULL, OPTION_USE_GRAFT},
 	'\0', NULL, "Allow to use graft points for filenames", ONE_DASH},
 	{{"help", no_argument, NULL, OPTION_HELP},
@@ -407,6 +452,10 @@ static const struct ld_option ld_options[] =
 	'\0', NULL, "Switch behaviour for GUI", ONE_DASH},
 	{{NULL, required_argument, NULL, 'i'},
 	'i', "ADD_FILES", "No longer supported", TWO_DASHES},
+	{{"input-charset", required_argument, NULL, OPTION_INPUT_CHARSET},
+	'\0', "CHARSET", "Local input charset for file name conversion", ONE_DASH},
+	{{"output-charset", required_argument, NULL, OPTION_OUTPUT_CHARSET},
+	'\0', "CHARSET", "Output charset for file name conversion", ONE_DASH},
 	{{"iso-level", required_argument, NULL, OPTION_ISO_LEVEL},
 	'\0', "LEVEL", "Set ISO9660 conformance level (1..3)", ONE_DASH},
 	{{"joliet", no_argument, NULL, 'J'},
@@ -426,11 +475,17 @@ static const struct ld_option ld_options[] =
 	{{"exclude-list", required_argument, NULL, OPTION_X_LIST},
 	'\0', "FILE", "File with list of file names to exclude", ONE_DASH},
 	{{"pad", no_argument, NULL, OPTION_PAD},
-	0, NULL, "Pad to a multiple of 32k", ONE_DASH},
+	0, NULL, "Pad outout to a multiple of 32k (default)", ONE_DASH},
+	{{"no-pad", no_argument, NULL, OPTION_NOPAD},
+	0, NULL, "Do not pad output to a multiple of 32k", ONE_DASH},
 	{{"prev-session", required_argument, NULL, 'M'},
 	'M', "FILE", "Set path to previous session to merge", ONE_DASH},
 	{{"omit-version-number", no_argument, NULL, 'N'},
 	'N', NULL, "Omit version number from ISO9660 filename (violates ISO9660)", ONE_DASH},
+	{{"new-dir-mode", required_argument, NULL, OPTION_NEW_DIR_MODE},
+	 '\0', "mode", "Mode used when creating new directories.", ONE_DASH},
+	{{"force-rr", no_argument, NULL, OPTION_FORCE_RR},
+	0, NULL, "Inhibit automatic Rock Ridge detection for previous session", ONE_DASH},
 	{{"no-rr", no_argument, NULL, OPTION_NO_RR},
 	0, NULL, "Inhibit reading of Rock Ridge attributes from previous session", ONE_DASH},
 	{{"no-split-symlink-components", no_argument, NULL, OPTION_NOSPLIT_SL_COMPONENT},
@@ -469,6 +524,9 @@ static const struct ld_option ld_options[] =
 	'\0', "TABLE_NAME", "Translation table file name", ONE_DASH},
 	{{"ucs-level", required_argument, NULL, OPTION_UCS_LEVEL},
 	'\0', "LEVEL", "Set Joliet UCS level (1..3)", ONE_DASH},
+	{{"uid", required_argument, NULL, OPTION_UID},
+	 '\0', "uid", "Make the owner of all files this uid.", 
+	 ONE_DASH},
 	{{"untranslated-filenames", no_argument, NULL, 'U'},
 	'U', NULL, "Allow Untranslated filenames (for HPUX & AIX - violates ISO9660). Forces -l, -d, -L, -N, -relaxed-filenames, -allow-lowercase, -allow-multidot", ONE_DASH},
 	{{"relaxed-filenames", no_argument, NULL, OPTION_RELAXED_FILENAMES},
@@ -551,6 +609,14 @@ static const struct ld_option ld_options[] =
 	'\0', NULL, "Keep HFS icon position", ONE_DASH},
 	{{"root-info", required_argument, NULL, OPTION_ROOT_INFO},
 	'\0', "FILE", "finderinfo for root folder", ONE_DASH},
+	{{"input-hfs-charset", required_argument, NULL, OPTION_HFS_INPUT_CHARSET},
+	'\0', "CHARSET", "Local input charset for HFS file name conversion", ONE_DASH},
+	{{"output-hfs-charset", required_argument, NULL, OPTION_HFS_OUTPUT_CHARSET},
+	'\0', "CHARSET", "Output charset for HFS file name conversion", ONE_DASH},
+	{{"hfs-unlock", no_argument, NULL, OPTION_HFS_UNLOCK},
+	'\0', NULL, "Leave HFS Volume unlocked", ONE_DASH},
+	{{"hfs-bless", required_argument, NULL, OPTION_HFS_BLESS},
+	'\0', "FOLDER_NAME", "Name of Folder to be blessed", ONE_DASH},
 #ifdef PREP_BOOT
 	{{"prep-boot", required_argument, NULL, OPTION_PREP_BOOT},
 	'\0', "FILE", "PReP boot image file -- up to 4 are allowed", ONE_DASH},
@@ -808,7 +874,7 @@ usage(excode)
 	fprintf(stderr, "Usage: %s [options] file...\n", program_name);
 
 	fprintf(stderr, "Options:\n");
-	for (i = 0; i < OPTION_COUNT; i++) {
+	for (i = 0; i < (int)OPTION_COUNT; i++) {
 		if (ld_options[i].doc != NULL) {
 			int	comma;
 			int	len;
@@ -840,7 +906,7 @@ usage(excode)
 				}
 				++j;
 			}
-			while (j < OPTION_COUNT && ld_options[j].doc == NULL);
+			while (j < (int)OPTION_COUNT && ld_options[j].doc == NULL);
 
 			j = i;
 			do {
@@ -864,7 +930,7 @@ usage(excode)
 				}
 				++j;
 			}
-			while (j < OPTION_COUNT && ld_options[j].doc == NULL);
+			while (j < (int)OPTION_COUNT && ld_options[j].doc == NULL);
 
 			if (len >= 30) {
 				fprintf(stderr, "\n");
@@ -959,6 +1025,8 @@ get_pnames(argc, argv, opt, pname, pnsize, fp)
 	int	pnsize;
 	FILE	*fp;
 {
+	int	len;
+
 	/* we may of already read the first line from the pathnames file */
 	if (save_pname) {
 		save_pname = 0;
@@ -972,7 +1040,11 @@ get_pnames(argc, argv, opt, pname, pnsize, fp)
 		return ((char *) 0);
 
 	if (fgets(pname, pnsize, fp)) {
-		pname[strlen(pname) - 1] = '\0';	/* Discard newline */
+		/* Discard newline */
+		len = strlen(pname);
+		if (pname[len - 1] == '\n') {
+			pname[len - 1] = '\0';
+		}
 		return (pname);
 	}
 	return ((char *) 0);
@@ -1001,7 +1073,7 @@ main(argc, argv)
 	int		c;
 	int		n;
 	char		*log_file = 0;
-	char		*node;
+	char		*node = NULL;
 	char		*pathnames = 0;
 	FILE		*pfp = NULL;
 	char		pname[1024],
@@ -1011,6 +1083,7 @@ main(argc, argv)
 	int		no_path_names = 1;
 	int		warn_violate = 0;
 	int		have_cmd_line_pathspec = 0;
+	int		rationalize_all = 0;
 
 #ifdef APPLE_HYB
 	char		*afpfile = "";	/* mapping file for TYPE/CREATOR */
@@ -1054,7 +1127,7 @@ main(argc, argv)
 		shortopts[0] = '-';
 		is = 1;
 		il = 0;
-		for (i = 0; i < OPTION_COUNT; i++) {
+		for (i = 0; i < (int)OPTION_COUNT; i++) {
 			if (ld_options[i].shortopt != '\0') {
 				shortopts[is] = ld_options[i].shortopt;
 				++is;
@@ -1142,8 +1215,13 @@ main(argc, argv)
 			use_Joliet++;
 			break;
 		case OPTION_JCHARSET:
-			jcharset = optarg;
 			use_Joliet++;
+			/* FALLTHROUGH */
+		case OPTION_INPUT_CHARSET:
+			icharset = optarg;
+			break;
+		case OPTION_OUTPUT_CHARSET:
+			ocharset = optarg;
 			break;
 		case OPTION_NOBAK:
 			all_files = 0;
@@ -1249,8 +1327,27 @@ main(argc, argv)
 #endif
 			};
 			break;
+		case OPTION_CACHE_INODES:
+			cache_inodes = 1;
+			break;
+		case OPTION_NOCACHE_INODES:
+			cache_inodes = 0;
+			break;
 		case OPTION_CHECK_OLDNAMES:
 			check_oldnames++;
+			break;
+		case OPTION_CHECK_SESSION:
+			check_session++;
+			check_oldnames++;
+			merge_image = optarg;
+			outfile = "/dev/null";
+			/*
+			 * cdrecord_data is handled specially in multi.c
+			 * as we cannot write to all strings.
+			 * If mkisofs is called with -C xx,yy
+			 * our default is overwritten.
+			 */
+/*			cdrecord_data = "0,0";*/
 			break;
 		case OPTION_COPYRIGHT:
 			copyright = optarg;
@@ -1298,6 +1395,9 @@ main(argc, argv)
 			omit_version_number++;
 			warn_violate++;
 			break;
+		case OPTION_FORCE_RR:
+			force_rr++;
+			break;
 		case OPTION_NO_RR:
 			no_rr++;
 			break;
@@ -1306,6 +1406,9 @@ main(argc, argv)
 			break;
 		case OPTION_PAD:
 			dopad++;
+			break;
+		case OPTION_NOPAD:
+			dopad = 0;
 			break;
 		case OPTION_P_LIST:
 			pathnames = optarg;
@@ -1343,9 +1446,104 @@ main(argc, argv)
 			use_RockRidge++;
 			break;
 		case 'r':
-			rationalize++;
+			rationalize_all++;
 			use_RockRidge++;
 			break;
+		case OPTION_NEW_DIR_MODE:
+			rationalize++;
+		{
+			char	*end = 0;
+
+			new_dir_mode = strtol(optarg, &end, 8);
+			if (!end || *end != 0 ||
+			    new_dir_mode < 0 || new_dir_mode > 07777) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD, "Bad mode for -new-dir-mode\n");
+#else
+				fprintf(stderr, "Bad mode for -new-dir-mode\n");
+				exit(1);
+#endif
+			}
+ 			break;
+		}
+
+		case OPTION_UID:
+			rationalize++;
+			use_RockRidge++;
+			rationalize_uid++;
+		{
+			char	*end = 0;
+
+			uid_to_use = strtol(optarg, &end, 0);
+			if (!end || *end != 0) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD, "Bad value for -uid\n");
+#else
+				fprintf(stderr, "Bad value for -uid\n");
+				exit(1);
+#endif
+			}
+ 			break;
+		}
+
+		case OPTION_GID:
+			rationalize++;
+			use_RockRidge++;
+			rationalize_gid++;
+		{
+			char	*end = 0;
+
+			gid_to_use = strtol(optarg, &end, 0);
+			if (!end || *end != 0) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD, "Bad value for -gid\n");
+#else
+				fprintf(stderr, "Bad value for -gid\n");
+				exit(1);
+#endif
+			}
+ 			break;
+		}
+
+		case OPTION_FILEMODE:
+			rationalize++;
+			use_RockRidge++;
+			rationalize_filemode++;
+		{
+			char	*end = 0;
+
+			filemode_to_use = strtol(optarg, &end, 8);
+			if (!end || *end != 0 ||
+			    filemode_to_use < 0 || filemode_to_use > 07777) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD, "Bad mode for -file-mode\n");
+#else
+				fprintf(stderr, "Bad mode for -file-mode\n");
+				exit(1);
+#endif
+			}
+ 			break;
+		}
+
+		case OPTION_DIRMODE:
+			rationalize++;
+			use_RockRidge++;
+			rationalize_dirmode++;
+		{
+			char	*end = 0;
+
+			dirmode_to_use = strtol(optarg, &end, 8);
+			if (!end || *end != 0 ||
+			    dirmode_to_use < 0 || dirmode_to_use > 07777) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD, "Bad mode for -dir-mode\n");
+#else
+				fprintf(stderr, "Bad mode for -dir-mode\n");
+				exit(1);
+#endif
+			}
+ 			break;
+		}
 
 #ifdef SORTING
 		case OPTION_SORT:
@@ -1650,7 +1848,7 @@ main(argc, argv)
 			break;
 		case OPTION_NOMACFILES:
 #ifdef	USE_LIBSCHILY
-			comerrno(EX_BAD,
+			errmsgno(EX_BAD,
 			"Warning: -no-mac-files no longer used ... ignoring\n");
 #else
 			fprintf(stderr,
@@ -1728,6 +1926,19 @@ main(argc, argv)
 		case OPTION_HFS_LIST:
 			hfs_add_list(optarg);
 			break;
+		case OPTION_HFS_INPUT_CHARSET:
+			use_mac_name = 1;
+			hfs_icharset = optarg;
+			break;
+		case OPTION_HFS_OUTPUT_CHARSET:
+			hfs_ocharset = optarg;
+			break;
+		case OPTION_HFS_UNLOCK:
+			hfs_lock = 0;
+			break;
+		case OPTION_HFS_BLESS:
+			hfs_bless = optarg;
+			break;
 #ifdef PREP_BOOT
 		case OPTION_PREP_BOOT:
 			use_prep_boot++;
@@ -1744,7 +1955,7 @@ main(argc, argv)
 			/* pathname of the boot image on cd */
 			prep_boot_image[use_prep_boot - 1] = optarg;
 			if (prep_boot_image[use_prep_boot - 1] == NULL) {
-#ifdef  USE_LIBSCHILY
+#ifdef	USE_LIBSCHILY
 				comerrno(EX_BAD,
 				"Required PReP boot image pathname missing\n");
 #else
@@ -1759,6 +1970,11 @@ main(argc, argv)
 		default:
 			usage(1);
 		}
+	/*
+	 * "--" was found, the next argument is a pathspec
+	 */
+	if (argc != optind)
+		have_cmd_line_pathspec = 1;
 
 parse_input_files:
 
@@ -1767,26 +1983,80 @@ parse_input_files:
 	if (iso9660_namelen > LEN_ISONAME)
 		error("Warning: ISO-9660 filenames longer than %d may cause buffer overflows in the OS.\n",
 			LEN_ISONAME);
+	if (use_Joliet && !use_RockRidge) {
+		error("Warning: creating filesystem with (nonstandard) Joliet extensions\n");
+		error("         but without (standard) Rock Ridge extensions.\n");
+		error("         It is highly recommended to add Rock Ridge\n");
+	}
 
-	init_nls();	/* Initialize UNICODE tables */
-	if (jcharset == NULL) {
-#if	defined(__CYGWIN32__) || defined(__CYGWIN__)
-		nls = load_nls("cp437");
+	init_nls();		/* Initialize UNICODE tables */
+
+	/* initialize code tables from a file - if they exists */
+	init_nls_file(icharset);
+	init_nls_file(ocharset);
+#ifdef APPLE_HYB
+	init_nls_file(hfs_icharset);
+	init_nls_file(hfs_ocharset);
+#endif /* APPLE_HYB */
+
+	if (icharset == NULL) {
+#if	(defined(__CYGWIN32__) || defined(__CYGWIN__)) && !defined(IS_CYGWIN_1)
+		in_nls = load_nls("cp437");
 #else
-		nls = load_nls("iso8859-1");
+		in_nls = load_nls("iso8859-1");
 #endif
 	} else {
-		if (strcmp(jcharset, "default") == 0)
-			nls = load_nls_default();
+		if (strcmp(icharset, "default") == 0)
+			in_nls = load_nls_default();
 		else
-			nls = load_nls(jcharset);
+			in_nls = load_nls(icharset);
 	}
-	if (nls == NULL) {	/* Unknown charset specified */
-		fprintf(stderr, "Unknown charset: %s\nKnown charsets are:\n",
-							jcharset);
+	/*
+	 * set the output charset to the same as the input or the given output
+	 * charset
+	 */
+	if (ocharset == NULL) {
+		out_nls = in_nls;
+	} else {
+		if (strcmp(ocharset, "default") == 0)
+			out_nls = load_nls_default();
+		else
+			out_nls = load_nls(ocharset);
+	}
+	if (in_nls == NULL || out_nls == NULL) { /* Unknown charset specified */
+		fprintf(stderr, "Unknown charset\nKnown charsets are:\n");
 		list_nls();	/* List all known charset names */
 		exit(1);
 	}
+
+
+#ifdef APPLE_HYB
+	if (hfs_icharset == NULL || strcmp(hfs_icharset, "mac-roman")) {
+		hfs_inls = load_nls("cp10000");
+	} else {
+		if (strcmp(hfs_icharset, "default") == 0)
+			hfs_inls = load_nls_default();
+		else
+			hfs_inls = load_nls(hfs_icharset);
+	}
+	if (hfs_ocharset == NULL) {
+		hfs_onls = hfs_inls;
+	} else {
+		if (strcmp(hfs_ocharset, "default") == 0)
+			hfs_onls = load_nls_default();
+		else if (strcmp(hfs_ocharset, "mac-roman") == 0)
+			hfs_onls = load_nls("cp10000");
+		else
+			hfs_onls = load_nls(hfs_ocharset);
+	}
+
+	if (hfs_inls == NULL || hfs_onls == NULL) {
+		fprintf(stderr, "Unknown HFS charset\nKnown charsets are:\n");
+		list_nls();
+		exit(1);
+	}
+#endif /* APPLE_HYB */
+
 	if (merge_image != NULL) {
 		if (open_merge_image(merge_image) < 0) {
 			/* Complain and die. */
@@ -1864,7 +2134,8 @@ parse_input_files:
 		if (*afpfile || probe || use_mac_name || hfs_select ||
 				hfs_boot_file || magic_file ||
 				hfs_ishidden() || gen_pt || autoname ||
-				afe_size || icon_pos || hfs_ct) {
+				afe_size || icon_pos || hfs_ct ||
+				hfs_icharset || hfs_ocharset) {
 			apple_hyb = 1;
 		}
 	}
@@ -1945,16 +2216,24 @@ parse_input_files:
 	if (apple_ext && !use_RockRidge) {
 		/* use RockRidge to set the SystemUse field ... */
 		use_RockRidge++;
-		rationalize++;
+		rationalize_all++;
 	}
 #endif	/* APPLE_HYB */
+
+	if (rationalize_all) {
+		rationalize++;
+		rationalize_uid++;
+		rationalize_gid++;
+		rationalize_filemode++;
+		rationalize_dirmode++;
+	}
 
 	if (verbose > 1) {
 		fprintf(stderr, "%s (%s-%s-%s)\n",
 				version_string,
 				HOST_CPU, HOST_VENDOR, HOST_OS);
 	}
-	if (cdrecord_data == NULL && merge_image != NULL) {
+	if (cdrecord_data == NULL && !check_session && merge_image != NULL) {
 #ifdef	USE_LIBSCHILY
 		comerrno(EX_BAD,
 		"Multisession usage bug: Must specify -C if -M is used.\n");
@@ -2010,10 +2289,12 @@ parse_input_files:
 
 	if ((arg = get_pnames(argc, argv, optind, pname,
 						sizeof(pname), pfp)) == NULL) {
+		if (check_session == 0) {
 #ifdef	USE_LIBSCHILY
-		errmsgno(EX_BAD, "Missing pathspec.\n");
+			errmsgno(EX_BAD, "Missing pathspec.\n");
 #endif
-		usage(1);
+			usage(1);
+		}
 	}
 
 	/*
@@ -2076,11 +2357,15 @@ parse_input_files:
 		}
 	}
 	/* Find name of root directory. */
-	node = findequal(arg);
+	if (arg != NULL)
+		node = findequal(arg);
 	if (!use_graft_ptrs)
 		node = NULL;
 	if (node == NULL) {
-		node = arg;
+		if (use_graft_ptrs && arg != NULL)
+			node = escstrcpy(nodename, arg);
+		else
+			node = arg;
 	} else {
 		/*
 		 * Remove '\\' escape chars which are located
@@ -2115,20 +2400,46 @@ parse_input_files:
 		get_session_start(NULL);
 	}
 	if (merge_image != NULL) {
+		char	sector[2048];
+
+		errno = 0;
 		mrootp = merge_isofs(merge_image);
 		if (mrootp == NULL) {
 			/* Complain and die. */
 #ifdef	USE_LIBSCHILY
-			comerr("Unable to find previous session image %s\n",
+			if (errno == 0)
+				errno = -1;
+			comerr("Unable to find previous session PVD %s\n",
 				merge_image);
 #else
 			fprintf(stderr,
-				"Unable to find previous session image %s\n",
+				"Unable to find previous session PVD %s\n",
 				merge_image);
 			exit(1);
 #endif
 		}
 		memcpy(de.isorec.extent, mrootp->extent, 8);
+
+		/*
+		 * Look for RR Attributes in '.' entry of root dir.
+		 * This is the first ISO directory entry in the root dir.
+		 */
+		c = isonum_733((unsigned char *)mrootp->extent);
+		readsecs(c, sector, 1);		
+		c = rr_flags((struct iso_directory_record *)sector);
+		if (c) {
+			if (c & 1024) {
+				fprintf(stderr, "Rock Ridge signatures found\n");
+			} else {
+				fprintf(stderr, "Bad Rock Ridge signatures found (SU record missing)\n");
+				if (!force_rr)
+					no_rr++; 
+			}
+		} else {
+			fprintf(stderr, "NO Rock Ridge present\n");
+			if (!force_rr)
+				no_rr++; 
+		}
 	}
 	/*
 	 * Create an empty root directory. If we ever scan it for real,
@@ -2147,6 +2458,7 @@ parse_input_files:
 	 * write out to the output image.  Note - we take multiple source
 	 * directories and keep merging them onto the image.
 	 */
+if (check_session == 0)
 	while ((arg = get_pnames(argc, argv, optind, pname,
 						sizeof(pname), pfp)) != NULL) {
 		struct directory *graft_dir;
@@ -2223,7 +2535,10 @@ parse_input_files:
 			}
 		} else {
 			graft_dir = root;
-			node = arg;
+			if (use_graft_ptrs)
+				node = escstrcpy(nodename, arg);
+			else
+				node = arg;
 		}
 
 		/*
@@ -2267,7 +2582,10 @@ parse_input_files:
 								short_name))
 #endif	/* APPLE_HYB */
 				{
-					exit(1);
+					/*
+					 * Should we ignore this?
+					 */
+/*					exit(1);*/
 				}
 			}
 		}
@@ -2284,7 +2602,7 @@ parse_input_files:
 	 * - not going to happen at the moment as we have to have at least one
 	 * path on the command line
 	 */
-	if (no_path_names) {
+	if (no_path_names && !check_session) {
 #ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD, "No pathnames found.\n");
 #endif
@@ -2513,8 +2831,11 @@ parse_input_files:
 		}
 	}
 	if (print_size > 0) {
-		fprintf(stderr, "Total extents scheduled to be written = %d\n",
+		if (verbose > 0)
+			fprintf(stderr,
+			"Total extents scheduled to be written = %d\n",
 			(last_extent - session_start));
+		printf("%d\n", (last_extent - session_start));
 		exit(0);
 	}
 	/*
@@ -2596,5 +2917,6 @@ e_malloc(size)
 		exit(1);
 #endif
 	}
+	memset(pt, 0, size);
 	return pt;
 }

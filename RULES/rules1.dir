@@ -1,4 +1,4 @@
-#ident @(#)rules1.dir	1.7 99/12/20 
+#ident @(#)rules1.dir	1.8 00/12/01 
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -26,7 +26,7 @@
 $(ALLTARGETS):
 	@list="$(DIRS)";							\
 	[ -d TARGETS -a -f TARGETS/15conf ] && 					\
-		list=`echo TARGETS/[0-9][0-9]* | sed -e "s;TARGETS/[0-9][0-9];;g"`;\
+		list=`echo TARGETS/[0-9][0-9]* | sed -e 's;TARGETS/[0-9][0-9];;g'`;\
 	for DIR in $${list} ;							\
 	do									\
 		(								\
@@ -44,7 +44,7 @@ tinfo:
 	for i in $${list};							\
 	do									\
 		(read line < $$i;						\
-		name=`echo $$i | sed -e "s;TARGETS/[0-9][0-9];;"`;		\
+		name=`echo $$i | sed -e 's;TARGETS/[0-9][0-9];;'`;		\
 		echo "$$name	- $${line}";					\
 		);								\
 	done

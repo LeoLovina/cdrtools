@@ -1,4 +1,4 @@
-#ident %W% %E% %Q%
+#ident @(#)Makefile	1.9 01/04/03 
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,11 +23,12 @@ INSDIR=		bin
 TARGET=		mkisofs
 HARDLINKS=	mkhybrid
 #CPPOPTS +=	-DADD_FILES
+CPPOPTS +=	-DUSE_LARGEFILES
 CPPOPTS +=	-DAPPLE_HYB
 CPPOPTS +=	-DSORTING
 CPPOPTS +=	-I../libhfs_iso/
 CPPOPTS	+=	-DHAVE_CONFIG_H -DUSE_LIBSCHILY -DUSE_SCG \
-		'-DAPPID_DEFAULT="MKISOFS ISO 9660/HFS FILESYSTEM BUILDER & CDRECORD CD-R/DVD CREATOR"' \
+		'-DAPPID_DEFAULT="MKISOFS ISO 9660/HFS FILESYSTEM BUILDER & CDRECORD CD-R/DVD CREATOR (C) 1993 E.YOUNGDALE (C) 1997 J.PEARSON/J.SCHILLING"' \
 		-I../cdrecord
 CFILES=		mkisofs.c tree.c write.c hash.c rock.c multi.c \
 		joliet.c match.c name.c fnmatch.c eltorito.c boot.c \
@@ -40,7 +41,7 @@ HFILES=		apple.h bootinfo.h config.h defaults.h diskmbr.h exclude.h \
 		fnmatch.h getopt.h iso9660.h mac_label.h mactypes.h match.h \
 		mkisofs.h sunlabel.h vms.h 
 
-LIBS=		-lhfs -lfile -lunls -lscg -lschily $(SCSILIB)
+LIBS=		-lhfs -lfile -lunls -lrscg -lscg -lschily $(SCSILIB) $(LIB_SOCKET)
 XMK_FILE=	Makefile.man hybridman.mk
 
 ###########################################################################

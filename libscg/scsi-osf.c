@@ -1,7 +1,7 @@
-/* @(#)scsi-osf.c	1.14 00/07/01 Copyright 1998 J. Schilling */
+/* @(#)scsi-osf.c	1.23 01/03/18 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-osf.c	1.14 00/07/01 Copyright 1998 J. Schilling";
+	"@(#)scsi-osf.c	1.23 01/03/18 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for Digital UNIX (OSF/1 generic SCSI implementation (/dev/cam).
@@ -46,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.14";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.23";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -74,8 +74,8 @@ LOCAL	BOOL	scsi_checktgt	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun))
  * This has been introduced to make it easier to trace down problems
  * in applications.
  */
-EXPORT char *
-scg__version(scgp, what)
+LOCAL char *
+scgo_version(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
@@ -97,14 +97,14 @@ scg__version(scgp, what)
 	return ((char *)0);
 }
 
-EXPORT int
-scsi_open(scgp, device, busno, tgt, tlun)
+LOCAL int
+scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
-	int	busno;
-	int	tgt;
-	int	tlun;
 {
+		 int	busno	= scg_scsibus(scgp);
+		 int	tgt	= scg_target(scgp);
+		 int	tlun	= scg_lun(scgp);
 	register int	b;
 	register int	t;
 	register int	l;
@@ -177,8 +177,8 @@ scsi_open(scgp, device, busno, tgt, tlun)
 	return (1);
 }
 
-EXPORT int
-scsi_close(scgp)
+LOCAL int
+scgo_close(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->local == NULL)
@@ -193,6 +193,7 @@ scsi_close(scgp)
 /*
  * We send a test unit ready command to the target to check whether the
  * OS is considering this target to be valid.
+ * XXX Is this really needed? We should rather let the cmd fail later.
  */
 LOCAL BOOL
 scsi_checktgt(scgp, f, busno, tgt, tlun)
@@ -202,38 +203,41 @@ scsi_checktgt(scgp, f, busno, tgt, tlun)
 	int	tgt;
 	int	tlun;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	struct scg_cmd	sc;
-	int	obus = scgp->scsibus;
-	int	otgt = scgp->target;
-	int	olun = scgp->lun;
+	int	ret;
+	int	ofd  = scgp->fd;
+	int	obus = scg_scsibus(scgp);
+	int	otgt = scg_target(scgp);
+	int	olun = scg_lun(scgp);
 
-	scgp->scsibus = busno;
-	scgp->target  = tgt;
-	scgp->lun     = tlun;
-	
-	fillbytes((caddr_t)&sc, sizeof(sc), '\0');
-	sc.addr = (caddr_t)0;
-	sc.size = 0;
-	sc.flags = SCG_DISRE_ENA | SCG_SILENT;
-	sc.cdb_len = SC_G0_CDBLEN;
-	sc.sense_len = CCS_SENSE_LEN;
-	sc.target = scgp->target;
-	sc.cdb.g0_cdb.cmd = SC_TEST_UNIT_READY;
-	sc.cdb.g0_cdb.lun = scgp->lun;
+	scg_settarget(scgp, busno, tgt, tlun);
+	scgp->fd = f;
 
-	scsi_send(scgp, f, &sc);
-	scgp->scsibus = obus;
-	scgp->target  = otgt;
-	scgp->lun     = olun;
+	sc = *sp;
+	fillbytes((caddr_t)sp, sizeof(*sp), '\0');
+	sp->addr = (caddr_t)0;
+	sp->size = 0;
+	sp->flags = SCG_DISRE_ENA | SCG_SILENT;
+	sp->cdb_len = SC_G0_CDBLEN;
+	sp->sense_len = CCS_SENSE_LEN;
+	sp->cdb.g0_cdb.cmd = SC_TEST_UNIT_READY;
+	sp->cdb.g0_cdb.lun = scg_lun(scgp);
 
-	if (sc.error != SCG_FATAL)
+	scgo_send(scgp);
+	scg_settarget(scgp, obus, otgt, olun);
+	scgp->fd = ofd;
+
+	if (sp->error != SCG_FATAL)
 		return (TRUE);
-	return (sc.ux_errno != EINVAL);
+	ret = sp->ux_errno != EINVAL;
+	*sp = sc;
+	return (ret);
 }
 
 
 LOCAL long
-scsi_maxdma(scgp, amt)
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -242,21 +246,21 @@ scsi_maxdma(scgp, amt)
 	return (maxdma);
 }
 
-EXPORT void *
-scsi_getbuf(scgp, amt)
+LOCAL void *
+scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	if (amt <= 0 || amt > scsi_bufsize(scgp, amt))
-		return ((void *)0);
-	if (scgp->debug)
-		printf("scsi_getbuf: %ld bytes\n", amt);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"scgo_getbuf: %ld bytes\n", amt);
+	}
 	scgp->bufbase = valloc((size_t)(amt));
 	return (scgp->bufbase);
 }
 
-EXPORT void
-scsi_freebuf(scgp)
+LOCAL void
+scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->bufbase)
@@ -264,8 +268,8 @@ scsi_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
-EXPORT
-BOOL scsi_havebus(scgp, busno)
+LOCAL BOOL
+scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
@@ -285,8 +289,8 @@ BOOL scsi_havebus(scgp, busno)
 }
 
 
-EXPORT
-int scsi_fileno(scgp, busno, tgt, tlun)
+LOCAL int
+scgo_fileno(scgp, busno, tgt, tlun)
 	SCSI	*scgp;
 	int	busno;
 	int	tgt;
@@ -298,39 +302,34 @@ int scsi_fileno(scgp, busno, tgt, tlun)
 	return (busno < 0 || busno >= MAX_SCG) ? -1 : scglocal(scgp)->scgfile;
 }
 
-EXPORT int
-scsi_initiator_id(scgp)
+LOCAL int
+scgo_initiator_id(scgp)
 	SCSI	*scgp;
 {
 	return (-1);
 }
 
-EXPORT
-int scsi_isatapi(scgp)
+LOCAL int
+scgo_isatapi(scgp)
 	SCSI	*scgp;
 {
 	return (FALSE);
 }
 
-EXPORT
-int scsireset(scgp)
+LOCAL int
+scgo_reset(scgp, what)
 	SCSI	*scgp;
+	int	what;
 {
-#ifdef	XXX
-	int	f = scsi_fileno(scgp, scgp->scsibus, scgp->target, scgp->lun);
-
-	return (ioctl(f, SCGIORESET, 0));
-#else
+	errno = EINVAL;
 	return (-1);
-#endif
 }
 
 LOCAL int
-scsi_send(scgp, f, sp)
+scgo_send(scgp)
 	SCSI		*scgp;
-	int		f;
-	struct scg_cmd	*sp;
 {
+	struct scg_cmd	*sp = scgp->scmd;
 	CCB_SCSIIO ccb;
 	UAGT_CAM_CCB ua;
 	unsigned char  *cdb;
@@ -338,7 +337,7 @@ scsi_send(scgp, f, sp)
 	UAGT_CAM_CCB relua;
 	int             i;
 
-	if (f < 0) {
+	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
@@ -358,13 +357,13 @@ scsi_send(scgp, f, sp)
 
 	ccb.cam_timeout = sp->timeout;
 
-	ccb.cam_data_ptr = ua.uagt_buffer = (u_char *) sp->addr;
+	ccb.cam_data_ptr = ua.uagt_buffer = (Uchar *) sp->addr;
 	ccb.cam_dxfer_len = ua.uagt_buflen = sp->size;
 	ccb.cam_ch.cam_func_code = XPT_SCSI_IO;
 	ccb.cam_ch.cam_flags = 0;	/* CAM_DIS_CALLBACK; */
 
 	if (sp->size == 0) {
-		ccb.cam_data_ptr = ua.uagt_buffer = (u_char *) NULL;
+		ccb.cam_data_ptr = ua.uagt_buffer = (Uchar *) NULL;
 		ccb.cam_ch.cam_flags |= CAM_DIR_NONE;
 	} else {
 		if (sp->flags & SCG_RECV_DATA) {
@@ -378,28 +377,28 @@ scsi_send(scgp, f, sp)
 	for (i = 0; i < sp->cdb_len; i++)
 		cdb[i] = sp->cdb.cmd_cdb[i];
 
-	ccb.cam_ch.cam_path_id	  = scgp->scsibus;
-	ccb.cam_ch.cam_target_id  = scgp->target;
-	ccb.cam_ch.cam_target_lun = scgp->lun;
+	ccb.cam_ch.cam_path_id	  = scg_scsibus(scgp);
+	ccb.cam_ch.cam_target_id  = scg_target(scgp);
+	ccb.cam_ch.cam_target_lun = scg_lun(scgp);
 
 	sp->sense_count = 0;
 	sp->ux_errno = 0;
 	sp->error = SCG_NO_ERROR;
 
 
-	if (ioctl(f, UAGT_CAM_IO, (caddr_t) &ua) < 0) {
+	if (ioctl(scgp->fd, UAGT_CAM_IO, (caddr_t) &ua) < 0) {
 		sp->ux_errno = geterrno();
 		sp->error = SCG_FATAL;
-		if (scgp->debug) {
-			errmsg("ioctl(f, UAGT_CAM_IO, dev=%d,%d,%d) failed.\n",
-					scgp->scsibus, scgp->target, scgp->lun);
+		if (scgp->debug > 0) {
+			errmsg("ioctl(fd, UAGT_CAM_IO, dev=%d,%d,%d) failed.\n",
+					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 		}
 		return (0);
 	}
-	if (scgp->debug) {
+	if (scgp->debug > 0) {
 		errmsgno(EX_BAD, "cam_status = 0x%.2X dev=%d,%d,%d\n",
 					ccb.cam_ch.cam_status,
-					scgp->scsibus, scgp->target, scgp->lun);
+					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 		fflush(stderr);
 	}
 	switch (ccb.cam_ch.cam_status & CAM_STATUS_MASK) {
@@ -440,16 +439,16 @@ scsi_send(scgp, f, sp)
 		relsim.cam_ch.cam_ccb_len = sizeof(CCB_SCSIIO);
 		relsim.cam_ch.cam_func_code = XPT_REL_SIMQ;
 		relsim.cam_ch.cam_flags = CAM_DIR_IN | CAM_DIS_CALLBACK;
-		relsim.cam_ch.cam_path_id	= scgp->scsibus;
-		relsim.cam_ch.cam_target_id	= scgp->target;
-		relsim.cam_ch.cam_target_lun	= scgp->lun;
+		relsim.cam_ch.cam_path_id	= scg_scsibus(scgp);
+		relsim.cam_ch.cam_target_id	= scg_target(scgp);
+		relsim.cam_ch.cam_target_lun	= scg_lun(scgp);
 
 		relua.uagt_ccb = (struct ccb_header *) & relsim;	/* wrong cast */
 		relua.uagt_ccblen = sizeof(relsim);
 		relua.uagt_buffer = NULL;
 		relua.uagt_buflen = 0;
 
-		if (ioctl(f, UAGT_CAM_IO, (caddr_t) & relua) < 0)
+		if (ioctl(scgp->fd, UAGT_CAM_IO, (caddr_t) & relua) < 0)
 			errmsg("DEC CAM -> LMA\n");
 	}
 	return 0;

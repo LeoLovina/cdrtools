@@ -1,4 +1,4 @@
-/* @(#)waitdefs.h	1.7 99/11/14 Copyright 1995 J. Schilling */
+/* @(#)waitdefs.h	1.8 00/11/08 Copyright 1995 J. Schilling */
 /*
  *	Definitions to deal with various kinds of wait flavour
  *
@@ -37,6 +37,10 @@
 #	undef	HAVE_UNION_WAIT			/* POSIX.1 doesn't use U_W   */
 #		include <sys/wait.h>
 #	endif
+#endif
+
+#ifdef	__cplusplus
+extern "C" {
 #endif
 
 #ifdef HAVE_UNION_WAIT
@@ -90,6 +94,10 @@
 
 #ifndef	WCONTFLG
 #define	WCONTFLG	0xFFFF
+#endif
+
+#ifdef	__cplusplus
+}
 #endif
 
 #endif	/* _WAITDEFS_H */

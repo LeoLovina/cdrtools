@@ -1,7 +1,7 @@
-/* @(#)nls_base.c	1.2 00/04/26 2000 J. Schilling */
+/* @(#)nls_base.c	1.4 01/01/20 2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)nls_base.c	1.2 00/04/26 2000 J. Schilling";
+	"@(#)nls_base.c	1.4 01/01/20 2000 J. Schilling";
 #endif
 /*
  *	Modifications to make the code portable Copyright (c) 2000 J. Schilling
@@ -298,99 +298,6 @@ struct nls_table *
 load_nls_default()
 {
 	return &default_table;
-}
-
-int
-init_nls()
-{
-#ifdef CONFIG_NLS_ISO8859_1
-	init_nls_iso8859_1();
-#endif
-#ifdef CONFIG_NLS_ISO8859_2
-	init_nls_iso8859_2();
-#endif
-#ifdef CONFIG_NLS_ISO8859_3
-	init_nls_iso8859_3();
-#endif
-#ifdef CONFIG_NLS_ISO8859_4
-	init_nls_iso8859_4();
-#endif
-#ifdef CONFIG_NLS_ISO8859_5
-	init_nls_iso8859_5();
-#endif
-#ifdef CONFIG_NLS_ISO8859_6
-	init_nls_iso8859_6();
-#endif
-#ifdef CONFIG_NLS_ISO8859_7
-	init_nls_iso8859_7();
-#endif
-#ifdef CONFIG_NLS_ISO8859_8
-	init_nls_iso8859_8();
-#endif
-#ifdef CONFIG_NLS_ISO8859_9
-	init_nls_iso8859_9();
-#endif
-#ifdef CONFIG_NLS_ISO8859_14
-        init_nls_iso8859_14();
-#endif
-#ifdef CONFIG_NLS_ISO8859_15
-	init_nls_iso8859_15();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_437
-	init_nls_cp437();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_737
-	init_nls_cp737();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_775
-	init_nls_cp775();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_850
-	init_nls_cp850();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_852
-	init_nls_cp852();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_855
-	init_nls_cp855();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_857
-	init_nls_cp857();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_860
-	init_nls_cp860();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_861
-	init_nls_cp861();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_862
-	init_nls_cp862();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_863
-	init_nls_cp863();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_864
-	init_nls_cp864();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_865
-	init_nls_cp865();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_866
-	init_nls_cp866();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_869
-	init_nls_cp869();
-#endif
-#ifdef CONFIG_NLS_CODEPAGE_874
-	init_nls_cp874();
-#endif
-#ifdef CONFIG_NLS_KOI8_R
-	init_nls_koi8_r();
-#endif
-#ifdef CONFIG_NLS_MAC_ROMAN
-	init_nls_mac_roman();
-#endif
-	return 0;
 }
 
 #ifdef MODULE

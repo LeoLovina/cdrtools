@@ -1,4 +1,4 @@
-#ident "@(#)rules.hlp	1.6 99/12/20 "
+#ident "@(#)rules.hlp	1.7 01/02/04 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -23,6 +23,7 @@
 # Location for targets:
 #
 # - all						: see appropriate rules
+# - lint					: rules.lnt
 # - clean, clobber, distclean, relink, rmtarget	: rules.clr
 # - install, ibins				: rules.ins
 # - depend, rmdep				: rules.dep
@@ -36,6 +37,7 @@
 	@echo "Usage: make [target]"
 	@echo "Available targets are:" $(ALLTARGETS)
 	@echo "	all		make the default target"
+	@echo "	lint		lint all sources for the default target"
 	@echo "	clean		remove all made objects and the default target"
 	@echo "	clobber		remove all from 'clean' and all dependency files"
 	@echo "	distclean	remove all from 'clobber' and all made files"

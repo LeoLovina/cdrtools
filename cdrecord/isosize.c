@@ -1,7 +1,7 @@
-/* @(#)isosize.c	1.6 99/10/18 Copyright 1996 J. Schilling */
+/* @(#)isosize.c	1.7 01/02/21 Copyright 1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isosize.c	1.6 99/10/18 Copyright 1996 J. Schilling";
+	"@(#)isosize.c	1.7 01/02/21 Copyright 1996 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1996 J. Schilling
@@ -22,6 +22,7 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <statdefs.h>
@@ -31,18 +32,19 @@ static	char sccsid[] =
 #include <intcvt.h>
 
 #include "iso9660.h"
+#include "cdrecord.h"	/* to verify isosize() prototype */
 
-long	isosize		__PR((int f));
+Llong	isosize		__PR((int f));
 
-long
+Llong
 isosize(f)
 	int	f;
 {
 	struct iso9660_voldesc		vd;
 	struct iso9660_pr_voldesc	*vp;
-	long				isize;
+	Llong				isize;
 	struct stat			sb;
-	long				mode;
+	mode_t				mode;
 
 	/*
 	 * First check if a bad guy tries to call isosize()
@@ -50,15 +52,15 @@ isosize(f)
 	 * return -1 in this case.
 	 */
 	if (isatty(f))
-		return (-1L);
+		return ((Llong)-1);
 	if (fstat(f, &sb) < 0)
-		return (-1L);
-	mode = (long)(sb.st_mode & S_IFMT);
+		return ((Llong)-1);
+	mode = sb.st_mode & S_IFMT;
 	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
-		return (-1L);
+		return ((Llong)-1);
 
 	if (lseek(f, (off_t)(16L * 2048L), SEEK_SET) == -1)
-		return (-1L);
+		return ((Llong)-1);
 
 	vp = (struct iso9660_pr_voldesc *) &vd;
 
@@ -74,7 +76,7 @@ isosize(f)
 	if (GET_UBYTE(vd.vd_type) != VD_PRIMARY)
 		return (-1L);
 
-	isize = GET_BINT(vp->vd_volume_space_size);
+	isize = (Llong)GET_BINT(vp->vd_volume_space_size);
 	isize *= GET_BSHORT(vp->vd_lbsize);
 	return (isize);
 }

@@ -1,3 +1,8 @@
+/* @(#)softmagic.c	1.4 01/02/17 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)softmagic.c	1.4 01/02/17 joerg";
+#endif
 /*
 **	find file types by using a modified "magic" file
 **
@@ -33,11 +38,10 @@
  * 4. This notice may not be removed or altered.
  */
 
+#include <mconfig.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/types.h>
+#include <strdefs.h>
+#include <stdxlib.h>
 
 #include "file.h"
 
@@ -46,13 +50,19 @@ static char *moduleid =
 	"@(#)$Id: softmagic.c,v 1.34 1997/01/15 19:28:35 christos Exp $";
 #endif	/* lint */
 
+#ifdef DEBUG
+int	debug = 1; 	/* debugging 				*/
+#else
+#define	debug	0 	/* debugging 				*/
+#endif /* DEBUG */
+
 /* static int match	__P((unsigned char *, int)); */
 static char *match	__P((unsigned char *, int));
 static int mget		__P((union VALUETYPE *,
 			     unsigned char *, struct magic *, int));
 static int mcheck	__P((union VALUETYPE *, struct magic *));
 #ifdef	__used__
-static void mdebug	__P((int32, char *, int));
+static void mdebug	__P((Int32_t, char *, int));
 #endif
 static int mconvert	__P((union VALUETYPE *, struct magic *));
 
@@ -105,21 +115,21 @@ int nbytes;
 	int magindex = 0;
 	union VALUETYPE p;
 
-	for (magindex = 0; magindex < nmagic; magindex++) {
+	for (magindex = 0; magindex < __f_nmagic; magindex++) {
 		/* if main entry matches, print it... */
-		if (!mget(&p, s, &magic[magindex], nbytes) ||
-		    !mcheck(&p, &magic[magindex])) {
+		if (!mget(&p, s, &__f_magic[magindex], nbytes) ||
+		    !mcheck(&p, &__f_magic[magindex])) {
 			    /* 
 			     * main entry didn't match,
 			     * flush its continuations
 			     */
-			    while (magindex < nmagic &&
-			    	   magic[magindex + 1].cont_level != 0)
+			    while (magindex < __f_nmagic &&
+			    	   __f_magic[magindex + 1].cont_level != 0)
 			    	   magindex++;
 			    continue;
 		}
 
-		return (magic[magindex].desc);
+		return (__f_magic[magindex].desc);
 	}
 	return 0;			/* no match at all */
 }
@@ -154,7 +164,7 @@ struct magic *m;
 		return 1;
 	case BELONG:
 	case BEDATE:
-		p->l = (int32)
+		p->l = (Int32_t)
 		    ((p->hl[0]<<24)|(p->hl[1]<<16)|(p->hl[2]<<8)|(p->hl[3]));
 		return 1;
 	case LESHORT:
@@ -162,7 +172,7 @@ struct magic *m;
 		return 1;
 	case LELONG:
 	case LEDATE:
-		p->l = (int32)
+		p->l = (Int32_t)
 		    ((p->hl[3]<<24)|(p->hl[2]<<16)|(p->hl[1]<<8)|(p->hl[0]));
 		return 1;
 	default:
@@ -173,7 +183,7 @@ struct magic *m;
 #ifdef	__used__
 static void
 mdebug(offset, str, len)
-int32 offset;
+Int32_t offset;
 char *str;
 int len;
 {
@@ -191,7 +201,7 @@ unsigned char	*s;
 struct magic *m;
 int nbytes;
 {
-	int32 offset = m->offset;
+	Int32_t offset = m->offset;
 
 	if (offset + sizeof(union VALUETYPE) <= nbytes)
 		memcpy(p, s + offset, sizeof(union VALUETYPE));
@@ -200,7 +210,7 @@ int nbytes;
 		 * the usefulness of padding with zeroes eludes me, it
 		 * might even cause problems
 		 */
-		int32 have = nbytes - offset;
+		Int32_t have = nbytes - offset;
 		memset(p, 0, sizeof(union VALUETYPE));
 		if (have > 0)
 			memcpy(p, s + offset, have);
@@ -239,8 +249,8 @@ mcheck(p, m)
 union VALUETYPE* p;
 struct magic *m;
 {
-	register uint32 l = m->value.l;
-	register uint32 v;
+	register UInt32_t l = m->value.l;
+	register UInt32_t v;
 	int matched;
 
 	if ( (m->value.s[0] == 'x') && (m->value.s[1] == '\0') ) {
@@ -322,7 +332,7 @@ struct magic *m;
 					       v, l, matched);
 		}
 		else {
-			matched = (int32) v > (int32) l;
+			matched = (Int32_t) v > (Int32_t) l;
 			if (debug)
 				(void) fprintf(stderr, "%d > %d = %d\n",
 					       v, l, matched);
@@ -337,7 +347,7 @@ struct magic *m;
 					       v, l, matched);
 		}
 		else {
-			matched = (int32) v < (int32) l;
+			matched = (Int32_t) v < (Int32_t) l;
 			if (debug)
 				(void) fprintf(stderr, "%d < %d = %d\n",
 					       v, l, matched);

@@ -1,7 +1,7 @@
-/* @(#)cdda2wav.c	1.17 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)cdda2wav.c	1.23 00/11/06 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)cdda2wav.c	1.17 00/06/24 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)cdda2wav.c	1.23 00/11/06 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #undef DEBUG_BUFFER_ADDRESSES
@@ -77,16 +77,11 @@ static char     sccsid[] =
 #include <stdxlib.h>
 #include <strdefs.h>
 #include <schily.h>
-#if	defined HAVE_STRINGS_H
-#include <strings.h>
-#endif
+#include <strdefs.h>
 #include <signal.h>
 #include <math.h>
 #include <fctldefs.h>
-#include <time.h>
-#if (defined (HAVE_SYS_TIME_H) || (HAVE_SYS_TIME_H != 1)) && defined (TIME_WITH_SYS_TIME)
-#include <sys/time.h>
-#endif
+#include <timedefs.h>
 #if defined (HAVE_LIMITS_H) && (HAVE_LIMITS_H == 1)
 #include <limits.h>
 #endif
@@ -95,10 +90,7 @@ static char     sccsid[] =
 #endif
 #include <errno.h>
 #include <sys/stat.h>
-
-#if defined (HAVE_SYS_WAIT_H) && (HAVE_SYS_WAIT_H == 1)
-#include <sys/wait.h>
-#endif
+#include <waitdefs.h>
 #if defined (HAVE_SETPRIORITY) && (HAVE_SETPRIORITY == 1)
 #include <sys/resource.h>
 #endif
@@ -463,7 +455,7 @@ static unsigned int track = 1;
  * define size-related entries in audio file header, update and close file */
 static void CloseAll ()
 {
-  int chld_return_status = 0;
+  WAIT_T chld_return_status;
   int amichild;
 
   /* terminate child process first */
@@ -538,7 +530,6 @@ fprintf(stderr, "Child (WRITER) terminating, \n");
 fprintf(stderr, "Parent wait for child death, \n");
 #endif
 
-#if defined(HAVE_SYS_WAIT_H) && (HAVE_SYS_WAIT_H == 1)
     /* wait for child to terminate */
     if (0 > wait(&chld_return_status)) {
       perror("");
@@ -555,7 +546,6 @@ fprintf(stderr, "Parent wait for child death, \n");
         fprintf(stderr, "\nW Child is stopped due to signal %d\n", WSTOPSIG(chld_return_status));
       }
     }
-#endif
 
 #ifdef DEBUG_CLEANUP
 fprintf(stderr, "\nW Parent child death, state:%d\n", chld_return_status);
@@ -674,12 +664,12 @@ static int RealEnd __PR((SCSI *scgp));
 static int RealEnd(scgp)
 	SCSI	*scgp;
 {
-	if (myscsierr(scgp) != 0) {
+	if (scg_cmd_err(scgp) != 0) {
 		int c,k,q;
 
-		k = scsi_sense_key(scgp);
-		c = scsi_sense_code(scgp);
-		q = scsi_sense_qual(scgp);
+		k = scg_sense_key(scgp);
+		c = scg_sense_code(scgp);
+		q = scg_sense_qual(scgp);
 		if ((k == 0x05 /* ILLEGAL_REQUEST */ &&
 		     c == 0x21 /* lba out of range */ &&
 		     q == 0x00) ||
@@ -1069,18 +1059,26 @@ switch_to_realtime_priority()
 #if defined(__CYGWIN32__)
 
 /*
- * NOTE: Base.h has a second typedef for BOOL.
+ * NOTE: Base.h from Cygwin-B20 has a second typedef for BOOL.
  *	 We define BOOL to make all local code use BOOL
  *	 from Windows.h and use the hidden __SBOOL for
  *	 our global interfaces.
+ *
+ * NOTE: windows.h from Cygwin-1.x includes a structure field named sample,
+ *	 so me may not define our own 'sample' or need to #undef it now.
+ *	 With a few nasty exceptions, Microsoft assumes that any global
+ *	 defines or identifiers will begin with an Uppercase letter, so
+ *	 there may be more of these problems in the future.
+ *
+ * NOTE: windows.h defines interface as an alias for struct, this 
+ *	 is used by COM/OLE2, I guess it is class on C++
+ *	 We man need to #undef 'interface'
  */
 #define	BOOL	WBOOL		/* This is the Win BOOL		*/
-#define	format	__format
-#include <Windows32/Base.h>
-#include <Windows32/Defines.h>
-#include <Windows32/Structures.h>
-#include <Windows32/Functions.h>
-#undef	format
+#define	format	__format	/* Avoid format parameter hides global ... */
+#include <windows.h>
+#undef format
+#undef interface
 
 static void
 switch_to_realtime_priority()
@@ -1226,7 +1224,7 @@ if (DEBUG_ILLLEADOUT)
 	global.iloop, *nSamplesToDo);
 				*eorecording = 1;
 			} else {
-				scsiprinterr(scgp);
+				scg_printerr(scgp);
 			}
 		}
 	}
@@ -2085,9 +2083,10 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
     fprintf(stderr, "No track in table of contents! Aborting...\n");
     exit(10);
   }
-  if (ReadTocText != NULL) ReadTocText(get_scsi_p());
-
-  handle_cdtext();
+  if (ReadTocText != NULL && FirstAudioTrack () ) {
+	ReadTocText(get_scsi_p());
+	handle_cdtext();
+  }
 
   calc_cddb_id();
   calc_cdindex_id();
