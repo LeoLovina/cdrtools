@@ -1,0 +1,89 @@
+This Version 1.0 of cdrecord for Solaris
+
+Cdrecord allows you to create CD's on a CD-Recorder.
+Cdrecord runs on Solaris 2.3 or later.
+
+The cdrecord distribution contains a SCSI user level transport library.
+The SCSI library is suitable to talk to any SCSI device without having
+a special driver for it.
+
+
+You need the SCSI generic driver 'scg' in order to run cdrecord.
+
+The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
+it is supplied binary in pkgadd(1m) format and is tested 
+on Solaris 2.3 & Solaris 2.4.
+
+
+It is nice to have the 'fbk' driver to mount files that contain
+images of file systems. Fbk means File simulates Block Device.
+
+The 'fbk' driver is Copyright 1988-1995 Jörg Schilling,
+it is supplied binary in pkgadd(1m) format and is tested
+on Solaris 2.3 & Solaris 2.4.
+
+If scg & fbk compile on Solarix x86, they will be released within the next
+days.
+cdrecord should compile on SunOS, but you will need the scg driver for
+SunOS in this case.
+
+
+Cdrecord for Solaris is tested on a Philips CDD 521.
+It should run also on:
+
+	Philips CDD 522
+	Philips CDD 2000
+	HP C4324/C4325
+	HP SureStore 4020i
+	Plasmon CDR 4220
+	Grundig CDR-100
+(not tested)
+
+Implemented but not tested at all:
+	Yamaha CDR-100
+	Yamaha CDR-102
+
+To install get:
+
+	SCHILYscg.sparc.tar.Z	The scg driver in pkgadd format (sparc).
+	SCHILYfbk.sparc.tar.Z	The fbk driver in pkgadd format (sparc).
+	cdrecord.tar.Z		The cdrecord for Solaris distribution.
+
+NOTE:	These tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
+	tar may get some minor trouble.
+
+The files are located on:
+
+ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/...
+ftp://ftp.fokus.gmd.de/pub/unix/kernel/scg/...
+ftp://ftp.fokus.gmd.de/pub/unix/kernel/fbk/...
+
+Installation Process:
+
+	1) scg driver
+			untar SCHILYscg.tar:
+			su
+			Password: xxxxx
+			cd /tmp
+			zcat SCHILYscg.tar | tar -xvf -
+			cd SCHILYscg
+			pkgadd -d .
+			reboot -- -r 
+
+	2) fbk driver
+			similar to scg driver (see above)
+
+	3) Switch the CD-Writer to an unused target id (2 should do it)
+		
+
+NOTE:
+	You need to be root because you need access to /dev/scg? and to be
+	able to put cdrecord into the realtime scheduling class.
+
+
+The SCSI transport library has been taken from the sformat program.
+
+If you have questions mail to:
+
+schilling@fokus.gmd.de
+

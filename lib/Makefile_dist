@@ -1,0 +1,84 @@
+#	Copyright 1995 J. Schilling
+#
+#	Defines:
+#
+#	BSD4_2		BSD systems
+#	SVR4		Compile for System Vr4
+#
+DEFS=		-DNO_FLOATINGPOINT -DNO_SCANSTACK
+#
+INCLUDE=	-I. -I../include
+#CFLAGS=		-O $(INCLUDE) -DBSD4_2
+CFLAGS=		-O $(INCLUDE) $(DEFS) -DSVR4
+RANLIB=		echo
+#
+#
+#
+OBJSRC=		astoi.c comerr.c error.c fillbytes.c \
+		format.c getargs.c geterrno.c getfp.c \
+		movebytes.c \
+		printf.c raisecond.c saveargs.c streql.c
+
+#OBJSRC=		astoi.c cmpbytes.c comerr.c error.c fconv.c fillbytes.c \
+#		format.c getargs.c geterrno.c getav0.c getfp.c \
+#		match.c movebytes.c \
+#		printf.c raisecond.c saveargs.c sprintf.c strcatl.c streql.c swabbytes.c
+
+STDIOSRC=	stdio/flag.c stdio/flush.c stdio/fgetline.c stdio/filewrite.c
+
+#STDIOSRC=	stdio/cvmod.c stdio/dat.c stdio/fcons.c \
+#		stdio/fdown.c stdio/fgetline.c stdio/file_raise.c \
+#		stdio/fileopen.c stdio/fileread.c stdio/ffileread.c \
+#		stdio/fileseek.c \
+#		stdio/filewrite.c stdio/ffilewrite.c stdio/flag.c \
+#		stdio/flush.c \
+#		stdio/niread.c stdio/openfd.c
+
+OBJ=		astoi.o comerr.o error.o fillbytes.o \
+		format.o getargs.o geterrno.o getfp.o \
+		movebytes.o \
+		printf.o raisecond.o saveargs.o streql.o
+
+#OBJ=		astoi.o cmpbytes.o comerr.o error.o fconv.o fillbytes.o \
+#		format.o getargs.o geterrno.o getav0.o getfp.o \
+#		match.o movebytes.o \
+#		printf.o raisecond.o saveargs.o sprintf.o strcatl.o streql.o swabbytes.o
+
+STDIO=		stdio/flag.o stdio/flush.o stdio/fgetline.o stdio/filewrite.o
+
+#STDIO=		stdio/cvmod.o stdio/dat.o stdio/fcons.o \
+#		stdio/fdown.o stdio/fgetline.o stdio/file_raise.o \
+#		stdio/fileopen.o stdio/fileread.o stdio/ffileread.o \
+#		stdio/fileseek.o \
+#		stdio/filewrite.o stdio/ffilewrite.o stdio/flag.o \
+#		stdio/flush.o \
+#		stdio/niread.o stdio/openfd.o
+
+all:	stdio libschily.a
+
+clean:	
+	rm -f av_offset av_offset.o align_test align_test.o comerr.h $(OBJ)
+	cd stdio; $(MAKE) clean
+
+$(STDIO):
+	cd stdio; $(MAKE)
+
+getav0.o:	comerr.h
+fillbytes.o:	align.h
+movebytes.o:	align.h
+
+comerr.h:	av_offset
+		./av_offset > comerr.h
+
+av_offset:	av_offset.o getfp.o
+		$(CC) -o $@ av_offset.o getfp.o
+
+align.h:	align_test
+		./align_test > align.h
+
+align_test:	align_test.o
+		$(CC) -o $@ align_test.o
+
+libschily.a:	$(STDIO) $(OBJ)
+		ar r $@ `lorder $(STDIO) $(OBJ) | tsort`
+		$(RANLIB) $@

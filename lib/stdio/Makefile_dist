@@ -1,0 +1,30 @@
+#	Copyright 1995 J. Schilling
+#
+#	Defines:
+#
+#	BSD4_2		BSD systems
+#	SVR4		Compile for System Vr4
+#	DO_DOWN		Compile with stream checking code
+#
+INCLUDE=	-I. -I../../include
+#CFLAGS=		-O $(INCLUDE) -DBSD4_2
+CFLAGS=		-O $(INCLUDE) -DSVR4
+#
+SRC=	flag.c flush.c fgetline.c filewrite.c
+
+#SRC=	cvmod.c dat.c fcons.c fdown.c fgetline.c file_raise.c \
+#	fileopen.c fileread.c ffileread.c fileseek.c \
+#	filewrite.c ffilewrite.c flag.c flush.c \
+#	niread.c openfd.c
+
+OBJ=	flag.o flush.o fgetline.o filewrite.o
+
+#OBJ=	cvmod.o dat.o fcons.o fdown.o fgetline.o file_raise.o \
+#	fileopen.o fileread.o ffileread.o fileseek.o \
+#	filewrite.o ffilewrite.o flag.o flush.o \
+#	niread.o openfd.o
+
+all:	$(OBJ)
+
+clean: 
+	rm -f $(OBJ)

@@ -1,0 +1,566 @@
+/* @(#)getargs.c	2.2 96/02/04 Copyright 1985, 1995 J. Schilling */
+/*
+ *	Copyright (c) 1985, 1995 J. Schilling
+ */
+/*
+ *	Parse arguments on a command line.
+ *	Format string specifier (appearing directly after flag name):
+ *		''	BOOL
+ *		'*'	string
+ *		'?'	char
+ *		'#'	number
+ *		'&'	call function
+ *		'+'	inctype		+++ NEU +++
+ */
+/* This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ */
+/* LINTLIBRARY */
+#ifdef DEBUG
+#	include <stdio.h>
+#	undef	DEBUG
+#	define	DEBUG(a)	printf a
+#else
+#	undef	DEBUG
+#	define	DEBUG(a)
+#endif
+#include <standard.h>
+#include <ctype.h>
+#ifdef	HAVE_STDARG_H
+#	include <stdarg.h>
+#else
+#	include <varargs.h>
+#endif
+
+#define	NOARGS		  0	/* No more args			*/
+#define	NOTAFLAG	  1	/* Not a flag type argument	*/
+#define BADFLAG		(-1)	/* Not a valid flag argument	*/
+#define BADFMT		(-2)	/* Error in format string	*/
+#define NOTAFILE	(-3)	/* Internal code XXX??		*/
+
+	int	_getargs __PR((int *, char *const **, const char *, va_list));
+LOCAL	int	dofile __PR((int *, char *const **, const char **));
+LOCAL	int	doflag __PR((int *, char *const **, const char *,
+						const char *, va_list));
+LOCAL	int	dosflags __PR((const char *, const char *, va_list));
+LOCAL	int	checkfmt __PR((const char *));
+LOCAL	int	checkeql __PR((const char *));
+
+extern	char	*astol();
+extern	char	*strchr();
+
+LOCAL	char	fmtspecs[] = "#?*&+"; 
+
+#define	isfmtspec(c)		strchr(fmtspecs, c)
+
+/*---------------------------------------------------------------------------
+|
+|	get flags until a non flag type argument is reached
+|
++---------------------------------------------------------------------------*/
+/* VARARGS3 */
+#ifdef	PROTOTYPES
+int getargs(int *pac, char *const **pav, const char *fmt, ...)
+#else
+int getargs(pac, pav, fmt, va_alist)
+	int	*pac;
+	char	**pav[];
+	char	*fmt;
+	va_dcl
+#endif
+{
+	va_list	args;
+	int	ret;
+
+#ifdef	PROTOTYPES
+	va_start(args, fmt);
+#else
+	va_start(args);
+#endif
+	ret = _getargs(pac, pav, fmt, args);
+	va_end(args);
+	return (ret);
+}
+
+
+/*---------------------------------------------------------------------------
+|
+|	get all flags on the command line, do not stop on files
+|
++---------------------------------------------------------------------------*/
+/* VARARGS3 */
+#ifdef	PROTOTYPES
+int getallargs(int *pac, char *const **pav, const char *fmt, ...)
+#else
+int getallargs(pac, pav, fmt, va_alist)
+	int	*pac;
+	char	**pav[];
+	char	*fmt;
+	va_dcl
+#endif
+{
+	va_list	args;
+	int	ret;
+
+#ifdef	PROTOTYPES
+	va_start(args, fmt);
+#else
+	va_start(args);
+#endif
+	for (;; (*pac)--, (*pav)++)
+		if ((ret = _getargs(pac, pav, fmt, args)) != NOTAFLAG)
+			break;
+	va_end(args);
+	return (ret);
+}
+
+
+/*---------------------------------------------------------------------------
+|
+|	get next non flag type argument (i.e. a file)
+|
++---------------------------------------------------------------------------*/
+int getfiles(pac, pav, fmt)
+	int		*pac;
+	char *const	*pav[];
+	const char	*fmt;
+{
+	return (_getargs(pac, pav, fmt, (va_list)0));
+}
+
+
+/*---------------------------------------------------------------------------
+|
+|	check args until the next non flag type argmument is reached
+|	*pac is decremented, *pav is incremented so that the
+|	non flag type argument is at *pav[0]
+|
+|	return code:
+|		NOARGS		no more args
+|		NOTAFLAG	not a flag type argument
+|		BADFLAG		a non-matching flag type argument
+|		BADFMT		bad syntax in format string
+|
+|
++---------------------------------------------------------------------------*/
+/*LOCAL*/ int _getargs(pac, pav, fmt, args)
+	register int		*pac;
+	register char	*const	**pav;
+		 const char	*fmt;
+		va_list		args;
+{
+	const	 char	*argp;
+		 int	ret;
+
+	for(; *pac > 0; (*pac)--, (*pav)++) {
+		argp = **pav;
+
+		if ((ret = dofile(pac, pav, &argp)) != NOTAFILE)
+			return (ret);
+		if ((ret = doflag(pac, pav, argp, fmt, args)) != NOTAFLAG)
+			return (ret);
+	}
+	return (NOARGS);
+}
+
+
+/*---------------------------------------------------------------------------
+|
+| check if *pargp is a file type argument
+|
++---------------------------------------------------------------------------*/
+LOCAL int dofile(pac, pav, pargp)
+	register int		*pac;
+	register char *const	**pav;
+		 const char	**pargp;
+{
+	register const char	*argp = *pargp;
+
+	if (argp[0] == '-') {
+		/*
+		 * "-" is a special non flag type argument
+		 *     that usually means take stdin instead of a named file
+		 */
+		if (argp[1] == '\0')
+			return (NOTAFLAG);
+		/*
+		 * "--" is a prefix to take the next argument
+		 *	as non flag type argument
+		 * NOTE: Posix requires "--" to indicate the end of the
+		 *	 flags on the command line. But we are currently not
+		 *	 Posix.
+		 */
+		if (argp[1] == '-' && argp[2] == '\0') {
+			if (--(*pac) > 0) {
+				(*pav)++;
+				return (NOTAFLAG);
+			} else {
+				return (NOARGS);
+			}
+		}
+	}
+
+	/*
+	 * now check if it may be flag type argument
+	 * flag type arguments begin with a '-', a '+' or contain a '='
+	 * i.e. -flag +flag or flag=
+	 */
+	if (argp[0] != '-' && argp[0] != '+' && (!checkeql(argp)))
+		return (NOTAFLAG);
+
+	/*
+	 * flags beginning with '-' don't have to include the '-' in
+	 * the format string.
+	 * flags beginning with '+' have to include it in the format string.
+	 */
+	if (argp[0] == '-')
+		(*pargp)++;
+
+	return (NOTAFILE);
+}
+
+
+/*---------------------------------------------------------------------------
+|
+|	compare argp with the format string
+|	if a match is found store the result a la scanf in one of the
+|	arguments pointed to in the va_list
+|
+|	if the va_list is a NULL pointer only check arguments for getfiles()
+|
++---------------------------------------------------------------------------*/
+LOCAL int doflag(pac, pav, argp, fmt, args)
+		int		*pac;
+		char	*const	**pav;
+	register const char	*argp;
+	register const char	*fmt;
+		va_list		args;
+{
+	long	value;
+	int	singlecharflag	= 0;
+	const char	*sargp	= argp;
+	const char	*sfmt	= fmt;
+	va_list	sargs		= args;
+	char	*const	*spav	= *pav;
+	int		spac	= *pac;
+	void		*curarg	= (void *)0;
+
+	if (args)
+		curarg = va_arg(args, void *);
+
+	/*
+	 * check if the first flag in format string is a sinlgechar flag
+	 */
+	if (fmt[1] == ',' || fmt[1] == '+' || fmt[1] == '\0')
+		singlecharflag++;
+	/*
+	 * check the whole format string for a match
+	 */
+	for(;;) {
+		for(;*fmt; fmt++,argp++) {
+			if (isfmtspec(*fmt)) {
+				/*
+				 * skip over to arg of flag
+				 */
+				if (*argp == '=')
+					argp++;
+				break;
+			} else if (*fmt == *argp) {
+				if (argp[1] == '\0' &&
+				    (fmt[1] == '\0' || fmt[1] == ',')) {
+
+					if (args)
+						*((int *)curarg) = TRUE;
+
+					return (checkfmt(fmt));/* XXX */
+				}
+			} else {
+				/*
+				 * skip over to next format identifier
+				 * & reset arg pointer
+				 */
+				while (*fmt != ',' && *fmt != '\0') {
+					/* function has extra arg */
+					if (*fmt == '&' && args)
+						curarg = va_arg(args, void *);
+					fmt++;
+				}
+				argp = sargp;
+				break;
+			}
+		}
+		switch(*fmt) {
+
+		case '\0':
+			if (singlecharflag && 
+			   (value = dosflags(sargp, sfmt, sargs)) != BADFLAG)
+				return (value);
+
+			return (BADFLAG);
+
+		case ',':
+			fmt++;
+			if (fmt[1] == ',' || fmt[1] == '+' || fmt[1] == '\0')
+				singlecharflag++;
+			if (args)
+				curarg = va_arg(args, void *);
+			continue;
+
+		case '*':
+			if (*argp == '\0') {
+				if (*pac > 1) {
+					(*pac)--;
+					(*pav)++;
+					argp = **pav;
+				} else {
+					return (BADFLAG);
+				}
+			}
+			if (args)
+				*((const char **)curarg) = argp;
+
+			return (checkfmt(fmt));
+
+		case '?':
+			if (args)
+				*((char *)curarg) = *argp;
+
+			return (checkfmt(fmt));
+
+		case '+':
+			/*
+			 * inc type has no arg !
+			 */
+			if (*argp != '\0')
+				goto nextchance;
+			if (fmt[1] == 'l' || fmt[1] == 'L') {
+				if (args)
+					*((long *)curarg) += 1;
+				fmt++;
+			} else if (fmt[1] == 's' || fmt[1] == 'S') {
+				if (args)
+					*((short *)curarg) += 1;
+				fmt++;
+			} else {
+				if (fmt[1] == 'i' || fmt[1] == 'I')
+					fmt++;
+				if (args)
+					*((int *)curarg) += 1;
+			}
+
+			return (checkfmt(fmt));
+
+		case '#':
+			if (*argp == '\0') {
+				if (*pac > 1) {
+					(*pac)--;
+					(*pav)++;
+					argp = **pav;
+				} else {
+					return (BADFLAG);
+				}
+			}
+			if (*astol(argp, &value) != '\0') {
+				/*
+				 * arg is not a valid number!
+				 * go to next format in the format string
+				 * and check if arg matches any other type
+				 * in the format specs.
+				 */
+			nextchance:
+				while(*fmt != ',' && *fmt != '\0') {
+					if (*fmt == '&' && args)
+						curarg = va_arg(args, void *);
+					fmt++;
+				}
+				argp = sargp;
+				*pac = spac;
+				*pav = spav;
+				continue;
+			}
+			if (fmt[1] == 'l' || fmt[1] == 'L') {
+				if (args)
+					*((long *)curarg) = value;
+				fmt++;
+			} else if (fmt[1] == 's' || fmt[1] == 'S') {
+				if (args)
+					*((short *)curarg) = value;
+				fmt++;
+			} else {
+				if (fmt[1] == 'i' || fmt[1] == 'I')
+					fmt++;
+				if (args)
+					*((int *)curarg) = value;
+			}
+			return (checkfmt(fmt));
+
+		case '&':
+			if (*argp == '\0') {
+				if (*pac > 1) {
+					(*pac)--;
+					(*pav)++;
+					argp = **pav;
+				} else {
+					return (BADFLAG);
+				}
+			}
+			if (args == (va_list)0) {
+				return (checkfmt(fmt));
+			} else {
+				void *funarg = va_arg(args, void *);
+
+				return ((*((int (*)())curarg)) (argp, funarg));
+			}
+		}
+	}
+}
+
+
+/*---------------------------------------------------------------------------
+|
+|	parse args for combined single char flags
+|
++---------------------------------------------------------------------------*/
+typedef struct {
+	void	*curarg;
+	short	count;
+	char	c;
+	char	type;
+} sflags;
+
+LOCAL int dosflags(argp, fmt, args)
+	register const char	*argp;
+	register const char	*fmt;
+		va_list		args;
+{
+#define	MAXSF	32
+		 sflags	sf[MAXSF];
+	register sflags	*rsf	= sf;
+	register int	nsf	= 0;
+	register const char *p	= argp;
+	register int	i;
+	register void	*curarg = (void *)0;
+
+	if (args)
+		curarg = va_arg(args, void *);
+
+	while (*p) {
+		for (i=0; i < nsf; i++) {
+			if (rsf[i].c == *p)
+				break;
+		}
+		if (i >= MAXSF)
+			return (BADFLAG);
+		if (i == nsf) {
+			rsf[i].curarg = (void *)0;
+			rsf[i].count = 0;
+			rsf[i].c = *p;
+			rsf[i].type = -1;
+			nsf++;
+		}
+		rsf[i].count++;
+		p++;
+	}
+
+	while (*fmt) {
+		if (!isfmtspec(*fmt) &&
+		    (fmt[1] == ',' || fmt[1] == '+' || fmt[1] == '\0') &&
+		     strchr(argp, *fmt)) {
+			for (i=0; i < nsf; i++) {
+				if (rsf[i].c == *fmt) {
+					if (fmt[1] == '+') {
+						fmt++;
+						if (fmt[1] == ',' ||
+						    fmt[1] == '\0') {
+							rsf[i].type = 'i';
+						} else {
+							rsf[i].type = fmt[1];
+						}
+					} else {
+						rsf[i].type = fmt[1];
+					}
+					rsf[i].curarg = curarg;
+					break;
+				}
+			}
+		}
+		while (*fmt != ',' && *fmt != '\0') {
+			/* function has extra arg */
+			if (*fmt == '&' && args)
+				curarg = va_arg(args, void *);
+			fmt++;
+		}
+		if (*fmt != '\0')
+			fmt++;
+
+		if (args)
+			curarg = va_arg(args, void *);
+	}
+	for (i=0; i < nsf; i++) {
+		if (rsf[i].type < 0)
+			return (BADFLAG);
+		if (rsf[i].curarg) {
+			if (rsf[i].type == ',' || rsf[i].type == '\0') {
+				*((int *)rsf[i].curarg) = TRUE;
+			} else if (rsf[i].type == 'i' || rsf[i].type == 'I') {
+				*((int *)rsf[i].curarg) += rsf[i].count;
+			} else if (rsf[i].type == 'l' || rsf[i].type == 'L') {
+				*((long *)rsf[i].curarg) += rsf[i].count;
+			} else if (rsf[i].type == 's' || rsf[i].type == 'S') {
+				*((short *)rsf[i].curarg) += rsf[i].count;
+			} else {
+				return (BADFLAG);
+			}
+		}
+	}
+	return (NOTAFLAG);
+}
+
+/*---------------------------------------------------------------------------
+|
+|	If the next format character is a comma or the string delimiter,
+|	there are no invalid format specifiers. Return success.
+|	Otherwise raise the getarg_bad_format condition.
+|
++---------------------------------------------------------------------------*/
+LOCAL int checkfmt(fmt)
+	const char	*fmt;
+{
+	char c = *(++fmt);
+	if (c == ',' || c == '\0') {
+		return (NOTAFLAG);
+	} else {
+		raisecond("getarg_bad_format", (long)fmt);
+		return (BADFMT);
+	}
+}
+
+/*---------------------------------------------------------------------------
+|
+|	Parse the string as long as valid characters can be found.
+|	Valid flag identifiers are chosen from the set of
+|	alphanumeric characters and '_'.
+|	If the next character is an equal sign the string
+|	contains a valid flag identifier.
+|
++---------------------------------------------------------------------------*/
+static int checkeql(str)
+	register const char *str;
+{
+	register char c;
+
+	for (c = *str; isalnum(c) || c == '_'; c = *str++)
+		;
+	return (c == '=');
+}
