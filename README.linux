@@ -1,11 +1,18 @@
-Cdrecord compiles on Linux, but will not run because
-there is currently no scg driver for Linux.
+Linux includes the gnu make program by default but it is called 'make' on linux.
+You will definitely need the shell script Gmake.linux to use gmake
+on a linux system.
 
-To compile, use: make -f Makefile_linux
+Install it as /usr/bin/Gmake with:
 
-If someone is willing to make a port, there is only
-two files that have to be changed: 
+cp Gmake.linux /usr/bin/Gmake
 
-scsitransport.c & the open part in scsi_cdr.c
+Then compile the system by calling:
+
+/usr/bin/Gmake
+or ./Gmake.linux
+
+NOTES for S.u.S.E distributions: you must unset an environment variable
+called PROMPT_COMMAND
+It contains illegal values for a make file system.
 
 Joerg

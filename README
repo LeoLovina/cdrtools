@@ -1,10 +1,23 @@
- # @(#)README	1.5 96/12/19 Copyright 1996 J. Schilling
+ # @(#)README	1.7 97/03/04 Copyright 1996 J. Schilling
 
-This is Version 1.2 of cdrecord for Solaris
+This is Version 1.3 of cdrecord for Solaris
 
 Cdrecord allows you to create CD's on a CD-Recorder.
-Cdrecord runs on sparc and x86 on Solaris 2.3 or later.
-Cdrecord runs without problems on a loded system.
+Cdrecord runs on:
+
+SunOS 4.1.3 or later:	sparc.
+Solaris 2.3 or later:	sparc and x86.
+Linux:			x86.
+
+Cdrecord runs without problems on a loded Solaris system.
+On SunOS and Linux you have to test.
+
+Cdrecord has been designed with a similar user interface as cdwrite
+written by
+	Adam J. Richter <adam@yggdrasil.com>
+now maintained by
+	H. Peter Anvin <hpa@transmeta.com>
+this is because I believe it is the right way to do it.
 
 The cdrecord distribution contains a SCSI user level transport library.
 The SCSI library is suitable to talk to any SCSI device without having
@@ -12,14 +25,18 @@ a special driver for it.
 Cdrecord may be easily ported to any system that has a 
 SCSI device driver similar to the scg driver.
 
+On Linux cdrecord currently uses the /dev/sg? driver 
+	- you need no additional driver
 
+On SunOS/Solaris:
 You *need* the SCSI general driver 'scg' in order to run cdrecord.
 
+Solaris only:
 The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
 it is supplied binary in pkgadd(1m) format and is tested 
 on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
 
-
+Solaris only:
 It is _nice to have_ the 'fbk' driver to mount files that contain 
 images of file systems. Fbk means File simulates Block Device.
 
@@ -32,18 +49,21 @@ gert@fwi.uva.nl (Gert Poletiek) who did the tests.
 The bitorder problems have been eliminated.
 
 There may be some performance problems on Solaris x86.
-A possible solution is to reduce BUF_SIZE to 32 kBytes.
+A solution was to reduce BUF_SIZE to 32 kBytes.
 It may be that the real reason is that the PC-architecture
 has no IO-MMU and therefore is not able to do DVMA.
 If this points out to be the reason, I have to
 change the scg driver & cdrecord, but this would 
 be neded on Linux anyway.
 
+Cdrecord-1.3 now adopts the right BUF_SIZE for each architecture.
+
 cdrecord should compile on SunOS, but you will need the scg driver for
 SunOS in this case.
 
 
 Cdrecord has been implemented with a Philips CDD 521.
+Cdrecord now is maintained with a Philips CDD-2000
 It should run also on:
 
 	Philips CDD 522
@@ -56,10 +76,12 @@ It should run also on:
 	Yamaha CDR-100
 	Yamaha CDR-102
 
+Multi-session has only been tested with the Philips CDD-2000
+
 Cdrecord-1.1 definitely does not run on a Plasmon RF-41000
 which has the same drive mechanism as the Philips CDD-522 but a different
 SCSI interface board.
-I am interested to hear if cdrecord-1.2 runs on the Plasmon RF-41000.
+I am interested to hear if cdrecord-1.3 runs on the Plasmon RF-41000.
 NOTE: you have to switch off the warning and exit in the source 
 if you want test this.
 
@@ -82,11 +104,14 @@ will get (continued) support in the following releases.
 
 To install get:
 
+Solaris only:
 	SCHILYscg.sparc.tar.Z	The scg driver in pkgadd format (sparc).
 	SCHILYfbk.sparc.tar.Z	The fbk driver in pkgadd format (sparc).
 	SCHILYscg.i386.tar.Z	The scg driver in pkgadd format (x86).
 	SCHILYfbk.i386.tar.Z	The fbk driver in pkgadd format (x86).
-	cdrecord-1.1.tar.Z	The cdrecord for Solaris distribution.
+
+All Systems:
+	cdrecord-1.2.tar.Z	The cdrecord for source distribution.
 
 NOTE:	These tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
 	tar may get some minor trouble.
@@ -108,6 +133,7 @@ ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/mkisofs-1.05.tar.gz
 
 Installation Process:
 
+Solaris only:
 	1) scg driver
 			untar SCHILYscg.tar:
 			su
@@ -131,6 +157,7 @@ NOTE:
 	You need to be root because you need access to /dev/scg? and to be
 	able to put cdrecord into the realtime scheduling class.
 
+All Systems:
 
 The SCSI transport library has been taken from the sformat program.
 Sformat is the first SCSI disk formatting/analyzing/repairing that runs on
@@ -148,6 +175,7 @@ Please mail suggestions to: wofs@schily.isdn.cs.tu-berlin.de
 
 If you want to use the CD-recorder as CD-ROM device, have a look at 
 
+Solaris only:
 ftp://ftp.fokus.gmd.de/pub/unix/kernel/sd
 
 

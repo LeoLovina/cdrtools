@@ -1,0 +1,14 @@
+This release of cdrecord includes support for mkisofs.
+
+**** Do NOT run configure in the directory mkisofs-1.11 ****
+
+I changed the make system to use my make file system.
+
+Read the file README.multi to learn how to create multi-session
+CD-R's with this release of cdrecord and mkisofs.
+
+You definitely need this patched release of mkisofs-1.11 to 
+create multi-session CD-R's on SunOS.
+
+
+Joerg Schiling

@@ -1,8 +1,9 @@
-/* @(#)filewrite.c	1.8 96/02/04 Copyright 1986 J. Schilling */
+/* @(#)filewrite.c	1.9 97/04/20 Copyright 1986 J. Schilling */
 /*
  *	Copyright (c) 1986 J. Schilling
  */
-/* This program is free software; you can redistribute it and/or modify
+/*
+ * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2, or (at your option)
  * any later version.
@@ -14,13 +15,15 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <stdio.h>
 #include "io.h"
 
 static	char	_writeerr[]	= "file_write_err";
+
+#ifdef	HAVE_USG_STDIO
 
 int filewrite (f, vbuf, len)
 	register FILE	*f;
@@ -33,13 +36,6 @@ int filewrite (f, vbuf, len)
 
 	down2(f, _IOWRT, _IORW);
 
-#ifndef	HAVE_USG_STDIO
-
-	if (my_flag(f) & _IOUNBUF)
-		return write(fileno(f), buf, len);
-	return fwrite(buf, 1, len, f);
-
-#else
 	if (f->_flag & _IONBF){
 		cnt = write (fileno(f), buf, len);
 		if (cnt < 0){
@@ -71,5 +67,29 @@ int filewrite (f, vbuf, len)
 	if (!(my_flag(f) & _IONORAISE))
 	raisecond(_writeerr, 0L);
 	return -1;
-#endif	/* HAVE_USG_STDIO */
 }
+
+#else
+
+int filewrite (f, vbuf, len)
+	register FILE	*f;
+	void	*vbuf;
+	int	len;
+{
+	int	cnt;
+	char		*buf = vbuf;
+
+	down2(f, _IOWRT, _IORW);
+
+	if (my_flag(f) & _IOUNBUF)
+		return write(fileno(f), buf, len);
+	cnt = fwrite(buf, 1, len, f);
+
+	if (!ferror(f))
+		return cnt;
+	if (!(my_flag(f) & _IONORAISE))
+	raisecond(_writeerr, 0L);
+	return -1;
+}
+
+#endif	/* HAVE_USG_STDIO */

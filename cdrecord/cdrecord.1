@@ -1,0 +1,532 @@
+.\" @(#)cdrecord.1	1.6 97/03/04 Copyright 1996 J. Schilling
+.\" 
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this manual; if not, write to the Free
+.\" Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139,
+.\" USA.
+.\"
+.if t .ds a \v'-0.55m'\h'0.00n'\z.\h'0.40n'\z.\v'0.55m'\h'-0.40n'a
+.if t .ds o \v'-0.55m'\h'0.00n'\z.\h'0.45n'\z.\v'0.55m'\h'-0.45n'o
+.if t .ds u \v'-0.55m'\h'0.00n'\z.\h'0.40n'\z.\v'0.55m'\h'-0.40n'u
+.if t .ds A \v'-0.77m'\h'0.25n'\z.\h'0.45n'\z.\v'0.77m'\h'-0.70n'A
+.if t .ds O \v'-0.77m'\h'0.25n'\z.\h'0.45n'\z.\v'0.77m'\h'-0.70n'O
+.if t .ds U \v'-0.77m'\h'0.30n'\z.\h'0.45n'\z.\v'0.77m'\h'-0.75n'U
+.if t .ds s \\(*b
+.if t .ds S SS
+.if n .ds a ae
+.if n .ds o oe
+.if n .ds u ue
+.if n .ds s sz
+.TH CDRECORD 1 "Version 1.3" "J\*org Schilling" "Schily\'s USER COMMANDS"
+.SH NAME
+cdrecord \- record audio or data Compact Discs from a master
+.SH SYNOPSIS
+.B cdrecord
+[
+.I "general options
+]
+.BI dev= device
+[
+.I track options
+]
+.IR track1 .\|.\|. trackn
+
+.SH DESCRIPTION
+.B Cdrecord
+is used to record data or audio Compact Discs on an Orange Book
+CD-Recorder.
+.PP
+The
+.I device
+refers to
+.IR scsibus / target / lun
+of the CD-Recorder. Communication is done with the SCSI general driver
+.B scg.
+Possible syntax is:
+.IR scsibus , target , lun
+or
+.IR target , lun .
+In the latter case, the CD-Recorder has to be connected to the default 
+SCSI bus of the machine.
+.PP
+.I Scsibus
+,
+.I target 
+and 
+.I lun
+are integer numbers. 
+.I Scsibus 
+0 is the default SCSI bus on the machine. Watch the boot messages for more 
+information or look into 
+.B /var/adm/messages 
+for more information about the SCSI configuration of your machine.
+.PP
+Each
+.I track
+corresponds to a single file that contains the prepared data for that track.
+If the argument is 
+.RB ` \- ',
+standard input is used for that track.
+
+.SH "GENERAL OPTIONS
+.PP
+General options must be before any track file name or track option.
+.TP
+.B \-v
+Be verbose during work, display the progress of the writing process.
+.TP
+.B \-V
+Be verbose in respect of SCSI command transport. This helps to debug problems
+during the writing process, that occur in the CD-Recorder. 
+If you get incomprehensible error messages you should use this flag
+to get more detailed output.
+.TP
+.B \-debug
+Print additional debug messages. This may help to find out problems
+with sector sizes and setor types.
+.TP
+.B \-dummy
+The CD-Recorder will go through all steps of the recording process,
+but the laser is turned off during this procedure.
+It is recommended to run several tests before actually writing to a 
+Compact Disk, if the timing and load response of the system is not known.
+.TP
+.B \-multi
+Allow multi session CD's to be made. This flag needs to be present
+on all sessions of a multi session disk,
+except you want to create a session that will be 
+the last session on the media.
+The fixation will be done in a way that allows the CD-Recorder to
+append additional sessions later. This is done by generation a TOC
+with a link to the next program area. The so generated media is not
+100%  compatible to manufactured CD's. 
+Use only for recording a multi session CD.
+If this option is present, the default track type is
+.BR "CD-ROM XA mode 2" .
+.TP
+.B \-msinfo
+Retrieve multi session info in a form suitable for 
+.BR "mkisofs-1.10" .
+.TP
+.B \-toc
+Retrieve and print out the table of content or PMA of a CD.
+With this option, 
+.B cdrecord
+will work also with a CD-Rom drive.
+.TP
+.B \-fix
+The disk will only be fixated (i.e. a TOC for a CD-Reader will be written). 
+This may be used, if for some reason the disk has been written but not
+fixated.
+.TP
+.B "speed=#
+Set the speed factor of the writing process to #.
+# is an integer, representing a multiple of the audio speed.
+This is about 151 KB/s for CD-ROM and about 175 KB/s for CD-Audio.
+.TP
+.BI dev= target
+Sets the SCSI target for the CD-Recorder, see notes above.
+
+.SH "TRACK OPTIONS
+.PP
+Track options may be mixed with track file names.
+.TP
+.B \-audio
+If this flag is present, all subsequent tracks are written in
+.B "CD-DA 
+(similar to Red Book) audio format.
+The file with data for this tracks should
+contain stereo, 16-bit digital audio with 44100 samples/s.
+The byte order should be the following: MSB left, LSB left, 
+MSB right, LSB right, MSB left and so on. The track should be a multiple of 
+2352 bytes. It is not possible to put the master image of an audio track 
+on a raw disk because 
+data will be read in multiple of 2352 bytes during the recording process.
+.TP
+.B \-swab
+If this flag is present, audio data is swapped before writing to CD.
+This is needed on some types of CD-Writers e.g. Yamaha and probably Sony
+because they are using the wrong byte order for audio data
+(they are ignoring the fact that the SCSI-protocol otherwise correctly
+uses network byte order). In a future release 
+.B cdrwite
+will know itself which CD-Recorder needs byte swapping.
+.TP
+.B \-data
+If this flag is present, all subsequent tracks are written in
+.B "CD-ROM mode 1
+(Yellow Book) format. The data is a multiple of 2048 bytes.
+The file with track data should contain an 
+.BR ISO-9660 " or " "Rock Ridge
+filesystem image (see 
+.B mkisofs
+for more details). If the track data is an
+.B ufs
+filesystem image, fragment size should be set to 2 KB or more to allow
+CR-drives with 2 KB sector size to to be used for reading.
+.TP
+.I " "
+\-data is the default, if no other flag is present.
+.TP
+.B \-mode2
+If this flag is present, all subsequent tracks are written in
+.B "CD-ROM mode 2
+format. The data is a multiple of 2048 bytes.
+.TP
+.B \-xa1
+If this flag is present, all subsequent tracks are written in
+.B "CD-ROM XA mode 1
+format. The data is a multiple of 2048 bytes.
+.TP
+.B \-xa2
+If this flag is present, all subsequent tracks are written in
+.B "CD-ROM XA mode 2
+format. The data is a multiple of 2048 bytes.
+.TP
+.B \-cdi
+If this flag is present, all subsequent tracks are written in
+.B "CDI
+format. The data is a multiple of 2048 bytes.
+.TP
+.B \-isosize
+Use the 
+.B "ISO-9660
+file system size as the size of the next track.
+This currently cannot be used to determine the size of a file system
+if the multi session option is present.
+.TP
+.B \-pad
+If the track is a data track, 15 sectors of zeroed data
+will be added to the end of this and each subsequent data track.
+Use this if your CD-drive is not able to read the last sectors of
+a track. If the track is an audio track,
+.B cdrecord 
+will pad the audio data to be a multiple of 2352 bytes. 
+The audio data padding is done with binary zeroes which is 
+equal to absolute silence.
+.TP
+.B \-nopad
+Do not pad the following tracks \- the default.
+.TP
+.B \-preemp
+If this flag is present, all TOC entries for subsequent audio tracks 
+will indicate that the audio data has been sampled with 50/15 µsec
+preemphasis.
+The data, however is not modified during the process of transferring from file
+to disk. 
+This option has no effect on data tracks.
+.TP
+.B \-nopreemp
+If this flag is present, all TOC entries for subsequent audio tracks 
+will indicate that the audio data has been mastered with linear data \- 
+this is the default.
+.TP
+.B bytes=#
+If the master image for the next track has been stored on a raw disk, 
+use this option
+to specify the valid amount of data on this disk. If the image of the next 
+track is stored in a regular file, the size of that file is taken to determine
+the length of this track.
+The 
+.B isosize
+program, usually included in the
+.B mkisofs
+distribution, can be used to determine the length of an ISO 9660
+filesystem image.
+
+.SH EXAMPLES
+.PP
+For all examples below, it will be assumed that the CD-Recorder is
+connected to the primary SCSI bus of the machine. The SCSI target id is
+set to 2.
+.PP
+To record a pure CD-ROM at double speed, using data from the file
+.IR cdimage.raw :
+.PP
+    cdrecord \-v speed=2 dev=2,0 cdimage.raw
+.PP
+To create an image for a ISO 9660 filesystem with Rock Ridge extensions:
+.PP
+    mkisofs \-R \-o cdimage.raw /home/joerg/master/tree
+.PP
+To check the resulting file before writing to CD:
+.PP
+    mount \-r \-F fbk \-o type=hsfs /dev/fbk0:cdimage.raw /mnt
+.br
+    ls \-lR /mnt
+.br
+    umount /mnt
+.PP
+If the overall speed of the system is sufficient and the structure of
+the filesystem is not too complex, cdrecord will run without creating an
+image of the ISO 9660 filesystem. Simply run the pipeline:
+.PP
+    mkisofs \-R /master/tree | cdrecord \-v speed=2 dev=2,0 -
+.PP
+If your system is loaded, you should run mkisofs in the real time class too.
+To raise the priority of 
+.B mkisofs
+replace the command
+.PP
+    mkisofs \-R /master/tree
+.br
+by
+.br
+    priocntl \-e \-c RT \-p 59 mkisofs \-R /master/tree
+.sp
+on Solaris and by
+.sp
+    nice -18 mkisofs \-R /master/tree
+.sp
+on SunOS.
+.PP
+Cdrecord runs at priority 59 on Solaris, you should run mkisofs
+at no more than priority 58. On SunOS, you should run mkisofs
+at no less than nice -18.
+.PP
+Creating a CD-ROM without file system image on disk has been tested
+on a Sparcstation-2 with a Yamaha CDR-100. It did work up to double speed.
+A faster machine may be able to handle quad speed also.
+.PP
+To record a pure CD-DA (audio) at single speed, with each track contained
+in a file named
+.IR track01.cdaudio ,
+.IR track02.cdaudio ,
+etc:
+.PP
+    cdrecord \-v speed=1 dev=2,0 -audio track*.cdaudio
+.PP
+To check if it will be ok to use double speed for the example above. 
+Use the dummy write option:
+.PP
+    cdrecord \-v \-dummy speed=2 dev=2,0 \-audio track*.cdaudio
+.PP
+To record a mixed-mode CD with an ISO 9660 filesystem from
+.I cdimage.raw
+on the first track, the other tracks being audio tracks from the files
+.IR track01.cdaudio ,
+.IR track02.cdaudio ,
+etc:
+.PP
+    cdrecord \-v \-dummy dev=2,0 cdimage.raw \-audio track*.cdaudio
+
+.SH SEE ALSO
+.BR mkisofs (1),
+.BR scg (7),
+.BR fbk (7).
+
+.SH NOTES
+The current version of
+.B cdrecord
+will only record
+.B "track at once
+Yellow Book Compatible Discs.
+If the so made disks contain more than one track,
+they are not suitable for direct mass production by CD manufacturers.
+You will need the 
+.B "disk at once
+option to record such disks.
+Nevertheless the disks made with
+.B cdrecord
+will normally be read in all CD players. Some old
+players however may produce a two second click between two audio tracks.
+.PP
+You should not use the 
+.B \-multi
+flag, unless you know that you really want to create a multi session CD.
+As 
+.B cdrecord 
+currently has no support to retrieve the first writable address for the 
+next session, multi session CD's are currently not possible. We will need
+a modified 
+.B mkisofs
+to do this according the Kodak Photo-CD spec.
+.PP
+The minimal size of a track is 4 seconds or 300 sectors. If you write 
+smaller tracks, the CD-Recorder will add dummy blocks. This is not an
+error, even though the SCSI-error message looks this way.
+.PP
+.B Cdrecord
+has been tested on an upgraded Philips CDD-521 recorder at single and 
+double speed on a SparcStation 20/502 with no problems, slower computer systems
+should work also. 
+The newer Philips/HP/Plasmon/Grundig
+drives as well as Yamaha CDR-100 and CDR-102 work also. The Plasmon RF-4100
+does not work. Although it uses the same drive mechanism as the Philips CDD-522,
+it has a different SCSI-processor and a different command set.
+A Philips CDD-521 that has not been upgraded will not work.
+.PP
+You should run several tests in single and double speed with the
+.B \-dummy
+option turned on if you are using 
+.B cdrecord
+on an unknown system. Writing a CD is a realtime process. 
+You can currently not use cdimages that are located on
+.B NFS
+file systems.
+.B Nfs
+will not deliver constantly the needed data rates.
+I used
+.B cdrecord 
+with with medium load on a SS20/502 and even at quad speed 
+on a Sparcstation-2 which was heavily loaded, 
+but it is recommended to leave the system
+as lightly loaded as possible while writing a CD.
+.B Cdrecord
+needs to run as root to get access to the 
+.B /dev/scg?
+device nodes and to be able to lock itself into memory.
+.PP
+If you don't want to allow users to become root on your systen,
+.B cdrecord
+may safely be installed suid root. This allows all users or a group of
+users with no root privileges to use 
+.B cdrecord.
+.B Cdrecord 
+in this case checks, if the real user would have been able to read 
+the specified files.
+To give all user access to use 
+.B cdrecord, 
+enter:
+.PP
+	chmod 4711 /usr/local/bin/cdrecord
+.PP
+To give a restricted group of users access to cdrecord enter:
+.PP
+	chmod 4710 /usr/local/bin/cdrecord
+.br
+	chgrp cdburners /usr/local/bin/cdrecord
+.PP
+and add a group 
+.I cdburners
+on your system.
+.PP
+Never give write permissions for non root users to the 
+.I /dev/scg?
+devices unless you would allow anybody to read/write/format
+all your disks.
+.PP
+You should not connect old drives that do not support
+disconnect/reconnect to either the SCSI bus that is connected to the
+CD-Recorder or the source disk.
+.PP
+A Compact Disc can have no more than 99 tracks.
+.PP
+When creating a disc with both audio and data tracks, 
+the data should be on track 1. CDplus has not yet been tested.
+.PP
+Many systems are not able to read more than a single data track, or
+need special software to do so.
+.PP
+More information on the SCSI command set of a HP CD-Recorder can be found at:
+.PP
+	http://www.hp.com:80/isgsupport/cdr/index.html
+.PP
+If you have more information or SCSI command manuals for other CD-Recorders
+than Philips CDD 522 or the HP drive mentioned above please contact the author.
+.PP
+The Philips CDD 521 CD-Recorder (even in the upgraded version)
+has several firmware bugs. Some of them will
+force you to power cycle the device or to reboot the machine.
+.PP
+
+.SH DIAGNOSTICS
+.PP
+You have 9 seconds to type ^C to abort 
+.B cdrecord
+after you see the message:
+.PP
+Starting to write CD at speed %d in %s mode for %s session.
+.PP
+A typical error message for a SCSI command looks like:
+.sp
+.RS
+.nf
+cdrecord: I/O error. test unit ready: scsi sendcmd: no error
+status: 0x2 (CHECK CONDITION)
+Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00
+Sense Key: 0x5 Illegal Request, Code 0x25 (invalid lun) blk 0
+.fi
+.sp
+.RE
+The first line gives information about the transport of the command.
+The text after the first colon gives the error text for the system call
+from the view of the kernel. It usually is:
+.B "I/O error
+unless other problems happen. The next words contain a short description for
+the SCSI command that fails. The rest of the line tell you if there were
+any problems for the transport of the command over the SCSI bus.
+.B "fatal error
+means that it was not possible to transport the command (i.e. no device present
+at the requested SCSI address).
+.PP
+The second line gives information on the SCSI status code returned by the 
+command, if the transport of the command succeeds. 
+This is error information from the SCSI device.
+.PP
+The third line is a hex dump of the auto request sense information for the 
+command.
+.PP
+The fourth line is the error text for the sense bytes if available.
+If the type of the device is known, the sense data is decoded from tables
+in
+.IR scsierrs.c " .
+.PP
+The following message is not an error:
+..sp
+.RS
+.nf
+Track 01: Total bytes read/written: 2048/2048 (1 sectors).
+cdrecord: I/O error. flush cache: scsi sendcmd: no error
+status: 0x2 (CHECK CONDITION)
+Sense Bytes: F0 00 05 80 00 00 27 0A 00 00 00 00 B5 00 00 00 00 00
+Sense Key: 0x5 Illegal Request, Code 0xB5 (dummy data blocks added) blk -2147483609 valid 
+.fi
+.sp
+.RE
+It simply notifies, that a track that is smaller than the minimum size has been
+expanded to 300 sectors.
+.SH BUGS
+.PP
+.B Cdrecord
+should verify that the input data will fit on the media. Currently you get
+unpredictable results in this case.
+.PP
+There should be an option to write index numbers for audio tracks.
+.PP
+There should be a recover option to make disks usable, that have been written
+during a power failure.
+
+.SH AUTHOR
+.nf
+J\*org Schilling
+Seestr. 110
+D-13353 Berlin
+Germany
+.fi
+.PP
+Mail bugs and suggestions to:
+.PP
+.B
+joerg@schily.isdn.cs.tu-berlin.de
+or
+.B
+js@cs.tu-berlin.de
+or
+.B
+jes@fokus.gmd.de

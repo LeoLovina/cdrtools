@@ -1,7 +1,10 @@
+***** Changelog for cdrecord-1.3 is currently missing *******
+
+
 Mon Dec 16 16:19:54 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
 
 	* Added -swab option to support Yamaha audio
-	  Thanks to (Fred) ecoven@montefiore.ulg.ac.be
+	  Thanks to (Fred) vecoven@montefiore.ulg.ac.be
 	  for the hint.
 	* Added counter for quit time (9 seconds)
 

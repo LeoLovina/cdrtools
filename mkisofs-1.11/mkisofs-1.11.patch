@@ -1,0 +1,257 @@
+*** eltorito.c.orig	Thu Apr 10 05:41:44 1997
+--- eltorito.c	Fri May 16 14:37:26 1997
+***************
+*** 28,34 ****
+  #include <sys/stat.h>
+  #include <unistd.h>
+  #include <fcntl.h>
+! #include <malloc.h>
+  
+  #include "mkisofs.h"
+  #include "iso9660.h"
+--- 28,35 ----
+  #include <sys/stat.h>
+  #include <unistd.h>
+  #include <fcntl.h>
+! /*#include <malloc.h>*/
+! #include <stdlib.h>
+  
+  #include "mkisofs.h"
+  #include "iso9660.h"
+*** mkisofs.h.orig	Thu Apr 10 05:41:48 1997
+--- mkisofs.h	Fri May 16 14:41:21 1997
+***************
+*** 262,267 ****
+--- 262,273 ----
+  				     struct stat *,
+  				     struct directory_entry **));
+  
++ #ifdef	USE_SCG
++ /* scsi.c */
++ extern	int	readsecs(int startsecno, void *buffer, int sectorcount);
++ extern	int	scsidev_open(char *path);
++ #endif
++ 
+  extern char * extension_record;
+  extern int extension_record_extent;
+  extern int n_data_extents;
+*** multi.c.orig	Thu Apr 10 05:41:48 1997
+--- multi.c	Fri May 16 13:06:55 1997
+***************
+*** 278,293 ****
+     * First, allocate a buffer large enough to read in the entire
+     * directory.
+     */
+!   dirbuff = (char *) e_malloc(isonum_733(mrootp->size));
+  
+!   readsecs(isonum_733(mrootp->extent), dirbuff,
+! 	   isonum_733(mrootp->size)/SECTOR_SIZE);
+  
+    /*
+     * Next look over the directory, and count up how many entries we
+     * have.
+     */
+!   len = isonum_733(mrootp->size);
+    i = 0;
+    *nent = 0;
+    while(i < len )
+--- 278,293 ----
+     * First, allocate a buffer large enough to read in the entire
+     * directory.
+     */
+!   dirbuff = (char *) e_malloc(isonum_733((unsigned char *)mrootp->size));
+  
+!   readsecs(isonum_733((unsigned char *)mrootp->extent), dirbuff,
+! 	   isonum_733((unsigned char *)mrootp->size)/SECTOR_SIZE);
+  
+    /*
+     * Next look over the directory, and count up how many entries we
+     * have.
+     */
+!   len = isonum_733((unsigned char *)mrootp->size);
+    i = 0;
+    *nent = 0;
+    while(i < len )
+***************
+*** 329,336 ****
+        *pnt = (struct directory_entry *) e_malloc(sizeof(**rtn));
+        (*pnt)->next = NULL;
+        (*pnt)->isorec = *idr;
+!       (*pnt)->starting_block = isonum_733(idr->extent);
+!       (*pnt)->size = isonum_733(idr->size);
+        (*pnt)->priority = 0;
+        (*pnt)->name = NULL;
+        (*pnt)->table = NULL;
+--- 329,336 ----
+        *pnt = (struct directory_entry *) e_malloc(sizeof(**rtn));
+        (*pnt)->next = NULL;
+        (*pnt)->isorec = *idr;
+!       (*pnt)->starting_block = isonum_733((unsigned char *)idr->extent);
+!       (*pnt)->size = isonum_733((unsigned char *)idr->size);
+        (*pnt)->priority = 0;
+        (*pnt)->name = NULL;
+        (*pnt)->table = NULL;
+***************
+*** 412,419 ****
+  	      free((*pnt)->name);
+  	    }
+  	  (*pnt)->name = strdup("<translation table>");
+! 	  tt_extent = isonum_733(idr->extent);
+! 	  tt_size = isonum_733(idr->size);
+  	}
+        
+        pnt++;
+--- 412,419 ----
+  	      free((*pnt)->name);
+  	    }
+  	  (*pnt)->name = strdup("<translation table>");
+! 	  tt_extent = isonum_733((unsigned char *)idr->extent);
+! 	  tt_size = isonum_733((unsigned char *)idr->size);
+  	}
+        
+        pnt++;
+***************
+*** 660,670 ****
+--- 660,682 ----
+     * FIXME(eric).
+     */
+  
++ #ifndef	USE_SCG
+    in_image = fopen(path, "rb");
+    if( in_image == NULL )
+      {
+        return NULL;
+      }
++ #else
++   if (strchr(path, '/')) {
++ 	in_image = fopen(path, "rb");
++ 	if( in_image == NULL ) {
++ 		return NULL;
++ 	}
++   } else {
++ 	if (scsidev_open(path) < 0)
++ 		return NULL;
++   }
++ #endif
+  
+    get_session_start(&file_addr);
+  
+***************
+*** 680,686 ****
+        vdp = (struct iso_volume_descriptor *)buffer;
+  
+        if(    (strncmp(vdp->id, ISO_STANDARD_ID, sizeof vdp->id) == 0)
+! 	  && (isonum_711(vdp->type) == ISO_VD_PRIMARY) )
+  	{
+  	  break;
+  	}
+--- 692,698 ----
+        vdp = (struct iso_volume_descriptor *)buffer;
+  
+        if(    (strncmp(vdp->id, ISO_STANDARD_ID, sizeof vdp->id) == 0)
+! 	  && (isonum_711((unsigned char *)vdp->type) == ISO_VD_PRIMARY) )
+  	{
+  	  break;
+  	}
+***************
+*** 697,704 ****
+    /*
+     * Check the blocksize of the image to make sure it is compatible.
+     */
+!   if(    (isonum_723 (pri->logical_block_size) != SECTOR_SIZE)
+!       || (isonum_723 (pri->volume_set_size) != 1) )
+      {
+        return NULL;
+      }
+--- 709,716 ----
+    /*
+     * Check the blocksize of the image to make sure it is compatible.
+     */
+!   if(    (isonum_723 ((unsigned char *)pri->logical_block_size) != SECTOR_SIZE)
+!       || (isonum_723 ((unsigned char *)pri->volume_set_size) != 1) )
+      {
+        return NULL;
+      }
+***************
+*** 737,743 ****
+        if( pnt[i]->name != NULL
+  	  && strcmp(pnt[i]->name, "<translation table>") == 0 )
+  	{
+! 	  ttbl_extent = isonum_733(pnt[i]->isorec.extent);
+  	  ttbl_index = i;
+  	  continue;
+  	}
+--- 749,755 ----
+        if( pnt[i]->name != NULL
+  	  && strcmp(pnt[i]->name, "<translation table>") == 0 )
+  	{
+! 	  ttbl_extent = isonum_733((unsigned char *)pnt[i]->isorec.extent);
+  	  ttbl_index = i;
+  	  continue;
+  	}
+*** rock.c.orig	Thu Apr 10 05:41:49 1997
+--- rock.c	Fri May 16 12:32:14 1997
+***************
+*** 225,231 ****
+      Rock[ipnt++] = PN_SIZE;
+      Rock[ipnt++] = SU_VERSION;  
+      flagval |= (1<<1);
+! #if MAJOR_IN_SYSMACROS == 0 && MAJOR_IN_MKDEV == 0
+      set_733((char*)Rock + ipnt, major(lstatbuf->st_rdev ));
+      ipnt += 8;
+      set_733((char*)Rock + ipnt, minor(lstatbuf->st_rdev));
+--- 225,231 ----
+      Rock[ipnt++] = PN_SIZE;
+      Rock[ipnt++] = SU_VERSION;  
+      flagval |= (1<<1);
+! #if !defined(MAJOR_IN_SYSMACROS) && !defined(MAJOR_IN_MKDEV)
+      set_733((char*)Rock + ipnt, major(lstatbuf->st_rdev ));
+      ipnt += 8;
+      set_733((char*)Rock + ipnt, minor(lstatbuf->st_rdev));
+*** tree.c.orig	Thu Apr 10 05:41:49 1997
+--- tree.c	Fri May 16 14:42:26 1997
+***************
+*** 55,63 ****
+   * Autoconf should be able to figure this one out for us and let us know
+   * whether the system has memmove or not.
+   */
+! # ifndef HAVE_MEMMOVE
+! #  define memmove(d, s, n) bcopy ((s), (d), (n))
+! # endif
+  
+  #include "mkisofs.h"
+  #include "iso9660.h"
+--- 55,68 ----
+   * Autoconf should be able to figure this one out for us and let us know
+   * whether the system has memmove or not.
+   */
+! /*
+!  * Dont use bcopy() as default!!!!
+!  * SVR4 does not have bcopy() myt memmove seems to be on all new systems.
+!  * JS
+!  */
+! /*# ifndef HAVE_MEMMOVE*/
+! /*#  define memmove(d, s, n) bcopy ((s), (d), (n))*/
+! /*# endif*/
+  
+  #include "mkisofs.h"
+  #include "iso9660.h"
+*** write.c.orig	Thu Apr 10 05:43:02 1997
+--- write.c	Fri May 16 13:04:12 1997
+***************
+*** 425,431 ****
+  		* we don't end up scheduling the thing for writing
+  		* either.
+  		*/
+! 	       if( isonum_733(s_entry->isorec.extent) != 0 )
+  	       {
+  		    continue;
+  	       }
+--- 425,431 ----
+  		* we don't end up scheduling the thing for writing
+  		* either.
+  		*/
+! 	       if( isonum_733((unsigned char *)s_entry->isorec.extent) != 0 )
+  	       {
+  		    continue;
+  	       }

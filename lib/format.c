@@ -1,4 +1,4 @@
-/* @(#)format.c	1.22 96/08/21 Copyright 1985 J. Schilling */
+/* @(#)format.c	1.23 97/04/27 Copyright 1985 J. Schilling */
 /*
  *	format
  *	common code for printf fprintf & sprintf
@@ -8,7 +8,8 @@
  *
  *	Copyright (c) 1985 J. Schilling
  */
-/* This program is free software; you can redistribute it and/or modify
+/*
+ * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2, or (at your option)
  * any later version.
@@ -20,7 +21,7 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <mconfig.h>
@@ -68,17 +69,24 @@ typedef unsigned short	Ushort;
 typedef unsigned long	Ulong;
 
 typedef struct f_args {
-	void	(*outf) __PR((char, long));
-	long	farg;
+	void	(*outf) __PR((char, long)); /* Func from format(fun, arg) */
+	long	farg;			    /* Arg from format (fun, arg) */
 	int	minusflag;
+	int	flags;
 	int	fldwidth;
 	int	signific;
+	int	lzero;
 	char	*buf;
 	char	*bufp;
 	char	fillc;
 	char	*prefix;
 	int	prefixlen;
 } f_args;
+
+#define	MINUSFLG	1	/* '-' flag */
+#define	PLUSFLG		2	/* '+' flag */
+#define	SPACEFLG	4	/* ' ' flag */
+#define	HASHFLG		8	/* '#' flag */
 
 LOCAL	void	prmod  __PR((Ulong, unsigned, f_args *));
 LOCAL	void	prdmod __PR((Ulong, f_args *));
@@ -143,30 +151,55 @@ EXPORT int format(fun, farg, fmt, args)
 		buf[0] = '\0';
 		fa.buf = fa.bufp = buf;
 		fa.minusflag = 0;
+		fa.flags = 0;
 		fa.fldwidth = 0;
 		fa.signific = -1;
+		fa.lzero = 0;
 		fa.fillc = ' ';
 		fa.prefixlen = 0;
 		sfmt = fmt;
 		unsflag = FALSE;
-		if (*(++fmt) == '+') {
-			fmt++;
-/*			fa.plusflag++;*/ /* XXX to be implemented */
-		}
-		if (*fmt == '-') {
-			fmt++;
+	newflag:
+		switch (*(++fmt)) {
+
+		case '+':
+			fa.flags |= PLUSFLG;
+			goto newflag;
+
+		case '-':
 			fa.minusflag++;
-		}
-		if (*fmt == '0') {
-			fmt++;
+			goto newflag;
+
+		case ' ':
+			/*
+			 * If the space and the + flag are present,
+			 * the space flag will be ignored.
+			 */
+			fa.flags |= SPACEFLG;
+			goto newflag;
+
+		case '#':
+			fa.flags |= HASHFLG;
+			goto newflag;
+
+		case '0':
+			/*
+			 * '0' is a flag.
+			 */
 			fa.fillc = '0';
+			goto newflag;
 		}
 		if (*fmt == '*') {
 			fmt++;
 			fa.fldwidth = va_arg(args, int);
+			/*
+			 * A negative fieldwith is a minus flag with a
+			 * positive fieldwidth.
+			 */
 			if (fa.fldwidth < 0) {
 				fa.fldwidth = -fa.fldwidth;
-				fa.minusflag ^= 1;
+/*				fa.minusflag ^= 1;*/
+				fa.minusflag = 1;
 			}
 		} else while (c = *fmt, is_dig(c)) {
 			fa.fldwidth *= 10;
@@ -193,8 +226,6 @@ EXPORT int format(fun, farg, fmt, args)
 			 *
 			 * got a type specifyer
 			 */
-			if (fa.signific == -1)
-				fa.signific = 0;
 			if (*fmt == 'U') {
 				fmt++;
 				unsflag = TRUE;
@@ -233,9 +264,6 @@ EXPORT int format(fun, farg, fmt, args)
 			type = 'L';		/* convert to type */
 
 		getmode:
-			if (fa.signific == -1)
-				fa.signific = 0;
-
 			if (!strchr("udioxX", *(++fmt))) {
 				fmt--;
 				mode = 'D';
@@ -246,41 +274,35 @@ EXPORT int format(fun, farg, fmt, args)
 					mode = 'D';
 			}
 			break;
+		case 'x':
+			mode = 'x';
+			goto havemode;
 		case 'u':
 			unsflag = TRUE;
 		case 'o': case 'O':
 		case 'd': case 'D':
 		case 'i': case 'I':
 		case 'p':
-		case 'x': case 'X':
+		case 'X':
 		case 'z': case 'Z':
-			if (fa.signific == -1)
-				fa.signific = 0;
 			mode = to_cap(*fmt);
+		havemode:
 			type = cap_ty(*fmt);
 			if (mode == 'I')	/*XXX kann entfallen*/
 				mode = 'D';	/*wenn besseres uflg*/
 			break;
 
 		case '%':
-			if (fa.signific == -1)
-				fa.signific = 0;
 			count += prc('%', &fa);
 			continue;
 		case ' ':
-			if (fa.signific == -1)
-				fa.signific = 0;
 			count += prbuf("", &fa);
 			continue;
 		case 'c':
-			if (fa.signific == -1)
-				fa.signific = 0;
 			c = va_arg(args, int);
 			count += prc(c, &fa);
 			continue;
 		case 's':
-			if (fa.signific == -1)
-				fa.signific = 0;
 			str = va_arg(args, char *);
 			count += prstring(str, &fa);
 			continue;
@@ -391,18 +413,30 @@ EXPORT int format(fun, farg, fmt, args)
 		 * mode is one of: 'O'ctal, 'D'ecimal, or he'X'
 		 * oder 'Z'weierdarstellung.
 		 */
-		if (val == 0) {
-			count += prbuf("0", &fa);
+		if (val == 0 && mode != 'D') {
+		printzero:
+			/*
+			 * Printing '0' with fieldwidth 0 results in no chars.
+			 */
+			count += prstring("0", &fa);
 			continue;
 		} else switch(mode) {
 
-		case 'U':
 		case 'D':
 			if (!unsflag && val < 0) {
 				fa.prefix = "-";
 				fa.prefixlen = 1;
 				val = -val;
+			} else if (fa.flags & PLUSFLG) {
+				fa.prefix = "+";
+				fa.prefixlen = 1;
+			} else if (fa.flags & SPACEFLG) {
+				fa.prefix = " ";
+				fa.prefixlen = 1;
 			}
+			if (val == 0)
+				goto printzero;
+		case 'U':
 
 			/* output a long unsigned decimal number */
 			if ((res = divlbys(((Ulong)val)>>1, (Uint)5)) != 0)
@@ -412,6 +446,10 @@ EXPORT int format(fun, farg, fmt, args)
 			break;
 		case 'O':
 			/* output a long octal number */
+			if (fa.flags & HASHFLG) {
+				fa.prefix = "0";
+				fa.prefixlen = 1;
+			}
 			if ((res = (val>>3) & 0x1FFFFFFFL) != 0)
 				promod(res, &fa);
 			promod(val & 07, &fa);
@@ -419,6 +457,10 @@ EXPORT int format(fun, farg, fmt, args)
 		case 'p':
 		case 'x':
 			/* output a hex long */
+			if (fa.flags & HASHFLG) {
+				fa.prefix = "0x";
+				fa.prefixlen = 2;
+			}
 			if ((res = (val>>4) & 0xFFFFFFFL) != 0)
 				prxmod(res, &fa);
 			prxmod(val & 0xF, &fa);
@@ -426,6 +468,10 @@ EXPORT int format(fun, farg, fmt, args)
 		case 'P':
 		case 'X':
 			/* output a hex long */
+			if (fa.flags & HASHFLG) {
+				fa.prefix = "0X";
+				fa.prefixlen = 2;
+			}
 			if ((res = (val>>4) & 0xFFFFFFFL) != 0)
 				prXmod(res, &fa);
 			prXmod(val & 0xF, &fa);
@@ -437,6 +483,13 @@ EXPORT int format(fun, farg, fmt, args)
 			prmod(val & 0x1, 2, &fa);
 		}
 		*fa.bufp = '\0';
+		fa.lzero = -1;
+		/*
+		 * If a precision (fielwidth) is specified
+		 * on diouXx conversions, the '0' flag is ignored.
+		 */
+		if (fa.signific >= 0)
+			fa.fillc = ' ';
 		count += prbuf(fa.buf, &fa);
 	}
 	return (count);
@@ -506,9 +559,14 @@ LOCAL int prbuf(s, fa)
 	register long arg			= fa->farg;
 	register void (*fun) __PR((char, long))	= fa->outf;
 	register int count;
+	register int lzero = 0;
 
 	count = strlen(s);
-	diff = fa->fldwidth - count - fa->prefixlen;
+
+	if (fa->lzero < 0 && count < fa->signific)
+		lzero = fa->signific - count;
+	diff = fa->fldwidth - lzero - count - fa->prefixlen;
+	count += lzero;
 	if (diff > 0)
 		count += diff;
 
@@ -524,6 +582,11 @@ LOCAL int prbuf(s, fa)
 	if (fa->prefixlen && fa->fillc == ' ') {
 		while (*fa->prefix != '\0')
 			(*fun)(*fa->prefix++, arg);
+	}
+	if (lzero > 0) {
+		rfillc = '0';
+		while (--lzero >= 0)
+			(*fun)(rfillc, arg);
 	}
 	while (*s != '\0')
 		(*fun)(*s++, arg);
@@ -576,7 +639,8 @@ LOCAL int prc(c, fa)
 
 /*
  * String output routine.
- * If fa->signific is != 0, it uses only fa->signific chars.
+ * If fa->signific is >= 0, it uses only fa->signific chars.
+ * If fa->signific is 0, print no characters.
  */
 LOCAL int prstring(s, fa)
 	register const char	*s;
@@ -587,7 +651,7 @@ LOCAL int prstring(s, fa)
 	if (s == NULL)
 		return (prbuf("(NULL POINTER)", fa));
 
-	if (fa->signific == 0)
+	if (fa->signific < 0)
 		return (prbuf(s, fa));
 
 	bp = fa->buf;

@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.6 96/12/18 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.12 97/05/02 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -6,8 +6,11 @@
  *
  *	This file must be included before any other file.
  *	Use only cpp instructions.
+ *
+ *	NOTE: SING: (Schily Is Not Gnu)
  */
-/* This program is free software; you can redistribute it and/or modify
+/*
+ * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2, or (at your option)
  * any later version.
@@ -19,7 +22,7 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifdef	HAVE_CONFIG_H	/* XXX gnu autoconf stuff (not yet active...) */
@@ -72,7 +75,8 @@ extern "C" {
  *
  * define HAVE_STRING_H to get NULL and string function prototypes
  *
- * define STDC_HEADERS	to declare the presence of other ansi C headers
+ * define HAVE_STDC_HEADERS to declare the presence of other ansi C headers
+ * define STDC_HEADERS 	same as above (GNU name)
  *
  * define HAVE_LONGLONG	to use long long for space/transfer calculations
  *
@@ -103,6 +107,9 @@ extern "C" {
  * define HAVE_SYS_SYSTEMINFO_H to use sysinfo()
  * define HAVE_SYS_UTSNAME_H to use uname()
  *
+ * define HAVE_SYS_PRIOCNTL_H to use priocntl() instead of nice()/setpriority()
+ * define HAVE_SYS_RTPRIOCNTL_H if the system supports real time classes.
+ *
  * define HAVE_SYS_MTIO_H to use mtio definitions from sys/mtio.h
  * define HAVE_MTGET_DSREG if struct mtget contains mt_dsreg (drive status)
  * define HAVE_MTGET_RESID if struct mtget contains mt_resid (residual count)
@@ -115,6 +122,8 @@ extern "C" {
  * define MAJOR_IN_SYSMACROS if we should include sys/sysmacros.h to get 
  *			major(), minor() and makedev()
  *
+ *			... else look in sys/types.h for major()
+ *
  * 3) Miscellaneous operating system/library/processor related things
  *
  * define HAVE_USG_STDIO to enable the use USG stdio.h internals
@@ -126,6 +135,8 @@ extern "C" {
  *			f->_ptr			... pointer into buf
  *			_filbuf(FILE * f)	... fill buffer, return 1st ch
  *			_flsbuf(unsigned char *, FILE * f) ... flush buffer
+ *
+ * define HAVE_STRERROR	may use strerror() instead of sys_errlist[] and sys_nerr
  *
  * define HAVE_MMAP	may map memory (sys/types.h + sys/mman.h)
  * define HAVE_SMMAP	may map anonymous memory to get shared mem
@@ -291,68 +302,6 @@ extern "C" {
 #endif
 
 /*
- * SysVr4
- */
-#if defined(__SVR4)
-#	define	PROTOTYPES
-#	define	HAVE_ELF
-#	define	HAVE_STDARG_H
-#	if defined(IS_SUN)
-#		define	HAVE_LONGLONG
-#		define	HAVE_UTIMES
-#		define	HAVE_QUOTA
-#		define	HAVE_GETAV0	/* XXX what about PPC ??? */
-#		define	HAVE_SCANSTACK	/* XXX what about PPC ??? */
-#	endif
-#	define	HAVE_UNISTD_H
-#	define	HAVE_FCNTL_H
-#	define	HAVE_TERMIOS_H
-#	define	HAVE_TERMIO_H
-#	define	HAVE_UTIME_H
-#	define	HAVE_WAIT_H
-#	define	HAVE_SYS_WAIT_H
-#	define	HAVE_SYS_SYSTEMINFO_H
-#	define	HAVE_SYS_UTSNAME_H
-#	define	HAVE_SYS_MTIO_H
-#	define	HAVE_MTGET_DSREG
-#	define	HAVE_MTGET_RESID
-#	define	HAVE_MTGET_FILENO
-#	define	HAVE_MTGET_BLKNO
-#	define	MAJOR_IN_MKDEV
-#	define	HAVE_USG_STDIO
-#	define	HAVE_MMAP
-#	define	HAVE_SMMAP
-#	define	HAVE_USGSHM
-#	define	HAVE_USGSEM
-#	ifdef sparc
-#		define	HAVE_LDSTUB
-#	endif
-#	ifdef i386
-#		define	HAVE_XCHG
-#	endif
-#	define	HAVE_FCHDIR
-#	define	HAVE_STATVFS
-#	define	HAVE_YP
-#	define	HAVE_SHADOW
-#	define	HAVE_SETEUID
-#	define	HAVE_LCHOWN
-#	define	HAVE_PROCFS
-#	if (defined(i386) && !defined(IS_SUN))
-#		define	HAVE_PROCFS2
-#		define	HAVE_QUOTA
-#	endif
-#	define	HAVE_SIGINFO
-#	define	HAVE_WAITPID
-#	define	HAVE_STREAMS
-#	define	HAVE_STRPTYS
-#	define	HAVE_POLL
-#	define	HAVE_SELECT
-#	define	HAVE_TIRPC
-#	define	GID_T		gid_t
-#	define	USLEEPRETURN_T	unsigned int
-#endif
-
-/*
  * AIX
  */
 #if	defined(_IBMR2) || defined(_AIX)
@@ -375,6 +324,7 @@ extern "C" {
 #	define	HAVE_SYS_UTSNAME_H
 #	define	MAJOR_IN_SYSMACROS
 /*#	define	HAVE_USG_STDIO*/
+#	define	HAVE_STRERROR
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -395,9 +345,11 @@ extern "C" {
 #endif
 
 /*
- * Silicon Graphics
+ * Silicon Graphics	(must be before SVR4)
  */
 #if defined(sgi) || defined(__sgi)
+#	define	__NOT_SVR4__	/* Not a real SVR4 implementation */
+
 #	define	PROTOTYPES
 #	define	HAVE_ELF
 #	define	HAVE_COFF
@@ -421,6 +373,7 @@ extern "C" {
 #	define	HAVE_MTGET_BLKNO
 #	define	MAJOR_IN_MKDEV
 #	define	HAVE_USG_STDIO
+#	define	HAVE_STRERROR
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -531,6 +484,7 @@ extern "C" {
 #	define	HAVE_SYS_UTSNAME_H
 #	define	HAVE_SYS_MTIO_H
 #	define	MAJOR_IN_SYSMACROS
+#	define	HAVE_STRERROR
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -572,6 +526,7 @@ extern "C" {
 #	define	mt_type		mt_model
 #	define	mt_dsreg	mt_status1
 #	define	mt_erreg	mt_status2
+#	define	HAVE_STRERROR
 #	define	HAVE_USGSEM
 #	if defined(__i386_) || defined(i386)
 #		define	HAVE_XCHG
@@ -650,7 +605,8 @@ extern "C" {
 #	define	HAVE_STDARG_H
 #	define	HAVE_STDLIB_H
 #	define	HAVE_STRING_H
-#	define	STDC_HEADERS
+#	define	HAVE_STDC_HEADERS
+#	define	STDC_HEADERS	/* GNU name */
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
@@ -667,6 +623,7 @@ extern "C" {
 #	define	HAVE_MTGET_FILENO
 #	define	HAVE_MTGET_BLKNO
 #	define	MAJOR_IN_SYSMACROS
+#	define	HAVE_STRERROR
 #	define	HAVE_MMAP
 /*#	define	HAVE_SMMAP*/
 #	define	HAVE_USGSHM
@@ -717,9 +674,135 @@ extern "C" {
 #endif
 
 /*
+ * Prototype for FreeBSD
+ */
+#if defined(__FreeBSD__)
+#	define	NO_FLOATINGPOINT/* No support for nonstd floatingpoint */
+#	define	PROTOTYPES
+#	define	HAVE_AOUT
+#	define	HAVE_STDARG_H
+#	define	HAVE_STDLIB_H
+#	define	HAVE_STRING_H
+#	define	HAVE_STDC_HEADERS
+#	define	STDC_HEADERS	/* GNU name */
+#	define	HAVE_LONGLONG
+#	define	HAVE_UNISTD_H
+#	define	HAVE_FCNTL_H
+#	define	HAVE_TERMIOS_H
+#	define	HAVE_UTIMES
+#	define	HAVE_UTIME_H
+#	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_MTIO_H
+#	define	HAVE_MTGET_DSREG
+#	define	HAVE_MTGET_RESID
+#	define	HAVE_MTGET_FILENO
+#	define	HAVE_MTGET_BLKNO
+/*#	define	HAVE_USG_STDIO*/
+#	define	HAVE_STRERROR
+#	define	HAVE_MMAP
+#	define	HAVE_SMMAP
+#	define	HAVE_USGSHM
+#	define	HAVE_USGSEM
+#	ifdef sparc
+#		define	HAVE_LDSTUB
+#	endif
+#	ifdef i386
+#		define	HAVE_XCHG
+#	endif
+#	define	HAVE_FLOCK
+#	define	HAVE_FCHDIR
+#	define	HAVE_QUOTA
+#	define	HAVE_YP
+#	define	HAVE_SETREUID
+/*#	define	HAVE_SETRESUID*/
+#	define	HAVE_SETEUID
+/*#	define	HAVE_LCHOWN*/
+#	define	HAVE_WAIT3
+#	define	HAVE_WAITPID
+#	define	HAVE_UNION_WAIT
+#	define	HAVE_GETHOSTNAME
+#	define	HAVE_SELECT
+#	define	GID_T		gid_t
+/*#	define	USLEEPRETURN_T	unsigned int*/
+#	define	USLEEPRETURN_T	void
+#	define	USLEEPISVOID
+
+/*#	define	HAVE_GETAV0*/
+/*#	define	HAVE_SCANSTACK*/
+#endif
+
+/*
+ * SysVr4
+ */
+#if defined(__SVR4) && !defined(__NOT_SVR4__)
+#	define	PROTOTYPES
+#	define	HAVE_ELF
+#	define	HAVE_STDARG_H
+#	if defined(IS_SUN)
+#		define	HAVE_LONGLONG
+#		define	HAVE_UTIMES
+#		define	HAVE_QUOTA
+#		define	HAVE_GETAV0	/* XXX what about PPC ??? */
+#		define	HAVE_SCANSTACK	/* XXX what about PPC ??? */
+#	endif
+#	define	HAVE_UNISTD_H
+#	define	HAVE_FCNTL_H
+#	define	HAVE_TERMIOS_H
+#	define	HAVE_TERMIO_H
+#	define	HAVE_UTIME_H
+#	define	HAVE_WAIT_H
+#	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_SYSTEMINFO_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_PRIOCNTL_H
+#	define	HAVE_SYS_RTPRIOCNTL_H
+#	define	HAVE_SYS_MTIO_H
+#	define	HAVE_MTGET_DSREG
+#	define	HAVE_MTGET_RESID
+#	define	HAVE_MTGET_FILENO
+#	define	HAVE_MTGET_BLKNO
+#	define	MAJOR_IN_MKDEV
+#	define	HAVE_USG_STDIO
+#	define	HAVE_STRERROR
+#	define	HAVE_MMAP
+#	define	HAVE_SMMAP
+#	define	HAVE_USGSHM
+#	define	HAVE_USGSEM
+#	ifdef sparc
+#		define	HAVE_LDSTUB
+#	endif
+#	ifdef i386
+#		define	HAVE_XCHG
+#	endif
+#	define	HAVE_FCHDIR
+#	define	HAVE_STATVFS
+#	define	HAVE_YP
+#	define	HAVE_SHADOW
+#	define	HAVE_SETEUID
+#	define	HAVE_LCHOWN
+#	define	HAVE_PROCFS
+#	if (defined(i386) && !defined(IS_SUN))
+#		define	HAVE_PROCFS2
+#		define	HAVE_QUOTA
+#	endif
+#	define	HAVE_SIGINFO
+#	define	HAVE_WAITPID
+#	define	HAVE_STREAMS
+#	define	HAVE_STRPTYS
+#	define	HAVE_POLL
+#	define	HAVE_SELECT
+#	define	HAVE_TIRPC
+#	define	GID_T		gid_t
+#	define	USLEEPRETURN_T	unsigned int
+#endif
+
+/*
  * Prototype for new systems
  */
 #if defined(__NEW_SYSTEM_TO_DEFINE__)
+#	define	__NOT_SVR4__	/* Not a real SVR4 implementation */
+
 #	define	PROTOTYPES
 #	define	HAVE_ELF
 #	define	HAVE_COFF
@@ -727,7 +810,8 @@ extern "C" {
 #	define	HAVE_STDARG_H
 #	define	HAVE_STDLIB_H
 #	define	HAVE_STRING_H
-#	define	STDC_HEADERS
+#	define	HAVE_STDC_HEADERS
+#	define	STDC_HEADERS	/* GNU name */
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
@@ -739,6 +823,8 @@ extern "C" {
 #	define	HAVE_SYS_WAIT_H
 #	define	HAVE_SYS_SYSTEMINFO_H
 #	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_PRIOCNTL_H
+#	define	HAVE_SYS_RTPRIOCNTL_H
 #	define	HAVE_SYS_MTIO_H
 #	define	HAVE_MTGET_DSREG
 #	define	HAVE_MTGET_RESID
@@ -747,6 +833,7 @@ extern "C" {
 #	define	MAJOR_IN_MKDEV
 #	define	MAJOR_IN_SYSMACROS
 #	define	HAVE_USG_STDIO
+#	define	HAVE_STRERROR
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -776,7 +863,6 @@ extern "C" {
 #	define	HAVE_POLL
 #	define	HAVE_SELECT
 #	define	HAVE_TIRPC
-
 #	define	GID_T		gid_t
 #	define	USLEEPRETURN_T	unsigned int
 #	define	USLEEPRETURN_T	void
@@ -807,6 +893,23 @@ extern "C" {
 #		ifndef	HAVE_LONGLONG
 #			define	HAVE_LONGLONG
 #		endif
+#	endif
+#endif
+
+/*
+ * Convert to GNU name
+ */
+#ifdef	HAVE_STDC_HEADERS
+#	ifndef	STDC_HEADERS
+#		define	STDC_HEADERS
+#	endif
+#endif
+/*
+ * Convert to SCHILY name
+ */
+#ifdef	STDC_HEADERS
+#	ifndef	HAVE_STDC_HEADERS
+#		define	HAVE_STDC_HEADERS
 #	endif
 #endif
 
