@@ -1,7 +1,3 @@
-Cdrecord has not been tested on OpenBSD jet. 
-It should run anyhow because the differences between the *BSD 
-systems should not be that big.
-
 The current *BSD port will not yet be able to scan the SCSI bus
 for a CD-Recorder as it is on other architectures.
 

@@ -1,10 +1,14 @@
-/* @(#)scsi-vms.c	1.29 01/03/18 Copyright 1997 J. Schilling */
+/* @(#)scsi-vms.c	1.32 02/10/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-vms.c	1.29 01/03/18 Copyright 1997 J. Schilling";
+	"@(#)scsi-vms.c	1.32 02/10/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the VMS generic SCSI implementation.
+ *
+ *	The idea for an elegant mapping to VMS device dontroller names
+ *	is from Chip Dancy Chip.Dancy@hp.com. This allows up to
+ *	26 IDE controllers (DQ[A-Z][0-1]).
  *
  *	This is a hack, that tries to emulate the functionality
  *	of the scg driver.
@@ -47,15 +51,40 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.29";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.32";	/* The version for this transport*/
 
-#define MAX_SCG 	16		/* Max # of SCSI controllers */
+#define VMS_MAX_DK	4		/* DK[A-D] VMS device controllers */
+#define VMS_MAX_GK	4		/* GK[A-D] VMS device controllers */
+#define VMS_MAX_DQ	26		/* DQ[A-Z] VMS device controllers */
+
+#define VMS_DKRANGE_MAX	VMS_MAX_DK
+#define VMS_GKRANGE_MAX	(VMS_DKRANGE_MAX + VMS_MAX_GK)
+#define VMS_DQRANGE_MAX	(VMS_GKRANGE_MAX + VMS_MAX_DQ )
+
+#define MAX_SCG 	VMS_DQRANGE_MAX	/* Max # of SCSI controllers */
 #define MAX_TGT 	16
 #define MAX_LUN 	8
 
 #define MAX_DMA_VMS	(63*1024)	/* Check if this is not too big */
 #define MAX_PHSTMO_VMS	300
 #define MAX_DSCTMO_VMS	((64*1024)-1)	/* max value for OpenVMS/AXP 7.1 ehh*/
+
+/*
+ * Define a mapping from the scsi busno to the three character
+ * VMS device controller.
+ * The valid busno values are broken into three ranges, one for each of
+ * the three supported devices: dk, gk, and dq.  
+ * The vmschar[] and vmschar1[] arrays are subscripted by an offset
+ * corresponding to each of the three ranges [0,1,2] to provide the
+ * two characters of the VMS device.
+ * The offset of the busno value within its range is used to define the 
+ * third character, using the vmschar2[] array.
+ */ 
+LOCAL	char	vmschar[]	= {'d','g','d'};
+LOCAL	char	vmschar1[]	= {'k','k','q'};
+LOCAL	char	vmschar2[]	= {'a','b','c','d','e','f','g','h','i','j',
+				   'k','l','m','n','o','p','q','r','s','t',
+				   'u','v','w','x','y','z'};
 
 
 LOCAL	int	do_scg_cmd	__PR((SCSI *scgp, struct scg_cmd *sp));
@@ -159,6 +188,16 @@ scgo_version(scgp, what)
 }
 
 LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "IO$_DIAGNOSE", "Generic SCSI",
+		"", "bus,target,lun", "1,2,0", FALSE, FALSE);
+	return (0);
+}
+
+LOCAL int
 scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
@@ -170,6 +209,8 @@ scgo_open(scgp, device)
 	char	buschar;
 	char	buschar1;
 	char	buschar2;
+	int	range;
+	int	range_offset;
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -187,6 +228,16 @@ scgo_open(scgp, device)
 				"Open by 'devname' not supported on this OS");
 		return (-1);
 	}
+	if (busno < 0 || tgt < 0 || tlun < 0) {
+		/*
+		 * There is no real reason why we cannot scan on VMS,
+		 * but for now it is not possible.
+		 */
+		if (scgp->errstr)
+			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+				"Unable to scan on VMS");
+		return (0);
+	}
 
 	if (scgp->local == NULL) {
 		scgp->local = malloc(sizeof(struct scg_local));
@@ -194,62 +245,20 @@ scgo_open(scgp, device)
 			return (0);
 	}
 
-	switch (busno) {
-
-	case 0:	buschar = 'd';
-		buschar1 = 'k';
-		buschar2 = 'a';
-		break;
-	case 1:	buschar = 'd';
-		buschar1 = 'k';
-		buschar2 = 'b';
-		break;
-	case 2:	buschar = 'd';
-		buschar1 = 'k';
-		buschar2 = 'c';
-		break;
-	case 3:	buschar = 'd';
-		buschar1 = 'k';
-		buschar2 = 'd';
-		break;
-	case 4:	buschar = 'g';
-		buschar1 = 'k';
-		buschar2 = 'a';
-		break;
-	case 5:	buschar = 'g';
-		buschar1 = 'k';
-		buschar2 = 'b';
-		break;
-	case 6:	buschar = 'g';
-		buschar1 = 'k';
-		buschar2 = 'c';
-		break;
-	case 7:	buschar = 'g';
-		buschar1 = 'k';
-		buschar2 = 'd';
-		break;
-	case 8:	buschar = 'd';
-		buschar1 = 'q';
-		buschar2 = 'a';
-		break;
-	case 9:	buschar = 'd';
-		buschar1 = 'q';
-		buschar2 = 'b';
-		break;
-	case 10: buschar = 'd';
-		buschar1 = 'q';
-		buschar2 = 'c';
-		break;
-	case 11: buschar = 'd';
-		buschar1 = 'q';
-		buschar2 = 'd';
-		break;
-	default :
-		if (scgp->errstr)
-			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-					"Wrong scsibus-# (%d)", busno);
-		return (-1);
+	if (busno < VMS_DKRANGE_MAX ) {			/*in the dk range?   */
+		range = 0;
+		range_offset = busno;
+	} else if (busno < VMS_GKRANGE_MAX ) {		/*in the gk range?   */
+		range = 1;
+		range_offset = busno - VMS_DKRANGE_MAX;
+	} else if (busno < VMS_DQRANGE_MAX ) {		/*in the dq range?   */
+		range = 2;
+		range_offset = busno - VMS_GKRANGE_MAX;
 	}
+	buschar = vmschar[range];			/* get first device char*/
+	buschar1 = vmschar1[range];			/* get 2nd device char*/
+	buschar2 = vmschar2[range_offset];		/* get controller char*/
+
 	js_snprintf(devname, sizeof(devname), "%c%c%c%d0%d:",
 					buschar, buschar1, buschar2,
 					tgt, tlun);
@@ -299,7 +308,7 @@ scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
-	if (gk_chan <= 0)
+	if (gk_chan == 0)
 		return (FALSE);
 	return (TRUE);
 }
@@ -311,7 +320,7 @@ scgo_fileno(scgp, busno, tgt, tlun)
 	int	tgt;
 	int	tlun;
 {
-	if (gk_chan <= 0)
+	if (gk_chan == 0)
 		return (-1);
 	return (gk_chan);
 }
@@ -453,7 +462,7 @@ do_scg_cmd(scgp, sp)
 	sp->resid = gk_desc.SCSI$L_DATA_LEN - gk_iosb.SCSI$L_IOSB_TFR_CNT;
 
 	if (scgo_isatapi(scgp)) {
-		scsi_sts = ((gk_iosb.SCSI$B_IOSB_STS >> 5) & 0x7);
+		scsi_sts = ((gk_iosb.SCSI$B_IOSB_STS >> 4) & 0x7);
 	} else {
 		scsi_sts = gk_iosb.SCSI$B_IOSB_STS;
 	}

@@ -1,4 +1,4 @@
-/* @(#)scsitransp.h	1.50 01/03/18 Copyright 1995 J. Schilling */
+/* @(#)scsitransp.h	1.53 02/10/19 Copyright 1995 J. Schilling */
 /*
  *	Definitions for commands that use functions from scsitransp.c
  *
@@ -39,6 +39,8 @@ typedef struct {
 #include <scg/scgops.h>
 #endif
 
+typedef	int	(*scg_cb_t)	__PR((void *));
+
 struct scg_scsi {
 	scg_ops_t *ops;		/* Ptr to low level SCSI transport ops	*/
 	int	fd;		/* File descriptor for next I/O		*/
@@ -74,6 +76,8 @@ struct scg_scsi {
 	char	*errptr;	/* Actual write pointer into errstr	*/
 	void	*errfile;	/* FILE to write errors to. NULL for not*/
 				/* writing and leaving errs in errstr	*/
+	scg_cb_t cb_fun;
+	void	*cb_arg;
 
 	struct scsi_inquiry *inq;
 	struct scsi_capacity *cap;
@@ -212,6 +216,9 @@ extern	int		scg__errmsg	__PR((SCSI *scgp, char *obuf, int maxcnt,
 /*
  * From scsiopen.c:
  */
+#ifdef	EOF	/* stdio.h has been included */
+extern	int	scg_help	__PR((FILE *f));
+#endif
 extern	SCSI	*scg_open	__PR((char *scsidev, char *errs, int slen, int odebug, int be_verbose));
 extern	int	scg_close	__PR((SCSI * scgp));
 extern	void	scg_settimeout	__PR((SCSI * scgp, int timeout));
@@ -227,6 +234,18 @@ extern	int	scg_settarget		__PR((SCSI *scgp, int scsibus, int target, int lun));
  * From scsi-remote.c:
  */
 extern	scg_ops_t *scg_remote	__PR((void));
+
+/*
+ * From scsihelp.c:
+ */
+#ifdef	EOF	/* stdio.h has been included */
+extern	void	__scg_help	__PR((FILE *f, char *name, char *tcomment,
+					char *tind,
+					char *tspec,
+					char *texample,
+					BOOL mayscan,
+					BOOL bydev));
+#endif
 
 #ifdef	__cplusplus
 }

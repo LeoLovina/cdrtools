@@ -1,12 +1,12 @@
-/* @(#)rscsi.c	1.12 01/04/21 Copyright 1994,2000 J. Schilling*/
+/* @(#)rscsi.c	1.23 02/11/30 Copyright 1994,2000-2002 J. Schilling*/
 #ifndef lint
 static	char sccsid[] =
-	"@(#)rscsi.c	1.12 01/04/21 Copyright 1994,2000 J. Schilling";
+	"@(#)rscsi.c	1.23 02/11/30 Copyright 1994,2000-2002 J. Schilling";
 #endif
 /*
  *	Remote SCSI server
  *
- *	Copyright (c) 1994,2000 J. Schilling
+ *	Copyright (c) 1994,2000-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 /*#define	FORCE_DEBUG*/
@@ -29,10 +29,11 @@ static	char sccsid[] =
 #include <mconfig.h>
 #include <stdio.h>
 #include <stdxlib.h>
-#include <unixstd.h>
+#include <unixstd.h>	/* includes <sys/types.h> */
+#include <utypes.h>
 #include <fctldefs.h>
+#include <statdefs.h>
 #include <strdefs.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #ifdef	 HAVE_SYS_PARAM_H
 #include <sys/param.h>	/* BSD-4.2 & Linux need this for MAXHOSTNAMELEN */
@@ -40,7 +41,6 @@ static	char sccsid[] =
 #include <errno.h>
 #include <pwd.h>
 
-#include <utypes.h>
 #include <standard.h>
 #include <deflts.h>
 #include <patmatch.h>
@@ -50,12 +50,10 @@ static	char sccsid[] =
 #include <scg/scsitransp.h>
 
 #include <netinet/in.h>
-#include <arpa/inet.h>
+#ifdef	HAVE_ARPA_INET_H
+#include <arpa/inet.h>		/* BeOS does not have <arpa/inet.h> */
+#endif				/* but inet_ntaoa() is in <netdb.h> */
 #include <netdb.h>
-
-#ifndef	HAVE_ERRNO_DEF
-extern	int	errno;
-#endif
 
 EXPORT	int	main		__PR((int argc, char **argv));
 LOCAL	void	checkuser	__PR((void));
@@ -75,6 +73,10 @@ LOCAL	void	initiator_id	__PR((void));
 LOCAL	void	isatapi		__PR((void));
 LOCAL	void	scsireset	__PR((void));
 LOCAL	void	sendcmd		__PR((void));
+
+LOCAL	int	fillrdbuf	__PR((void));
+LOCAL	int	readchar	__PR((char *cp));
+
 LOCAL	void	readbuf		__PR((char *buf, int n));
 LOCAL	void	voidarg		__PR((int n));
 LOCAL	void	readarg		__PR((char *buf, int n));
@@ -118,10 +120,22 @@ main(argc, argv)
 		argc--, argv++;
 		argc--, argv++;
 	}
+	/*
+	 * WARNING you are only allowed to change the defaults configuration
+	 * filename if you also change the documentation and add a statement
+	 * that makes clear where the official location of the file is, why you
+	 * did choose a nonstandard location and that the nonstandard location
+	 * only refers to inofficial rscsi versions.
+	 *
+	 * I was forced to add this because some people change cdrecord without
+	 * rational reason and then publish the result. As those people
+	 * don't contribute work and don't give support, they are causing extra
+	 * work for me and this way slow down the development.
+	 */
 	if (defltopen("/etc/default/rscsi") < 0) {
-		rscsierror(errno, errmsgstr(errno),
+		rscsierror(geterrno(), errmsgstr(geterrno()),
 			"Remote configuration error: Cannot open /etc/default/rscsi");
-/*		rscsirespond(-1, errno);*/
+/*		rscsirespond(-1, geterrno());*/
 		exit(EX_BAD);
 	}
 	debug_name=defltread("DEBUG=");
@@ -137,7 +151,7 @@ main(argc, argv)
 		
 	if (argc > 0) {
 		if (debug_file == 0) {
-			rscsirespond(-1, errno);
+			rscsirespond(-1, geterrno());
 			exit(EX_BAD);
 		}
 		(void) setbuf(debug_file, (char *)0);
@@ -157,6 +171,7 @@ checkuser()
 
 	if (uid == 0) {
 		username = "root";
+		DEBUG("rscsid: user id 0, name root\n");
 		return;
 	}
 	pw = getpwuid(uid);
@@ -164,6 +179,7 @@ checkuser()
 		goto notfound;
 
 	username = pw->pw_name;
+	DEBUG2("rscsid: user id %ld, name %s\n", (long)uid, username);
 
 	defltfirst();
 	while ((uname = defltnext("USER=")) != NULL) {
@@ -184,22 +200,53 @@ getpeer()
 	struct	sockaddr_in *s;
 	socklen_t	 sasize = sizeof(sa);
 	struct hostent	*he;
+#ifdef	MAXHOSTNAMELEN			/* XXX remove this and sys/param.h */
 static	char		buffer[MAXHOSTNAMELEN];
+#else
+static	char		buffer[64];
+#endif
 
 	if (getpeername(STDIN_FILENO, &sa, &sasize) < 0) {
-		DEBUG1("rscsid: peername %s\n", errmsgstr(errno));
+		int		errsav = geterrno();
+		struct stat	sb;
+
+		if (fstat(STDIN_FILENO, &sb) >= 0) {
+			if (S_ISFIFO(sb.st_mode)) {
+				DEBUG("rmt: stdin is a PIPE\n");
+				return ("PIPE");
+			}
+			DEBUG1("rscsid: stdin st_mode %0o\n", sb.st_mode);
+		}
+
+		DEBUG1("rscsid: peername %s\n", errmsgstr(errsav));
 		return ("ILLEGAL_SOCKET");
 	} else {
 		s = (struct sockaddr_in *)&sa;
-		if (s->sin_family != AF_INET)
+		if (s->sin_family != AF_INET) {
+#ifdef	AF_UNIX
+			/*
+			 * AF_UNIX is not defined on BeOS
+			 */
+			if (s->sin_family == AF_UNIX) {
+				DEBUG("rmt: stdin is a PIPE (UNIX domain socket)\n");
+				return ("PIPE");
+			}
+#endif
+			DEBUG1("rmt: stdin NOT_IP socket (sin_family: %d)\n",
+							s->sin_family);
 			return ("NOT_IP");
+		}
                
+#ifdef	HAVE_INET_NTOA
 		(void) js_snprintf(buffer, sizeof(buffer), "%s", inet_ntoa(s->sin_addr));
+#else
+		(void) js_snprintf(buffer, sizeof(buffer), "%x", s->sin_addr.s_addr);
+#endif
 		DEBUG1("rscsid: peername %s\n", buffer);
 		he = gethostbyaddr((char *)&s->sin_addr.s_addr, 4, AF_INET);
+		DEBUG1("rscsid: peername %s\n", he!=NULL?he->h_name:buffer);
 		if (he != NULL)
-			(void) js_snprintf(buffer, sizeof(buffer), "%s", he->h_name);
-		DEBUG1("rscsid: peername %s\n", buffer);
+			return (he->h_name);
 		return (buffer);
 	}
 }
@@ -310,8 +357,8 @@ dorscsi()
 {
 	char	c;
 
-	while (read(STDIN_FILENO, &c, 1) == 1) {
-		errno = 0;
+	while (readchar(&c) == 1) {
+		seterrno(0);
 
 		switch (c) {
 
@@ -377,8 +424,8 @@ scsiversion()
 	str = scg_version(scsi_ptr, atoi(what));
 	ret = strlen(str);
 	ret++;	/* Include null char */
-	rscsirespond(ret, errno);
-	write(STDOUT_FILENO, str, ret);
+	rscsirespond(ret, geterrno());
+	_nixwrite(STDOUT_FILENO, str, ret);
 }
 
 LOCAL void
@@ -398,10 +445,10 @@ openscsi()
 	DEBUG1("rscsid: O %s\n", device);
 	if (strncmp(device, "REMOTE", 6) == 0) {
 		scsi_ptr = NULL;
-		errno = EINVAL;
+		seterrno(EINVAL);
 	} else if (!checkscsi(device)) {
 		scsi_ptr = NULL;
-		errno = EACCES;
+		seterrno(EACCES);
 	} else {
 		scsi_ptr = scg_open(device, errstr, sizeof(errstr), debug, lverbose);
 		if (scsi_ptr == NULL) {
@@ -418,8 +465,8 @@ openscsi()
 		 * XXX This is currently the only place where we use the
 		 * XXX extended error string.
 		 */
-		rscsierror(errno, errmsgstr(errno), errstr);
-/*		rscsirespond(ret, errno);*/
+		rscsierror(geterrno(), errmsgstr(geterrno()), errstr);
+/*		rscsirespond(ret, geterrno());*/
 		return;
 	}
 	DEBUG4("rscsid:>A 0 %d.%d,%d,%d\n", 
@@ -433,7 +480,7 @@ openscsi()
 		0,
 		scg_target(scsi_ptr),
 		scg_lun(scsi_ptr));
-	(void) write(STDOUT_FILENO, rbuf, ret);
+	(void) _nixwrite(STDOUT_FILENO, rbuf, ret);
 }
 
 LOCAL void
@@ -445,7 +492,7 @@ closescsi()
 	readarg(device, sizeof(device));
 	DEBUG1("rscsid: C %s\n", device);
 	ret = scg_close(scsi_ptr);
-	rscsirespond(ret, errno);
+	rscsirespond(ret, geterrno());
 	scsi_ptr = NULL;
 }
 
@@ -462,7 +509,7 @@ maxdma()
 		return;
 	}
 	ret = scg_bufsize(scsi_ptr, atol(amt));
-	rscsirespond(ret, errno);
+	rscsirespond(ret, geterrno());
 }
 
 LOCAL void
@@ -480,7 +527,7 @@ getbuf()
 	ret = scg_bufsize(scsi_ptr, atol(amt));
 	if (preparebuffer(ret) == NULL)
 		ret = -1;
-	rscsirespond(ret, errno);
+	rscsirespond(ret, geterrno());
 }
 
 LOCAL void
@@ -497,7 +544,7 @@ freebuf()
 	}
 	scg_freebuf(scsi_ptr);
 	Sbuf = NULL;
-	rscsirespond(ret, errno);
+	rscsirespond(ret, geterrno());
 }
 
 LOCAL void
@@ -515,7 +562,7 @@ havebus()
 		return;
 	}
 	ret = scg_havebus(scsi_ptr, atol(bus));
-	rscsirespond(ret, errno);
+	rscsirespond(ret, geterrno());
 }
 
 LOCAL void
@@ -536,14 +583,14 @@ scsifileno()
 		rscsirespond(-1, EBADF);
 		return;
 	}
-	errno = 0;
+	seterrno(0);
 	ret = scg_settarget(scsi_ptr, atoi(bus), atoi(tgt), atoi(lun));
 	if (!checktarget()) {
 		scg_settarget(scsi_ptr, -1, -1, -1);
 		ret = -1;
 	}
-	if (errno != 0)
-		rscsirespond(ret, errno);
+	if (geterrno() != 0)
+		rscsirespond(ret, geterrno());
 	else
 		rscsireply(ret);
 }
@@ -560,10 +607,10 @@ initiator_id()
 		rscsirespond(-1, EBADF);
 		return;
 	}
-	errno = 0;
+	seterrno(0);
 	ret = scg_initiator_id(scsi_ptr);
-	if (errno != 0)
-		rscsirespond(ret, errno);
+	if (geterrno() != 0)
+		rscsirespond(ret, geterrno());
 	else
 		rscsireply(ret);
 }
@@ -580,10 +627,10 @@ isatapi()
 		rscsirespond(-1, EBADF);
 		return;
 	}
-	errno = 0;
+	seterrno(0);
 	ret = scg_isatapi(scsi_ptr);
-	if (errno != 0)
-		rscsirespond(ret, errno);
+	if (geterrno() != 0)
+		rscsirespond(ret, geterrno());
 	else
 		rscsireply(ret);
 }
@@ -601,7 +648,7 @@ scsireset()
 		return;
 	}
 	ret = scg_reset(scsi_ptr, atoi(what));
-	rscsirespond(ret, errno);
+	rscsirespond(ret, geterrno());
 }
 
 LOCAL void
@@ -719,10 +766,36 @@ sendcmd()
 		ret += n;
 		n = 0;
 	}
-	(void) write(STDOUT_FILENO, rbuf, ret);
+	(void) _nixwrite(STDOUT_FILENO, rbuf, ret);
 
 	if (n > 0)
-		(void) write(STDOUT_FILENO, Sbuf, n);
+		(void) _nixwrite(STDOUT_FILENO, Sbuf, n);
+}
+
+#define	READB_SIZE	128
+LOCAL	char		readb[READB_SIZE];
+LOCAL	char		*readbptr;
+LOCAL	int		readbcnt;
+
+LOCAL int
+fillrdbuf()
+{
+	readbptr = readb;
+
+	return (readbcnt = _niread(STDIN_FILENO, readb, READB_SIZE));
+}
+
+LOCAL int
+readchar(cp)
+	char	*cp;
+{
+	if (--readbcnt < 0) {
+		if (fillrdbuf() <= 0)
+			return (readbcnt);
+		--readbcnt;
+	}
+	*cp = *readbptr++;
+	return (1);
 }
 
 LOCAL void
@@ -730,11 +803,21 @@ readbuf(buf, n)
 	register char	*buf;
 	register int	n;
 {
-	register int	i;
+	register int	i = 0;
 	register int	amt;
 
-	for (i = 0; i < n; i += amt) {
-		amt = read(STDIN_FILENO, &buf[i], n - i);
+	if (readbcnt > 0) {
+		amt = readbcnt;
+		if (amt > n)
+			amt = n;
+		movebytes(readbptr, buf, amt);
+		readbptr += amt;
+		readbcnt -= amt;
+		i += amt;
+	}
+
+	for (; i < n; i += amt) {
+		amt = _niread(STDIN_FILENO, &buf[i], n - i);
 		if (amt <= 0) {
 			DEBUG("rscsid: premature eof\n");
 			rscsierror(0, "Premature eof", NULL);
@@ -767,7 +850,7 @@ readarg(buf, n)
 	int	i;
 
 	for (i = 0; i < n; i++) {
-		if (read(STDIN_FILENO, &buf[i], 1) != 1)
+		if (readchar(&buf[i]) != 1)
 			exit(0);
 		if (buf[i] == '\n')
 			break;
@@ -837,7 +920,7 @@ rscsireply(ret)
 
 	DEBUG1("rscsid:>A %d\n", ret);
 	(void) js_snprintf(rbuf, sizeof(rbuf), "A%d\n", ret);
-	(void) write(STDOUT_FILENO, rbuf, strlen(rbuf));
+	(void) _nixwrite(STDOUT_FILENO, rbuf, strlen(rbuf));
 }
 
 LOCAL void
@@ -861,7 +944,7 @@ rscsierror(err, str, xstr)
 		n += xlen;
 		xlen = 0;
 	}
-	(void) write(STDOUT_FILENO, rbuf, n);
+	(void) _nixwrite(STDOUT_FILENO, rbuf, n);
 	if (xlen > 0)
-		(void) write(STDOUT_FILENO, xstr, xlen);
+		(void) _nixwrite(STDOUT_FILENO, xstr, xlen);
 }

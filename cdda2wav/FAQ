@@ -186,9 +186,12 @@ MP3 coding
 
 Q: Does cdda2wav support on-the-fly mp3-coding?
 
-A: Not yet :-). But I added two scripts to use an external encoder. The trick
-   is to avoid big temporary files. So I made two versions (cdda2mp3 and
-   cdda2mp3.new), one using pipes, and one using a named pipe. The examples
+A: Yes. As of version 1.9alpha I integrated the LAME encoding engine as a new
+   output format.
+   To support external encoders, I added two scripts. The trick
+   is to avoid big temporary files. There are three versions (cdda2mp3.file,
+   cdda2mp3.pipe, and cdda2mp3.fifo), the first using files, the second uses
+   pipes, and the last uses a named pipe (also called fifo). The examples
    use the Fraunhofer encoder 'l3enc', which is a commercial product and has
    to be purchased seperately. Other encoders should be usable in a similar way.
 

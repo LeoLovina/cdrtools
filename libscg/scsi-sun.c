@@ -1,7 +1,7 @@
-/* @(#)scsi-sun.c	1.69 01/03/18 Copyright 1988,1995,2000 J. Schilling */
+/* @(#)scsi-sun.c	1.76 02/10/19 Copyright 1988,1995,2000 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sun.c	1.69 01/03/18 Copyright 1988,1995,2000 J. Schilling";
+	"@(#)scsi-sun.c	1.76 02/10/19 Copyright 1988,1995,2000 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -57,10 +57,11 @@ static	char __sccsid[] =
 #	define	USE_USCSI
 #endif
 
-LOCAL	char	_scg_trans_version[] = "scg-1.69";	/* The version for /dev/scg	*/
-LOCAL	char	_scg_utrans_version[] = "uscsi-1.69";	/* The version for USCSI	*/
+LOCAL	char	_scg_trans_version[] = "scg-1.76";	/* The version for /dev/scg	*/
+LOCAL	char	_scg_utrans_version[] = "uscsi-1.76";	/* The version for USCSI	*/
 
 #ifdef	USE_USCSI
+LOCAL	int	scgo_uhelp	__PR((SCSI *scgp, FILE *f));
 LOCAL	int	scgo_uopen	__PR((SCSI *scgp, char *device));
 LOCAL	int	scgo_uclose	__PR((SCSI *scgp));
 LOCAL	int	scgo_ucinfo	__PR((int f, struct dk_cinfo *cp, int debug));
@@ -76,6 +77,7 @@ LOCAL	int	scgo_usend	__PR((SCSI *scgp));
 LOCAL scg_ops_t sun_uscsi_ops = {
 	scgo_usend,
 	scgo_version,		/* Shared with SCG driver */
+	scgo_uhelp,
 	scgo_uopen,
 	scgo_uclose,
 	scgo_umaxdma,
@@ -163,6 +165,19 @@ scgo_version(scgp, what)
 }
 
 LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "scg", "Generic transport independent SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+#ifdef	USE_USCSI
+	scgo_uhelp(scgp, f);
+#endif
+	return (0);
+}
+
+LOCAL int
 scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
@@ -211,8 +226,13 @@ scgo_open(scgp, device)
 
 
 	for (i=0; i < MAX_SCG; i++) {
+		/*
+		 * Skip unneeded devices if not in SCSI Bus scan open mode
+		 */
+		if (busno >= 0 && busno != i)
+			continue;
 		js_snprintf(devname, sizeof(devname), "/dev/scg%d", i);
-		f = open(devname, 2);
+		f = open(devname, O_RDWR);
 		if (f < 0) {
 			if (errno != ENOENT && errno != ENXIO) {
 				if (scgp->errstr)
@@ -423,6 +443,16 @@ scgo_send(scgp)
 #endif
 
 LOCAL int
+scgo_uhelp(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "USCSI", "SCSI transport for targets known by Solaris drivers",
+		"USCSI:", "bus,target,lun", "USCSI:1,2,0", TRUE, TRUE);
+	return (0);
+}
+
+LOCAL int
 scgo_uopen(scgp, device)
 	SCSI	*scgp;
 	char	*device;
@@ -437,8 +467,10 @@ scgo_uopen(scgp, device)
 	register int	nopen = 0;
 	char		devname[32];
 
-	if (scgp->overbose)
-		error("Warning: Using USCSI interface.\n");
+	if (scgp->overbose) {
+		js_fprintf((FILE *)scgp->errfile,
+				"Warning: Using USCSI interface.\n");
+	}
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -523,6 +555,8 @@ openbydev:
 		int	target;
 		int	lun;
 
+		if (device != NULL && strncmp(device, "USCSI:", 6) == 0)
+			device += 6;
 		if (device == NULL || device[0] == '\0')
 			return (0);
 
@@ -669,6 +703,13 @@ scgo_umaxdma(scgp, amt)
 			}
 		}
 	}
+	/*
+	 * The Sun tape driver does not support to retrieve the max DMA count.
+	 * Use the knwoledge about default DMA sizes in this case.
+	 */
+	if (maxdma < 0)
+		maxdma = scgo_maxdma(scgp, amt);
+
 	return (maxdma);
 }
 
@@ -803,12 +844,28 @@ scgo_usend(scgp)
 		js_fprintf((FILE *)scgp->errfile, "uscsi_status:    0x%x\n", req.uscsi_status);
 		js_fprintf((FILE *)scgp->errfile, "uscsi_timeout:   %d\n", req.uscsi_timeout);
 		js_fprintf((FILE *)scgp->errfile, "uscsi_bufaddr:   0x%lx\n", (long)req.uscsi_bufaddr);
-		js_fprintf((FILE *)scgp->errfile, "uscsi_buflen:    %d\n", req.uscsi_buflen);
-		js_fprintf((FILE *)scgp->errfile, "uscsi_resid:     %d\n", req.uscsi_resid);
+								/*
+								 * Cast auf int OK solange sp->size
+								 * auch ein int bleibt.
+								 */
+		js_fprintf((FILE *)scgp->errfile, "uscsi_buflen:    %d\n", (int)req.uscsi_buflen);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_resid:     %d\n", (int)req.uscsi_resid);
 		js_fprintf((FILE *)scgp->errfile, "uscsi_rqlen:     %d\n", req.uscsi_rqlen);
 		js_fprintf((FILE *)scgp->errfile, "uscsi_rqstatus:  0x%x\n", req.uscsi_rqstatus);
 		js_fprintf((FILE *)scgp->errfile, "uscsi_rqresid:   %d\n", req.uscsi_rqresid);
-		js_fprintf((FILE *)scgp->errfile, "uscsi_rqbuf:     0x%lx\n", (long)req.uscsi_rqbuf);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_rqbuf ptr: 0x%lx\n", (long)req.uscsi_rqbuf);
+		js_fprintf((FILE *)scgp->errfile, "uscsi_rqbuf:     ");
+		if (req.uscsi_rqbuf != NULL && req.uscsi_rqlen > req.uscsi_rqresid) {
+			int	i;
+			int	len = req.uscsi_rqlen - req.uscsi_rqresid;
+
+			for (i = 0; i < len; i++) {
+				js_fprintf((FILE *)scgp->errfile, "0x%02X ", ((char *)req.uscsi_rqbuf)[i]);
+			}		
+			js_fprintf((FILE *)scgp->errfile, "\n");
+		} else {
+			js_fprintf((FILE *)scgp->errfile, "<data not available>\n");
+		}
 	}
 	if (ret < 0) {
 		sp->ux_errno = geterrno();
@@ -823,8 +880,11 @@ scgo_usend(scgp)
 			sp->error = SCG_FATAL;
 			return (0);
 		}
-		if (errno == ENOTTY || errno == ENXIO ||
-		    errno == EINVAL || errno == EACCES) {
+		if (errno == ENXIO) {
+			sp->error = SCG_FATAL;
+			return (0);
+		}
+		if (errno == ENOTTY || errno == EINVAL || errno == EACCES) {
 			return (-1);
 		}
 	} else {

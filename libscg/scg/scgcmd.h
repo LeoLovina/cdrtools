@@ -1,4 +1,4 @@
-/* @(#)scgcmd.h	2.20 01/03/11 Copyright 1986 J. Schilling */
+/* @(#)scgcmd.h	2.21 02/08/08 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI 'scg_cmd' structure that has been created
  *	for the SCSI general driver 'scg' for SunOS and Solaris but
@@ -29,14 +29,16 @@
 #include <btorder.h>
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
-#elif	defined(_BIT_FIELDS_HTOL)	/* Motorola byteorder */
-#else 
+#else
+# if	defined(_BIT_FIELDS_HTOL)	/* Motorola byteorder */
+# else 
 /*
  * #error will not work for all compilers (e.g. sunos4)
  * The following line will abort compilation on all compilers
  * if none of the above is defines. And that's  what we want.
  */
 error  One of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL must be defined
+# endif
 #endif
 
 #include <scg/scsisense.h>

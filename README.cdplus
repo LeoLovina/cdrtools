@@ -16,7 +16,7 @@ multi session mode and then writing a data session.
 If you like to append a filesystem to a audio CD, first extract the 
 CD by calling:
 
-	cdda2wav -B -v255
+	cdda2wav -B -vall
 
 This first audio session may be written in TAO mode with the command
 
@@ -49,7 +49,7 @@ See my README.multi for more info on how to create multi session CD's
 
 The procedure again in short form:
 
-	cdda2wav -v2255 -B
+	cdda2wav -vall -B
 
 	cdrecord -multi -audio audio_tracks ....
 or
@@ -63,5 +63,10 @@ or
 	cdrecord -data cd_plus.raw
 or
 	cdrecord -multi cd_plus.raw
+
+
+Note: If you want to create an HFS hybrid as the data track, then you must
+use the '-part' option to mkisofs. Otherwise, the data track will be mounted
+as an ISO9660/Joliet CD when used on a Mac.
 	
 Jörg

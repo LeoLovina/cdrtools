@@ -1,7 +1,7 @@
-/* @(#)data.c	1.2 01/01/21 joerg */
+/* @(#)data.c	1.5 02/02/10 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)data.c	1.2 01/01/21 joerg";
+	"@(#)data.c	1.5 02/02/10 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -24,12 +24,23 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include <strdefs.h>
-#include <time.h>
+#include <timedefs.h>
 
 #include "internal.h"
 #include "data.h"
 #include "btree.h"
 
+#ifdef APPLE_HYB
+/*
+ *	Depending on the version, AppleDouble/Single stores dates
+ *	relative to 1st Jan 1904 (v1) or 1st Jan 2000 (v2)
+ *
+ *	DUTDIFF is the difference between 1st Jan 2000 and
+ *	1st Jan 1970 (Unix epoch)).
+ */
+
+#define DUTDIFF 946684800L
+#endif /* APPLE_HYB */
 #define MUTDIFF	2082844800L
 #define	TZNONE	0x0FFFFFFFL	/* A timezone diff that cannot occur */
 
@@ -144,8 +155,8 @@ void d_putw(ptr, data)
 	short		data;
 #endif
 {
-  ptr[0] = ((unsigned short) data & 0xff00) >> 8;
-  ptr[1] = ((unsigned short) data & 0x00ff) >> 0;
+  ptr[0] = ((unsigned) data & 0xff00) >> 8;
+  ptr[1] = ((unsigned) data & 0x00ff) >> 0;
 }
 
 /*
@@ -345,6 +356,23 @@ unsigned long d_toutime(secs)
 
   return utime - MUTDIFF - tzdiff;
 }
+
+#ifdef APPLE_HYB
+/*
+ * NAME:	data->dtoutime()
+ * DESCRIPTION:	convert Apple Double v2 time to UNIX time
+ */
+unsigned long d_dtoutime(secs)
+	long		secs;
+{
+  time_t utime = secs;
+
+  if (tzdiff == TZNONE)
+    calctzdiff();
+
+  return utime + DUTDIFF - tzdiff;
+}
+#endif /* APPLE_HYB */
 
 /*
  * NAME:	data->relstring()

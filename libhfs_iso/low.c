@@ -1,7 +1,7 @@
-/* @(#)low.c	1.1 00/03/05 joerg */
+/* @(#)low.c	1.3 02/02/10 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)low.c	1.1 00/03/05 joerg";
+	"@(#)low.c	1.3 02/02/10 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -27,7 +27,7 @@ static	char sccsid[] =
 #include <stdxlib.h>
 #include <errno.h>
 #include <unixstd.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 
 #include "internal.h"
 #include "data.h"
@@ -473,10 +473,10 @@ int l_readvbm(vol)
 	hfsvol	*vol;
 {
   int vbmst = vol->mdb.drVBMSt;
-  int vbmsz = (vol->mdb.drNmAlBlks + 4095) / 4096;
+  int vbmsz = (vol->mdb.drNmAlBlks + 4095) / (unsigned)4096;
   block *bp;
 
-  if (vol->mdb.drAlBlSt - vbmst < vbmsz)
+  if ((int)(vol->mdb.drAlBlSt - vbmst) < vbmsz)
     {
       ERROR(EIO, "volume bitmap collides with volume data");
       return -1;
@@ -513,7 +513,7 @@ int l_writevbm(vol)
 	hfsvol	*vol;
 {
   int vbmst = vol->mdb.drVBMSt;
-  int vbmsz = (vol->mdb.drNmAlBlks + 4095) / 4096;
+  int vbmsz = (vol->mdb.drNmAlBlks + 4095) / (unsigned)4096;
   block *bp = vol->vbm;
 
   while (vbmsz--)

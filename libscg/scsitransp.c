@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.81 01/04/20 Copyright 1988,1995,2000 J. Schilling */
+/* @(#)scsitransp.c	1.85 02/10/19 Copyright 1988,1995,2000 J. Schilling */
 /*#ifndef lint*/
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.81 01/04/20 Copyright 1988,1995,2000 J. Schilling";
+	"@(#)scsitransp.c	1.85 02/10/19 Copyright 1988,1995,2000 J. Schilling";
 /*#endif*/
 /*
  *	SCSI user level command transport routines (generic part).
@@ -52,7 +52,7 @@ static	char sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_version[]		= "0.5";	/* The global libscg version	*/
+LOCAL	char	_scg_version[]		= "0.7";	/* The global libscg version	*/
 LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 #define	DEFTIMEOUT	20	/* Default timeout for SCSI command transport */
@@ -371,6 +371,7 @@ scg_cmd(scgp)
 		}
 		raisecond("SCSI ALREADY RUNNING !!", 0L);
 	}
+	scgp->cb_fun = NULL;
 	gettimeofday(scgp->cmdstart, (struct timezone *)0);
 	scgp->curcmdname = scgp->cmdname;
 	scgp->running = TRUE;
@@ -396,6 +397,8 @@ scg_cmd(scgp)
 
 	ret = scg_vtail(scgp);
 	scg_errflush(scgp);
+	if (scgp->cb_fun != NULL)
+		(*scgp->cb_fun)(scgp->cb_arg);
 	return (ret);
 }
 
@@ -1238,6 +1241,18 @@ scg_fprintdev(f, ip)
 		js_fprintf(f, "Storage array");	break;
 	case INQ_ENCL:
 		js_fprintf(f, "Enclosure services");break;
+	case INQ_SDAD:
+		js_fprintf(f, "Simple direct access");break;
+	case INQ_OCRW:
+		js_fprintf(f, "Optical card r/w");break;
+	case INQ_BRIDGE:
+		js_fprintf(f, "Bridging expander");break;
+	case INQ_OSD:
+		js_fprintf(f, "Object based storage");break;
+	case INQ_ADC:
+		js_fprintf(f, "Automation/Drive Interface");break;
+	case INQ_WELLKNOWN:
+		js_fprintf(f, "Well known lun");break;
 
 	case INQ_NODEV:
 		if (ip->data_format >= 2) {

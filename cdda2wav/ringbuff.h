@@ -1,4 +1,4 @@
-/* @(#)ringbuff.h	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)ringbuff.h	1.5 01/10/20 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /* This file contains data structures that reside in the shared memory
  * segment.
  */
@@ -17,6 +17,24 @@ union my_semun {
 };
 #endif
 
+/* Ringbuffer structures.
+   Space for the ringbuffer is allocated page aligned
+	 and contains the following
+
+	-------------------- start of page
+	header (once for the ring buffer) \\
+	space for page alignment	  ||+- HEADER_SIZE
+RB_BASE -+v				  ||
+	myringbuffer.offset		  |/
+	-------------------- start of page/-- pagesize
+	myringbuffer.data (SEGMENT_SIZE)\
+	space for page alignment	|+- ENTRY_SIZE_PAGE_AL
+	myringbuffer.offset		/
+	-------------------- start of page
+	myringbuffer.data
+	space for page alignment
+	...
+*/	
 typedef struct {
   int offset;
   UINT4 data[CD_FRAMESAMPLES];

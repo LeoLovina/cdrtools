@@ -1,7 +1,7 @@
-/* @(#)joliet.c	1.28 01/01/23 joerg */
+/* @(#)joliet.c	1.34 02/11/22 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)joliet.c	1.28 01/01/23 joerg";
+	"@(#)joliet.c	1.34 02/11/22 joerg";
 #endif
 /*
  * File joliet.c - handle Win95/WinNT long file/unicode extensions for iso9660.
@@ -101,9 +101,15 @@ static	char	ucs_codes[] = {
 		'E',		/* UCS-level 3			*/
 };	
 
+#ifdef	UDF
+	void	convert_to_unicode	__PR((unsigned char *buffer,
+		int size, char *source, struct nls_table *inls));
+	int	joliet_strlen		__PR((const char *string));
+#else
 static void	convert_to_unicode	__PR((unsigned char *buffer,
 		int size, char *source, struct nls_table *inls));
 static int	joliet_strlen		__PR((const char *string));
+#endif
 static void	get_joliet_vol_desc	__PR((struct iso_primary_descriptor *jvol_desc));
 static void	assign_joliet_directory_addresses __PR((struct directory *node));
 static void	build_jpathlist		__PR((struct directory *node));
@@ -179,7 +185,11 @@ conv_charset(c, inls, onls)
  *
  * Notes:
  */
+#ifdef	UDF
+void
+#else
 static void
+#endif
 convert_to_unicode(buffer, size, source, inls)
 	unsigned char	*buffer;
 	int		size;
@@ -271,7 +281,11 @@ convert_to_unicode(buffer, size, source, inls)
  * 		intelligent Unicode conversion for either Multibyte or 8-bit
  *		codes is available that we can easily adapt.
  */
+#ifdef	UDF
+int
+#else
 static int
+#endif
 joliet_strlen(string)
 	const char	*string;
 {
@@ -285,8 +299,8 @@ joliet_strlen(string)
 	 * bolix things up with very long paths.    The Joliet specs say that
 	 * the maximum length is 128 bytes, or 64 unicode characters.
 	 */
-	if (rtn > 0x80) {
-		rtn = 0x80;
+	if (rtn > 2*jlen) {
+		rtn = 2*jlen;
 	}
 	return rtn;
 }
@@ -370,7 +384,7 @@ assign_joliet_directory_addresses(node)
 			dpnt->jpath_index = next_jpath_index++;
 			if (dpnt->jextent == 0) {
 				dpnt->jextent = last_extent;
-				dir_size = (dpnt->jsize + (SECTOR_SIZE - 1)) >> 11;
+				dir_size = ISO_BLOCKS(dpnt->jsize);
 				last_extent += dir_size;
 			}
 		}
@@ -507,18 +521,6 @@ generate_joliet_path_tables()
 	memset(jpath_table_l, 0, tablesize);
 	memset(jpath_table_m, 0, tablesize);
 
-	if (next_jpath_index > 0xffff) {
-#ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD,
-		"Unable to generate sane path tables - too many directories (%d)\n",
-			next_jpath_index);
-#else
-		fprintf(stderr,
-		"Unable to generate sane path tables - too many directories (%d)\n",
-			next_jpath_index);
-		exit(1);
-#endif
-	}
 	/* Now start filling in the path tables.  Start with root directory */
 	jpath_table_index = 0;
 	jpathlist = (struct directory **) e_malloc(sizeof(struct directory *)
@@ -590,6 +592,19 @@ generate_joliet_path_tables()
 		set_731(jpath_table_l + jpath_table_index, dpnt->jextent);
 		set_732(jpath_table_m + jpath_table_index, dpnt->jextent);
 		jpath_table_index += 4;
+
+		if (dpnt->parent->jpath_index > 0xffff) {
+#ifdef	USE_LIBSCHILY
+			comerrno(EX_BAD,
+			"Unable to generate sane path tables - too many directories (%d)\n",
+				dpnt->parent->jpath_index);
+#else
+			fprintf(stderr,
+			"Unable to generate sane path tables - too many directories (%d)\n",
+				dpnt->parent->jpath_index);
+			exit(1);
+#endif
+		}
 
 		if (dpnt->parent != reloc_dir) {
 			set_721(jpath_table_l + jpath_table_index,
@@ -674,7 +689,7 @@ generate_one_joliet_directory(dpnt, outfile)
 	int			cvt_len;
 	struct directory	*finddir;
 
-	total_size = (dpnt->jsize + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1);
+	total_size = ISO_ROUND_UP(dpnt->jsize);
 	directory_buffer = (char *) e_malloc(total_size);
 	memset(directory_buffer, 0, total_size);
 	dir_index = 0;
@@ -721,8 +736,7 @@ generate_one_joliet_directory(dpnt, outfile)
 		 */
 		new_reclen = s_entry1->jreclen;
 		if ((dir_index & (SECTOR_SIZE - 1)) + new_reclen >= SECTOR_SIZE) {
-			dir_index = (dir_index + (SECTOR_SIZE - 1)) &
-				~(SECTOR_SIZE - 1);
+			dir_index = ISO_ROUND_UP(dir_index);
 		}
 		memcpy(&jrec, &s_entry1->isorec, offsetof(struct iso_directory_record, name[0]));
 
@@ -950,9 +964,7 @@ joliet_sort_n_finish(this_dir)
 
 		if ((this_dir->jsize & (SECTOR_SIZE - 1)) + jreclen >=
 								SECTOR_SIZE) {
-			this_dir->jsize =
-				(this_dir->jsize + (SECTOR_SIZE - 1)) &
-				~(SECTOR_SIZE - 1);
+			this_dir->jsize = ISO_ROUND_UP(this_dir->jsize);
 		}
 		this_dir->jsize += jreclen;
 	}
@@ -1012,7 +1024,7 @@ joliet_compare_dirs(rr, ll)
 	 * If the entries are the same, this is an error.
 	 * Joliet specs allow for a maximum of 64 characters.
 	 */
-	if (strncmp(rpnt, lpnt, 64) == 0) {
+	if (strncmp(rpnt, lpnt, jlen) == 0) {
 #ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD,
 			"Error: %s and %s have the same Joliet name\n",
@@ -1038,6 +1050,27 @@ joliet_compare_dirs(rr, ll)
 		return -1;
 	if (strcmp(lpnt, "..") == 0)
 		return 1;
+
+#ifdef DVD_VIDEO
+	/*
+	 * There're rumors claiming that some players assume VIDEO_TS.IFO
+	 * to be the first file in VIDEO_TS/ catalog. Well, it's basically
+	 * the only file a player has to actually look for, as the whole
+	 * video content can be "rolled down" from this file alone.
+	 *				<appro@fy.chalmers.se>
+	 */
+	/*
+	 * XXX This code has to be moved from the Joliet implementation
+	 * XXX to the UDF implementation if we implement decent UDF support
+	 * XXX with a separate name space for the UDF file tree.
+	 */
+	if (dvd_video) {
+		if (strcmp(rpnt, "VIDEO_TS.IFO") == 0)
+			return (-1);
+ 		if (strcmp(lpnt, "VIDEO_TS.IFO") == 0)
+			return (1);
+	}
+#endif
 
 	while (*rpnt && *lpnt) {
 		if (*rpnt == ';' && *lpnt != ';')
@@ -1257,7 +1290,7 @@ jvd_write(outfile)
 	/* Next we write out the boot volume descriptor for the disc */
 	jvol_desc = vol_desc;
 	get_joliet_vol_desc(&jvol_desc);
-	xfwrite(&jvol_desc, 1, 2048, outfile);
+	xfwrite(&jvol_desc, 1, SECTOR_SIZE, outfile);
 	last_extent_written++;
 	return 0;
 }
@@ -1278,6 +1311,6 @@ jpathtab_size(starting_extent)
 	return 0;
 }
 
-struct output_fragment joliet_desc = {NULL, oneblock_size, jroot_gen, jvd_write};
-struct output_fragment jpathtable_desc = {NULL, jpathtab_size, generate_joliet_path_tables, jpathtab_write};
-struct output_fragment jdirtree_desc = {NULL, jdirtree_size, NULL, jdirtree_write};
+struct output_fragment joliet_desc = {NULL, oneblock_size, jroot_gen, jvd_write, "Joliet Volume Descriptor" };
+struct output_fragment jpathtable_desc = {NULL, jpathtab_size, generate_joliet_path_tables, jpathtab_write, "Joliet path table" };
+struct output_fragment jdirtree_desc = {NULL, jdirtree_size, NULL, jdirtree_write, "Joliet directory tree" };

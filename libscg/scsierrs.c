@@ -1,7 +1,7 @@
-/* @(#)scsierrs.c	2.26 00/08/19 Copyright 1987-1996 J. Schilling */
+/* @(#)scsierrs.c	2.28 02/04/16 Copyright 1987-1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsierrs.c	2.26 00/08/19 Copyright 1987-1996 J. Schilling";
+	"@(#)scsierrs.c	2.28 02/04/16 Copyright 1987-1996 J. Schilling";
 #endif
 /*
  *	Error printing for scsitransp.c
@@ -27,6 +27,7 @@ static	char sccsid[] =
 #include <mconfig.h>
 
 #include <stdio.h>
+#include <unixstd.h>	/* for sys/types.h needed in schily.h for sprintf() */
 #include <standard.h>
 #include <schily.h>
 
@@ -113,6 +114,11 @@ static const char *sd_ccs_error_str[] = {
 	"\004\006logical unit not ready, recalculation in progress",	/* 04 06 */
 	"\004\007logical unit not ready, operation in progress",/* 04 07 */
 	"\004\010logical unit not ready, long write in progress",	/* 04 08 */
+	"\004\011logical unit not ready, self-test in progress",/* 04 09 */
+	"\004\012asymmetric access code 3 (00-232) [proposed]",	/* 04 0A */
+	"\004\013asymmetric access code 1 (00-232) [proposed]",	/* 04 0B */
+	"\004\014asymmetric access code 2 (00-232) [proposed]",	/* 04 0C */
+	"\004\020auxiliary memory code 2 (99-148) [proposed]",	/* 04 10 */
 	"\005\000logical unit does not respond to selection",	/* 05 00 */
 	"\006\000no reference position found",			/* 06 00 */
 	"\007\000multiple peripheral devices selected",		/* 07 00 */
@@ -120,6 +126,7 @@ static const char *sd_ccs_error_str[] = {
 	"\010\001logical unit communication time-out",		/* 08 01 */
 	"\010\002logical unit communication parity error",	/* 08 02 */
 	"\010\003logical unit communication crc error (ultra-dma/32)",	/* 08 03 */
+	"\010\004unreachable copy target",			/* 08 04 */
 	"\011\000track following error",			/* 09 00 */
 	"\011\001tracking servo failure",			/* 09 01 */
 	"\011\002focus servo failure",				/* 09 02 */
@@ -140,6 +147,17 @@ static const char *sd_ccs_error_str[] = {
 	"\014\010write error - recovery failed",		/* 0C 08 */
 	"\014\011write error - loss of streaming",		/* 0C 09 */
 	"\014\012write error - padding blocks added",		/* 0C 0A */
+	"\014\013auxiliary memory code 4 (99-148) [proposed]",	/* 0C 0B */
+	"\015\000error detected by third party temporary initiator",	/* 0D 00 */
+	"\015\001third party device failure",			/* 0D 01 */
+	"\015\002copy target device not reachable",		/* 0D 02 */
+	"\015\003incorrect copy target device type",		/* 0D 03 */
+	"\015\004copy target device data underrun",		/* 0D 04 */
+	"\015\005copy target device data overrun",		/* 0D 05 */
+#ifdef	__used__
+	"\016\000",						/* 0E 00 */
+	"\017\000",						/* 0F 00 */
+#endif
 	"\020\000id crc or ecc error",				/* 10 00 */
 	"\021\000unrecovered read error",			/* 11 00 */
 	"\021\001read retries exhausted",			/* 11 01 */
@@ -159,6 +177,7 @@ static const char *sd_ccs_error_str[] = {
 	"\021\017error reading upc/ean number",			/* 11 0F */
 	"\021\020error reading isrc number",			/* 11 10 */
 	"\021\021read error - loss of streaming",		/* 11 11 */
+	"\021\022auxiliary memory code 3 (99-148) [proposed]",	/* 11 12 */
 	"\022\000address mark not found for id field",		/* 12 00 */
 	"\023\000address mark not found for data field",	/* 13 00 */
 	"\024\000recorded entity not found",			/* 14 00 */
@@ -194,6 +213,7 @@ static const char *sd_ccs_error_str[] = {
 	"\030\005recovered data - recommend reassignment",	/* 18 05 */
 	"\030\006recovered data - recommend rewrite",		/* 18 06 */
 	"\030\007recovered data with ecc - data rewritten",	/* 18 07 */
+	"\030\010recovered data with linking",			/* 18 08 */
 	"\031\000defect list error",				/* 19 00 */
 	"\031\001defect list not available",			/* 19 01 */
 	"\031\002defect list error in primary list",		/* 19 02 */
@@ -207,22 +227,50 @@ static const char *sd_ccs_error_str[] = {
 	"\036\000recovered id with ecc correction",		/* 1E 00 */
 	"\037\000partial defect list transfer",			/* 1F 00 */
 	"\040\000invalid command operation code",		/* 20 00 */
+	"\040\001access controls code 1 (99-314) [proposed]",	/* 20 01 */
+	"\040\002access controls code 2 (99-314) [proposed]",	/* 20 02 */
+	"\040\003access controls code 3 (99-314) [proposed]",	/* 20 03 */
+	"\040\004read type operation while in write capable state",	/* 20 04 */
+	"\040\005write type operation while in read capable state",	/* 20 05 */
+	"\040\006illegal command while in explicit address model",	/* 20 06 */
+	"\040\007illegal command while in implicit address model",	/* 20 07 */
+	"\040\010access controls code 5 (99-245) [proposed]",	/* 20 08 */
+	"\040\011access controls code 6 (99-245) [proposed]",	/* 20 09 */
+	"\040\012access controls code 7 (99-245) [proposed]",	/* 20 0A */
+	"\040\013access controls code 8 (99-245) [proposed]",	/* 20 0B */
 	"\041\000logical block address out of range",		/* 21 00 */
 	"\041\001invalid element address",			/* 21 01 */
+	"\041\002invalid address for write",			/* 21 02 */
 	"\042\000illegal function (use 20 00, 24 00, or 26 00)",/* 22 00 */
+#ifdef	__used__
+	"\043\000",						/* 23 00 */
+#endif
 	"\044\000invalid field in cdb",				/* 24 00 */
+	"\044\001cdb decryption error",				/* 24 01 */
+	"\044\002invalid cdb field while in explicit block address model",	/* 24 02 */
+	"\044\003invalid cdb field while in implicit block address model",	/* 24 03 */
 	"\045\000logical unit not supported",			/* 25 00 */
 	"\046\000invalid field in parameter list",		/* 26 00 */
 	"\046\001parameter not supported",			/* 26 01 */
 	"\046\002parameter value invalid",			/* 26 02 */
 	"\046\003threshold parameters not supported",		/* 26 03 */
-	"\046\004invalid release of active persistent reservation",	/* 26 04 */
+	"\046\004invalid release of persistent reservation",	/* 26 04 */
+	"\046\005data decryption error",			/* 26 05 */
+	"\046\006too many target descriptors",			/* 26 06 */
+	"\046\007unsupported target descriptor type code",	/* 26 07 */
+	"\046\010too many segment descriptors",			/* 26 08 */
+	"\046\011unsupported segment descriptor type code",	/* 26 09 */
+	"\046\012unexpected inexact segment",			/* 26 0A */
+	"\046\013inline data length exceeded",			/* 26 0B */
+	"\046\014invalid operation for copy source or destination",	/* 26 0C */
+	"\046\015copy segment granularity violation",		/* 26 0D */
 	"\047\000write protected",				/* 27 00 */
 	"\047\001hardware write protected",			/* 27 01 */
 	"\047\002logical unit software write protected",	/* 27 02 */
 	"\047\003associated write protect",			/* 27 03 */
 	"\047\004persistent write protect",			/* 27 04 */
 	"\047\005permanent write protect",			/* 27 05 */
+	"\047\006conditional write protect",			/* 27 06 */
 	"\050\000not ready to ready change, medium may have changed",	/* 28 00 */
 	"\050\001import or export element accessed",		/* 28 01 */
 	"\051\000power on, reset, or bus device reset occurred",/* 29 00 */
@@ -236,13 +284,20 @@ static const char *sd_ccs_error_str[] = {
 	"\052\001mode parameters changed",			/* 2A 01 */
 	"\052\002log parameters changed",			/* 2A 02 */
 	"\052\003reservations preempted",			/* 2A 03 */
+	"\052\004reservations released",			/* 2A 04 */
+	"\052\005registrations preempted",			/* 2A 05 */
+	"\052\006asymmetric access code 6 (00-232) [proposed]",	/* 2A 06 */
+	"\052\007asymmetric access code 7 (00-232) [proposed]",	/* 2A 07 */
 	"\053\000copy cannot execute since host cannot disconnect",	/* 2B 00 */
 	"\054\000command sequence error",			/* 2C 00 */
 	"\054\001too many windows specified",			/* 2C 01 */
 	"\054\002invalid combination of windows specified",	/* 2C 02 */
 	"\054\003current program area is not empty",		/* 2C 03 */
 	"\054\004current program area is empty",		/* 2C 04 */
+	"\054\005illegal power condition request",		/* 2C 05 */
+	"\054\006persistent prevent conflict",			/* 2C 06 */
 	"\055\000overwrite error on update in place",		/* 2D 00 */
+	"\056\000insufficient time for operation",		/* 2E 00 */
 	"\057\000commands cleared by another initiator",	/* 2F 00 */
 	"\060\000incompatible medium installed",		/* 30 00 */
 	"\060\001cannot read medium - unknown format",		/* 30 01 */
@@ -254,8 +309,10 @@ static const char *sd_ccs_error_str[] = {
 	"\060\007cleaning failure",				/* 30 07 */
 	"\060\010cannot write - application code mismatch",	/* 30 08 */
 	"\060\011current session not fixated for append",	/* 30 09 */
+	"\060\020medium not formatted",				/* 30 10 */
 	"\061\000medium format corrupted",			/* 31 00 */
 	"\061\001format command failed",			/* 31 01 */
+	"\061\002zoned formatting failed due to spare linking",	/* 31 02 */
 	"\062\000no defect spare location available",		/* 32 00 */
 	"\062\001defect list update failure",			/* 32 01 */
 	"\063\000tape length error",				/* 33 00 */
@@ -267,10 +324,16 @@ static const char *sd_ccs_error_str[] = {
 	"\065\004enclosure services transfer refused",		/* 35 04 */
 	"\066\000ribbon, ink, or toner failure",		/* 36 00 */
 	"\067\000rounded parameter",				/* 37 00 */
+	"\070\000event status notification",			/* 38 00 */
+	"\070\002esn - power management class event",		/* 38 02 */
+	"\070\004esn - media class event",			/* 38 04 */
+	"\070\006esn - device busy class event",		/* 38 06 */
 	"\071\000saving parameters not supported",		/* 39 00 */
 	"\072\000medium not present",				/* 3A 00 */
 	"\072\001medium not present - tray closed",		/* 3A 01 */
 	"\072\002medium not present - tray open",		/* 3A 02 */
+	"\072\003medium not present - loadable",		/* 3A 03 */
+	"\072\004medium not present - medium auxiliary memory accessible",	/* 3A 04 */
 	"\073\000sequential positioning error",			/* 3B 00 */
 	"\073\001tape position error at beginning-of-medium",	/* 3B 01 */
 	"\073\002tape position error at end-of-medium",		/* 3B 02 */
@@ -292,18 +355,39 @@ static const char *sd_ccs_error_str[] = {
 	"\073\023medium magazine inserted",			/* 3B 13 */
 	"\073\024medium magazine locked",			/* 3B 14 */
 	"\073\025medium magazine unlocked",			/* 3B 15 */
+	"\073\026mechanical positioning or changer error",	/* 3B 16 */
+#ifdef	__used__
+	"\074\000",						/* 3C 00 */
+#endif
 	"\075\000invalid bits in identify message",		/* 3D 00 */
 	"\076\000logical unit has not self-configured yet",	/* 3E 00 */
 	"\076\001logical unit failure",				/* 3E 01 */
 	"\076\002timeout on logical unit",			/* 3E 02 */
+	"\076\003logical unit failed self-test",		/* 3E 03 */
+	"\076\004logical unit unable to update self-test log",	/* 3E 04 */
 	"\077\000target operating conditions have changed",	/* 3F 00 */
 	"\077\001microcode has been changed",			/* 3F 01 */
 	"\077\002changed operating definition",			/* 3F 02 */
 	"\077\003inquiry data has changed",			/* 3F 03 */
+	"\077\004component device attached",			/* 3F 04 */
+	"\077\005device identifier changed",			/* 3F 05 */
+	"\077\006redundancy group created or modified",		/* 3F 06 */
+	"\077\007redundancy group deleted",			/* 3F 07 */
+	"\077\010spare created or modified",			/* 3F 08 */
+	"\077\011spare deleted",				/* 3F 09 */
+	"\077\012volume set created or modified",		/* 3F 0A */
+	"\077\013volume set deleted",				/* 3F 0B */
+	"\077\014volume set deassigned",			/* 3F 0C */
+	"\077\015volume set reassigned",			/* 3F 0D */
+	"\077\016reported luns data has changed",		/* 3F 0E */
+	"\077\017echo buffer overwritten",			/* 3F 0F */
+	"\077\020medium loadable",				/* 3F 10 */
+	"\077\021medium auxiliary memory accessible",		/* 3F 11 */
 	"\100\000ram failure (should use 40 nn)",		/* 40 00 */
 #ifdef	XXX
 	"\100\000nn diagnostic failure on component nn (80h-ffh)",	/* 40 00 */
 #endif
+	"\100\000diagnostic failure on component nn (80h-ffh)",	/* 40 00 */
 	"\101\000data path failure (should use 40 nn)",		/* 41 00 */
 	"\102\000power-on or self-test failure (should use 40 nn)",	/* 42 00 */
 	"\103\000message error",				/* 43 00 */
@@ -311,6 +395,10 @@ static const char *sd_ccs_error_str[] = {
 	"\105\000select or reselect failure",			/* 45 00 */
 	"\106\000unsuccessful soft reset",			/* 46 00 */
 	"\107\000scsi parity error",				/* 47 00 */
+	"\107\001data phase crc error detected",		/* 47 01 */
+	"\107\002scsi parity error detected during st data phase",	/* 47 02 */
+	"\107\003information unit crc error detected",		/* 47 03 */
+	"\107\004asynchronous information protection error detected",	/* 47 04 */
 	"\110\000initiator detected error message received",	/* 48 00 */
 	"\111\000invalid message error",			/* 49 00 */
 	"\112\000command phase error",				/* 4A 00 */
@@ -319,11 +407,16 @@ static const char *sd_ccs_error_str[] = {
 #ifdef	XXX
 	"\115\000nn tagged overlapped commands (nn = queue tag)",	/* 4D 00 */
 #endif
+	"\115\000tagged overlapped commands (nn = queue tag)",	/* 4D 00 */
 	"\116\000overlapped commands attempted",		/* 4E 00 */
+#ifdef	__used__
+	"\117\000",						/* 4F 00 */
+#endif
 	"\120\000write append error",				/* 50 00 */
 	"\120\001write append position error",			/* 50 01 */
 	"\120\002position error related to timing",		/* 50 02 */
 	"\121\000erase failure",				/* 51 00 */
+	"\121\001erase failure - incomplete erase operation detected",	/* 51 01 */
 	"\122\000cartridge fault",				/* 52 00 */
 	"\123\000media load or eject failed",			/* 53 00 */
 	"\123\001unload tape failure",				/* 53 01 */
@@ -331,6 +424,14 @@ static const char *sd_ccs_error_str[] = {
 	"\124\000scsi to host system interface failure",	/* 54 00 */
 	"\125\000system resource failure",			/* 55 00 */
 	"\125\001system buffer full",				/* 55 01 */
+	"\125\002insufficient reservation resources",		/* 55 02 */
+	"\125\003insufficient resources",			/* 55 03 */
+	"\125\004insufficient registration resources",		/* 55 04 */
+	"\125\005access controls code 4 (99-314) [proposed]",	/* 55 05 */
+	"\125\006auxiliary memory code 1 (99-148) [proposed]",	/* 55 06 */
+#ifdef	__used__
+	"\126\000",						/* 56 00 */
+#endif
 	"\127\000unable to recover table-of-contents",		/* 57 00 */
 	"\130\000generation does not exist",			/* 58 00 */
 	"\131\000updated block read",				/* 59 00 */
@@ -346,12 +447,101 @@ static const char *sd_ccs_error_str[] = {
 	"\134\001spindles synchronized",			/* 5C 01 */
 	"\134\002spindles not synchronized",			/* 5C 02 */
 	"\135\000failure prediction threshold exceeded",	/* 5D 00 */
+	"\135\001media failure prediction threshold exceeded",	/* 5D 01 */
+	"\135\002logical unit failure prediction threshold exceeded",	/* 5D 02 */
+	"\135\003spare area exhaustion prediction threshold exceeded",	/* 5D 03 */
+	"\135\020hardware impending failure general hard drive failure",/* 5D 10 */
+	"\135\021hardware impending failure drive error rate too high",	/* 5D 11 */
+	"\135\022hardware impending failure data error rate too high",	/* 5D 12 */
+	"\135\023hardware impending failure seek error rate too high",	/* 5D 13 */
+	"\135\024hardware impending failure too many block reassigns",	/* 5D 14 */
+	"\135\025hardware impending failure access times too high",	/* 5D 15 */
+	"\135\026hardware impending failure start unit times too high",	/* 5D 16 */
+	"\135\027hardware impending failure channel parametrics",/* 5D 17 */
+	"\135\030hardware impending failure controller detected",/* 5D 18 */
+	"\135\031hardware impending failure throughput performance",	/* 5D 19 */
+	"\135\032hardware impending failure seek time performance",	/* 5D 1A */
+	"\135\033hardware impending failure spin-up retry count",	/* 5D 1B */
+	"\135\034hardware impending failure drive calibration retry count",	/* 5D 1C */
+	"\135\040controller impending failure general hard drive failure",	/* 5D 20 */
+	"\135\041controller impending failure drive error rate too high",	/* 5D 21 */
+	"\135\042controller impending failure data error rate too high",/* 5D 22 */
+	"\135\043controller impending failure seek error rate too high",/* 5D 23 */
+	"\135\044controller impending failure too many block reassigns",/* 5D 24 */
+	"\135\045controller impending failure access times too high",	/* 5D 25 */
+	"\135\046controller impending failure start unit times too high",	/* 5D 26 */
+	"\135\047controller impending failure channel parametrics",	/* 5D 27 */
+	"\135\050controller impending failure controller detected",	/* 5D 28 */
+	"\135\051controller impending failure throughput performance",	/* 5D 29 */
+	"\135\052controller impending failure seek time performance",	/* 5D 2A */
+	"\135\053controller impending failure spin-up retry count",	/* 5D 2B */
+	"\135\054controller impending failure drive calibration retry count",	/* 5D 2C */
+	"\135\060data channel impending failure general hard drive failure",	/* 5D 30 */
+	"\135\061data channel impending failure drive error rate too high",	/* 5D 31 */
+	"\135\062data channel impending failure data error rate too high",	/* 5D 32 */
+	"\135\063data channel impending failure seek error rate too high",	/* 5D 33 */
+	"\135\064data channel impending failure too many block reassigns",	/* 5D 34 */
+	"\135\065data channel impending failure access times too high",	/* 5D 35 */
+	"\135\066data channel impending failure start unit times too high",	/* 5D 36 */
+	"\135\067data channel impending failure channel parametrics",	/* 5D 37 */
+	"\135\070data channel impending failure controller detected",	/* 5D 38 */
+	"\135\071data channel impending failure throughput performance",/* 5D 39 */
+	"\135\072data channel impending failure seek time performance",	/* 5D 3A */
+	"\135\073data channel impending failure spin-up retry count",	/* 5D 3B */
+	"\135\074data channel impending failure drive calibration retry count",	/* 5D 3C */
+	"\135\100servo impending failure general hard drive failure",	/* 5D 40 */
+	"\135\101servo impending failure drive error rate too high",	/* 5D 41 */
+	"\135\102servo impending failure data error rate too high",	/* 5D 42 */
+	"\135\103servo impending failure seek error rate too high",	/* 5D 43 */
+	"\135\104servo impending failure too many block reassigns",	/* 5D 44 */
+	"\135\105servo impending failure access times too high",/* 5D 45 */
+	"\135\106servo impending failure start unit times too high",	/* 5D 46 */
+	"\135\107servo impending failure channel parametrics",	/* 5D 47 */
+	"\135\110servo impending failure controller detected",	/* 5D 48 */
+	"\135\111servo impending failure throughput performance",	/* 5D 49 */
+	"\135\112servo impending failure seek time performance",/* 5D 4A */
+	"\135\113servo impending failure spin-up retry count",	/* 5D 4B */
+	"\135\114servo impending failure drive calibration retry count",/* 5D 4C */
+	"\135\120spindle impending failure general hard drive failure",	/* 5D 50 */
+	"\135\121spindle impending failure drive error rate too high",	/* 5D 51 */
+	"\135\122spindle impending failure data error rate too high",	/* 5D 52 */
+	"\135\123spindle impending failure seek error rate too high",	/* 5D 53 */
+	"\135\124spindle impending failure too many block reassigns",	/* 5D 54 */
+	"\135\125spindle impending failure access times too high",	/* 5D 55 */
+	"\135\126spindle impending failure start unit times too high",	/* 5D 56 */
+	"\135\127spindle impending failure channel parametrics",/* 5D 57 */
+	"\135\130spindle impending failure controller detected",/* 5D 58 */
+	"\135\131spindle impending failure throughput performance",	/* 5D 59 */
+	"\135\132spindle impending failure seek time performance",	/* 5D 5A */
+	"\135\133spindle impending failure spin-up retry count",/* 5D 5B */
+	"\135\134spindle impending failure drive calibration retry count",	/* 5D 5C */
+	"\135\140firmware impending failure general hard drive failure",/* 5D 60 */
+	"\135\141firmware impending failure drive error rate too high",	/* 5D 61 */
+	"\135\142firmware impending failure data error rate too high",	/* 5D 62 */
+	"\135\143firmware impending failure seek error rate too high",	/* 5D 63 */
+	"\135\144firmware impending failure too many block reassigns",	/* 5D 64 */
+	"\135\145firmware impending failure access times too high",	/* 5D 65 */
+	"\135\146firmware impending failure start unit times too high",	/* 5D 66 */
+	"\135\147firmware impending failure channel parametrics",	/* 5D 67 */
+	"\135\150firmware impending failure controller detected",	/* 5D 68 */
+	"\135\151firmware impending failure throughput performance",	/* 5D 69 */
+	"\135\152firmware impending failure seek time performance",	/* 5D 6A */
+	"\135\153firmware impending failure spin-up retry count",	/* 5D 6B */
+	"\135\154firmware impending failure drive calibration retry count",	/* 5D 6C */
 	"\135\377failure prediction threshold exceeded (false)",/* 5D FF */
 	"\136\000low power condition on",			/* 5E 00 */
 	"\136\001idle condition activated by timer",		/* 5E 01 */
 	"\136\002standby condition activated by timer",		/* 5E 02 */
 	"\136\003idle condition activated by command",		/* 5E 03 */
 	"\136\004standby condition activated by command",	/* 5E 04 */
+	"\136\101power state change to active",			/* 5E 41 */
+	"\136\102power state change to idle",			/* 5E 42 */
+	"\136\103power state change to standby",		/* 5E 43 */
+	"\136\105power state change to sleep",			/* 5E 45 */
+	"\136\107power state change to device control",		/* 5E 47 */
+#ifdef	__used__
+	"\137\000",						/* 5F 00 */
+#endif
 	"\140\000lamp failure",					/* 60 00 */
 	"\141\000video acquisition error",			/* 61 00 */
 	"\141\001unable to acquire video",			/* 61 01 */
@@ -374,6 +564,10 @@ static const char *sd_ccs_error_str[] = {
 	"\147\005remove of logical unit failed",		/* 67 05 */
 	"\147\006attachment of logical unit failed",		/* 67 06 */
 	"\147\007creation of logical unit failed",		/* 67 07 */
+	"\147\010assign failure occurred",			/* 67 08 */
+	"\147\011multiply assigned logical unit",		/* 67 09 */
+	"\147\012asymmetric access code 4 (00-232) [proposed]",	/* 67 0A */
+	"\147\013asymmetric access code 5 (00-232) [proposed]",	/* 67 0B */
 	"\150\000logical unit not configured",			/* 68 00 */
 	"\151\000data loss on logical unit",			/* 69 00 */
 	"\151\001multiple logical unit failures",		/* 69 01 */
@@ -385,21 +579,44 @@ static const char *sd_ccs_error_str[] = {
 	"\154\000rebuild failure occurred",			/* 6C 00 */
 	"\155\000recalculate failure occurred",			/* 6D 00 */
 	"\156\000command to logical unit failed",		/* 6E 00 */
+	"\157\000copy protection key exchange failure - authentication failure",/* 6F 00 */
+	"\157\001copy protection key exchange failure - key not present",	/* 6F 01 */
+	"\157\002copy protection key exchange failure - key not established",	/* 6F 02 */
+	"\157\003read of scrambled sector without authentication",	/* 6F 03 */
+	"\157\004media region code is mismatched to logical unit region",	/* 6F 04 */
+	"\157\005drive region must be permanent/region reset count error",	/* 6F 05 */
 #ifdef	XXX
 	"\160\000nn decompression exception short algorithm id of nn",	/* 70 00 */
 #endif
+	"\160\000decompression exception short algorithm id of nn",	/* 70 00 */
 	"\161\000decompression exception long algorithm id",	/* 71 00 */
 	"\162\000session fixation error",			/* 72 00 */
 	"\162\001session fixation error writing lead-in",	/* 72 01 */
 	"\162\002session fixation error writing lead-out",	/* 72 02 */
 	"\162\003session fixation error - incomplete track in session",	/* 72 03 */
 	"\162\004empty or partially written reserved track",	/* 72 04 */
+	"\162\005no more track reservations allowed",		/* 72 05 */
 	"\163\000cd control error",				/* 73 00 */
 	"\163\001power calibration area almost full",		/* 73 01 */
 	"\163\002power calibration area is full",		/* 73 02 */
 	"\163\003power calibration area error",			/* 73 03 */
 	"\163\004program memory area update failure",		/* 73 04 */
 	"\163\005program memory area is full",			/* 73 05 */
+	"\163\006rma/pma is almost full",			/* 73 06 */
+#ifdef	__used__
+	"\164\000",						/* 74 00 */
+	"\165\000",						/* 75 00 */
+	"\166\000",						/* 76 00 */
+	"\167\000",						/* 77 00 */
+	"\170\000",						/* 78 00 */
+	"\171\000",						/* 79 00 */
+	"\172\000",						/* 7A 00 */
+	"\173\000",						/* 7B 00 */
+	"\174\000",						/* 7C 00 */
+	"\175\000",						/* 7D 00 */
+	"\176\000",						/* 7E 00 */
+	"\177\000",						/* 7F 00 */
+#endif
 #ifdef	XXX
 	"\200\000start vendor unique",				/* 80 00 */
 #endif

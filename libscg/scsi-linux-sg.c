@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.66 01/04/20 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.75 02/10/21 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.66 01/04/20 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.75 02/10/21 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -80,6 +80,13 @@ static	char __sccsid[] =
 
 #include "scsi/sg.h"
 
+#undef sense			/* conflict in struct cdrom_generic_command */
+#include <linux/cdrom.h>
+
+#if	defined(CDROM_PACKET_SIZE) && defined(CDROM_SEND_PACKET)
+#define	USE_ATA
+#endif
+
 /*
  *	Warning: you may change this source, but if you do that
  *	you need to change the _scg_version and _scg_auth* string below.
@@ -87,7 +94,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.66";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.75";	/* The version for this transport*/
 
 #ifndef	SCSI_IOCTL_GET_BUS_NUMBER
 #define SCSI_IOCTL_GET_BUS_NUMBER 0x5386
@@ -127,11 +134,23 @@ LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.66";	/* The version for thi
 
 /*
  * XXX Should add extra space in buscookies and scgfiles for a "PP bus"
- * XXX and for two "ATAPI busses".
+ * XXX and for two or more "ATAPI busses".
  */
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
 #define	MAX_LUN		8
+
+#ifdef	USE_ATA
+/*
+ * # of virtual buses (schilly_host number)
+ */
+#define	MAX_SCHILLY_HOSTS	MAX_SCG
+typedef struct {
+	Uchar   typ:4;
+	Uchar   bus:4;
+	Uchar   host:8;
+} ata_buscookies;
+#endif
 
 struct scg_local {
 	int	scgfile;		/* Used for SG_GET_BUFSIZE ioctl()*/
@@ -144,6 +163,9 @@ struct scg_local {
 	long	xbufsize;
 	char	*xbuf;
 	char	*SCSIbuf;
+#ifdef	USE_ATA
+	ata_buscookies	bc[MAX_SCHILLY_HOSTS];
+#endif
 };
 #define scglocal(p)	((struct scg_local *)((p)->local)) 
 
@@ -166,6 +188,10 @@ struct scg_local {
 #if	defined(USE_PG) && !defined(USE_PG_ONLY)
 #include "scsi-linux-pg.c"
 #endif
+#ifdef	USE_ATA
+#include "scsi-linux-ata.c"
+#endif
+
 
 #ifdef	MISALIGN
 LOCAL	int	sg_getint	__PR((int *ip));
@@ -174,6 +200,7 @@ LOCAL	int	scgo_send	__PR((SCSI *scgp));
 #ifdef	SG_IO
 LOCAL	int	sg_rwsend	__PR((SCSI *scgp));
 #endif
+LOCAL	void	sg_clearnblock	__PR((int f));
 LOCAL	BOOL	sg_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
 LOCAL	void	sg_initdev	__PR((SCSI *scgp, int f));
 LOCAL	int	sg_mapbus	__PR((SCSI *scgp, int busno, int ino));
@@ -237,6 +264,22 @@ scgo_version(scgp, what)
 }
 
 LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "sg", "Generic transport independent SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+#ifdef	USE_PG
+	pg_help(scgp, f);
+#endif
+#ifdef	USE_ATA
+	scgo_ahelp(scgp, f);
+#endif
+	return (0);
+}
+
+LOCAL int
 scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
@@ -259,6 +302,14 @@ scgo_open(scgp, device)
 				"Illegal value for busno, target or lun '%d,%d,%d'",
 				busno, tgt, tlun);
 		return (-1);
+	}
+	if (device != NULL && *device != '\0') {
+#ifdef	USE_ATA
+		if (strncmp(device, "ATAPI", 5) == 0) {
+			scgp->ops = &ata_ops;
+			return (SCGO_OPEN(scgp, device));
+		}
+#endif
 	}
 
 	if (scgp->local == NULL) {
@@ -289,8 +340,16 @@ scgo_open(scgp, device)
 
 	for (i=0; i < 32; i++) {
 		js_snprintf(devname, sizeof(devname), "/dev/sg%d", i);
-		f = open(devname, 2);
+					/* O_NONBLOCK is dangerous */
+		f = open(devname, O_RDWR | O_NONBLOCK);
 		if (f < 0) {
+			/*
+			 * Set up error string but let us clear it later
+			 * if at least one open succeeded.
+			 */
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"Cannot open '/dev/sg*'");
 			if (errno != ENOENT && errno != ENXIO && errno != ENODEV) {
 				if (scgp->errstr)
 					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -298,36 +357,62 @@ scgo_open(scgp, device)
 				return (0);
 			}
 		} else {
+			sg_clearnblock(f);	/* Be very proper about this */
 			if (sg_setup(scgp, f, busno, tgt, tlun))
 				return (++nopen);
 			if (busno < 0 && tgt < 0 && tlun < 0)
 				nopen++;
 		}
 	}
+	if (nopen > 0 && scgp->errstr)
+		scgp->errstr[0] = '\0';
+		
 	if (nopen == 0) for (i=0; i <= 25; i++) {
 		js_snprintf(devname, sizeof(devname), "/dev/sg%c", i+'a');
-		f = open(devname, 2);
+					/* O_NONBLOCK is dangerous */
+		f = open(devname, O_RDWR | O_NONBLOCK);
 		if (f < 0) {
+			/*
+			 * Set up error string but let us clear it later
+			 * if at least one open succeeded.
+			 */
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"Cannot open '/dev/sg*'");
 			if (errno != ENOENT && errno != ENXIO && errno != ENODEV) {
 				if (scgp->errstr)
 					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-						"Cannot open '%s'", devname);
+							"Cannot open '%s'", devname);
 				return (0);
 			}
 		} else {
+			sg_clearnblock(f);	/* Be very proper about this */
 			if (sg_setup(scgp, f, busno, tgt, tlun))
 				return (++nopen);
 			if (busno < 0 && tgt < 0 && tlun < 0)
 				nopen++;
 		}
 	}
+	if (nopen > 0 && scgp->errstr)
+		scgp->errstr[0] = '\0';
+
 openbydev:
 	if (device != NULL && *device != '\0') {
-		f = open(device, 2);
-		if (f < 0 && errno == ENOENT)
-			goto openpg;
+		if (scgp->overbose) {
+			js_fprintf((FILE *)scgp->errfile,
+			"Warning: Open by 'devname' is unintentional and not supported.\n");
+		}
+					/* O_NONBLOCK is dangerous */
+		f = open(device, O_RDWR | O_NONBLOCK);
+/*		if (f < 0 && errno == ENOENT)*/
+/*			goto openpg;*/
 
 		if (f < 0) {
+			/*
+			 * The pg driver has the same rules to decide whether
+			 * to use openbydev. If we cannot open the device, it
+			 * makes no sense to try the /dev/pg* driver.
+			 */
 			if (scgp->errstr)
 				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 					"Cannot open '%s'",
@@ -335,8 +420,12 @@ openbydev:
 			return (0);
 		}
 
+		sg_clearnblock(f);		/* Be very proper about this */
 		if (!sg_mapdev(scgp, f, &busno, &tgt, &tlun, 0, 0)) {
 			close(f);
+			/*
+			 * If sg_mapdev() failes, this may be /dev/pg* device.
+			 */
 			goto openpg;
 		}
 
@@ -410,6 +499,25 @@ scgo_close(scgp)
 	return (0);
 }
 
+/*
+ * The Linux kernel becomes more and more unmaintainable.
+ * Every year, a new incompatible SCSI transport interface is introduced.
+ * Each of them has it's own contradictory constraints.
+ * While you cannot have O_NONBLOCK set during operation, at least one
+ * of the drivers requires O_NONBLOCK to be set during open().
+ * This is used to clear O_NONBLOCK immediately after open() succeeded.
+ */
+LOCAL void
+sg_clearnblock(f)
+	int	f;
+{
+	int	n;
+
+	n = fcntl(f, F_GETFL);
+	n &= ~O_NONBLOCK;
+	fcntl(f, F_SETFL, n);
+}
+
 LOCAL BOOL
 sg_setup(scgp, f, busno, tgt, tlun)
 	SCSI	*scgp;
@@ -475,6 +583,11 @@ sg_setup(scgp, f, busno, tgt, tlun)
 			close(f);
 		}
 	} else {
+		/*
+		 * SCSI bus scanning may cause other generic SCSI activities to
+		 * fail because we set the default timeout and clear command
+		 * queues (in case of the old sg driver interface).
+		 */
 		sg_initdev(scgp, f);
 		if (scglocal(scgp)->scgfile < 0)
 			scglocal(scgp)->scgfile = f;	/* remember file for ioctl's */
@@ -492,6 +605,19 @@ sg_initdev(scgp, f)
 		unsigned char		rbuf[100];
 	} sg_rep;
 	int	n;
+	int	i;
+	struct stat sb;
+
+	sg_settimeout(f, scgp->deftimeout);
+
+	/* 
+	 * If it's a block device, don't read.... pre Linux-2.4 /dev/sg*
+	 * definitely is a character device and we only need to clear the
+	 * queue for old /dev/sg* versions. If somebody ever implements
+	 * raw disk access for Linux, this test may fail.
+	 */ 
+	if (fstat(f, &sb) >= 0 && S_ISBLK(sb.st_mode)) 
+		return; 
 
 	/* Eat any unwanted garbage from prior use of this device */
 
@@ -501,12 +627,28 @@ sg_initdev(scgp, f)
 	fillbytes((caddr_t)&sg_rep, sizeof(struct sg_header), '\0');
 	sg_rep.hd.reply_len = sizeof(struct sg_header);
 
-	while (read(f, &sg_rep, sizeof(sg_rep)) >= 0 || errno != EAGAIN)
-		;
+	/*
+	 * This is really ugly.
+	 * We come here if 'f' is related to a raw device. If Linux
+	 * will ever have raw devices for /dev/hd* we may get problems.
+	 * As long as there is no clean way to find out whether the
+	 * filedescriptor 'f' is related to an old /dev/sg* or to
+	 * /dev/hd*, we must assume that we found an old /dev/sg* and
+	 * clean it up. Unfortunately, reading from /dev/hd* will
+	 * Access the medium.
+	 */
+	for (i=0; i < 1000; i++) {	/* Read at least 32k from /dev/sg* */
+		int	ret;
 
+		ret = read(f, &sg_rep, sizeof(sg_rep));
+		if (ret > 0)
+			continue;
+		if (ret == 0 || errno == EAGAIN || errno == EIO)
+			break;
+		if (ret < 0 && i > 10)	/* Stop on repeated unknown error */
+			break;
+	}
 	fcntl(f, F_SETFL, n);
-
-	sg_settimeout(f, scgp->deftimeout);
 }
 
 LOCAL int
@@ -925,6 +1067,7 @@ scgo_send(scgp)
 	struct scg_cmd	*sp = scgp->scmd;
 	int		ret;
 	sg_io_hdr_t	sg_io;
+	struct timeval	to;
 
 	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
@@ -1027,12 +1170,31 @@ scgo_send(scgp)
 			break;
 	
 	case DID_TIME_OUT:
+		__scg_times(scgp);
+
+		if (sp->timeout > 1 && scgp->cmdstop->tv_sec == 0) {
+			sp->u_scb.cmd_scb[0] = 0;
+			sp->error = SCG_FATAL;	/* a selection timeout */
+		} else {
 			sp->error = SCG_TIMEOUT;
-			break;
+		}
+		break;
 
 	default:
+		to.tv_sec = sp->timeout;
+		to.tv_usec = 500000;
+		__scg_times(scgp);
+
+		if (scgp->cmdstop->tv_sec < to.tv_sec ||
+		    (scgp->cmdstop->tv_sec == to.tv_sec &&
+			scgp->cmdstop->tv_usec < to.tv_usec)) {
+
+			sp->ux_errno = 0;
+			sp->error = SCG_TIMEOUT;	/* a timeout */
+		} else {
 			sp->error = SCG_RETRYABLE;
-			break;
+		}
+		break;
 	}
 	if (sp->error && sp->ux_errno == 0)
 		sp->ux_errno = EIO;
@@ -1102,7 +1264,7 @@ sg_rwsend(scgp)
 						sizeof(struct sg_header));
 				if (scgp->debug > 0) {
 					js_fprintf((FILE *)scgp->errfile,
-						"Allocted DMA copy buffer, addr: 0x%8.8lX size: %ld\n",
+						"Allocated DMA copy buffer, addr: 0x%8.8lX size: %ld\n",
 						(long)scglocal(scgp)->xbuf,
 						scgp->maxbuf);
 				}
@@ -1273,11 +1435,15 @@ sg_rwsend(scgp)
 			to.tv_usec = 500000;
 			__scg_times(scgp);
 
-			if (scgp->cmdstop->tv_sec < to.tv_sec ||
+			if (sp->timeout > 1 && scgp->cmdstop->tv_sec == 0) {
+				sp->u_scb.cmd_scb[0] = 0;
+				sp->ux_errno = EIO;
+				sp->error = SCG_FATAL;	/* a selection timeout */
+			} else if (scgp->cmdstop->tv_sec < to.tv_sec ||
 			    (scgp->cmdstop->tv_sec == to.tv_sec &&
 				scgp->cmdstop->tv_usec < to.tv_usec)) {
 
-				sp->ux_errno = 0;
+				sp->ux_errno = EIO;
 				sp->error = SCG_TIMEOUT;	/* a timeout */
 			} else {
 				sp->error = SCG_RETRYABLE;	/* may be BUS_BUSY */

@@ -1,7 +1,7 @@
-/* @(#)wm_packet.c	1.14 01/02/22 Copyright 1995, 1997, 2001 J. Schilling */
+/* @(#)wm_packet.c	1.20 02/10/27 Copyright 1995, 1997, 2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)wm_packet.c	1.14 01/02/22 Copyright 1995, 1997, 2001 J. Schilling";
+	"@(#)wm_packet.c	1.20 02/10/27 Copyright 1995, 1997, 2001 J. Schilling";
 #endif
 /*
  *	CDR write method abtraction layer
@@ -27,11 +27,10 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include <stdio.h>
-#include <standard.h>
 #include <stdxlib.h>
 #include <unixstd.h>
-/*#include <string.h>*/
-#include <sys/types.h>
+#include <timedefs.h>
+#include <standard.h>
 #include <utypes.h>
 #include <schily.h>
 
@@ -44,15 +43,15 @@ extern	int	lverbose;
 
 extern	char	*buf;			/* The transfer buffer */
 
-EXPORT	int	write_packet_data __PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
+EXPORT	int	write_packet_data __PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
 
 EXPORT int
-write_packet_data(scgp, dp, track, trackp)
+write_packet_data(scgp, dp, trackp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	track;
 	track_t	*trackp;
 {
+	int	track = trackp->trackno;
 	int	f;
 	int	isaudio;
 	long	startsec;
@@ -66,13 +65,36 @@ write_packet_data(scgp, dp, track, trackp)
 	int	bytespt;
 	long	amount;
 	int	pad;
-	int	bswab;
 	int	retried;
-	long	nextblock; 
+	long	nextblock;
 	int	bytes_to_read;
 	BOOL	neednl	= FALSE;
 	BOOL	islast	= FALSE;
 	char	*bp	= buf;
+	struct timeval tlast;
+	struct timeval tcur;
+	float	secsps = 75.0;
+long bsize;
+long bfree;
+#define	BCAP
+#ifdef	BCAP
+int per;
+#ifdef	XBCAP
+int oper = -1;
+#endif
+#endif
+
+	if (dp->cdr_dstat->ds_flags & DSF_DVD)
+		secsps = 676.27;
+
+	scgp->silent++;
+	if ((*dp->cdr_buffer_cap)(scgp, &bsize, &bfree) < 0)
+		bsize = -1L;
+	if (bsize == 0)		/* If we have no (known) buffer, we cannot */
+		bsize = -1L;	/* retrieve the buffer fill ratio	   */
+	else
+		dp->cdr_dstat->ds_buflow = 0;
+	scgp->silent--;
 
 	f = trackp->f;
 	isaudio = is_audio(trackp);
@@ -84,7 +106,6 @@ write_packet_data(scgp, dp, track, trackp)
 	bytespt = secsize * secspt;
 	
 	pad = !isaudio && is_pad(trackp);	/* Pad only data tracks */
-	bswab = isaudio && is_swab(trackp);	/* Swab only audio tracks */
 
 	if (debug) {
 		printf("secsize:%d secspt:%d bytespt:%d audio:%d pad:%d\n",
@@ -93,14 +114,15 @@ write_packet_data(scgp, dp, track, trackp)
 
 	if (lverbose) {
 		if (tracksize > 0)
-			printf("\rTrack %02d:   0 of %3lld MB written.",
+			printf("\rTrack %02d:    0 of %4lld MB written.",
 			       track, tracksize >> 20);
 		else
-			printf("\rTrack %02d:   0 MB written.", track);
+			printf("\rTrack %02d:    0 MB written.", track);
 		flush();
 		neednl = TRUE;
 	}
 
+	gettimeofday(&tlast, (struct timezone *)0);
 	do {
 		bytes_to_read = bytespt;
 		if (tracksize > 0) {
@@ -109,7 +131,8 @@ write_packet_data(scgp, dp, track, trackp)
 			else
 				bytes_to_read = tracksize - bytes_read;				
 		}
-		count = get_buf(f, &bp, bytes_to_read);
+					/* XXX next wr addr ??? */
+		count = get_buf(f, trackp, startsec, &bp, bytes_to_read);
 		if (count < 0)
 			comerr("read error on input file\n");
 		if (count == 0)
@@ -117,12 +140,9 @@ write_packet_data(scgp, dp, track, trackp)
 		bytes_read += count;
 		if (tracksize >= 0 && bytes_read >= tracksize) {
 			count -= bytes_read - tracksize;
-			if (trackp->padsize == 0 || (bytes_read/secsize) >= 300)
+			if (trackp->padsecs == 0 || (bytes_read/secsize) >= 300)
 				islast = TRUE;
 		}
-
-		if (bswab)
-			swabbytes(bp, count);
 
 		if (count < bytespt) {
 			if (debug) {
@@ -140,7 +160,6 @@ write_packet_data(scgp, dp, track, trackp)
 			if (is_packet(trackp) && trackp->pktsize > 0) {
 				if (count < bytespt) {
 					amount = bytespt - count;
-					fillbytes(&bp[count], amount, '\0');
 					count += amount;
 					printf("\nWARNING: padding remainder of packet.\n");
 					neednl = FALSE;
@@ -148,7 +167,7 @@ write_packet_data(scgp, dp, track, trackp)
 			}
 			bytespt = count;
 			secspt = count / secsize;
-			if (trackp->padsize == 0 || (bytes_read/secsize) >= 300)
+			if (trackp->padsecs == 0 || (bytes_read/secsize) >= 300)
 				islast = TRUE;
 		}
 
@@ -159,7 +178,7 @@ write_packet_data(scgp, dp, track, trackp)
 			scg_settimeout(scgp, 100);
 		/* XXX */
 		if (is_packet(trackp) && trackp->pktsize == 0) {
-			if ((*dp->cdr_next_wr_address)(scgp, track, trackp, &nextblock) == 0) {
+			if ((*dp->cdr_next_wr_address)(scgp, trackp, &nextblock) == 0) {
 				/*
 				 * Some drives (e.g. Ricoh MPS6201S) do not
 				 * increment the Next Writable Address value to
@@ -167,14 +186,14 @@ write_packet_data(scgp, dp, track, trackp)
 				 * their write buffer has underflowed.
 				 */
 				if (retried && nextblock == startsec) {
-					startsec += 7; 
+					startsec += 7;
 				} else {
 					startsec = nextblock;
 				}
 			}
 		}
 
-		amount = (*dp->cdr_write_trackdata)(scgp, bp, startsec, bytespt, secspt, islast);
+		amount =  write_secs(scgp, dp, bp, startsec, bytespt, secspt, islast);
 		if (amount < 0) {
 			if (is_packet(trackp) && trackp->pktsize == 0 && !retried) {
 				printf("%swrite track data: error after %lld bytes, retry with new packet\n",
@@ -192,41 +211,84 @@ write_packet_data(scgp, dp, track, trackp)
 
 		if (lverbose && (bytes >= (savbytes + 0x100000))) {
 			int	fper;
+			int	nsecs = (bytes - savbytes) / secsize;
+			float	fspeed;
 
-			printf("\rTrack %02d: %3lld", track, bytes >> 20);
+			gettimeofday(&tcur, (struct timezone *)0);
+			printf("\rTrack %02d: %4lld", track, bytes >> 20);
 			if (tracksize > 0)
-				printf(" of %3lld MB", tracksize >> 20);
+				printf(" of %4lld MB", tracksize >> 20);
 			else
 				printf(" MB");
 			printf(" written");
 			fper = fifo_percent(TRUE);
 			if (fper >= 0)
 				printf(" (fifo %3d%%)", fper);
+#ifdef	BCAP
+			if (bsize > 0) {			/* buffer size known */
+				scgp->silent++;
+				per = (*dp->cdr_buffer_cap)(scgp, (long *)0, &bfree);
+				scgp->silent--;
+				if (per >= 0) {
+					per = 100*(bsize - bfree) / bsize;
+					if (per < 5)
+						dp->cdr_dstat->ds_buflow++;
+					if (per < dp->cdr_dstat->ds_minbuf &&
+					    (startsec*secsize) > bsize) {
+						dp->cdr_dstat->ds_minbuf = per;
+					}
+					printf(" [buf %3d%%]", per);
+#ifdef	BCAPDBG
+					printf(" %3ld %3ld", bsize >> 10, bfree >> 10);
+#endif
+				}
+			}
+#endif
+
+			tlast.tv_sec = tcur.tv_sec - tlast.tv_sec;
+			tlast.tv_usec = tcur.tv_usec - tlast.tv_usec;
+			while (tlast.tv_usec < 0) {
+				tlast.tv_usec += 1000000;
+				tlast.tv_sec -= 1;
+			}
+			fspeed = (nsecs / secsps) /
+				(tlast.tv_sec * 1.0 + tlast.tv_usec * 0.000001);
+			if (fspeed > 999.0)
+				fspeed = 999.0;
+			printf(" %5.1fx", fspeed);
 			printf(".");
 			savbytes = (bytes >> 20) << 20;
 			flush();
 			neednl = TRUE;
+			tlast = tcur;
 		}
 	} while (tracksize < 0 || bytes_read < tracksize);
 
 	if ((bytes / secsize) < 300) {
-		savbytes = roundup(trackp->padsize, secsize);
-		if (((bytes+savbytes) / secsize) < 300)
-			trackp->padsize = 300 * secsize - bytes;
+		if ((trackp->padsecs + (bytes / secsize)) < 300)
+			trackp->padsecs = 300 - (bytes / secsize);
 	}
-	if (trackp->padsize) {
+	if (trackp->padsecs > 0) {
+		Llong	padbytes;
+
+		/*
+		 * pad_track() is based on secsize. Compute the amount of bytes
+		 * assumed by pad_track().
+		 */
+		padbytes = trackp->padsecs * secsize;
+
 		if (neednl) {
 			printf("\n");
 			neednl = FALSE;
 		}
-		if ((trackp->padsize >> 20) > 0) {
+		if ((padbytes >> 20) > 0) {
 			neednl = TRUE;
 		} else if (lverbose) {
 			printf("Track %02d: writing %3lld KB of pad data.\n",
-						track, (Llong)trackp->padsize >> 10);
+						track, (Llong)(padbytes >> 10));
 			neednl = FALSE;
 		}
-		pad_track(scgp, dp, track, trackp, startsec, trackp->padsize,
+		pad_track(scgp, dp, trackp, startsec, padbytes,
 					TRUE, &savbytes);
 		bytes += savbytes;
 		startsec += savbytes / secsize;

@@ -1,7 +1,7 @@
-/* @(#)scsi-os2.c	1.21 00/09/02 Copyright 1998 J. Schilling, C. Wohlgemuth */
+/* @(#)scsi-os2.c	1.22 02/10/19 Copyright 1998 J. Schilling, C. Wohlgemuth */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-os2.c	1.21 00/09/02 Copyright 1998 J. Schilling, C. Wohlgemuth";
+	"@(#)scsi-os2.c	1.22 02/10/19 Copyright 1998 J. Schilling, C. Wohlgemuth";
 #endif
 /*
  *	Interface for the OS/2 ASPI-Router ASPIROUT.SYS ((c) D. Dorau).
@@ -49,7 +49,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.21";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.22";	/* The version for this transport*/
 
 #define FILE_OPEN			0x0001
 #define OPEN_SHARE_DENYREADWRITE	0x0010
@@ -125,6 +125,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "ASPI", "Generic transport independent SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int

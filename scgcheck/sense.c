@@ -1,7 +1,7 @@
-/* @(#)sense.c	1.1 01/03/18 Copyright 2001 J. Schilling */
+/* @(#)sense.c	1.3 02/09/26 Copyright 2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)sense.c	1.1 01/03/18 Copyright 2001 J. Schilling";
+	"@(#)sense.c	1.3 02/09/26 Copyright 2001 J. Schilling";
 #endif
 /*
  *	Copyright (c) 2001 J. Schilling
@@ -63,7 +63,7 @@ sensetest(scgp)
 	int	sense_count = 0;
 	BOOL	passed = TRUE;
 
-	printf("Ready to start test for failing command? Enter <CR> to conitnue: ");
+	printf("Ready to start test for failing command? Enter <CR> to continue: ");
 	fprintf(logfile, "**********> Testing for failed SCSI command.\n");
 	flushit();
 	(void)getline(abuf, sizeof(abuf));
@@ -80,14 +80,14 @@ sensetest(scgp)
 		printf("This may be because the firmware in your drive is buggy.\n");
 		printf("If the current drive is not a CD-ROM drive please restart\n");
 		printf("the test utility. Otherwise remove any medium from the drive.\n");
-		printf("Ready to start test for failing command? Enter <CR> to conitnue: ");
+		printf("Ready to start test for failing command? Enter <CR> to continue: ");
 		flushit();
 		(void)getline(abuf, sizeof(abuf));
 		ret = test_unit_ready(scgp);
 		if (ret >= 0 || !scg_cmd_err(scgp)) {
-			scsi_unload(scgp);
+			scsi_unload(scgp, (cdr_t *)0);
 			printf("Test Unit Ready did not fail.\n");
-			printf("Ready to eject tray? Enter <CR> to conitnue: ");
+			printf("Ready to eject tray? Enter <CR> to continue: ");
 			flushit();
 			(void)getline(abuf, sizeof(abuf));
 			ret = test_unit_ready(scgp);

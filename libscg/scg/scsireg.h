@@ -1,4 +1,4 @@
-/* @(#)scsireg.h	1.24 00/11/07 Copyright 1987 J. Schilling */
+/* @(#)scsireg.h	1.28 02/10/09 Copyright 1987 J. Schilling */
 /*
  *	usefull definitions for dealing with CCS SCSI - devices
  *
@@ -137,6 +137,12 @@ struct	scsi_inquiry {
 #define	INQ_IT8_2	0x0B		/* IT8 */
 #define	INQ_STARR	0x0C		/* Storage array device */
 #define	INQ_ENCL	0x0D		/* Enclosure services device */
+#define	INQ_SDAD	0x0E		/* Simplyfied direct-access device */
+#define	INQ_OCRW	0x0F		/* Optical card reader/writer device */
+#define	INQ_BRIDGE	0x10		/* Bridging expander device */
+#define	INQ_OSD		0x11		/* Object based storage device */
+#define	INQ_ADC		0x12		/* Automation/Drive interface */
+#define	INQ_WELLKNOWN	0x1E		/* Well known logical unit */
 #define	INQ_NODEV	0x1F		/* Unknown or no device */
 #define	INQ_NOTPR	0x1F		/* Logical unit not present (SCSI-1) */
 
@@ -772,14 +778,17 @@ struct cd_mode_page_05 {		/* write parameters */
 	Uchar	p_len;			/* 0x32 = 50 Bytes */
 	Ucbit	write_type	: 4;	/* Session write type (PACKET/TAO...)*/
 	Ucbit	test_write	: 1;	/* Do not actually write data	     */
-	Ucbit	res_2		: 3;
+	Ucbit	LS_V		: 1;	/* Link size valid		     */
+	Ucbit	BUFE		: 1;	/* Enable Bufunderrun free rec.	     */
+	Ucbit	res_2_7		: 1;
 	Ucbit	track_mode	: 4;	/* Track mode (Q-sub control nibble) */
 	Ucbit	copy		: 1;	/* 1st higher gen of copy prot track ~*/
 	Ucbit	fp		: 1;	/* Fixed packed (if in packet mode)  */
 	Ucbit	multi_session	: 2;	/* Multi session write type	     */
 	Ucbit	dbtype		: 4;	/* Data block type		     */
 	Ucbit	res_4		: 4;	/* Reserved			     */
-	Uchar	res_56[2];		/* Reserved			     */
+	Uchar	link_size;		/* Link Size (default is 7)	     */
+	Uchar	res_6;			/* Reserved			     */
 	Ucbit	host_appl_code	: 6;	/* Host application code of disk     */
 	Ucbit	res_7		: 2;	/* Reserved			     */
 	Uchar	session_format;		/* Session format (DA/CDI/XA)	     */
@@ -797,7 +806,9 @@ struct cd_mode_page_05 {		/* write parameters */
 struct cd_mode_page_05 {		/* write parameters */
 		MP_P_CODE;		/* parsave & pagecode */
 	Uchar	p_len;			/* 0x32 = 50 Bytes */
-	Ucbit	res_2		: 3;
+	Ucbit	res_2_7		: 1;
+	Ucbit	BUFE		: 1;	/* Enable Bufunderrun free rec.	     */
+	Ucbit	LS_V		: 1;	/* Link size valid		     */
 	Ucbit	test_write	: 1;	/* Do not actually write data	     */
 	Ucbit	write_type	: 4;	/* Session write type (PACKET/TAO...)*/
 	Ucbit	multi_session	: 2;	/* Multi session write type	     */
@@ -806,7 +817,8 @@ struct cd_mode_page_05 {		/* write parameters */
 	Ucbit	track_mode	: 4;	/* Track mode (Q-sub control nibble) */
 	Ucbit	res_4		: 4;	/* Reserved			     */
 	Ucbit	dbtype		: 4;	/* Data block type		     */
-	Uchar	res_56[2];		/* Reserved			     */
+	Uchar	link_size;		/* Link Size (default is 7)	     */
+	Uchar	res_6;			/* Reserved			     */
 	Ucbit	res_7		: 2;	/* Reserved			     */
 	Ucbit	host_appl_code	: 6;	/* Host application code of disk     */
 	Uchar	session_format;		/* Session format (DA/CDI/XA)	     */
@@ -823,9 +835,18 @@ struct cd_mode_page_05 {		/* write parameters */
 
 #if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
+struct cd_wr_speed_performance {
+	Uchar	res0;			/* Reserved			     */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
+	Ucbit	res_1_27	: 6;	/* Reserved			     */
+	Uchar	wr_speed_supp[2];	/* Supported write speed	     */
+};
+
 struct cd_mode_page_2A {		/* CD Cap / mech status */
 		MP_P_CODE;		/* parsave & pagecode */
-	Uchar	p_len;			/* 0x14 = 20 Bytes */
+	Uchar	p_len;			/* 0x14 = 20 Bytes (MMC) */
+					/* 0x18 = 24 Bytes (MMC-2) */
+					/* 0x1C >= 28 Bytes (MMC-3) */
 	Ucbit	cd_r_read	: 1;	/* Reads CD-R  media		     */
 	Ucbit	cd_rw_read	: 1;	/* Reads CD-RW media		     */
 	Ucbit	method2		: 1;	/* Reads fixed packet method2 media  */
@@ -847,7 +868,7 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	mode_2_form_1	: 1;	/* Reads Mode-2 form 1 media (XA)    */
 	Ucbit	mode_2_form_2	: 1;	/* Reads Mode-2 form 2 media	     */
 	Ucbit	multi_session	: 1;	/* Reads multi-session media	     */
-	Ucbit	res_4		: 1;	/* Reserved			     */
+	Ucbit	BUF		: 1;	/* Supports Buffer under. free rec.  */
 	Ucbit	cd_da_supported	: 1;	/* Reads audio data with READ CD cmd */
 	Ucbit	cd_da_accurate	: 1;	/* READ CD data stream is accurate   */
 	Ucbit	rw_supported	: 1;	/* Reads R-W sub channel information */
@@ -882,13 +903,37 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	res_17		: 2;	/* Reserved			     */
 	Uchar	max_write_speed[2];	/* Max. write speed supported in KB/s*/
 	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	     */
+
+					/* Byte 22 ... Only in MMC-2	     */
+	Uchar	copy_man_rev[2];	/* Copy management revision supported*/
+	Uchar	res_24;			/* Reserved			     */
+	Uchar	res_25;			/* Reserved			     */
+
+					/* Byte 26 ... Only in MMC-3	     */
+	Uchar	res_26;			/* Reserved			     */
+	Ucbit	res_27_27	: 6;	/* Reserved			     */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
+	Uchar	v3_cur_write_speed[2];	/* Current write speed in KB/s	     */
+	Uchar	num_wr_speed_des[2];	/* # of wr speed perf descr. tables  */
+	struct cd_wr_speed_performance
+		wr_speed_des[1];	/* wr speed performance descriptor   */
+					/* Actually more (num_wr_speed_des)  */
 };
 
 #else				/* Motorola byteorder */
 
+struct cd_wr_speed_performance {
+	Uchar	res0;			/* Reserved			     */
+	Ucbit	res_1_27	: 6;	/* Reserved			     */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
+	Uchar	wr_speed_supp[2];	/* Supported write speed	     */
+};
+
 struct cd_mode_page_2A {		/* CD Cap / mech status */
 		MP_P_CODE;		/* parsave & pagecode */
-	Uchar	p_len;			/* 0x14 = 20 Bytes */
+	Uchar	p_len;			/* 0x14 = 20 Bytes (MMC) */
+					/* 0x18 = 24 Bytes (MMC-2) */
+					/* 0x1C >= 28 Bytes (MMC-3) */
 	Ucbit	res_2_67	: 2;	/* Reserved			     */
 	Ucbit	dvd_ram_read	: 1;	/* Reads DVD-RAM media		     */
 	Ucbit	dvd_r_read	: 1;	/* Reads DVD-R media		     */
@@ -903,7 +948,7 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	test_write	: 1;	/* Supports emulation write	     */
 	Ucbit	cd_rw_write	: 1;	/* Supports writing CD-RW media	     */
 	Ucbit	cd_r_write	: 1;	/* Supports writing CD-R  media	     */
-	Ucbit	res_4		: 1;	/* Reserved			     */
+	Ucbit	BUF		: 1;	/* Supports Buffer under. free rec.  */
 	Ucbit	multi_session	: 1;	/* Reads multi-session media	     */
 	Ucbit	mode_2_form_2	: 1;	/* Reads Mode-2 form 2 media	     */
 	Ucbit	mode_2_form_1	: 1;	/* Reads Mode-2 form 1 media (XA)    */
@@ -945,6 +990,21 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Ucbit	res_17_0	: 1;	/* Reserved			     */
 	Uchar	max_write_speed[2];	/* Max. write speed supported in KB/s*/
 	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	     */
+
+					/* Byte 22 ... Only in MMC-2	     */
+	Uchar	copy_man_rev[2];	/* Copy management revision supported*/
+	Uchar	res_24;			/* Reserved			     */
+	Uchar	res_25;			/* Reserved			     */
+
+					/* Byte 26 ... Only in MMC-3	     */
+	Uchar	res_26;			/* Reserved			     */
+	Ucbit	res_27_27	: 6;	/* Reserved			     */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
+	Uchar	v3_cur_write_speed[2];	/* Current write speed in KB/s	     */
+	Uchar	num_wr_speed_des[2];	/* # of wr speed perf descr. tables  */
+	struct cd_wr_speed_performance
+		wr_speed_des[1];	/* wr speed performance descriptor   */
+					/* Actually more (num_wr_speed_des)  */
 };
 
 #endif

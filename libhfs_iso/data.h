@@ -1,4 +1,4 @@
-/* @(#)data.h	1.1 00/03/05 joerg */
+/* @(#)data.h	1.2 01/11/11 joerg */
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie
@@ -38,5 +38,8 @@ void d_stores		__PR((unsigned char **, char *, int));
 
 unsigned long d_tomtime	__PR((unsigned long));
 unsigned long d_toutime	__PR((unsigned long));
+#ifdef APPLE_HYB
+unsigned long d_dtoutime __PR((long));
+#endif /* APPLE_HYB */
 
 int d_relstring		__PR((char *, char *));

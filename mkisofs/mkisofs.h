@@ -1,4 +1,4 @@
-/* @(#)mkisofs.h	1.60 01/04/02 joerg */
+/* @(#)mkisofs.h	1.76 02/12/07 joerg */
 /*
  * Header file mkisofs.h - assorted structure definitions and typecasts.
 
@@ -25,8 +25,6 @@
 
 #include <mconfig.h>	/* Must be before stdio.h for LARGEFILE support */
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <statdefs.h>
 #include <stdxlib.h>
 #include <unixstd.h>	/* Needed for for LARGEFILE support */
@@ -37,6 +35,12 @@ extern char    *strdup();
 #include <dirdefs.h>
 #include <utypes.h>
 #include <standard.h>
+
+#ifdef	DVD_VIDEO
+#ifndef	UDF
+#define	UDF
+#endif
+#endif
 
 /*#if	_LFS_LARGEFILE*/
 #ifdef	HAVE_LARGEFILES
@@ -114,6 +118,9 @@ struct directory_entry {
 #ifdef SORTING
 	int		sort;		/* sort weight for entry */
 #endif /* SORTING */
+#ifdef UDF
+	int		udf_file_entry_sector;	/* also used as UDF unique ID */
+#endif
 };
 
 struct file_hash {
@@ -154,6 +161,8 @@ struct output_fragment {
 	int             (*of_size)	__PR((int));
 	int             (*of_generate)	__PR((void));
 	int             (*of_write)	__PR((FILE *));
+	char		*of_name;			/* Textual description*/
+	unsigned int	of_start_extent;		/* For consist check */
 };
 
 extern struct output_fragment *out_list;
@@ -181,6 +190,34 @@ extern struct output_fragment genboot_desc;
 extern struct output_fragment hfs_desc;
 
 #endif	/* APPLE_HYB */
+#ifdef DVD_VIDEO
+/*
+ * This structure holds the information necessary to create a valid
+ * DVD-Video image. Basically it's how much to pad the files so the
+ * file offsets described in the video_ts.ifo and vts_xx_0.ifo are
+ * the correct one in the image that we create.
+ */
+typedef struct {
+	int	realsize_ifo;
+	int	realsize_menu;
+	int	realsize_bup;
+	int	size_ifo;
+	int	size_menu;
+	int	size_title;
+	int	size_bup;
+	int	pad_ifo;
+	int	pad_menu;
+	int	pad_title;
+	int	pad_bup;
+	int	number_of_vob_files;
+	int	realsize_vob[10];
+} title_set_t;
+
+typedef struct {
+	int		num_titles;
+	title_set_t	*title_set;
+} title_set_info_t; 
+#endif /* DVD_VIDEO */
 
 /*
  * This structure describes one complete directory.  It has pointers
@@ -206,8 +243,8 @@ struct directory {
 	unsigned int    extent;
 	unsigned int    jsize;
 	unsigned int    jextent;
-	unsigned short  path_index;
-	unsigned short  jpath_index;
+	unsigned int    path_index;
+	unsigned int    jpath_index;
 	unsigned short  dir_flags;
 	unsigned short  dir_nlink;
 #ifdef APPLE_HYB
@@ -288,11 +325,13 @@ extern int      new_dir_mode;
 extern int      follow_links;
 extern int	cache_inodes;
 extern int      verbose;
+extern int      debug;
 extern int      gui;
 extern int      all_files;
 extern int      generate_tables;
 extern int      print_size;
 extern int      split_output;
+extern int	use_graft_ptrs;
 extern int      jhide_trans_tbl;
 extern int      hide_rr_moved;
 extern int      omit_period;
@@ -312,6 +351,15 @@ extern int	use_fileversion;
 extern int      split_SL_component;
 extern int      split_SL_field;
 extern char    *trans_tbl;
+
+#define JMAX		64	/* maximum Joliet file name length (spec) */
+#define JLONGMAX	103	/* out of spec Joliet file name length */
+extern int	jlen;		/* selected maximum Joliet file name length */
+
+#ifdef DVD_VIDEO
+extern int	dvd_video;
+#endif /* DVD_VIDEO */
+
 
 #ifdef APPLE_HYB
 extern int      apple_hyb;	/* create HFS hybrid */
@@ -333,6 +381,7 @@ extern char    *hfs_volume_id;	/* HFS volume ID */
 extern int      icon_pos;	/* Keep Icon position */
 extern int	hfs_lock;	/* lock HFS volume (read-only) */
 extern char    *hfs_bless;	/* name of folder to 'bless' (System Folder) */
+extern char    *hfs_parms;	/* low level HFS parameters */
 
 #define MAP_LAST	1	/* process magic then map file */
 #define MAG_LAST	2	/* process map then magic file */
@@ -415,7 +464,7 @@ extern void set_722 __PR((char *pnt, unsigned int i));
 extern void outputlist_insert __PR((struct output_fragment * frag));
 
 #ifdef APPLE_HYB
-extern int get_adj_size __PR((int Csize));
+extern Ulong get_adj_size __PR((int Csize));
 extern int adj_size __PR((int Csize, int start_extent, int extra));
 extern void adj_size_other __PR((struct directory * dpnt));
 extern int insert_padding_file __PR((int size));
@@ -449,6 +498,11 @@ extern int merge_previous_session __PR((struct directory *,
 extern int get_session_start __PR((int *));
 
 /* joliet.c */
+#ifdef	UDF
+extern	void	convert_to_unicode	__PR((unsigned char *buffer,
+			int size, char *source, struct nls_table *inls));
+extern	int	joliet_strlen		__PR((const char *string));
+#endif
 extern unsigned char conv_charset __PR((unsigned char, struct nls_table *,
 				struct nls_table *));
 extern int joliet_sort_tree __PR((struct directory * node));
@@ -573,18 +627,31 @@ extern struct eltorito_boot_entry_info *first_boot_entry;
 extern struct eltorito_boot_entry_info *last_boot_entry;
 extern struct eltorito_boot_entry_info *current_boot_entry;
 
-extern void    *e_malloc __PR((size_t));
+extern char    *findgequal	__PR((char *));
+extern void    *e_malloc	__PR((size_t));
 
+/*
+ * Note: always use these macros to avoid problems.
+ *
+ * ISO_ROUND_UP(X)	may cause an integer overflow and thus give
+ *			incorrect results. So avoid it if possible.
+ *
+ * ISO_BLOCKS(X)	is overflow safe. Prefer this when ever it is possible.
+ */
 #define SECTOR_SIZE	(2048)
-#define ISO_ROUND_UP(X)	((X + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1))
+#define ISO_ROUND_UP(X)	(((X) + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1))
+#define ISO_BLOCKS(X)	(((X) / SECTOR_SIZE) + (((X)%SECTOR_SIZE)?1:0))
+
 #define ROUND_UP(X,Y)	(((X + (Y - 1)) / Y) * Y)
 
 #ifdef APPLE_HYB
-#define HFS_ROUND_UP(X)	ISO_ROUND_UP(((X)*HFS_BLOCKSZ))
 /*
  * ISO blocks == 2048, HFS blocks == 512
  */
 #define HFS_BLK_CONV	(SECTOR_SIZE/HFS_BLOCKSZ)
+
+#define HFS_ROUND_UP(X)	ISO_ROUND_UP(((X)*HFS_BLOCKSZ))	/* XXX ??? */
+#define HFS_BLOCKS(X)	(ISO_BLOCKS(X) * HFS_BLK_CONV)
 
 #define USE_MAC_NAME(E)	(use_mac_name && ((E)->hfs_ent != NULL) && (E)->hfs_type)
 #endif	/* APPLE_HYB */
@@ -616,15 +683,16 @@ extern void    *e_malloc __PR((size_t));
  * is set for all entries in a directory, it means we can just
  * reuse the TRANS.TBL and not generate a new one.
  */
-#define SAFE_TO_REUSE_TABLE_ENTRY  0x01
-#define DIR_HAS_DOT		   0x02
-#define DIR_HAS_DOTDOT		   0x04
+#define SAFE_TO_REUSE_TABLE_ENTRY  0x01		/* de_flags only  */
+#define DIR_HAS_DOT		   0x02		/* dir_flags only */
+#define DIR_HAS_DOTDOT		   0x04		/* dir_flags only */
 #define INHIBIT_JOLIET_ENTRY	   0x08
-#define INHIBIT_RR_ENTRY	   0x10
-#define RELOCATED_DIRECTORY	   0x20
+#define INHIBIT_RR_ENTRY	   0x10		/* not used       */
+#define RELOCATED_DIRECTORY	   0x20		/* de_flags only  */
 #define INHIBIT_ISO9660_ENTRY	   0x40
-#define MEMORY_FILE		   0x80
-#define HIDDEN_FILE		   0x100
+#define MEMORY_FILE		   0x80		/* de_flags only  */
+#define HIDDEN_FILE		   0x100	/* de_flags only  */
+#define DIR_WAS_SCANNED		   0x200	/* dir_flags only */
 
 /*
  * Volume sequence number to use in all of the iso directory records.
@@ -648,7 +716,7 @@ extern void    *e_malloc __PR((size_t));
 #ifdef FILENAME_MAX
 #define NAME_MAX	FILENAME_MAX
 #else
-#define NAME_MAX	128
+#define NAME_MAX	256
 #endif
 #endif
 

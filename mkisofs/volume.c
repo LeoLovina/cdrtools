@@ -1,7 +1,7 @@
-/* @(#)volume.c	1.8 01/03/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)volume.c	1.12 02/10/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)volume.c	1.8 01/03/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)volume.c	1.12 02/10/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -44,8 +44,8 @@ static	char sccsid[] =
 
 static hfsvol  *vol_save = 0;	/* used to "destroy" an HFS volume */
 
-static int	AlcSiz		__PR((int));
-static int	XClpSiz		__PR((int));
+static int	AlcSiz		__PR((Ulong));
+static int	XClpSiz		__PR((Ulong));
 static int	get_vol_size	__PR((int));
 	int	make_mac_volume	__PR((struct directory *, int));
 static int	copy_to_mac_vol	__PR((hfsvol *, struct directory *));
@@ -56,7 +56,7 @@ static void	set_dir_info	__PR((hfsvol *, struct directory *));
  */
 static int
 AlcSiz(vlen)
-	int	vlen;
+	Ulong	vlen;
 {
 	int	lpa,
 		drAlBlkSiz;
@@ -79,7 +79,7 @@ AlcSiz(vlen)
  */
 static int
 XClpSiz(vlen)
-	int	vlen;
+	Ulong	vlen;
 {
 	int	olpa,
 		lpa,
@@ -98,16 +98,21 @@ XClpSiz(vlen)
 	drNmAlBlks = (vlen - 5 - vbmsz) / lpa;
 	drXTClpSiz = drNmAlBlks / 128 * drAlBlkSiz;
 
-	/*
-	 * make allowances because we have possibly rounded up the
-	 * allocation size get the "original" lpa "
-	 */
-	olpa = 1 + vlen / 65536;
+	/* override the drXTClpSiz size for large volumes */
+	if (drXTClpSiz > hce->max_XTCsize) {
+		drXTClpSiz = hce->max_XTCsize;
+	} else {
+		/*
+		 * make allowances because we have possibly rounded up the
+		 * allocation size get the "original" lpa "
+		 */
+		olpa = 1 + vlen / 65536;
 
-	/* adjust size upwards */
-	drXTClpSiz = (drXTClpSiz * lpa) / olpa;
+		/* adjust size upwards */
+		drXTClpSiz = ((Ullong)drXTClpSiz * lpa) / olpa;
+	}
 
-	/* round up to the nearest alloaction size */
+	/* round up to the nearest allocation size */
 	drXTClpSiz = ROUND_UP(drXTClpSiz, drAlBlkSiz);
 
 	return (drXTClpSiz);
@@ -201,8 +206,7 @@ make_mac_volume(dpnt, start_extent)
 {
 	char	vol_name[HFS_MAX_VLEN + 1];	/* Mac volume name */
 	hfsvol	*vol;			/* Mac volume */
-	int	vlen,
-		vblen;			/* vol length (bytes, blocks) */
+	int	vblen;			/* vol length (HFS blocks) */
 	int	Csize,
 		lastCsize;		/* allocation sizes */
 	int	ret = 0;		/* return value */
@@ -249,24 +253,22 @@ make_mac_volume(dpnt, start_extent)
 			 * allocation size has changed, so update
 			 * ISO volume size
 			 */
-			if ((vlen = get_adj_size(Csize)) < 0) {
+			if ((vblen = get_adj_size(Csize)) < 0) {
 				sprintf(hce->error,
 					"too many files for HFS volume");
 				return (-1);
 			}
-			vlen +=
-			  ROUND_UP((start_extent - session_start) * SECTOR_SIZE,
+			vblen +=
+			 ROUND_UP((start_extent - session_start) * HFS_BLK_CONV,
 								Csize);
-			vblen = vlen / HFS_BLOCKSZ;
 			lastCsize = Csize;
 		}
 	}
 
-	/* set vlen to size in bytes */
 	/* take off the label/map size */
 	vblen -= hce->hfs_map_size;
 
-	vlen = hce->hfs_vol_size = vblen * HFS_BLOCKSZ;
+	hce->hfs_vol_size = vblen;
 
 	/* set the default allocation size for libhfs */
 	hce->Csize = Csize;

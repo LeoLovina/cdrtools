@@ -1,5 +1,6 @@
-#ident %W% %E% %Q%
 ###########################################################################
-DIRS=		patches conf inc lib libdeflt libscg librscg libhfs_iso libfile libunls \
-		cdrecord mkisofs mkisofs/diag cdda2wav misc rscsi scgcheck man
+#
+# This file is intentionally left empty. The targets are now defined by the
+# "Slottable Source" feature of the makefile system
+#
 ###########################################################################

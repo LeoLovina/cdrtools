@@ -1,7 +1,7 @@
-/* @(#)sha_func.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)sha_func.c	1.3 01/10/27 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)sha_func.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)sha_func.c	1.3 01/10/27 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /*____________________________________________________________________________
@@ -36,7 +36,7 @@ static char     sccsid[] =
 /* This code is in the public domain */
 
 #include "config.h"
-#include <string.h>
+#include <strdefs.h>
 #include "sha.h"
 
 /* UNRAVEL should be fastest & biggest */

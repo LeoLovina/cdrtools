@@ -2,15 +2,16 @@
 XXX
 SIZEOF testen !!!
 */
-/* @(#)scsi_cdr.c	1.101 01/04/11 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.123 02/11/03 Copyright 1995-2002 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.101 01/04/11 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.123 02/11/03 Copyright 1995-2002 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
+ *	covering pre-MMC standard functions up to MMC-2
  *
- *	Copyright (c) 1995 J. Schilling
+ *	Copyright (c) 1995-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -57,6 +58,7 @@ static	char sccsid[] =
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
 
+#include "scsimmc.h"
 #include "cdrecord.h"
 
 #define	strbeg(s1,s2)	(strstr((s2), (s1)) == (s2))
@@ -72,14 +74,18 @@ EXPORT	int	read_capacity	__PR((SCSI *scgp));
 EXPORT	void	print_capacity	__PR((SCSI *scgp, FILE *f));
 EXPORT	int	scsi_load_unload __PR((SCSI *scgp, int));
 EXPORT	int	scsi_prevent_removal __PR((SCSI *scgp, int));
-EXPORT	int	scsi_start_stop_unit __PR((SCSI *scgp, int, int));
-EXPORT	int	scsi_set_speed	__PR((SCSI *scgp, int readspeed, int writespeed));
+EXPORT	int	scsi_start_stop_unit __PR((SCSI *scgp, int, int, BOOL immed));
+EXPORT	int	scsi_set_speed	__PR((SCSI *scgp, int readspeed, int writespeed, int rotctl));
 EXPORT	int	scsi_get_speed	__PR((SCSI *scgp, int *readspeedp, int *writespeedp));
 EXPORT	int	qic02		__PR((SCSI *scgp, int));
+EXPORT	int	write_xscsi	__PR((SCSI *scgp, caddr_t, long, long, int));
 EXPORT	int	write_xg0	__PR((SCSI *scgp, caddr_t, long, long, int));
 EXPORT	int	write_xg1	__PR((SCSI *scgp, caddr_t, long, long, int));
 EXPORT	int	write_xg5	__PR((SCSI *scgp, caddr_t, long, long, int));
-EXPORT	int	scsi_flush_cache __PR((SCSI *scgp));
+EXPORT	int	seek_scsi	__PR((SCSI *scgp, long addr));
+EXPORT	int	seek_g0		__PR((SCSI *scgp, long addr));
+EXPORT	int	seek_g1		__PR((SCSI *scgp, long addr));
+EXPORT	int	scsi_flush_cache __PR((SCSI *scgp, BOOL immed));
 EXPORT	int	read_buffer	__PR((SCSI *scgp, caddr_t bp, int cnt, int mode));
 EXPORT	int	read_subchannel	__PR((SCSI *scgp, caddr_t bp, int track,
 					int cnt,int msf, int subq, int fmt));
@@ -88,6 +94,7 @@ EXPORT	int	read_toc_philips __PR((SCSI *scgp, caddr_t, int, int, int, int));
 EXPORT	int	read_header	__PR((SCSI *scgp, caddr_t, long, int, int));
 EXPORT	int	read_disk_info	__PR((SCSI *scgp, caddr_t, int));
 EXPORT	int	read_track_info	__PR((SCSI *scgp, caddr_t, int, int));
+EXPORT	int	read_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int fmt));
 EXPORT	int	send_opc	__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
 EXPORT	int	read_track_info_philips	__PR((SCSI *scgp, caddr_t, int, int));
 EXPORT	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track, BOOL immed));
@@ -122,18 +129,19 @@ EXPORT	void	printinq	__PR((SCSI *scgp, FILE *f));
 EXPORT	void	printdev	__PR((SCSI *scgp));
 EXPORT	BOOL	do_inquiry	__PR((SCSI *scgp, BOOL));
 EXPORT	BOOL	recovery_needed	__PR((SCSI *scgp));
-EXPORT	int	scsi_load	__PR((SCSI *scgp));
-EXPORT	int	scsi_unload	__PR((SCSI *scgp));
+EXPORT	int	scsi_load	__PR((SCSI *scgp, cdr_t *));
+EXPORT	int	scsi_unload	__PR((SCSI *scgp, cdr_t *));
 EXPORT	int	scsi_cdr_write	__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
 EXPORT	struct cd_mode_page_2A * mmc_cap __PR((SCSI *scgp, Uchar *modep));
 EXPORT	void	mmc_getval	__PR((struct cd_mode_page_2A *mp,
 					BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
-					BOOL *dvdp));
-EXPORT	BOOL	is_mmc		__PR((SCSI *scgp, BOOL *dvdp));
+					BOOL *dvdp, BOOL *dvdwp));
+EXPORT	BOOL	is_mmc		__PR((SCSI *scgp, BOOL *cdwp, BOOL *dvdwp));
 EXPORT	BOOL	mmc_check	__PR((SCSI *scgp, BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
-					BOOL *dvdp));
+					BOOL *dvdp, BOOL *dvdwp));
+LOCAL	void	print_speed	__PR((char *fmt, int val));
 EXPORT	void	print_capabilities __PR((SCSI *scgp));
 
 EXPORT BOOL
@@ -195,7 +203,13 @@ wait_unit_ready(scgp, secs)
 		}
 		c = scg_sense_code(scgp);
 		k = scg_sense_key(scgp);
-		if (k == SC_NOT_READY && (c == 0x3A || c == 0x30)) {
+		/*
+		 * Abort quickly if it does not make sense to wait.
+		 * 0x30 == Cannot read medium
+		 * 0x3A == Medium not present
+		 */
+		if ((k == SC_NOT_READY && (c == 0x3A || c == 0x30)) ||
+		    (k == SC_MEDIUM_ERROR)) {
 			if (scgp->silent <= 1)
 				scg_printerr(scgp);
 			scgp->silent--;
@@ -218,7 +232,9 @@ scsi_in_progress(scgp)
 		 * Logigal unit not ready operation/long_write in progress
 		 */
 	    scg_sense_code(scgp) == 0x04 &&
-	    (scg_sense_qual(scgp) == 0x07 || scg_sense_qual(scgp) == 0x08)) {
+	    (scg_sense_qual(scgp) == 0x04 || /* CyberDr. "format in progress"*/
+	     scg_sense_qual(scgp) == 0x07 || /* "operation in progress"	     */
+	     scg_sense_qual(scgp) == 0x08)) {/* "long write in progress"     */
 		return (TRUE);
 	} else {
 		if (scgp->silent <= 1)
@@ -423,10 +439,11 @@ scsi_prevent_removal(scgp, prevent)
 
 
 EXPORT int
-scsi_start_stop_unit(scgp, flg, loej)
+scsi_start_stop_unit(scgp, flg, loej, immed)
 	SCSI	*scgp;
 	int	flg;
 	int	loej;
+	BOOL	immed;
 {
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
@@ -437,6 +454,9 @@ scsi_start_stop_unit(scgp, flg, loej)
 	scmd->cdb.g0_cdb.cmd = 0x1B;	/* Start Stop Unit */
 	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.count = (flg ? 1:0) | (loej ? 2:0);
+
+	if (immed)
+		scmd->cdb.cmd_cdb[1] |= 0x01;
 	
 	scgp->cmdname = "start/stop unit";
 
@@ -444,10 +464,11 @@ scsi_start_stop_unit(scgp, flg, loej)
 }
 
 EXPORT int
-scsi_set_speed(scgp, readspeed, writespeed)
+scsi_set_speed(scgp, readspeed, writespeed, rotctl)
 	SCSI	*scgp;
 	int	readspeed;
 	int	writespeed;
+	int	rotctl;
 {
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
@@ -457,8 +478,17 @@ scsi_set_speed(scgp, readspeed, writespeed)
 	scmd->sense_len = CCS_SENSE_LEN;
 	scmd->cdb.g5_cdb.cmd = 0xBB;
 	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
-	i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], readspeed);
-	i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], writespeed);
+
+	if (readspeed < 0)
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], 0xFFFF);
+	else
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], readspeed);
+	if (writespeed < 0)
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], 0xFFFF);
+	else
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], writespeed);
+
+	scmd->cdb.cmd_cdb[1] |= rotctl & 0x03;
 
 	scgp->cmdname = "set cd speed";
 
@@ -487,7 +517,10 @@ scsi_get_speed(scgp, readspeedp, writespeedp)
 	if (readspeedp)
 		*readspeedp = val;
 
-	val = a_to_u_2_byte(mp->cur_write_speed);
+	if (mp->p_len >= 28)
+		val = a_to_u_2_byte(mp->v3_cur_write_speed);
+	else
+		val = a_to_u_2_byte(mp->cur_write_speed);
 	if (writespeedp)
 		*writespeedp = val;
 
@@ -514,6 +547,22 @@ qic02(scgp, cmd)
 	
 	scgp->cmdname = "qic 02";
 	return (scg_cmd(scgp));
+}
+
+#define	G0_MAXADDR	0x1FFFFFL
+
+EXPORT int
+write_xscsi(scgp, bp, addr, size, cnt)
+	SCSI	*scgp;
+	caddr_t	bp;		/* address of buffer */
+	long	addr;		/* disk address (sector) to put */
+	long	size;		/* number of bytes to transfer */
+	int	cnt;		/* sectorcount */
+{
+	if(addr <= G0_MAXADDR)
+		return(write_xg0(scgp, bp, addr, size, cnt));
+	else
+		return(write_xg1(scgp, bp, addr, size, cnt));
 }
 
 EXPORT int
@@ -604,8 +653,60 @@ write_xg5(scgp, bp, addr, size, cnt)
 }
 
 EXPORT int
-scsi_flush_cache(scgp)
+seek_scsi(scgp, addr)
 	SCSI	*scgp;
+	long	addr;
+{
+	if(addr <= G0_MAXADDR)
+		return(seek_g0(scgp, addr));
+	else
+		return(seek_g1(scgp, addr));
+}
+
+EXPORT int
+seek_g0(scgp, addr)
+	SCSI	*scgp;
+	long	addr;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g0_cdb.cmd = 0x0B;	/* Seek */
+	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
+	g0_cdbaddr(&scmd->cdb.g0_cdb, addr);
+	
+	scgp->cmdname = "seek_g0";
+
+	return (scg_cmd(scgp));
+}
+
+EXPORT int
+seek_g1(scgp, addr)
+	SCSI	*scgp;
+	long	addr;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g1_cdb.cmd = 0x2B;	/* Seek G1 */
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
+	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
+	
+	scgp->cmdname = "seek_g1";
+
+	return (scg_cmd(scgp));
+}
+
+EXPORT int
+scsi_flush_cache(scgp, immed)
+	SCSI	*scgp;
+	BOOL	immed;
 {
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
@@ -616,6 +717,9 @@ scsi_flush_cache(scgp)
 	scmd->timeout = 2 * 60;		/* Max: sizeof(CDR-cache)/150KB/s */
 	scmd->cdb.g1_cdb.cmd = 0x35;
 	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
+
+	if (immed)
+		scmd->cdb.cmd_cdb[1] |= 0x02;
 	
 	scgp->cmdname = "flush cache";
 
@@ -844,6 +948,34 @@ read_track_info(scgp, bp, track, cnt)
 }
 
 EXPORT int
+read_dvd_structure(scgp, bp, cnt, fmt)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	cnt;
+	int	fmt;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->timeout = 4 * 60;		/* Needs up to 2 minutes ??? */
+	scmd->cdb.g5_cdb.cmd = 0xAD;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	g5_cdblen(&scmd->cdb.g5_cdb, cnt);
+	scmd->cdb.g5_cdb.count[1] = fmt;
+
+	scgp->cmdname = "read dvd structure";
+
+	if (scg_cmd(scgp) < 0)
+		return (-1);
+	return (0);
+}
+
+EXPORT int
 send_opc(scgp, bp, cnt, doopc)
 	SCSI	*scgp;
 	caddr_t	bp;
@@ -920,6 +1052,7 @@ scsi_close_tr_session(scgp, type, track, immed)
 
 	if (immed)
 		scmd->cdb.g1_cdb.reladr = 1;
+/*		scmd->cdb.cmd_cdb[1] |= 0x01;*/
 #ifdef	nono
 	scmd->cdb.g1_cdb.reladr = 1;	/* IMM hack to test Mitsumi behaviour*/
 #endif
@@ -1050,6 +1183,7 @@ scsi_blank(scgp, addr, blanktype, immed)
 
 	if (immed)
 		scmd->cdb.g5_cdb.res |= 8;
+/*		scmd->cdb.cmd_cdb[1] |= 0x10;*/
 
 	scgp->cmdname = "blank unit";
 
@@ -1337,12 +1471,6 @@ mode_sense_g1(scgp, dp, cnt, page, pcf)
 	return (0);
 }
 
-struct tocheader {
-	Uchar	len[2];
-	Uchar	first;
-	Uchar	last;
-};
-
 struct trackdesc {
 	Uchar	res0;
 
@@ -1391,33 +1519,6 @@ struct trackheader {
 #define	TRM_ZERO	0
 #define	TRM_USER_ECC	1	/* 2048 bytes user data + 288 Bytes ECC/EDC */
 #define	TRM_USER	2	/* All user data (2336 bytes) */
-
-struct ftrackdesc {
-	Uchar	sess_number;
-
-#if defined(_BIT_FIELDS_LTOH)		/* Intel byteorder */
-	Ucbit	control		: 4;
-	Ucbit	adr		: 4;
-#else					/* Motorola byteorder */
-	Ucbit	adr		: 4;
-	Ucbit	control		: 4;
-#endif
-
-	Uchar	track;
-	Uchar	point;
-	Uchar	amin;
-	Uchar	asec;
-	Uchar	aframe;
-	Uchar	res7;
-	Uchar	pmin;
-	Uchar	psec;
-	Uchar	pframe;
-};
-
-struct fdiskinfo {
-	struct tocheader	hd;
-	struct ftrackdesc	desc[1];
-};
 
 
 EXPORT	int
@@ -1476,7 +1577,7 @@ read_cdtext(scgp)
 		return (-1);
 	}
 	{
-		FILE	*f = fileopen("cdtext.dat", "wct");
+		FILE	*f = fileopen("cdtext.dat", "wctb");
 		filewrite(f, xxb, len);
 	}
 	return (0);
@@ -1731,6 +1832,7 @@ sense_secsize(scgp, current)
 	Uchar	mode[0x100];
 	Uchar	*p;
 	Uchar	*ep;
+	int	len;
 	int	secsize = -1;
 
 	scgp->silent++;
@@ -1741,35 +1843,50 @@ sense_secsize(scgp, current)
 
 	fillbytes(mode, sizeof(mode), '\0');
 	scgp->silent++;
-	if (mode_sense(scgp, mode, 0xFF, 0x3F, current?0:2) < 0) {	/* All Pages */
+
+	len =	sizeof(struct scsi_mode_header) +
+		sizeof(struct scsi_mode_blockdesc);
+	/*
+	 * Wenn wir hier get_mode_params() nehmen bekommen wir die Warnung:
+	 * Warning: controller returns wrong page 1 for All pages page (3F).
+	 */
+	if (mode_sense(scgp, mode, len, 0x3F, current?0:2) < 0) {
 		fillbytes(mode, sizeof(mode), '\0');
-		if (mode_sense(scgp, mode, 0xFF, 0, current?0:2) < 0)	{/* VU (block desc) */
+		if (mode_sense(scgp, mode, len, 0, current?0:2) < 0)	{/* VU (block desc) */
 			scgp->silent--;
 			return (-1);
 		}
 	}
-	scgp->silent--;
-
-	ep = mode+mode[0];	/* Points to last byte of data */
-	p = &mode[4];
-	p += mode[3];
-	if (scgp->debug) {
-		printf("Pages: ");
-		while (p < ep) {
-			printf("0x%x ", *p&0x3F);
-			p += p[1]+2;
-		}
-		printf("\n");
-	}
-
 	if (mode[3] == 8) {
 		if (scgp->debug) {
-			printf("Density: 0x%x\n", mode[4]);
+			printf("Density: 0x%X\n", mode[4]);
 			printf("Blocks:  %ld\n", a_to_u_3_byte(&mode[5]));
 			printf("Blocklen:%ld\n", a_to_u_3_byte(&mode[9]));
 		}
 		secsize = a_to_u_3_byte(&mode[9]);
 	}
+	fillbytes(mode, sizeof(mode), '\0');
+	/*
+	 * The ACARD TECH AEC-7720 ATAPI<->SCSI adaptor
+	 * chokes if we try to transfer more than 0x40 bytes with
+	 * mode_sense of all pages. So try to avoid to run this
+	 * command if possible.
+	 */
+	if (scgp->debug &&
+	    mode_sense(scgp, mode, 0xFE, 0x3F, current?0:2) >= 0) {	/* All Pages */
+
+		ep = mode+mode[0];	/* Points to last byte of data */
+		p = &mode[4];
+		p += mode[3];
+		printf("Pages: ");
+		while (p < ep) {
+			printf("0x%X ", *p&0x3F);
+			p += p[1]+2;
+		}
+		printf("\n");
+	}
+	scgp->silent--;
+
 	return (secsize);
 }
 
@@ -1805,9 +1922,10 @@ is_unknown_dev(scgp)
 	return (scgp->dev == DEV_UNKNOWN);
 }
 
+#ifndef	DEBUG
 #define	DEBUG
+#endif
 #ifdef	DEBUG
-#define	G0_MAXADDR	0x1FFFFFL
 
 EXPORT int
 read_scsi(scgp, bp, addr, cnt)
@@ -2206,7 +2324,7 @@ getdev(scgp, print)
 
 		} else if (strbeg("T.YUDEN", vendor_info)) {
 			if (strbeg("CD-WO EW-50", prod_ident))
-				scgp->dev = DEV_CDD_521;
+				scgp->dev = DEV_TYUDEN_EW50;
 
 		} else if (strbeg("WPI", vendor_info)) {	/* Wearnes */
 			if (strbeg("CDR-632P", prod_ident))
@@ -2240,10 +2358,12 @@ getdev(scgp, print)
 			BOOL	cdrrw	 = FALSE;
 			BOOL	cdwrw	 = FALSE;
 			BOOL	dvd	 = FALSE;
+			BOOL	dvdwr	 = FALSE;
 
 			scgp->dev = DEV_CDROM;
 
-			if (mmc_check(scgp, &cdrr, &cdwr, &cdrrw, &cdwrw, &dvd))
+			if (mmc_check(scgp, &cdrr, &cdwr, &cdrrw, &cdwrw,
+								&dvd, &dvdwr))
 				scgp->dev = DEV_MMC_CDROM;
 			if (cdwr)
 				scgp->dev = DEV_MMC_CDR;
@@ -2251,6 +2371,8 @@ getdev(scgp, print)
 				scgp->dev = DEV_MMC_CDRW;
 			if (dvd)
 				scgp->dev = DEV_MMC_DVD;
+			if (dvdwr)
+				scgp->dev = DEV_MMC_DVD_WR;
 		}
 		break;
 
@@ -2343,7 +2465,8 @@ printdev(scgp)
 	case DEV_MMC_CDROM:	printf("Generic mmc CD-ROM");	break;
 	case DEV_MMC_CDR:	printf("Generic mmc CD-R");	break;
 	case DEV_MMC_CDRW:	printf("Generic mmc CD-RW");	break;
-	case DEV_MMC_DVD:	printf("Generic mmc2 DVD");	break;
+	case DEV_MMC_DVD:	printf("Generic mmc2 DVD-ROM");	break;
+	case DEV_MMC_DVD_WR:	printf("Generic mmc2 DVD-R/DVD-RW");break;
 	case DEV_CDD_521_OLD:	printf("Philips old CDD-521");	break;
 	case DEV_CDD_521:	printf("Philips CDD-521");	break;
 	case DEV_CDD_522:	printf("Philips CDD-522");	break;
@@ -2409,17 +2532,19 @@ recovery_needed(scgp)
 }
 
 EXPORT int
-scsi_load(scgp)
+scsi_load(scgp, dp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 {
-	return (scsi_start_stop_unit(scgp, 1, 1));
+	return (scsi_start_stop_unit(scgp, 1, 1, dp && (dp->cdr_cmdflags&F_IMMED) != 0));
 }
 
 EXPORT int
-scsi_unload(scgp)
+scsi_unload(scgp, dp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 {
-	return (scsi_start_stop_unit(scgp, 0, 1));
+	return (scsi_start_stop_unit(scgp, 0, 1, dp && (dp->cdr_cmdflags&F_IMMED) != 0));
 }
 
 EXPORT int
@@ -2487,7 +2612,7 @@ retry:
 	if (modep)
 		mp2 = (struct cd_mode_page_2A *)modep;
 	else
-		mp2 = (struct cd_mode_page_2A *)malloc(len);
+		mp2 = malloc(len);
 	if (mp2)
 		movebytes(mp, mp2, len);
 
@@ -2495,15 +2620,16 @@ retry:
 }
 
 EXPORT void
-mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
+mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp, dvdwp)
 	struct	cd_mode_page_2A *mp;
-	BOOL	*cdrrp;
-	BOOL	*cdwrp;
-	BOOL	*cdrrwp;
-	BOOL	*cdwrwp;
-	BOOL	*dvdp;
+	BOOL	*cdrrp;				/* CD ROM		*/
+	BOOL	*cdwrp;				/* CD-R writer		*/
+	BOOL	*cdrrwp;			/* CD-RW reader		*/
+	BOOL	*cdwrwp;			/* CD-RW writer		*/
+	BOOL	*dvdp;				/* DVD reader		*/
+	BOOL	*dvdwp;				/* DVD writer		*/
 {
-	BOOL	isdvd;				/* Any DVD drive	*/
+	BOOL	isdvd;				/* Any DVD reader	*/
 	BOOL	isdvd_wr;			/* DVD writer (R / RAM)	*/
 	BOOL	iscd_wr;			/* CD  writer		*/
 
@@ -2521,37 +2647,50 @@ mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
 		*cdwrwp = (mp->cd_rw_write != 0);/* SCSI-3/mmc CD-RW	*/
 
 	isdvd =					/* SCSI-3/mmc2 DVD 	*/
-		(mp->dvd_ram_read + mp->dvd_r_read  + mp->dvd_rom_read +
-		 mp->dvd_ram_write + mp->dvd_r_write) != 0;
+		(mp->dvd_ram_read + mp->dvd_r_read  +
+		 mp->dvd_rom_read) != 0;
 
-	isdvd_wr =				/* SCSI-3/mmc2 DVD 	*/
+	isdvd_wr =				/* SCSI-3/mmc2 DVD writer*/
 		(mp->dvd_ram_write + mp->dvd_r_write) != 0;
 
-	if (dvdp) {
-		*dvdp = FALSE;
-		if (isdvd)
-			*dvdp = TRUE;
-		if (!isdvd_wr)
-			*dvdp = FALSE;
-	}
+	if (dvdp)
+		*dvdp = isdvd;
+	if (dvdwp)
+		*dvdwp = isdvd_wr;
 }
 
 EXPORT BOOL
-is_mmc(scgp, dvdp)
+is_mmc(scgp, cdwp, dvdwp)
 	SCSI	*scgp;
-	BOOL	*dvdp;
+	BOOL	*cdwp;				/* CD  writer		*/
+	BOOL	*dvdwp;				/* DVD writer		*/
 {
-	return (mmc_check(scgp, NULL, NULL, NULL, NULL, dvdp));
+	BOOL	cdwr	= FALSE;
+	BOOL	cdwrw	= FALSE;
+
+	if (cdwp)
+		*cdwp = FALSE;
+	if (dvdwp)
+		*dvdwp = FALSE;
+
+	if (!mmc_check(scgp, NULL, &cdwr, NULL, &cdwrw, NULL, dvdwp))
+		return (FALSE);
+
+	if (cdwp)
+		*cdwp = cdwr | cdwrw;
+
+	return (TRUE);
 }
 
 EXPORT BOOL
-mmc_check(scgp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
+mmc_check(scgp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp, dvdwp)
 	SCSI	*scgp;
-	BOOL	*cdrrp;
-	BOOL	*cdwrp;
-	BOOL	*cdrrwp;
-	BOOL	*cdwrwp;
-	BOOL	*dvdp;
+	BOOL	*cdrrp;				/* CD ROM		*/
+	BOOL	*cdwrp;				/* CD-R writer		*/
+	BOOL	*cdrrwp;			/* CD-RW reader		*/
+	BOOL	*cdwrwp;			/* CD-RW writer		*/
+	BOOL	*dvdp;				/* DVD reader		*/
+	BOOL	*dvdwp	;			/* DVD writer		*/
 {
 	Uchar	mode[0x100];
 	BOOL	was_atapi;
@@ -2570,15 +2709,25 @@ mmc_check(scgp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
 	if (mp == NULL)
 		return (FALSE);
 
-	mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp);
+	mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp, dvdwp);
 
 	return (TRUE);			/* Generic SCSI-3/mmc CD	*/
 }
 
-#define	DOES(what,flag)	printf("  Does %s%s\n", flag?"":"not ",what);
-#define	IS(what,flag)	printf("  Is %s%s\n", flag?"":"not ",what);
-#define	VAL(what,val)	printf("  %s: %d\n", what, val[0]*256 + val[1]);
-#define	SVAL(what,val)	printf("  %s: %s\n", what, val);
+LOCAL void
+print_speed(fmt, val)
+	char	*fmt;
+	int	val;
+{
+	printf("  %s: %5d kB/s", fmt, val);
+	printf(" (CD %3ux,", val/176);
+	printf(" DVD %2ux)\n", val/1385);
+}
+
+#define	DOES(what,flag)	printf("  Does %s%s\n", flag?"":"not ",what)
+#define	IS(what,flag)	printf("  Is %s%s\n", flag?"":"not ",what)
+#define	VAL(what,val)	printf("  %s: %d\n", what, val[0]*256 + val[1])
+#define	SVAL(what,val)	printf("  %s: %s\n", what, val)
 
 EXPORT void
 print_capabilities(scgp)
@@ -2591,6 +2740,7 @@ static	const	char	*bclk[4] = {"32", "16", "24", "24 (I2S)"};
 static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 				"disc changer", "cartridge changer",
 				"reserved(6)", "reserved(7)" };
+static	const	char	*rotctl[4] = {"CLV/PCAV", "CAV", "reserved(2)", "reserved(3)"};
 
 
 	if (scgp->inq->type != INQ_ROMD)
@@ -2606,7 +2756,14 @@ static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 	if (mp == NULL)
 		return;
 
-	printf ("\nDrive capabilities, per page 2A:\n\n");
+	printf("\nDrive capabilities, per");
+	if (mp->p_len >= 28)
+		printf(" MMC-3");
+	else if (mp->p_len >= 24)
+		printf(" MMC-2");
+	else
+		printf(" MMC");
+	printf(" page 2A:\n\n");
 
 	DOES("read CD-R media", mp->cd_r_read);
 	DOES("write CD-R media", mp->cd_r_write);
@@ -2622,9 +2779,9 @@ static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 	DOES("read Mode 2 Form 1 blocks", mp->mode_2_form_1);
 	DOES("read Mode 2 Form 2 blocks", mp->mode_2_form_2);
 	DOES("read digital audio blocks", mp->cd_da_supported);
-	if (mp->cd_da_supported) 
+	if (mp->cd_da_supported)
 		DOES("restart non-streamed digital audio reads accurately", mp->cd_da_accurate);
-	DOES("support BURN-Proof (Sanyo)", mp->res_4);
+	DOES("support Buffer-Underrun-Free recording", mp->BUF);
 	DOES("read multi-session CDs", mp->multi_session);
 	DOES("read fixed-packet CD media using Method 2", mp->method2);
 	DOES("read CD bar code", mp->read_bar_code);
@@ -2661,11 +2818,40 @@ static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 	DOES("have load-empty-slot-in-changer feature", mp->sw_slot_sel);
 	DOES("support Individual Disk Present feature", mp->disk_present_rep);
 	printf("\n");
-	VAL("Maximum read  speed in kB/s", mp->max_read_speed);
-	VAL("Current read  speed in kB/s", mp->cur_read_speed);
-	VAL("Maximum write speed in kB/s", mp->max_write_speed);
-	VAL("Current write speed in kB/s", mp->cur_write_speed);
+	print_speed("Maximum read  speed", a_to_u_2_byte(mp->max_read_speed));
+	print_speed("Current read  speed", a_to_u_2_byte(mp->cur_read_speed));
+	print_speed("Maximum write speed", a_to_u_2_byte(mp->max_write_speed));
+	if (mp->p_len >= 28)
+		print_speed("Current write speed", a_to_u_2_byte(mp->v3_cur_write_speed));
+	else
+		print_speed("Current write speed", a_to_u_2_byte(mp->cur_write_speed));
+	if (mp->p_len >= 28) {
+		SVAL("Rotational control selected", rotctl[mp->rot_ctl_sel]);
+	}
 	VAL("Buffer size in KB", mp->buffer_size);
+
+	if (mp->p_len >= 24) {
+		VAL("Copy management revision supported", mp->copy_man_rev);
+	}
+
+	if (mp->p_len >= 28) {
+		struct cd_wr_speed_performance *pp;
+		Uint	ndesc;
+		Uint	i;
+		Uint	n;
+
+		ndesc = a_to_u_2_byte(mp->num_wr_speed_des);
+		pp = mp->wr_speed_des;
+		printf("  Number of supported write speeds: %d\n", ndesc);
+		for (i=0; i < ndesc; i++, pp++) {
+			printf("  Write speed # %d:", i);
+			n = a_to_u_2_byte(pp->wr_speed_supp);
+			printf(" %5d kB/s", n);
+			printf(" %s", rotctl[pp->rot_ctl_sel]);
+			printf(" (CD %3ux,", n/176);
+			printf(" DVD %2ux)\n", n/1385);
+		}
+	}
 
 	return;			/* Generic SCSI-3/mmc CD	*/
 }

@@ -1,7 +1,7 @@
-/* @(#)volume.c	1.1 00/03/06 joerg */
+/* @(#)volume.c	1.3 02/02/10 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)volume.c	1.1 00/03/06 joerg";
+	"@(#)volume.c	1.3 02/02/10 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -26,7 +26,6 @@ static	char sccsid[] =
 #include <stdxlib.h>
 #include <strdefs.h>
 #include <errno.h>
-#include <time.h>
 
 #include "internal.h"
 #include "data.h"
@@ -690,7 +689,7 @@ int v_scavenge(vol)
 	  ExtDataRec data;
 	  unsigned char *ptr;
 
-	  while (n.rnum >= n.nd.ndNRecs)
+	  while (n.rnum >= (int)n.nd.ndNRecs)
 	    {
 	      n.nnum = n.nd.ndFLink;
 	      if (n.nnum == 0)
@@ -731,7 +730,7 @@ int v_scavenge(vol)
 	  CatDataRec data;
 	  unsigned char *ptr;
 
-	  while (n.rnum >= n.nd.ndNRecs)
+	  while (n.rnum >= (int)n.nd.ndNRecs)
 	    {
 	      n.nnum = n.nd.ndFLink;
 	      if (n.nnum == 0)

@@ -1,7 +1,7 @@
-/* @(#)scsi-aix.c	1.33 01/03/18 Copyright 1997 J. Schilling */
+/* @(#)scsi-aix.c	1.35 02/10/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-aix.c	1.33 01/03/18 Copyright 1997 J. Schilling";
+	"@(#)scsi-aix.c	1.35 02/10/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the AIX generic SCSI implementation.
@@ -42,7 +42,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-aix.c-1.33";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-aix.c-1.35";	/* The version for this transport*/
 
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
@@ -85,6 +85,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "DKIOCMD", "SCSI transport for targets known by AIX drivers",
+		"", "bus,target,lun or UNIX device", "1,2,0 or /dev/rcd0@", FALSE, TRUE);
+	return (0);
 }
 
 LOCAL int
@@ -199,7 +209,7 @@ scgo_maxdma(scgp, amt)
 	return (MAX_DMA_AIX);
 }
 
-#define palign(x, a)	(((char *)(x)) + ((a) - 1 - (((unsigned)((x)-1))%(a))))
+#define palign(x, a)	(((char *)(x)) + ((a) - 1 - (((UIntptr_t)((x)-1))%(a))))
 
 LOCAL void *
 scgo_getbuf(scgp, amt)

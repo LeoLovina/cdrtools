@@ -1,7 +1,7 @@
-/* @(#)base64.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)base64.c	1.4 02/04/06 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)base64.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)base64.c	1.4 02/04/06 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /*____________________________________________________________________________
@@ -69,10 +69,8 @@ static char     sccsid[] =
  */
 
 #include "config.h"
-#include <ctype.h>
 #include <stdio.h>
-#include <time.h>
-#include <stdlib.h>
+#include <stdxlib.h>
 
 #include "base64.h"
 
@@ -98,7 +96,7 @@ unsigned char *rfc822_binary (src, srcl, len)
   char *v = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._";
   unsigned long i = ((srcl + 2) / 3) * 4;
   *len = i += 2 * ((i / 60) + 1);
-  d = ret = (unsigned char *) malloc ((size_t) ++i);
+  d = ret = malloc ((size_t) ++i);
   for (i = 0; srcl; s += 3) {	/* process tuplets */
     *d++ = v[s[0] >> 2];	/* byte 1: high 6 bits (1) */
 				/* byte 2: low 2 bits (1), high 4 bits (2) */

@@ -1,7 +1,7 @@
-/* @(#)aifc.c	1.4 00/06/02 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)aifc.c	1.5 01/10/27 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)aifc.c	1.4 00/06/02 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)aifc.c	1.5 01/10/27 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /***
@@ -18,7 +18,6 @@ static char     sccsid[] =
 #include "mytype.h"
 #include <stdio.h>
 #include <standard.h>
-#include <sys/types.h>
 #include <unixstd.h>
 #include <strdefs.h>
 #include <schily.h>

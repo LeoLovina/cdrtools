@@ -1,4 +1,4 @@
-/* @(#)stkframe.h	1.6 00/11/08 Copyright 1995 J. Schilling */
+/* @(#)stkframe.h	1.9 02/08/08 Copyright 1995 J. Schilling */
 /*
  * Common definitions for routines that parse the stack frame.
  *
@@ -25,19 +25,42 @@
 #ifndef _STKFRAME_H
 #define _STKFRAME_H
 
+#ifndef _MCONFIG_H
+#include <mconfig.h>
+#endif
+
 #if defined (sun) && (defined(SVR4) || defined(__SVR4) || defined(__SVR4__))
+	/*
+	 * Solaris 2.x aka SunOS 5.x
+	 */
 #	ifdef	i386
 		/*
 		 * On Solaris 2.1 x86 sys/frame.h is not useful at all
 		 * On Solaris 2.4 x86 sys/frame.h is buggy (fr_savfp is int!!)
 		 */
+#		ifndef	_INCL_SYS_REG_H
 #		include <sys/reg.h>
+#		define	_INCL_SYS_REG_H
+#		endif
 #	endif
+#	ifndef	_INCL_SYS_FRAME_H
 #	include <sys/frame.h>
+#	define	_INCL_SYS_FRAME_H
+#	endif
 
-#elif	defined (sun)
-#	include <machine/frame.h>
 #else
+# if	defined (sun)
+	/*
+	 * SunOS 4.x
+	 */
+#	ifndef	_INCL_MACHINE_FRAME_H
+#	include <machine/frame.h>
+#	define	_INCL_MACHINE_FRAME_H
+#	endif
+# else
+	/*
+	 * Anything that is not SunOS
+	 */
 
 #ifdef	__cplusplus
 extern "C" {
@@ -61,6 +84,7 @@ struct frame {
 }
 #endif
 
-#endif
+# endif	/* ! defined (sun) */
+#endif	/* ! defined (sun) && (defined(SVR4) || defined(__SVR4) || defined(__SVR4__)) */
 
 #endif	/* _STKFRAME_H */

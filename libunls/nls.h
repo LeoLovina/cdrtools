@@ -1,4 +1,4 @@
-/* @(#)nls.h	1.3 01/01/18 2000 J. Schilling */
+/* @(#)nls.h	1.6 02/12/03 2000 J. Schilling */
 /*
  *	Modifications to make the code portable Copyright (c) 2000 J. Schilling
  *	Thanks to Georgy Salnikov <sge@nmr.nioch.nsc.ru>
@@ -16,9 +16,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _NLS_H
@@ -49,6 +49,8 @@
 #define CONFIG_NLS_CODEPAGE_866
 #define CONFIG_NLS_CODEPAGE_869
 #define CONFIG_NLS_CODEPAGE_874
+#define CONFIG_NLS_CODEPAGE_1250
+#define CONFIG_NLS_CODEPAGE_1251
 #define CONFIG_NLS_ISO8859_1
 #define CONFIG_NLS_ISO8859_2
 #define CONFIG_NLS_ISO8859_3
@@ -61,6 +63,7 @@
 #define CONFIG_NLS_ISO8859_14
 #define CONFIG_NLS_ISO8859_15
 #define CONFIG_NLS_KOI8_R
+#define CONFIG_NLS_KOI8_U
 
 #define CONFIG_NLS_CODEPAGE_10000
 #define CONFIG_NLS_CODEPAGE_10006
@@ -96,7 +99,10 @@ extern int init_nls_cp865	__PR((void));
 extern int init_nls_cp866	__PR((void));
 extern int init_nls_cp869	__PR((void));
 extern int init_nls_cp874	__PR((void));
+extern int init_nls_cp1250	__PR((void));
+extern int init_nls_cp1251	__PR((void));
 extern int init_nls_koi8_r	__PR((void));
+extern int init_nls_koi8_u	__PR((void));
 
 extern int init_nls_cp10000	__PR((void));
 extern int init_nls_cp10006	__PR((void));

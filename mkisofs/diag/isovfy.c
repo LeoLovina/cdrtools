@@ -1,7 +1,7 @@
-/* @(#)isovfy.c	1.15 00/12/09 joerg */
+/* @(#)isovfy.c	1.20 02/11/30 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isovfy.c	1.15 00/12/09 joerg";
+	"@(#)isovfy.c	1.20 02/11/30 joerg";
 #endif
 /*
  * File isovfy.c - verify consistency of iso9660 filesystem.
@@ -35,6 +35,19 @@ static	char sccsid[] =
 #include <standard.h>
 #include <signal.h>
 #include <schily.h>
+
+/*
+ * XXX JS: Some structures have odd lengths!
+ * Some compilers (e.g. on Sun3/mc68020) padd the structures to even length.
+ * For this reason, we cannot use sizeof (struct iso_path_table) or
+ * sizeof (struct iso_directory_record) to compute on disk sizes.
+ * Instead, we use offsetof(..., name) and add the name size.
+ * See iso9660.h
+ */
+#ifndef	offsetof
+#define	offsetof(TYPE, MEMBER)	((size_t) &((TYPE *)0)->MEMBER)
+#endif
+
 
 FILE * infile;
 int blocksize;
@@ -329,10 +342,10 @@ dump_rr(idr)
 	char * pnt;
 
 	len = idr->length[0] & 0xff;
-	len -= (sizeof(struct iso_directory_record) - sizeof(idr->name));
+	len -= offsetof(struct iso_directory_record, name[0]);
 	len -= idr->name_len[0];
 	pnt = (char *) idr;
-	pnt += (sizeof(struct iso_directory_record) - sizeof(idr->name));
+	pnt += offsetof(struct iso_directory_record, name[0]);
 	pnt += idr->name_len[0];
 
 	if((idr->name_len[0] & 1) == 0){
@@ -445,21 +458,18 @@ check_tree(file_addr, file_size, parent_addr)
 			    }
 			  
 		  } else {
-		          if(i1 < 2) 
-			    {
-			      sprintf(&lbuffer[iline]," Improper sorting.");
-			      rr_goof++;
-			    }
-			  for(j=0; j<idr->name_len[0]; j++) 
-			    {
-			      sprintf(&lbuffer[iline],"%c", idr->name[j]);
-			    }
-			  for(j=0; j<14 - (int) idr->name_len[0]; j++) 
-			    {
-			      sprintf(&lbuffer[iline]," ");
-			      iline += strlen(lbuffer + iline);
-			    }
-			  rflag = 1;
+			if(i1 < 2) {
+				sprintf(&lbuffer[iline]," Improper sorting.");
+				rr_goof++;
+			}
+			for(j=0; j < (int)idr->name_len[0]; j++) {
+				sprintf(&lbuffer[iline],"%c", idr->name[j]);
+			}
+			for(j=0; j < (14 - (int) idr->name_len[0]); j++) {
+				sprintf(&lbuffer[iline]," ");
+				iline += strlen(lbuffer + iline);
+			}
+			rflag = 1;
 		  };
 
 		  if(size && extent == 0) 
@@ -528,7 +538,7 @@ check_tree(file_addr, file_size, parent_addr)
 						   orig_file_addr * blocksize);
 		  i += buffer[i];
 		  i1++;
-		  if (i > 2048 - sizeof(struct iso_directory_record)) break;
+		  if (i > 2048 - offsetof(struct iso_directory_record, name[0])) break;
 	  };
 	  file_addr += sizeof(buffer);
   };
@@ -614,6 +624,8 @@ usage(excode)
                 get_progname());
 
 	error("Options:\n");
+	error("\t-help,-h	Print this help\n");
+	error("\t-version	Print version info and exit\n");
 	exit(excode);
 }
 
@@ -622,6 +634,11 @@ main(argc, argv)
 	int	argc;
 	char	*argv[];
 {
+	int	cac;
+	char	* const *cav;
+	char	*opts = "help,h,version";
+	BOOL	help = FALSE;
+	BOOL	prvers = FALSE;
   off_t file_addr;
   int file_size;
   struct iso_primary_descriptor ipd;
@@ -631,17 +648,39 @@ main(argc, argv)
 
 	save_args(argc, argv);
 
-  if(argc < 2)
-	usage(EX_BAD);
-  infile = fopen(argv[1],"rb");
-  if (infile == NULL) {
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getallargs(&cac, &cav, opts, &help, &help, &prvers) < 0) {
+		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
+		usage(EX_BAD);
+	}
+	if (help)
+		usage(0);
+	if (prvers) {
+		printf("isovfy %s (%s-%s-%s)\n", "2.0",
+					HOST_CPU, HOST_VENDOR, HOST_OS);
+		exit(0);
+	}
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getfiles(&cac, &cav, opts) == 0) {
+		errmsgno(EX_BAD, "Missing Argument\n");
+		usage(EX_BAD);
+	}
+	infile = fopen(cav[0],"rb");
+	if (infile == NULL) {
 #ifdef	USE_LIBSCHILY
-	comerr("Cannot open '%s'.\n", argv[1]);
+		comerr("Cannot open '%s'.\n", cav[0]);
 #else
-	printf("Cannot open '%s'.\n", argv[1]);
-	exit(1);
+		printf("Cannot open '%s'.\n", cav[0]);
+		exit(1);
 #endif
-  }
+	}
+	cac--, cav++;
+	if (getfiles(&cac, &cav, opts) != 0) {
+		errmsgno(EX_BAD, "Bad Argument: '%s'\n",cav[0]);
+		usage(EX_BAD);
+	}
 
 
   file_addr = (off_t)32768;

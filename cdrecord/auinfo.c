@@ -1,10 +1,10 @@
-/* @(#)auinfo.c	1.6 01/02/21 Copyright 1999 J. Schilling */
+/* @(#)auinfo.c	1.17 02/09/20 Copyright 1998-2002 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)auinfo.c	1.6 01/02/21 Copyright 1999 J. Schilling";
+	"@(#)auinfo.c	1.17 02/09/20 Copyright 1998-2002 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1998 J. Schilling
+ *	Copyright (c) 1998-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -33,11 +33,15 @@ static	char sccsid[] =
 #include <schily.h>
 
 #include "cdrecord.h"
+#include "cdtext.h"
 
 extern	int	debug;
 
 EXPORT	void	auinfo		__PR((char *name, int track, track_t *trackp));
+LOCAL	textptr_t *gettextptr	__PR((int track, track_t *trackp));
+LOCAL	char 	*savestr	__PR((char *name));
 LOCAL	char 	*readtag	__PR((char *name));
+LOCAL	char 	*readtstr	__PR((char *name));
 EXPORT	void	setmcn		__PR((char *mcn, track_t *trackp));
 LOCAL	void	isrc_illchar	__PR((char *isrc, int c));
 EXPORT	void	setisrc		__PR((char *isrc, track_t *trackp));
@@ -63,6 +67,7 @@ auinfo(name, track, trackp)
 	char	infname[1024];
 	char	*p;
 	track_t	*tp = &trackp[track];
+	textptr_t *txp;
 	long	l;
 	long	tno = -1;
 	BOOL	isdao = !is_tao(&trackp[0]);
@@ -76,17 +81,74 @@ auinfo(name, track, trackp)
 
 	if (defltopen(infname) == 0) {
 
+		p = readtstr("CDINDEX_DISCID=");
 		p = readtag("CDDB_DISKID=");
 
 		p = readtag("MCN=");
-		if (p && *p)
+		if (p && *p) {
 			setmcn(p, &trackp[0]);
+			txp = gettextptr(0, trackp); /* MCN is isrc for trk 0*/
+			txp->tc_isrc = savestr(p);
+		}
 
 		p = readtag("ISRC=");
-		if (p && *p)
+		if (p && *p) {
 			setisrc(p, &trackp[track]);
+			txp = gettextptr(track, trackp);
+			txp->tc_isrc = savestr(p);
+		}
 
-		p = readtag("Albumtitle=");
+		p = readtstr("Albumperformer=");
+		if (p && *p) {
+			txp = gettextptr(0, trackp); /* Album perf. in trk 0*/
+			txp->tc_performer = savestr(p);
+		}
+		p = readtstr("Performer=");
+		if (p && *p) {
+			txp = gettextptr(track, trackp);
+			txp->tc_performer = savestr(p);
+		}
+		p = readtstr("Albumtitle=");
+		if (p && *p) {
+			txp = gettextptr(0, trackp); /* Album title in trk 0*/
+			txp->tc_title = savestr(p);
+		}
+		p = readtstr("Tracktitle=");
+		if (p && *p) {
+			txp = gettextptr(track, trackp);
+			txp->tc_title = savestr(p);
+		}
+		p = readtstr("Songwriter=");
+		if (p && *p) {
+			txp = gettextptr(track, trackp);
+			txp->tc_songwriter = savestr(p);
+		}
+		p = readtstr("Composer=");
+		if (p && *p) {
+			txp = gettextptr(track, trackp);
+			txp->tc_composer = savestr(p);
+		}
+		p = readtstr("Arranger=");
+		if (p && *p) {
+			txp = gettextptr(track, trackp);
+			txp->tc_arranger = savestr(p);
+		}
+		p = readtstr("Message=");
+		if (p && *p) {
+			txp = gettextptr(track, trackp);
+			txp->tc_message = savestr(p);
+		}
+		p = readtstr("Diskid=");
+		if (p && *p) {
+			txp = gettextptr(0, trackp); /* Disk id is in trk 0*/
+			txp->tc_title = savestr(p);
+		}
+		p = readtstr("Closed_info=");
+		if (p && *p) {
+			txp = gettextptr(track, trackp);
+			txp->tc_closed_info = savestr(p);
+		}
+
 		p = readtag("Tracknumber=");
 		if (p && isdao)
 			astol(p, &tno);
@@ -108,20 +170,29 @@ auinfo(name, track, trackp)
 			if (strncmp(p, "yes", 3) == 0) {
 				tp->flags |= TI_PREEMP;
 				if (tp->tracktype == TOC_DA)
-					tp->sectype = ST_AUDIO_PRE;
+					tp->sectype = SECT_AUDIO_PRE;
 
 			} else if (strncmp(p, "no", 2) == 0) {
 				tp->flags &= ~TI_PREEMP;
 				if (tp->tracktype == TOC_DA)
-					tp->sectype = ST_AUDIO_NOPRE;
+					tp->sectype = SECT_AUDIO_NOPRE;
 			}
 		}
 
 		p = readtag("Channels=");
 		p = readtag("Copy_permitted=");
 		if (p && *p) {
+			/*
+			 * -useinfo always wins
+			 */
+			tp->flags &= ~(TI_COPY|TI_SCMS);
+
 			if (strncmp(p, "yes", 3) == 0)
 				tp->flags |= TI_COPY;
+			else if (strncmp(p, "no", 2) == 0)
+				tp->flags |= TI_SCMS;
+			else if (strncmp(p, "once", 2) == 0)
+				tp->flags &= ~(TI_COPY|TI_SCMS);
 		}
 		p = readtag("Endianess=");
 		p = readtag("Index=");
@@ -138,7 +209,7 @@ auinfo(name, track, trackp)
 			if (l == -1) {
 				trackp[track+1].pregapsize = 0;
 			} else if (l > 0) {
-				ts = tp->tracksize / 2352;
+				ts = tp->itracksize / tp->isecsize;
 				ps = ts - l;
 				if (ps > 0)
 					trackp[track+1].pregapsize = ps;
@@ -148,11 +219,43 @@ auinfo(name, track, trackp)
 
 }
 
+LOCAL textptr_t *
+gettextptr(track, trackp)
+	int	track;
+	track_t	*trackp;
+{
+	register textptr_t *txp;
+
+	txp = (textptr_t *)trackp[track].text;
+	if (txp == NULL) {
+		txp = malloc(sizeof(textptr_t));
+		if (txp == NULL)
+			comerr("Cannot malloc CD-Text structure.\n");
+		fillbytes(txp, sizeof(textptr_t), '\0');
+		trackp[track].text = txp;
+	}
+	return (txp);
+}
+
+LOCAL char *
+savestr(str)
+	char	*str;
+{
+	char	*ret;
+
+	ret = malloc(strlen(str)+1);
+	if (ret)
+		strcpy(ret, str);
+	else
+		comerr("Cannot malloc auinfo string.\n");
+	return (ret);
+}
+
 LOCAL char *
 readtag(name)
 	char	*name;
 {
-	char	*p;
+	register char	*p;
 
 	p = defltread(name);
 	if (p) {
@@ -164,12 +267,36 @@ readtag(name)
 	return (p);
 }
 
+LOCAL char *
+readtstr(name)
+	char	*name;
+{
+	register char	*p;
+	register char	*p2;
+
+	p = readtag(name);
+	if (p && *p == '\'') {
+		p2 = ++p;
+		while (*p2 != '\0')
+			p2++;
+		while (p2 > p && *p2 != '\'')
+			p2--;
+		*p2 = '\0';
+		if (debug)
+			printf("%s	'%s'\n", name, p);
+	}
+	return (p);
+}
+
+/*
+ * Media catalog number is a 13 digit number.
+ */
 EXPORT void
 setmcn(mcn, trackp)
 	char	*mcn;
 	track_t	*trackp;
 {
-	char	*p;
+	register char	*p;
 
 	if (strlen(mcn) != 13)
 		comerrno(EX_BAD, "MCN '%s' has illegal length.\n", mcn);
@@ -183,7 +310,7 @@ setmcn(mcn, trackp)
 	trackp->isrc = p;
 
 	if (debug)
-		printf("Track %d MCN: '%s'\n", trackp->trackno, trackp->isrc);
+		printf("Track %d MCN: '%s'\n", (int)trackp->trackno, trackp->isrc);
 }
 
 LOCAL	char	upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -196,6 +323,16 @@ isrc_illchar(isrc, c)
 	errmsgno(EX_BAD, "ISRC '%s' contains illegal character '%c'.\n", isrc, c);
 }
 
+/*
+ * ISRC is 12 Byte:
+ *
+ *	Country code   'C' (alpha)	  2 Bytes
+ *	Owner code     'O' (alphanumeric) 3 Bytes
+ *	Year of record 'Y' (numeric)	  2 Bytes
+ *	Serial number  'S' (numeric)	  5 Bytes
+ *
+ *	CC-OOO-YY-SSSSS
+ */
 EXPORT void
 setisrc(isrc, trackp)
 	char	*isrc;
@@ -223,6 +360,9 @@ setisrc(isrc, trackp)
 		*ip++ = *p;
 		if (!strchr(upper, *p)) {
 /*			goto illchar;*/
+			/*
+			 * Flag numbers but accept them.
+			 */
 			isrc_illchar(isrc, *p);
 			if (*p >= '0' && *p <= '9')
 				continue;
@@ -233,7 +373,7 @@ setisrc(isrc, trackp)
 		p++;
 
 	/*
-	 * The XXX code.
+	 * The owner code.
 	 */
 	for (i = 0; i < 3; p++, i++) {
 		*ip++ = *p;
@@ -247,7 +387,7 @@ setisrc(isrc, trackp)
 		p++;
 
 	/*
-	 * The Year and the recording number.
+	 * The Year and the recording number (2 + 5 numbers).
 	 */
 	for (i = 0; i < 7; p++, i++) {
 		*ip++ = *p;
@@ -266,7 +406,7 @@ setisrc(isrc, trackp)
 	trackp->isrc = p;
 
 	if (debug)
-		printf("Track %d ISRC: '%s'\n", trackp->trackno, trackp->isrc);
+		printf("Track %d ISRC: '%s'\n", (int)trackp->trackno, trackp->isrc);
 	return;
 illchar:
 	isrc_illchar(isrc, *p);
@@ -284,7 +424,7 @@ setindex(tindex, trackp)
 	long	idx;
 	long	*idxlist;
 
-	idxlist = (long *)malloc(100*sizeof(long));
+	idxlist = malloc(100*sizeof(long));
 	p = tindex;
 	idxlist[0] = 0;
 	i = 0;
@@ -294,7 +434,7 @@ setindex(tindex, trackp)
 			goto illchar;
 		i++;
 		if (i > 99)
-			comerrno(EX_BAD, "Too many indices for track %d\n", trackp->trackno);
+			comerrno(EX_BAD, "Too many indices for track %d\n", (int)trackp->trackno);
 		idxlist[i] = idx;
 		if (*p == ',')
 			p++;
@@ -304,15 +444,13 @@ setindex(tindex, trackp)
 	nindex = i;
 
 	if (debug)
-		printf("Track %d %d Index: '%s'\n", trackp->trackno, i, tindex);
+		printf("Track %d %d Index: '%s'\n", (int)trackp->trackno, i, tindex);
 
 	if (debug) for (i=0; i <= nindex; i++)
 		printf("%d: %ld\n", i, idxlist[i]);
 
 	trackp->nindex = nindex;
 	trackp->tindex = idxlist;
-	if (debug && nindex > 1)
-		exit(1);
 	return;
 illchar:
 	comerrno(EX_BAD, "Index '%s' contains illegal character '%c'.\n", tindex, *p);

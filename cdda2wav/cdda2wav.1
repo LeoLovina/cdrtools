@@ -1,5 +1,5 @@
 '\" t
-.\" @(#)cdda2wav.1	1.5 00/02/13 Copyright 1998,1999,2000 Heiko Eissfeldt
+.\" @(#)cdda2wav.1	1.13 02/11/26 Copyright 1998,1999,2000 Heiko Eissfeldt
 .TH CDDA2WAV 1
 .SH NAME
 cdda2wav \- a sampling utility that dumps CD audio data into wav sound
@@ -27,10 +27,13 @@ files
 .RB [ -x ]
 .RB [ -q ]
 .RB [ -w ]
-.RB [ -v ]
+.RB [ -v
+.IR optlist ]
 .RB [ -V ]
 .RB [ -Q ]
 .RB [ -J ]
+.RB [ -L
+.IR cddbmode ]
 .RB [ -R ]
 .RB [ -P
 .IR sectors ]
@@ -65,7 +68,12 @@ files
 .IR count ]
 .RB [ -S
 .IR speed ]
-.RI [ audio.wav ]
+.RB [ -paranoia ]
+.RB [ cddbp-server=servername ]
+.RB [ cddbp-port=portnumber ]
+.RI [ filename(s)
+or
+.IR directories ]
 .SH DESCRIPTION
 .B cdda2wav
 can retrieve audio tracks from CDROM drives (see README for a list of drives) that are
@@ -73,10 +81,10 @@ capable of reading audio data digitally to the host
 .RB ( CDDA ).
 .SH OPTIONS
 .TP
-.BI \-D " device  --device"
+.BI \-D " device  --dev --device"
 uses
 .B device
-as the source for CDDA reading:
+as the source for CDDA reading.
 For example /dev/cdrom for the
 .B cooked_ioctl
 interface and Bus,ID,Lun for the 
@@ -193,7 +201,7 @@ Frames (sectors) are indicated by a 'f' suffix (like 75f for 75 sectors).
 .B 0
 sets the time for whole track.
 .TP
-.B \-B " --bulk"
+.B \-B " --bulk --alltracks"
 copies each track into a seperate file.
 .TP
 .B \-w " --wait"
@@ -215,23 +223,24 @@ copies audio data to sound device e.g.
 .B \-p " percentage --set-pitch"
 changes pitch of audio data copied to sound device.
 .TP
-.B \-v " level  --verbose-level"
+.B \-v " itemlist  --verbose-level"
 prints verbose information about the CD.
 .B Level
-is a sum of powers of two in the range 0 up to 63. Each power of two controls the type of information to be reported.
+is a list of comma seperated suboptions. Each suboption controls the type of information to be reported.
 .TS H
-center box ;
-r| l|.
-.TH CDDA2WAV 1
-Power	Description
+center box;
+r | l.
+Suboption	Description
 _
-1	show table of contents
-2	show a summary of the recording parameters
-4	determine and display index offsets
-8	retrieve and display the media catalog number MCN
-16	retrieve and display all Intern. Standard Recording Codes ISRC
-32	show the table of contents in start sector notation
-64	show the table of contents with track titles (when available)
+disable	no information is given, warnings appear however
+all	all information is given
+toc	show table of contents
+summary	show a summary of the recording parameters
+indices	determine and display index offsets
+catalog	retrieve and display the media catalog number MCN
+trackid	retrieve and display all Intern. Standard Recording Codes ISRC
+sectors	show the table of contents in start sector notation
+titles	show the table of contents with track titles (when available)
 .TE
 .TP
 .B \-N " --no-write"
@@ -239,6 +248,16 @@ does not write to a file, it just reads (for debugging purposes).
 .TP
 .B \-J " --info-only"
 does not write to a file, it just gives information about the disc.
+.TP
+.B \-L " cddb mode --cddb"
+does a cddbp album- and track title lookup based on the cddb id.
+The parameter cddb mode defines how multiple entries shall be handled.
+.TP
+.B " cddbp-server=servername"
+sets the server to be contacted for title lookups.
+.TP
+.B " cddbp-port=portnumber"
+sets the port number to be used for title lookups.
 .TP
 .B \-H " --no-infofile"
 does not write an info file and a cddb file.
@@ -250,7 +269,7 @@ formats the output to be better parsable by gui frontends.
 enables calculation of MD-5 checksum for 'count' bytes from a beginning of a
 track.
 .TP
-.B \-S " speed --speed-select"
+.B \-S " speed --speed"
 sets the cdrom device to one of the selectable speeds for reading.
 .TP
 .B \-q " --quiet"
@@ -262,7 +281,10 @@ enable SCSI command logging to the console. This is mainly used for debugging.
 .B \-Q " --silent-SCSI"
 suppress SCSI command error reports to the console. This is mainly used for guis.
 .TP
-.B \-J " --version"
+.B \-paranoia
+use the paranoia library instead of cdda2wav's routines for reading.
+.TP
+.B \-h " --help"
 display version of cdda2wav on standard output.
 .TP
 Defaults depend on the
@@ -276,6 +298,76 @@ settings (currently
 .B CDDA_DEVICE
 is used to set the device name. The device naming is compatible with Jörg
 Schilling's cdrecord package.
+.TP
+.B CDDBP_SERVER
+is used for cddbp title lookups when supplied.
+.TP
+.B CDDBP_PORT
+is used for cddbp title lookups when supplied.
+.TP
+.B RSH
+If the 
+.B RSH
+environment variable is present, the remote connection will not be created via
+.BR rcmd (3)
+but by calling the program pointed to by
+.BR RSH .
+Use e.g. 
+.BR RSH= /usr/bin/ssh
+to create a secure shell connection.
+.sp
+Note that this forces 
+.B cdda2wav
+to create a pipe to the 
+.B rsh(1)
+program and disallows
+.B cdda2wav
+to directly access the network socket to the remote server.
+This makes it impossible to set up performance parameters and slows down
+the connection compared to a 
+.B root
+initiated
+.B rcmd(3)
+connection.
+.TP
+.B RSCSI
+If the 
+.B RSCSI
+environment variable is present, the remote SCSI server will not be the program
+.B /opt/schily/sbin/rscsi
+but the program pointed to by
+.BR RSCSI .
+Note that the remote SCSI server program name will be ignored if you log in
+using an account that has been created with a remote SCSI server program as
+login shell.
+.SH "RETURN VALUES"
+.B cdda2wav
+uses the following exit codes to indicate various degress of success:
+.TS H
+center box;
+r | l.
+Exitcode	Description
+_
+0	no errors encountered, successful operation.
+1	usage or syntax error. cdda2wav got inconsistent arguments.
+2	permission (un)set errors. permission changes failed.
+3	read errors on the cdrom/burner device encountered.
+4	write errors while writing one of the output files encountered.
+5	errors with soundcard handling (initialization/write).
+6	errors with stat() system call on the read device (cooked ioctl).
+7	pipe communication errors encountered (in forked mode).
+8	signal handler installation errors encountered.
+9	allocation of shared memory failed (in forked mode).
+10	dynamic heap memory allocation failed.
+11	errors on the audio cd medium encountered.
+12	device open error in ioctl handling detected.
+13	race condition in ioctl interface handling detected.
+14	error in ioctl() operation encountered.
+15	internal error encountered. Please report back!!!
+16	error in semaphore operation encountered (install / request).
+17	could not get the scsi transfer buffer.
+18	could not create pipes for process communication (in forked mode).
+.TE
 .SH "DISCUSSION"
 .B cdda2wav
 is able to read parts of an
@@ -297,30 +389,27 @@ stands for compact disc digital audio and
 is a sound sample format introduced by MS Windows).  It
 allows copying
 .B CDDA
-audio data from the CDROM drive into a file on your ram-, hard-, floppy-
-or whatever-disk in 
+audio data from the CDROM drive into a file in 
 .B WAV
 or other formats.
 .PP
 The latest versions try to get higher real-time scheduling priorities to ensure
 smooth (uninterrupted) operation. These priorities are available for super users
 and are higher than those of 'normal' processes. Thus delays are minimized.
-Please note that you need newer kernels and c libraries to take advantage of this feature.
 .PP
-If your CDROM (not yet for SCSI drives) is on device
-.B /dev/cdrom
+If your CDROM is on device
+.B DEV
 and it is loaded with an audio CD, you may simply invoke
-.B cdda2wav
+.B cdda2wav dev=DEV
 and it will create the sound file
 .B audio.wav
 recording the whole track beginning with track 1 in stereo at 16 bit at 44100
 Hz sample rate, if your file system has enough space free.  Otherwise
-recording time will be limited. SCSI drives have to use different devices
-(see files
+recording time will be limited. For details see files
 .B README
 and
 .B README.INSTALL
-for details).
+.
 .SH "HINTS ON OPTIONS"
 .IP "Options"
 Most of the options are used to control the format of the WAV file. In
@@ -389,7 +478,7 @@ or
 .B "\-c 2"
 or
 .B "\-c s"
-selects stereo recording (doubles file size). Parameter s
+selects stereo recording. Parameter s
 will swap both sound channels.
 .IP "Select maximum quality"
 .B \-x
@@ -481,7 +570,7 @@ Differences can occur by the usage of the
 option (see below). Notice that recording time will be shortened, unless
 enough disk space exists. Recording can be aborted at anytime by
 pressing the break character (signal SIGQUIT).
-.IP "Record a complete audio CD in one go in different files"
+.IP "Record all tracks of a complete audio CD in seperate files"
 .B \-B
 copies each track into a seperate file. A base name can be given. File names
 have an appended track number and an extension corresponding to the audio
@@ -568,7 +657,21 @@ a value of 1 often selects single speed.
 .B \-M " count"
 enables calculation of MD-5 checksum for 'count' bytes from the beginning of a
 track. This was introduced for quick comparisons of tracks.
+.IP "Use Monty's libparanoia for reading of sectors"
+.B \-paranoia
+selects an alternate way of extracting audio sectors. Monty's library is used
+with the following default options:
+.sp
+PARANOIA_MODE_FULL, but without PARANOIA_MODE_NEVERSKIP
+.sp
+for details see Monty's libparanoia documentation.
+In this case the option
+.B \-P
+has no effect.
 .IP "Do linear or overlapping reading of sectors"
+(This applies unless option
+.B \-paranoia
+is used.)
 .B \-P " sectors"
 sets the given number of sectors for initial overlap sampling for jitter
 correction. Two cases are to be distinguished. For nonzero values,
@@ -602,32 +705,32 @@ endianess detection based on voting with "guess".
 (endianess can be "little" or "big") will override the default settings 
 of the output format.
 .IP "Verbose option"
-.B \-v " level"
-prints more information. A binary mask allows selection of different
-information.
+.B \-v " itemlist"
+prints more information. A list allows selection of different
+information items.
 .sp
-.B "0"
+.B "disable"
 keeps quiet
 .sp
-.B "1"
+.B "toc"
 displays the table of contents
 .sp
-.B "2"
+.B "summary"
 displays a summary of recording parameters
 .sp
-.B "4"
+.B "indices"
 invokes the index scanner and displays start positions of indices
 .sp
-.B "8"
+.B "catalog"
 retrieves and displays a media catalog number
 .sp
-.B "16"
+.B "trackid"
 retrieves and displays international standard recording codes
 .sp
-.B "32"
+.B "sectors"
 displays track start positions in absolute sector notation
 .sp
-To combine several requests just add the numbers and give the sum as argument.
+To combine several requests just list the suboptions seperated with commas.
 .IP "The table of contents"
 The display will show the table of contents with number of tracks and
 total time (displayed in
@@ -670,9 +773,9 @@ gui frontends (like xcd-roast).
 .IP "Verbose SCSI logging"
 .B \-V
 this option switches on logging of SCSI commands. This will produce
-a lot of output (when SCSI devices are being used),
-which is needed for debugging purposes. The format
-is the same as being used with the cdrecord package from Jörg Schilling.
+a lot of output (when SCSI devices are being used).
+This is needed for debugging purposes. The format
+is the same as being used with the cdrecord program from Jörg Schilling.
 I will not describe it here.
 .IP "Quiet option"
 .B \-q
@@ -684,6 +787,25 @@ does not write a file, it only prints information about the disc (depending
 on the
 .B \-v
 option). This is just for information purposes.
+.SH "CDDBP support"
+.IP "Lookup album and track titles option"
+.B \-L " cddbp mode"
+Cdda2wav tries to retrieve performer, album-, and track titles from a cddbp
+server. The default server right now is 'freedb.freedb.org'.
+It is planned to have more control over the server handling later.
+The parameter defines how multiple entries are handled:
+.PP
+0	interactive mode, the user chooses one of the entries.
+.PP
+1	take the first entry without asking.
+.IP "Set server for title lookups"
+.B cddbp-server " servername"
+When using \-L or --cddb, the server being contacted can be set with
+this option.
+.IP "Set portnumber for title lookups"
+.B cddbp-port " portnumber"
+When using \-L or --cddb, the server port being contacted can be set with
+this option.
 .SH "HINTS ON USAGE"
 Don't create samples you cannot read. First check your sample player
 software and sound card hardware. I experienced problems with very low
@@ -698,8 +820,7 @@ option to control the endianess of the written samples.
 .PP
 If your hardware is fast enough to run cdda2wav
 uninterrupted and your CD drive is one of the 'perfect' ones, you will
-gain speed when switching all overlap sampling off with
-the
+gain speed when switching all overlap sampling off with the
 .B \-P " 0"
 option. Further fine tuning can be done with the
 .B \-n " sectors"
@@ -719,7 +840,7 @@ to change the byte order of samples should be no more necessary; see option
 .B \-E
 to change the output byteorder).
 .PP
-If you really want to sample more than one track into
+If you want to sample more than one track into
 different files in one run, this is currently possible with the
 .B \-B
 option. When recording time exceeds the track limit a new file will
@@ -746,22 +867,24 @@ then .cddb and .cdindex files are generated unless suppressed by the
 option -H. They contain suitable formatted entries for submission to
 audio cd track title databases in the internet. The CDINDEX and CDDB(tm)
 systems are currently supported. For more information please visit
-www.cdindex.org and www.cddb.com.
+www.musicbrainz.org and www.freedb.com.
 .sp
 Inf files:
 .sp
 The inf files are describing the sample files and the part from the audio cd,
 it was taken from. They are a means to transfer information to a cd burning
 program like cdrecord. For example, if the original audio cd had pre-emphasis
-enabled, and cdda2wav -T did remove the pre-emphase, then the inf file has
+enabled, and cdda2wav -T did remove the pre-emphasis, then the inf file has
 pre-emphasis not set (since the audio file does not have it anymore), while
-the .cddb and the .cdindex have pre-emphase set as the original does.
+the .cddb and the .cdindex have pre-emphasis set as the original does.
 .SH WARNING
 .B IMPORTANT:
 it is prohibited to sell copies of copyrighted material by noncopyright
 holders. This program may not be used to circumvent copyrights.
 The user acknowledges this constraint when using the software.
 .SH BUGS
+Generation of md5 checksums is currently broken.
+.sp
 Performance may not be optimal on slower systems.
 .sp
 The index scanner may give timeouts.
@@ -780,8 +903,8 @@ Plextor Europe and Ricoh Japan provided cdrom disk drives and cd burners
 which helped a lot to develop this software.
 Rammi has helped a lot with the debugging and showed a lot of stamina when
 hearing 100 times the first 16 seconds of the first track of the Krupps CD.
-Paranoia patches contributed by Monty xiphmont@mit.edu.
+Libparanoia contributed by Monty (Christopher Montgomery) xiphmont@mit.edu.
 .SH AUTHOR
 Heiko Eissfeldt heiko@colossus.escape.de
 .SH DATE
-11 Feb 2000
+11 Sep 2002

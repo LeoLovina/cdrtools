@@ -1,8 +1,8 @@
-/* @(#)cdrecord.h	1.68 01/04/11 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.h	1.122 02/11/03 Copyright 1995-2002 J. Schilling */
 /*
  *	Definitions for cdrecord
  *
- *	Copyright (c) 1995 J. Schilling
+ *	Copyright (c) 1995-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -28,8 +28,12 @@
 #define	_INCL_SYS_TYPES_H
 #endif
 
+#ifndef	_UTYPES_H
+#include <utypes.h>
+#endif
+
 /*
- * Defines for option flags
+ * Defines for command line option flags
  */
 #define	F_DUMMY		0x000001L	/* Do dummy writes */
 #define	F_TOC		0x000002L	/* Get TOC */
@@ -50,9 +54,14 @@
 #define	F_PRDINFO	0x010000L	/* Print disk info */
 #define	F_IGNSIZE	0x020000L	/* Ignore disk size */
 #define	F_SAO		0x040000L	/* Session at once */
-#define	F_WRITE		0x080000L	/* Disk is going to be written */
-#define	F_FORCE		0x100000L	/* Force things (e.g. blank on dead disk)  */
-#define	F_WAITI		0x200000L	/* Wait until data is available on stdin */
+#define	F_RAW		0x080000L	/* Raw mode */
+#define	F_WRITE		0x100000L	/* Disk is going to be written */
+#define	F_FORCE		0x200000L	/* Force things (e.g. blank on dead disk)  */
+#define	F_WAITI		0x400000L	/* Wait until data is available on stdin */
+#define	F_OVERBURN	0x800000L	/* Allow oveburning */
+#define	F_CLONE		0x01000000L	/* Do clone writing */
+#define	F_STDIN		0x02000000L	/* We are using stdin as CD data */
+#define	F_IMMED		0x04000000L	/* Try tu use IMMED SCSI flag if possible */
 
 #ifdef	min
 #undef	min
@@ -67,8 +76,35 @@
 #undef	roundup
 #define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))
 
-#define DATA_SEC_SIZE	2048
-#define AUDIO_SEC_SIZE	2352
+/*
+ * NOTICE:	You should not make CDR_BUF_SIZE more than
+ *		the buffer size of the CD-Recorder.
+ *
+ * The Philips CDD 521 is the recorder with the smallest buffer.
+ * It only has 256kB of buffer RAM.
+ *
+ * WARNING:	Philips CDD 521 dies if CDR_BUF_SIZE is to big.
+ *		If you like to support the CDD 521 keep the buffer
+ *		at 63kB.
+ */
+/*#define	CDR_BUF_SIZE	(126*1024)*/
+#define	CDR_BUF_SIZE	(63*1024)
+
+#ifndef	MIN_GRACE_TIME
+#define	MIN_GRACE_TIME	2		/* 2 seconds */
+#endif
+#ifndef	GRACE_TIME
+#define	GRACE_TIME	9		/* 9 seconds */
+#endif
+
+/*
+ * Some sector sizes used for reading/writing ...
+ */
+#define DATA_SEC_SIZE	2048		/* 2048 bytes */
+#define MODE2_SEC_SIZE	2336		/* 2336 bytes */
+#define AUDIO_SEC_SIZE	2352		/* 2352 bytes */
+#define RAW16_SEC_SIZE	(2352+16)	/* 2368 bytes */
+#define RAW96_SEC_SIZE	(2352+96)	/* 2448 bytes */
 
 #define MAX_TRACK	99	/* Red Book track limit */
 
@@ -77,35 +113,61 @@
 
 #define	DEFAULT_FIFOSIZE (4L*1024L*1024L)
 
+#if	!defined(HAVE_LARGEFILES) && SIZEOF_LLONG > SIZEOF_LONG
+typedef	Llong	tsize_t;
+#else
+typedef	off_t	tsize_t;
+#endif
+
 #ifdef	nono
 typedef struct tindex {
 	int	dummy;		/* Not yet implemented */
 } tindex_t;
 #endif
 
+typedef struct ofile {
+	struct ofile *next;	/* Next open file			*/
+	int	f;		/* Open file				*/
+	char	*filename;	/* File name				*/
+	int	refcnt;		/* open reference count			*/
+} ofile_t;
+
 typedef struct track {
 	int	f;		/* Open file for this track		*/
 	char	*filename;	/* File name for this track		*/
+
+	tsize_t	itracksize;	/* Size of track bytes (-1 == until EOF)*/
+				/* This is in units of isecsize		*/
+	tsize_t	tracksize;	/* Size of track bytes (-1 == until EOF)*/
+				/* This is in units of secsize		*/
+
 	long	trackstart;	/* Start sector # of this track		*/
-	off_t	tracksize;	/* Size of track bytes (-1 == until EOF)*/
-	off_t	padsize;	/* Pad size for track bytes (0 == none)	*/
-				/* XXX pregapsize needs to be > long too*/
+	long	tracksecs;	/* Size of this track (sectors)		*/
+	long	padsecs;	/* Pad size for this track (sectors)	*/
 	long	pregapsize;	/* Pre-gap size for this track (sectors)*/
+	long	index0start;	/* Index 0 start within this tr(sectors)*/
+	int	isecsize;	/* Read input sector size for this track*/
 	int	secsize;	/* Sector size for this track (bytes)	*/
 	int	secspt;		/* # of sectors to copy for one transfer*/
 	int	pktsize;	/* # of blocks per write packet		*/
-	char	trackno;	/* Track number for this track		*/
-	char	sectype;	/* Sector type				*/
+	Uchar	dataoff;	/* offset of user data in raw sector	*/
+	Uchar	tracks;		/* Number of tracks on this disk	*/
+	Uchar	track;		/* Track # as offset in track[] array	*/
+	Uchar	trackno;	/* Track # on disk for this track	*/
 	char	tracktype;	/* Track type (toc type)		*/
 	char	dbtype;		/* Data block type for this track	*/
+	int	sectype;	/* Sector type				*/
 	int	flags;		/* Flags (see below)			*/
 	int	nindex;		/* Number of indices for track		*/
 	long	*tindex;	/* Track index descriptor		*/
 	char	*isrc;		/* ISRC code for this track / disk MCN	*/
+	void	*text;		/* Opaque CD-Text data (txtptr_t *)	*/
 } track_t;
 
+#define	track_base(tp)	((tp) - (tp)->trackno)
+
 /*
- * Defines for flags
+ * Defines for tp->flags
  */
 #define	TI_AUDIO	0x00001	/* File is an audio track		*/
 #define	TI_PREEMP	0x00002	/* Audio track recorded w/preemphasis	*/
@@ -124,6 +186,12 @@ typedef struct track {
 #define	TI_SCMS		0x04000	/* Force to follow the SCMS rules	*/
 #define	TI_COPY		0x08000	/* Allow digital copy			*/
 #define	TI_SHORT_TRACK	0x10000	/* Ignore min 4 second Red Book	std.	*/
+#define	TI_RAW16	0x20000	/* This track uses 16 bytes subch.	*/
+#define	TI_RAW96R	0x40000	/* This track uses 96 bytes RAW subch.	*/
+#define	TI_CLONE	0x80000	/* Special clone treatment needed	*/
+#define	TI_TEXT		0x100000/* This track holds CD-Text information	*/
+#define	TI_DVD		0x200000/* We are writing a DVD track		*/
+
 
 #define	is_audio(tp)	(((tp)->flags & TI_AUDIO) != 0)
 #define	is_preemp(tp)	(((tp)->flags & TI_PREEMP) != 0)
@@ -134,10 +202,17 @@ typedef struct track {
 #define	is_packet(tp)	(((tp)->flags & TI_PACKET) != 0)
 #define	is_noclose(tp)	(((tp)->flags & TI_NOCLOSE) != 0)
 #define	is_tao(tp)	(((tp)->flags & TI_TAO) != 0)
+#define	is_raw(tp)	(((tp)->flags & TI_RAW) != 0)
+#define	is_raw16(tp)	(((tp)->flags & TI_RAW16) != 0)
+#define	is_raw96(tp)	(((tp)->flags & (TI_RAW|TI_RAW16)) == TI_RAW)
+#define	is_raw96p(tp)	(((tp)->flags & (TI_RAW|TI_RAW16|TI_RAW96R)) == TI_RAW)
+#define	is_raw96r(tp)	(((tp)->flags & (TI_RAW|TI_RAW16|TI_RAW96R)) == (TI_RAW|TI_RAW96R))
 #define	is_pregap(tp)	(((tp)->flags & TI_PREGAP) != 0)
 #define	is_scms(tp)	(((tp)->flags & TI_SCMS) != 0)
 #define	is_copy(tp)	(((tp)->flags & TI_COPY) != 0)
 #define	is_shorttrk(tp)	(((tp)->flags & TI_SHORT_TRACK) != 0)
+#define	is_clone(tp)	(((tp)->flags & TI_CLONE) != 0)
+#define	is_text(tp)	(((tp)->flags & TI_TEXT) != 0)
 
 /*
  * Defines for toc type / track type
@@ -166,9 +241,36 @@ extern	int	toc2sess[];	/* Convert toc type to session format	*/
 #define	ST_AUDIO_NOPRE	4	/* CD-DA stereo without preemphasis	*/
 #define	ST_AUDIO_PRE	5	/* CD-DA stereo with preemphasis	*/
 
+#define	ST_PREEMPMASK	0x01	/* Mask for preemphasis bit		*/
 #define	ST_AUDIOMASK	0x04	/* Mask for audio bit			*/
 #define	ST_MODEMASK	0x03	/* Mask for mode bits in sector type	*/
 #define	ST_MASK		0x07	/* Mask needed for sectname[]		*/
+
+/*
+ * There are 6 different generic basic sector types.
+ */
+#define	ST_MODE_AUDIO	 0x00	/* Generic Audio mode			*/
+#define	ST_MODE_0	 0x10	/* Generic Zero mode			*/
+#define	ST_MODE_1	 0x20	/* Generic CD-ROM mode	(ISO/IEC 10149)	*/
+#define	ST_MODE_2	 0x30	/* Generic Mode 2	(ISO/IEC 10149)	*/
+#define	ST_MODE_2_FORM_1 0x40	/* Generic Mode 2 form 1		*/
+#define	ST_MODE_2_FORM_2 0x50	/* Generic Mode 2 form 2		*/
+#define	ST_MODE_2_MIXED	 0x60	/* Generic Mode 2 mixed form (1/2)	*/
+
+#define	ST_MODE_MASK	 0x70	/* Mask needed to get generic sectype	*/
+
+#define	ST_MODE_RAW	 0x08	/* Do not touch EDC & subchannels	*/
+#define	ST_NOSCRAMBLE	 0x80	/* Do not srcamble sectors 		*/
+
+#define	SECT_AUDIO	(ST_AUDIO_NOPRE  | ST_MODE_AUDIO)
+#define	SECT_AUDIO_NOPRE (ST_AUDIO_NOPRE | ST_MODE_AUDIO)
+#define	SECT_AUDIO_PRE	(ST_AUDIO_PRE    | ST_MODE_AUDIO)
+#define	SECT_MODE_0	(ST_ROM_MODE1    | ST_MODE_0)
+#define	SECT_ROM	(ST_ROM_MODE1    | ST_MODE_1)
+#define	SECT_MODE_2	(ST_ROM_MODE2    | ST_MODE_2)
+#define	SECT_MODE_2_F1	(ST_ROM_MODE2    | ST_MODE_2_FORM_1)
+#define	SECT_MODE_2_F2	(ST_ROM_MODE2    | ST_MODE_2_FORM_2)
+#define	SECT_MODE_2_MIX	(ST_ROM_MODE2    | ST_MODE_2_MIXED)
 
 extern	char	*st2name[];	/* Convert sector type to name		*/
 extern	int	st2mode[];	/* Convert sector type to control nibble*/
@@ -228,8 +330,7 @@ extern	int	st2mode[];	/* Convert sector type to control nibble*/
 #define	DB_VU_7		7	/* -	Vendor specific			  */
 #define	DB_ROM_MODE1	8	/* 2048 bytes Mode 1 (ISO/IEC 10149)	  */
 #define	DB_ROM_MODE2	9	/* 2336 bytes Mode 2 (ISO/IEC 10149)	  */
-#define	DB_XA_MODE1	10	/* 2048 bytes Mode 1? (CD-ROM XA form 1)  */
-#define	DB_XA_MODE2	10	/* 2048 bytes Mode 2! (CD-ROM XA form 1)  */
+#define	DB_XA_MODE2	10	/* 2048 bytes Mode 2 (CD-ROM XA form 1)   */
 #define	DB_XA_MODE2_F1	11	/* 2056 bytes Mode 2 (CD-ROM XA form 1)	  */
 #define	DB_XA_MODE2_F2	12	/* 2324 bytes Mode 2 (CD-ROM XA form 2)	  */
 #define	DB_XA_MODE2_MIX	13	/* 2332 bytes Mode 2 (CD-ROM XA 1/2+subhdr) */
@@ -279,6 +380,14 @@ extern	char	*db2name[];	/* Convert data block type to name	  */
 #define	hseconds(v)	((int)(hsamples(v) % 100))
 #define	frames(v)	((int)(fsamples(v) % 75))
 
+/*
+ * sector based macros
+ */
+#define	Sminutes(s)	((int)((s) / (60*75)))
+#define	Sseconds(s)	((int)((s) / 75))
+#define	Shseconds(s)	((int)(((s) % 75)*100)/75)
+#define	Sframes(s)	((int)((s) % 75))
+
 typedef struct msf {
 	char	msf_min;
 	char	msf_sec;
@@ -297,11 +406,23 @@ typedef struct msf {
 
 /*
  * Definitions for read disk information "recording flags"
+ * used in UInt16_t "ds_cdrflags".
  */
 #define	RF_WRITE	0x0001	/* Disk is going to be written		*/
+#define	RF_BLANK	0x0002	/* Disk is going to be erased		*/
+#define	RF_PRATIP	0x0004	/* Print ATIP info			*/
+#define	RF_LEADIN	0x0008	/* Lead-in has been "manually" written	*/
+#define	RF_BURNFREE	0x0010	/* BUFFER underrun free recording	*/
+#define	RF_VARIREC	0x0020	/* Plextor VariRec			*/
+#define	RF_AUDIOMASTER	0x0040	/* Yamaha AudioMaster			*/
+#define	RF_FORCESPEED	0x0080	/* WriteSpeed forced high		*/
+#define	RF_DID_STAT	0x0100	/* Already did call cdrstats()		*/
+#define	RF_DID_CDRSTAT	0x0200	/* Already did call (*dp->cdr_stats)()	*/
+#define	RF_WR_WAIT	0x0400	/* Wait during writing to free bus	*/
 
 /*
  * Definitions for read disk information "disk status"
+ * used in "ds_diskstat".
  */
 #define	DS_EMPTY	0	/* Empty disk				*/
 #define	DS_APPENDABLE	1	/* Incomplete disk (appendable)		*/
@@ -310,6 +431,7 @@ typedef struct msf {
 
 /*
  * Definitions for read disk information "session status"
+ * used in "ds_sessstat".
  */
 #define	SS_EMPTY	0	/* Empty session			*/
 #define	SS_APPENDABLE	1	/* Incomplete session			*/
@@ -317,43 +439,120 @@ typedef struct msf {
 #define	SS_COMPLETE	3	/* Complete session (needs DS_COMPLETE)	*/
 
 /*
+ * Definitions for disk_status write mode
+ * used in "ds_wrmode".
+ */
+#define	WM_NONE		0	/* No write mode selected		*/
+#define	WM_BLANK	1	/* Blanking mode			*/
+#define	WM_PACKET	4	/* Packet writing			*/
+#define	WM_TAO		8	/* Track at Once			*/
+#define	WM_SAO		12	/* Session at Once w/ cooked sectors	*/
+#define	WM_SAO_RAW16	13	/* Session at Once RAW+16 byte sectors	*/
+#define	WM_SAO_RAW96P	14	/* Session at Once RAW+96P byte sectors	*/
+#define	WM_SAO_RAW96R	15	/* Session at Once RAW+96R byte sectors	*/
+#define	WM_RAW		16	/* RAW with cooked sectors is impossible*/
+#define	WM_RAW_RAW16	17	/* RAW with RAW+16 byte sectors		*/
+#define	WM_RAW_RAW96P	18	/* RAW with RAW+96P byte sectors	*/
+#define	WM_RAW_RAW96R	19	/* RAW with RAW+96R byte sectors	*/
+
+#define	wm_base(wm)	((wm)/4*4)/* The basic write mode for this mode	*/
+
+/*
  * Definitions for disk_status flags
+ * used in UInt16_t "ds_flags".
  */
 #define	DSF_DID_V	0x0001	/* Disk id valid			*/
 #define	DSF_DBC_V	0x0002	/* Disk bar code valid			*/
 #define	DSF_URU		0x0004	/* Disk is for unrestricted use		*/
 #define	DSF_ERA		0x0008	/* Disk is erasable			*/
+#define	DSF_HIGHSP_ERA	0x0010	/* Disk is high speed erasable		*/
+#define	DSF_ULTRASP_ERA	0x0020	/* Disk is high speed erasable		*/
+#define	DSF_DVD		0x0100	/* Disk is a DVD			*/
 
+/*
+ * Definitions for disk_status disk type
+ * used in "ds_type".
+ */
+/* None defined yet */
 
 typedef	struct disk_status	dstat_t;
 
 struct disk_status {
-	long	ds_cdrflags;		/* Recording flags from cdrecord*/
-	long	ds_diskid;		/* Disk identification		*/
-	int	ds_flags;		/* Disk_status flags		*/
-	int	ds_type;		/* Abstract disk type		*/
-	Uchar	ds_disktype;		/* Disk type (from TOC/PMA)	*/
-	Uchar	ds_diskstat;		/* Disk status (MMC)		*/
-	Uchar	ds_sessstat;		/* Status of last sesion (MMC)	*/
-	Uchar	ds_trfirst;		/* first track #		*/
-	Uchar	ds_trlast;		/* last track #			*/
-	Uchar	ds_trfirst_ls;		/* first track # in last session*/
-	Uchar	ds_barcode[8];		/* Disk bar code		*/
+	UInt32_t ds_diskid;		/* Disk identification		*/
+	UInt16_t ds_cdrflags;		/* Recording flags from cdrecord*/
+	UInt16_t ds_flags;		/* Disk_status flags		*/
+	Uchar	 ds_wrmode;		/* Selected write mode		*/
+	Uchar	 ds_type;		/* Abstract disk type		*/
 
-	long	ds_first_leadin;	/* Start of first lead in (ATIP)*/
-	long	ds_last_leadout;	/* Start of last lead out (ATIP)*/
-	long	ds_curr_leadin;		/* Start of next lead in	*/
-	long	ds_curr_leadout;	/* Start of next lead out	*/
+	Uchar	 ds_disktype;		/* Disk type (from TOC/PMA)	*/
+	Uchar	 ds_diskstat;		/* Disk status (MMC)		*/
+	Uchar	 ds_sessstat;		/* Status of last sesion (MMC)	*/
+	Uchar	 ds_trfirst;		/* first track #		*/
+	Uchar	 ds_trlast;		/* last track #			*/
+	Uchar	 ds_trfirst_ls;		/* first track # in last session*/
+	Uchar	 ds_barcode[8];		/* Disk bar code		*/
 
-	long	ds_maxblocks;		/* # of official blocks on disk	*/
-	long	ds_maxrblocks;		/* # real blocks on disk	*/
-	long	ds_fwa;			/* first writable addr		*/
+	Int32_t	 ds_first_leadin;	/* Start of first lead in (ATIP)*/
+	Int32_t	 ds_last_leadout;	/* Start of last lead out (ATIP)*/
+	Int32_t	 ds_curr_leadin;	/* Start of next lead in	*/
+	Int32_t	 ds_curr_leadout;	/* Start of next lead out	*/
+
+	Int32_t	 ds_maxblocks;		/* # of official blocks on disk	*/
+	Int32_t	 ds_maxrblocks;		/* # real blocks on disk	*/
+	Int32_t	 ds_fwa;		/* first writable addr		*/
+
+	Int32_t	 ds_startsec;		/* Actual start sector		*/
+	Int32_t	 ds_endsec;		/* Actual end sector		*/
+	Int32_t	 ds_buflow;		/* # of times drive buffer empty*/
+
+	UInt16_t ds_minbuf;		/* Minimum drive bufer fill rt.	*/
+
+	UInt16_t ds_at_min_speed;	/* The minimal ATIP write speed	*/
+	UInt16_t ds_at_max_speed;	/* The maximal ATIP write speed	*/
+	UInt16_t ds_dr_cur_rspeed;	/* The drive's cur read speed	*/
+	UInt16_t ds_dr_max_rspeed;	/* The drive's max read speed	*/
+	UInt16_t ds_dr_cur_wspeed;	/* The drive's cur write speed	*/
+	UInt16_t ds_dr_max_wspeed;	/* The drive's max write speed	*/
 };
 
 /*
  * First approach of a CDR device abstraction layer.
  * This interface will change as long as I did not find the
  * optimum that fits for all devices.
+ *
+ * Called with pointer to whole track array:
+ *	cdr_send_cue()
+ *	cdr_write_leadin()
+ *	cdr_open_session()
+ *	cdr_fixate()
+ *
+ * Called with (track_t *) 0 or pointer to current track:
+ *	cdr_next_wr_address()
+ *
+ * Called with pointer to current track:
+ *	cdr_open_track()
+ *	cdr_close_track()
+ *
+ * Calling sequence:
+ *	cdr_identify()					May modify driver
+ *	cdr_attach()					Get drive properties
+ *	cdr_buffer_cap()
+ *	cdr_getdisktype()				GET ATIP
+ *	cdr_set_speed_dummy(scgp, dp, 0, flags & F_DUMMY) set TAO for -msinfo
+ *	cdr_check_session				XXX ????
+ *	cdr_set_speed_dummy(scgp, dp, &speed, flags & F_DUMMY)
+ *	do_opc()
+ *	cdr_blank()
+ *	cdr_open_session()
+ *	do_opc()
+ *	cdr_write_leadin()
+ *		cdr_open_track()
+ *		cdr_next_wr_address()
+ *		write_track_data()
+ *		cdr_close_track()
+ *	write_leadout()				XXX should go -> driver!
+ *	cdr_fixate()
+ *	cdr_stats()
  */
 /*--------------------------------------------------------------------------*/
 typedef	struct cdr_cmd	cdr_t;
@@ -361,38 +560,43 @@ typedef	struct cdr_cmd	cdr_t;
 #ifdef	_SCG_SCSITRANSP_H
 struct cdr_cmd {
 	int	cdr_dev;
-	int	cdr_flags;
-	char	*cdr_drname;					/* Driver ID string */
-	char	*cdr_drtext;					/* Driver ID text */
+	UInt32_t cdr_cmdflags;			/* Command line options */
+	UInt32_t cdr_flags;			/* Drive related flags	*/
+	UInt16_t cdr_speeddef;			/* Default write speed	*/
+	UInt16_t cdr_speedmax;			/* Max. write speed	*/
+	char	*cdr_drname;			/* Driver ID string	*/
+	char	*cdr_drtext;			/* Driver ID text	*/
 	struct cd_mode_page_2A *cdr_cdcap;
-/*	dstat_t	*cdr_dstat;*/
+	dstat_t	*cdr_dstat;
 #ifdef	_SCG_SCSIREG_H
 	cdr_t	*(*cdr_identify)	__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *));	/* identify drive */
 #else
 	cdr_t	*(*cdr_identify)	__PR((SCSI *scgp, cdr_t *, void *));		/* identify drive */
 #endif
 	int	(*cdr_attach)		__PR((SCSI *scgp, cdr_t *));		/* init error decoding etc*/
-	int	(*cdr_getdisktype)	__PR((SCSI *scgp, cdr_t *, dstat_t *));	/* get disk type */
-	int	(*cdr_load)		__PR((SCSI *scgp));		/* load disk */
-	int	(*cdr_unload)		__PR((SCSI *scgp));		/* unload disk */
+	int	(*cdr_getdisktype)	__PR((SCSI *scgp, cdr_t *));	/* get disk type */
+	int	(*cdr_load)		__PR((SCSI *scgp, cdr_t *));	/* load disk */
+	int	(*cdr_unload)		__PR((SCSI *scgp, cdr_t *));	/* unload disk */
 	int	(*cdr_buffer_cap)	__PR((SCSI *scgp, long *sizep, long *freep));	/* read buffer capacity */
 	int	(*cdr_check_recovery)	__PR((SCSI *scgp));		/* check if recover is needed */
 	int	(*cdr_recover)		__PR((SCSI *scgp, int track));	/* do recover */
-	int	(*cdr_set_speed_dummy)	__PR((SCSI *scgp, int *speedp, int dummy));	/* set recording speed & dummy write */
+	int	(*cdr_set_speed_dummy)	__PR((SCSI *scgp, cdr_t *, int *speedp, int dummy));	/* set recording speed & dummy write */
 	int	(*cdr_set_secsize)	__PR((SCSI *scgp, int secsize));	/* set sector size */
-	int	(*cdr_next_wr_address)	__PR((SCSI *scgp, int track, track_t *trackp, long *ap));	/* get next writable addr. */
-	int	(*cdr_reserve_track)	__PR((SCSI *scgp, unsigned long len));	/* reserve a track for future use */
+	int	(*cdr_next_wr_address)	__PR((SCSI *scgp, track_t *trackp, long *ap));	/* get next writable addr. */
+	int	(*cdr_reserve_track)	__PR((SCSI *scgp, Ulong len));	/* reserve a track for future use */
 	int	(*cdr_write_trackdata)	__PR((SCSI *scgp, caddr_t buf, long daddr, long bytecnt, int seccnt, BOOL islast));
-
-	int	(*cdr_send_cue)		__PR((SCSI *scgp, int track, track_t *trackp));			/* send cue sheet */
-	int	(*cdr_open_track)	__PR((SCSI *scgp, cdr_t *, int track, track_t *trackp));	/* open new track */
-	int	(*cdr_close_track)	__PR((SCSI *scgp, int track, track_t *trackp));		/* close written track */
-	int	(*cdr_open_session)	__PR((SCSI *scgp, cdr_t *, int tracks, track_t *trackp, int toctype, int multi));		/* open new session */
+	int	(*cdr_send_cue)		__PR((SCSI *scgp, track_t *trackp));			/* send cue sheet */
+	int	(*cdr_write_leadin)	__PR((SCSI *scgp, cdr_t *, track_t *trackp));	/* write leadin */
+	int	(*cdr_open_track)	__PR((SCSI *scgp, cdr_t *, track_t *trackp));	/* open new track */
+	int	(*cdr_close_track)	__PR((SCSI *scgp, cdr_t *, track_t *trackp));	/* close written track */
+	int	(*cdr_open_session)	__PR((SCSI *scgp, cdr_t *, track_t *trackp, int toctype, int multi));		/* open new session */
 	int	(*cdr_close_session)	__PR((SCSI *scgp));		/* really needed ??? */
 	int	(*cdr_session_offset)	__PR((SCSI *scgp, long *soff));		/* read session offset*/
-	int	(*cdr_fixate)		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));	/* write toc on disk */
-	int	(*cdr_blank)		__PR((SCSI *scgp, long addr, int blanktype));	/* blank something */
+	int	(*cdr_fixate)		__PR((SCSI *scgp,  cdr_t *, int onp, int dummy, int toctype, track_t *trackp));	/* write toc on disk */
+	int	(*cdr_stats)		__PR((SCSI *scgp, cdr_t *));		/* final statistics printing*/
+	int	(*cdr_blank)		__PR((SCSI *scgp, cdr_t *, long addr, int blanktype));	/* blank something */
 	int	(*cdr_opc)		__PR((SCSI *scgp, caddr_t bp, int cnt, int doopc));	/* Do OPC */
+	int	(*cdr_opt1)		__PR((SCSI *scgp, cdr_t *));		/* do early option processing*/
 };
 #endif
 
@@ -400,28 +604,53 @@ struct cdr_cmd {
  * Definitions for cdr_flags
  */
 #define	CDR_TAO		0x01		/* Drive supports Track at once	*/
-#define	CDR_DAO		0x02		/* Drive supports Disk at once	*/
+#define	CDR_SAO		0x02		/* Drive supports Sess at once	*/
 #define	CDR_PACKET	0x04		/* Drive supports packet writing*/
-#define	CDR_SWABAUDIO	0x08		/* Drive swabs audio data	*/
-#define	CDR_ISREADER	0x10		/* Drive is s CD-ROM reader	*/
-#define	CDR_TRAYLOAD	0x20		/* Drive loads CD with tray	*/
-#define	CDR_CADDYLOAD	0x40		/* Drive loads CD with caddy	*/
-#define	CDR_NO_LOLIMIT	0x80		/* Drive ignores lead-out limit	*/
-#define	CDR_DVD		0x100		/* Drive is a DVD drive		*/
-#define	CDR_ALLOC	0x1000		/* structure is allocated	*/
+#define	CDR_RAW		0x08		/* Drive supports raw writing	*/
+#define	CDR_RAW16	0x10		/* Drive supports RAW raw16	*/
+#define	CDR_RAW96P	0x20		/* Drive supports RAW raw96 pak	*/
+#define	CDR_RAW96R	0x40		/* Drive supports RAW raw96 raw	*/
+#ifdef	__needed__
+#define	CDR_SRAW16	0x100		/* Drive supports SAO raw16	*/
+#endif
+#define	CDR_SRAW96P	0x200		/* Drive supports SAO raw96 pak	*/
+#define	CDR_SRAW96R	0x400		/* Drive supports SAO raw96 raw */
+#define	CDR_SWABAUDIO	0x1000		/* Drive swabs audio data	*/
+#define	CDR_ISREADER	0x2000		/* Drive is s CD-ROM reader	*/
+#define	CDR_TRAYLOAD	0x4000		/* Drive loads CD with tray	*/
+#define	CDR_CADDYLOAD	0x8000		/* Drive loads CD with caddy	*/
+#define	CDR_NO_LOLIMIT	0x10000		/* Drive ignores lead-out limit	*/
+#define	CDR_DVD		0x20000		/* Drive is a DVD drive		*/
+#define	CDR_SIMUL	0x40000		/* Drive is simulated		*/
+#define	CDR_BURNFREE	0x80000		/* Drive sup. BUFund. free rec.	*/
+#define	CDR_VARIREC	0x100000	/* Drive sup. VariRec	 Plex.	*/
+#define	CDR_AUDIOMASTER	0x200000	/* Drive sup. AudioMaster Yamah.*/
+#define	CDR_FORCESPEED	0x400000	/* Drive sup. WriteSpeed ctl.	*/
+#define	CDR_DISKTATTOO	0x800000	/* Drive sup. Yamaha DiskT@2	*/
+#define	CDR_MMC		0x10000000	/* Drive is MMC compliant	*/
+#define	CDR_MMC2	0x20000000	/* Drive is MMC-2 compliant	*/
+#define	CDR_MMC3	0x40000000	/* Drive is MMC-3 compliant	*/
+#ifdef	PROTOTYPES
+#define	CDR_ALLOC	0x80000000UL	/* structure is allocated	*/
+#else
+#define	CDR_ALLOC	0x80000000	/* structure is allocated	*/
+#endif
 
 
 /*
  * cdrecord.c
  */
 extern	int	read_buf	__PR((int f, char *bp, int size));
-extern	int	get_buf		__PR((int f, char **bpp, int size));
+extern	int	fill_buf	__PR((int f, track_t *trackp, long secno, char *bp, int size));
+extern	int	get_buf		__PR((int f, track_t *trackp, long secno, char **bpp, int size));
 #ifdef	_SCG_SCSITRANSP_H
-extern	int	pad_track	__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp,
+extern	int	write_secs	__PR((SCSI *scgp, cdr_t *dp, char *bp, long startsec, int bytespt, int secspt, BOOL islast));
+extern	int	pad_track	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp,
 				     long startsec, Llong amt,
 				     BOOL dolast, Llong *bytesp));
 extern	void	load_media	__PR((SCSI *scgp, cdr_t *, BOOL));
 extern	void	unload_media	__PR((SCSI *scgp, cdr_t *, int));
+extern	void	reload_media	__PR((SCSI *scgp, cdr_t *));
 #endif
 extern	void	raisepri	__PR((int));
 extern	int	getnum		__PR((char* arg, long* valp));
@@ -429,7 +658,7 @@ extern	int	getnum		__PR((char* arg, long* valp));
 /*
  * defaults.c
  */
-extern	void	cdr_defaults	__PR((char **devp, int *speedp, long *fsp));
+extern	void	cdr_defaults	__PR((char **devp, int *speedp, long *fsp, char **drvoptp));
 
 /*
  * cd_misc.c
@@ -438,13 +667,14 @@ extern	int	from_bcd	__PR((int b));
 extern	int	to_bcd		__PR((int i));
 extern	long	msf_to_lba	__PR((int m, int s, int f, BOOL force_positive));
 extern	BOOL	lba_to_msf	__PR((long lba, msf_t *mp));
+extern	void	sec_to_msf	__PR((long sec, msf_t *mp));
 extern	void	print_min_atip	__PR((long li, long lo));
 
 /*
  * fifo.c
  */
 extern	void	init_fifo	__PR((long));
-extern	BOOL	init_faio	__PR((int tracks, track_t *track, int));
+extern	BOOL	init_faio	__PR((track_t *track, int));
 extern	BOOL	await_faio	__PR((void));
 extern	void	kill_faio	__PR((void));
 extern	int	wait_faio	__PR((void));
@@ -456,18 +686,22 @@ extern	int	fifo_percent	__PR((BOOL addone));
 /*
  * wm_session.c
  */
-extern	int	write_session_data __PR((cdr_t *dp, int track, track_t *trackp));
+#ifdef	_SCG_SCSITRANSP_H
+extern	int	write_session_data __PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+#endif
 
 /*
  * wm_track.c
  */
-/*extern	int	write_track_data __PR((cdr_t *dp, int track, track_t *trackp));*/
+#ifdef	_SCG_SCSITRANSP_H
+/*extern	int	write_track_data __PR((SCSI *scgp, cdr_t *dp, track_t *trackp));*/
+#endif
 
 /*
  * wm_packet.c
  */
 #ifdef	_SCG_SCSITRANSP_H
-extern	int	write_packet_data __PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
+extern	int	write_packet_data __PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
 #endif
 
 /*
@@ -490,6 +724,12 @@ extern	void	timevaldiff	__PR((struct timeval *start, struct timeval *stop));
 #endif
 
 /*
+ * getnum.c
+ */
+extern	int	getnum		__PR((char* arg, long* valp));
+extern	int	getllnum	__PR((char *arg, Llong* lvalp));
+
+/*
  * scsi_cdr.c
  */
 #ifdef	_SCG_SCSITRANSP_H
@@ -506,14 +746,22 @@ extern	void	print_capacity	__PR((SCSI *scgp, FILE *f));
 #endif
 extern	int	scsi_load_unload __PR((SCSI *scgp, int));
 extern	int	scsi_prevent_removal __PR((SCSI *scgp, int));
-extern	int	scsi_start_stop_unit __PR((SCSI *scgp, int, int));
-extern	int	scsi_set_speed	__PR((SCSI *scgp, int readspeed, int writespeed));
+extern	int	scsi_start_stop_unit __PR((SCSI *scgp, int, int, BOOL immed));
+
+#define	ROTCTL_CLV	0	/* CLV or PCAV	*/
+#define	ROTCTL_CAV	1	/* True CAV	*/
+
+extern	int	scsi_set_speed	__PR((SCSI *scgp, int readspeed, int writespeed, int rotctl));
 extern	int	scsi_get_speed	__PR((SCSI *scgp, int *readspeedp, int *writespeedp));
 extern	int	qic02		__PR((SCSI *scgp, int));
+extern	int	write_xscsi	__PR((SCSI *scgp, caddr_t, long, long, int));
 extern	int	write_xg0	__PR((SCSI *scgp, caddr_t, long, long, int));
 extern	int	write_xg1	__PR((SCSI *scgp, caddr_t, long, long, int));
 extern	int	write_xg5	__PR((SCSI *scgp, caddr_t, long, long, int));
-extern	int	scsi_flush_cache __PR((SCSI *scgp));
+extern	int	seek_scsi	__PR((SCSI *scgp, long addr));
+extern	int	seek_g0		__PR((SCSI *scgp, long addr));
+extern	int	seek_g1		__PR((SCSI *scgp, long addr));
+extern	int	scsi_flush_cache __PR((SCSI *scgp, BOOL immed));
 extern	int	read_buffer	__PR((SCSI *scgp, caddr_t bp, int cnt, int mode));
 extern	int	read_subchannel	__PR((SCSI *scgp, caddr_t bp, int track,
 					int cnt,int msf, int subq, int fmt));
@@ -522,6 +770,7 @@ extern	int	read_toc_philips __PR((SCSI *scgp, caddr_t, int, int, int, int));
 extern	int	read_header	__PR((SCSI *scgp, caddr_t, long, int, int));
 extern	int	read_disk_info	__PR((SCSI *scgp, caddr_t, int));
 extern	int	read_track_info	__PR((SCSI *scgp, caddr_t, int, int));
+extern	int	read_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int fmt));
 extern	int	send_opc	__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
 extern	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track, BOOL immed));
 extern	int	read_master_cue	__PR((SCSI *scgp, caddr_t bp, int sheet, int cnt));
@@ -557,20 +806,27 @@ extern	void	printinq	__PR((SCSI *scgp, FILE *f));
 extern	void	printdev	__PR((SCSI *scgp));
 extern	BOOL	do_inquiry	__PR((SCSI *scgp, BOOL));
 extern	BOOL	recovery_needed	__PR((SCSI *scgp));
-extern	int	scsi_load	__PR((SCSI *scgp));
-extern	int	scsi_unload	__PR((SCSI *scgp));
+extern	int	scsi_load	__PR((SCSI *scgp, cdr_t *));
+extern	int	scsi_unload	__PR((SCSI *scgp, cdr_t *));
 extern	int	scsi_cdr_write	__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
 extern	struct cd_mode_page_2A * mmc_cap __PR((SCSI *scgp, Uchar *modep));
 extern	void	mmc_getval	__PR((struct cd_mode_page_2A *mp,
 					BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
-					BOOL *dvdp));
-extern	BOOL	is_mmc		__PR((SCSI *scgp, BOOL *dvdp));
+					BOOL *dvdp, BOOL *dvdwp));
+extern	BOOL	is_mmc		__PR((SCSI *scgp, BOOL *cdwp, BOOL *dvdwp));
 extern	BOOL	mmc_check	__PR((SCSI *scgp, BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
-					BOOL *dvdp));
+					BOOL *dvdp, BOOL *dvdwp));
 extern	void	print_capabilities	__PR((SCSI *scgp));
 #endif
+
+/*
+ * mmc_misc.c
+ */
+#ifdef	_SCG_SCSITRANSP_H
+extern	int	check_writemodes_mmc	__PR((SCSI *scgp, cdr_t *dp));
+#endif	/* _SCG_SCSITRANSP_H */
 
 /*
  * cdr_drv.c
@@ -585,11 +841,11 @@ extern	int	drive_attach		__PR((SCSI *scgp, cdr_t *));
 #endif
 extern	int	attach_unknown		__PR((void));
 #ifdef	_SCG_SCSITRANSP_H
-extern	int	blank_dummy		__PR((SCSI *scgp, long addr, int blanktype));
-extern	int	drive_getdisktype	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
+extern	int	blank_dummy		__PR((SCSI *scgp, cdr_t *, long addr, int blanktype));
+extern	int	drive_getdisktype	__PR((SCSI *scgp, cdr_t *dp));
 extern	int	cmd_ill			__PR((SCSI *scgp));
 extern	int	cmd_dummy		__PR((SCSI *scgp));
-extern	int	no_sendcue		__PR((SCSI *scgp, int tracks, track_t *trackp));
+extern	int	no_sendcue		__PR((SCSI *scgp, track_t *trackp));
 extern	int	buf_dummy		__PR((SCSI *scgp, long *sp, long *fp));
 #endif
 extern	BOOL	set_cdrcmds		__PR((char *name, cdr_t **dpp));
@@ -597,6 +853,15 @@ extern	BOOL	set_cdrcmds		__PR((char *name, cdr_t **dpp));
 extern	cdr_t	*get_cdrcmds		__PR((SCSI *scgp));
 #endif
 
+
+/*
+ * drv_mmc.c
+ */
+extern	void	mmc_opthelp		__PR((cdr_t *dp, int excode));
+extern	char	*hasdrvopt		__PR((char *optstr, char *optname));
+#ifdef	_SCG_SCSITRANSP_H
+extern struct ricoh_mode_page_30 * get_justlink_ricoh	__PR((SCSI *scgp, Uchar *mode));
+#endif
 
 /*
  * isosize.c
@@ -629,4 +894,48 @@ extern	long	disk_rcap		__PR((msf_t *mp, long maxblock, BOOL rw, BOOL audio));
 /*--------------------------------------------------------------------------*/
 /* Test only								    */
 /*--------------------------------------------------------------------------*/
-/*extern	int	do_cue		__PR((int tracks, track_t *trackp, struct mmc_cue **cuep));*/
+#ifdef _SCSIMMC_H
+/*extern	int	do_cue		__PR((track_t *trackp, struct mmc_cue **cuep));*/
+#else
+/*extern	int	do_cue		__PR((track_t *trackp, void *cuep));*/
+#endif
+
+/*
+ * subchan.c
+ */
+extern	int     do_leadin	__PR((track_t *trackp));
+#ifdef	_SCG_SCSITRANSP_H
+extern	int     write_leadin	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp, int leadinstart));
+extern	int     write_leadout	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+#endif
+extern	void	fillsubch	__PR((track_t *trackp, Uchar *sp, int secno, int nsecs));
+extern	void	filltpoint	__PR((Uchar *sub, int ctrl_adr, int point, msf_t *mp));
+extern	void	fillttime	__PR((Uchar *sub, msf_t *mp));
+extern	void	qpto96		__PR((Uchar *sub, Uchar *subq, int dop));
+extern	void	addrw		__PR((Uchar *sub, Uchar	*subrwptr));
+extern	void	qwto16		__PR((Uchar *subq, Uchar *subptr));
+extern	void	subrecodesecs	__PR((track_t *trackp, Uchar *bp, int address, int nsecs));
+
+/*
+ * sector.c
+ */
+extern	int	encspeed	__PR((BOOL be_verbose));
+extern	void	encsectors	__PR((track_t *trackp, Uchar *bp, int address, int nsecs));
+extern	void	scrsectors	__PR((track_t *trackp, Uchar *bp, int address, int nsecs));
+extern	void	encodesector	__PR((Uchar *sp, int sectype, int address));
+extern	void	fillsector	__PR((Uchar *sp, int sectype, int address));
+
+/*
+ * clone.c
+ */
+extern	void	clone_toc	__PR((track_t *trackp));
+extern	void	clone_tracktype	__PR((track_t *trackp));
+
+/*
+ * cdtext.c
+ */
+extern	BOOL	checktextfile	__PR((char *fname));
+extern	void	packtext	__PR((int tracks, track_t *trackp));
+#ifdef	_SCG_SCSITRANSP_H
+extern	int	write_cdtext	__PR((SCSI *scgp, cdr_t *dp, long startsec));
+#endif

@@ -1,7 +1,7 @@
-/* @(#)misc.c	1.1 98/08/16 Copyright 1998 J. Schilling */
+/* @(#)misc.c	1.2 01/10/29 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)misc.c	1.1 98/08/16 Copyright 1998 J. Schilling";
+	"@(#)misc.c	1.2 01/10/29 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Misc support functions

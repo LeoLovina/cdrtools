@@ -1,7 +1,7 @@
-/* @(#)name.c	1.23 01/04/01 joerg */
+/* @(#)name.c	1.25 02/12/25 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)name.c	1.23 01/04/01 joerg";
+	"@(#)name.c	1.25 02/12/25 joerg";
 
 #endif
 /*
@@ -32,9 +32,9 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include "mkisofs.h"
-#include <ctype.h>
 #include <standard.h>
 #include <schily.h>
+#include <ctype.h>
 
 void	iso9660_check		__PR((struct iso_directory_record *idr,	struct directory_entry *ndr));
 int	iso9660_file_length	__PR((const char *name,
@@ -401,7 +401,7 @@ iso9660_file_length(name, sresult, dirflag)
 				case '(':
 				case ')':
 				case '*':
-				case '-':
+/*				case '-':*/
 				case '?':
 				case '@':
 				case '\\':
@@ -434,6 +434,7 @@ iso9660_file_length(name, sresult, dirflag)
 					break;
 
 				case '#':
+				case '-':
 				case '~':
 					/*
 					 * Check if we should allow these

@@ -1,7 +1,7 @@
-/* @(#)audiosize.c	1.16 01/02/22 Copyright 1998 J. Schilling */
+/* @(#)audiosize.c	1.18 01/10/09 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)audiosize.c	1.16 01/02/22 Copyright 1998 J. Schilling";
+	"@(#)audiosize.c	1.18 01/10/09 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -26,8 +26,6 @@ static	char sccsid[] =
  */
 
 #include <mconfig.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <statdefs.h>
 #include <unixstd.h>
 #include <standard.h>
@@ -123,6 +121,9 @@ EXPORT	BOOL	is_auname(name)
 	return (streql(p, ".au"));
 }
 
+/*
+ * Read Sun audio header, leave file seek pointer past auheader.
+ */
 EXPORT off_t
 ausize(f)
 	int	f;
@@ -194,6 +195,9 @@ EXPORT	BOOL	is_wavname(name)
 	return (streql(p, ".wav") || streql(p, ".WAV"));
 }
 
+/*
+ * Read WAV header, leave file seek pointer past WAV header.
+ */
 EXPORT off_t
 wavsize(f)
 	int	f;
@@ -231,6 +235,11 @@ wavsize(f)
 		size = (off_t)le_a_to_u_long(chunk.cksize);
 
 		if (strncmp((char *)chunk.ckid, WAV_RIFF_MAGIC, 4) == 0) {
+			/*
+			 * We found (first) RIFF header. Check if a WAVE
+			 * magic follows. Set up size to be able to skip
+			 * past this header.
+			 */
 			if (read(f, &riff, sizeof (riff)) != sizeof (riff))
 				goto err;
 			if (strncmp((char *)riff.wave, WAV_WAVE_MAGIC, 4) != 0)
@@ -238,6 +247,11 @@ wavsize(f)
 			size = (off_t)sizeof (riff);
 
 		} else if (strncmp((char *)chunk.ckid, WAV_FMT_MAGIC, 4) == 0) {
+			/*
+			 * We found WAVE "fmt " header. Check size (if it is
+			 * valid for a WAVE file) and coding whether it is
+			 * useable for a CD. 
+			 */
 			if (size < (off_t)sizeof (fmt)) goto err;
 			if (sizeof (fmt) != read(f, &fmt, sizeof (fmt))) goto err;
 			if (le_a_to_u_short(fmt.channels) != 2 ||
@@ -249,6 +263,10 @@ wavsize(f)
 			gotFormat = TRUE;
 
 		} else if (strncmp((char *)chunk.ckid, WAV_DATA_MAGIC, 4) == 0) {
+			/*
+			 * We found WAVE "data" header. This contains the
+			 * size value of the audio part.
+			 */
 			if (!gotFormat) {
 				ret = AU_BAD_CODING;
 				goto err;

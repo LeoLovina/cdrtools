@@ -1,7 +1,7 @@
-/* @(#)getopt.c	1.3 00/02/16 joerg */
+/* @(#)getopt.c	1.5 01/12/10 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getopt.c	1.3 00/02/16 joerg";
+	"@(#)getopt.c	1.5 01/12/10 joerg";
 #endif
 /* Getopt for GNU.
    NOTE: getopt is now part of the C library, so if you don't know what
@@ -79,6 +79,7 @@ the executable file might be covered by the GNU General Public License. */
 /* Don't include stdlib.h for non-GNU C libraries because some of them
    contain conflicting prototypes for getopt.  */
 #include <stdlib.h>
+#define	__DID_STDLIB__		/* FSF rubbish compensation */
 #endif	/* GNU C library.  */
 
 /* This version of `getopt' appears to the caller like standard Unix `getopt'
@@ -191,6 +192,8 @@ static enum
 
 char *getenv ();
 
+static char * my_index __PR((const char *str, int chr));
+
 static char *
 my_index (str, chr)
      const char *str;
@@ -218,6 +221,23 @@ extern int strlen (const char *);
 #endif /* __GNUC__ */
 
 #endif /* not __GNU_LIBRARY__ */
+
+#ifndef	__DID_STDLIB__		/* FSF rubbish compensation */
+/*
+ *	This is the clean code using Schily constructs...
+ */
+#undef	getopt
+#define	getopt	__nothing__
+#include <stdxlib.h>
+#undef	getopt
+#endif
+#ifndef	my_index
+/*
+ * FSF rubbish compensation
+ * If GCC has problems with the system include files, it has to be fixed
+ */
+#include <strdefs.h>
+#endif
 
 /* Handle permutation of arguments.  */
 

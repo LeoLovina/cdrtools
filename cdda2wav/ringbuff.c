@@ -1,18 +1,15 @@
-/* @(#)ringbuff.c	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)ringbuff.c	1.8 02/11/21 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)ringbuff.c	1.4 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)ringbuff.c	1.8 02/11/21 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #include "config.h"
 
-#include <stdlib.h>
+#include <stdxlib.h>
 #include <stdio.h>
 #include <standard.h>
-#if defined (HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
-#include <sys/types.h>
-#include <unistd.h>
-#endif
+#include <unixstd.h>
 
 #if defined(HAVE_SEMGET) && defined(USE_SEMAPHORES)
 #include <sys/ipc.h>
@@ -26,6 +23,7 @@ static char     sccsid[] =
 #include "interface.h"
 #include "ringbuff.h"
 #include "semshm.h"
+#include "exitcodes.h"
 
 #undef WARN_INTERRUPT
 #undef _DEBUG
@@ -51,6 +49,7 @@ static unsigned int total_buffers;
 #define free_buffers() (total_buffers - defined_buffers())
 #define occupied_buffers() (defined_buffers())
 
+/* ARGSUSED */
 void set_total_buffers(num_buffers, mysem_id)
 	unsigned int num_buffers;
 	int mysem_id;
@@ -67,9 +66,6 @@ void set_total_buffers(num_buffers, mysem_id)
   if (semctl(mysem_id,(int) FREE_SEM,SETVAL,mysemun) < 0) {
     perror("semctl FREE_SEM");
   }
-#else
-
-  PRETEND_TO_USE(mysem_id);
 #endif
 
   total_buffers = num_buffers;
@@ -174,7 +170,7 @@ myringbuff * get_next_buffer()
        try again...
        */
     fprintf(stderr, "child reader sem request failed\n");
-    exit(3);
+    exit(SEMAPHORE_ERROR);
   }
 #if 0
   fprintf(stderr,"start reading  %p - %p\n",

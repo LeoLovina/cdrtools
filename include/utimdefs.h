@@ -1,4 +1,4 @@
-/* @(#)utimdefs.h	1.1 01/02/17 Copyright 2001 J. Schilling */
+/* @(#)utimdefs.h	1.4 01/10/27 Copyright 2001 J. Schilling */
 /*
  *	Defines for utimes() / utime()
  *
@@ -23,20 +23,32 @@
 #ifndef	_UTIMDEFS_H
 #define	_UTIMDEFS_H
 
+#ifndef _MCONFIG_H
+#include <mconfig.h>
+#endif
+
 #ifndef	_INCL_SYS_TYPES_H
 #include <sys/types.h>
 #define	_INCL_SYS_TYPES_H
 #endif
 
 #ifdef	HAVE_UTIMES
+#ifndef _TIMEDEFS_H
 #include <timedefs.h>
+#endif
 #endif
 
 #ifdef	HAVE_UTIME_H
+#ifndef	_INCL_UTIME_H
 #include <utime.h>
+#define	_INCL_UTIME_H
+#endif
 #else
 #ifdef	HAVE_SYS_UTIME_H
+#ifndef	_INCL_SYS_UTIME_H
 #include <sys/utime.h>
+#define	_INCL_SYS_UTIME_H
+#endif
 #else
 struct utimbuf {
 	time_t	actime;

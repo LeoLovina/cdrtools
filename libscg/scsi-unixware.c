@@ -1,7 +1,7 @@
-/* @(#)scsi-unixware.c	1.25 01/03/18 Copyright 1998 J. Schilling, Santa Cruz Operation */
+/* @(#)scsi-unixware.c	1.27 02/10/19 Copyright 1998 J. Schilling, Santa Cruz Operation */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-unixware.c	1.25 01/03/18 Copyright 1998 J. Schilling, Santa Cruz Operation";
+	"@(#)scsi-unixware.c	1.27 02/10/19 Copyright 1998 J. Schilling, Santa Cruz Operation";
 #endif
 /*
  *	Interface for the SCO UnixWare SCSI implementation.
@@ -46,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.25";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.27";	/* The version for this transport*/
 
 /* Max. number of scg scsibusses.  The real limit would be           */
 /* MAX_HBA * MAX_BUS (which would be 32 * 8 on UnixWare 2.1/7.x),    */
@@ -60,6 +60,11 @@ LOCAL	char	_scg_trans_version[] = "scsi-unixware.c-1.25";	/* The version for thi
 #define	MAX_LUN		MAX_EXLUS	/* Max # of lun's            */
 
 #define	MAX_DMA		(32*1024)
+#ifdef	__WHAT_TODO__
+#define	MAX_DMA		(16*1024)	/* On UnixWare 2.1.x w/ AHA2940 HBA
+					 * the max DMA size is 16KB.
+					 */
+#endif
 
 #define MAXLINE		80
 #define	MAXPATH		256
@@ -101,6 +106,9 @@ struct scg_local {
 	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
 #define scglocal(p)	((struct scg_local *)((p)->local)) 
+
+LOCAL	int	fdesc[MAX_SCG][MAX_TGT][MAX_LUN];
+LOCAL	int	nfopen;
 
 LOCAL	int	unixware_init	__PR((SCSI *scgp));
 LOCAL	int	do_scg_cmd	__PR((SCSI *scgp, struct scg_cmd *sp));
@@ -150,6 +158,16 @@ scgo_version(scgp, what)
 	return ((char *)0);
 }
 
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "SDI_SEND", "Generic SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
+}
 
 /* ---------------------------------------------------------------
 ** This routine is introduced to create all device nodes necessary
@@ -374,12 +392,26 @@ extern	char		**environ;
 			  /* Open pass-through device node */
 
 			  if ((fd = open(dname, O_RDONLY)) < 0) {
-				if (scgp->errstr)
-					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-						"can not open pass-through %s", dname);
-				return (-1);
+				if (errno == EBUSY && fdesc[s][t][l] >= 0) {
+					/*
+					 * Device has already been opened, just
+					 * return the saved file desc.
+					 */
+					fd = fdesc[s][t][l];
+				} else {
+					if (scgp->errstr)
+						js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"can not open pass-through %s", dname);
+					return (-1);
+				}
 			  }
 
+			/*
+			 * If for whatever reason we may open a pass through
+			 * device more than once, this will waste fs's as we
+			 * do not check for fdesc[s][t][l] == -1.
+			 */
+			  fdesc[s][t][l] = fd;
 			  sdidevs[s][t][l].fd   = fd;
 			  sdidevs[s][t][l].open = 1;
   			  nopen++;
@@ -398,6 +430,8 @@ extern	char		**environ;
 		}
 	}
 
+	if (nopen > 0)
+		nfopen++;
 	return (nopen);
 }
 
@@ -434,6 +468,14 @@ scgo_open(scgp, device)
 		}
 	}
 
+	if (nfopen <= 0) {
+		for (c = 0; c < MAX_SCG; c++) {
+			for (b = 0; b < MAX_TGT; b++) {
+				for (t = 0; t < MAX_LUN ; t++)
+					fdesc[c][b][t] = -1;
+			}
+		}
+	}
 
 	memset(sdidevs, 0, sizeof(sdidevs));	/* init tmp_structure */
 
@@ -468,6 +510,7 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
+	nfopen--;
 	for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
 			for (l=0; l < MAX_LUN ; l++) {
@@ -476,6 +519,8 @@ scgo_close(scgp)
 				if (f >= 0)
 					close(f);
 
+				if (nfopen <= 0)
+					fdesc[b][t][l] = -1;
 				sdidevs[b][t][l].fd    = -1;
 				sdidevs[b][t][l].open  =  0;
 				sdidevs[b][t][l].valid =  0;

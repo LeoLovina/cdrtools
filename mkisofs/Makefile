@@ -1,4 +1,4 @@
-#ident @(#)Makefile	1.9 01/04/03 
+#ident @(#)Makefile	1.10 01/11/22 
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,22 +24,30 @@ TARGET=		mkisofs
 HARDLINKS=	mkhybrid
 #CPPOPTS +=	-DADD_FILES
 CPPOPTS +=	-DUSE_LARGEFILES
+#
+# Comment out if you do not like to ignore deep directories
+# when Rock Ridge is not in use
+CPPOPTS +=	-DABORT_DEEP_ISO_ONLY
 CPPOPTS +=	-DAPPLE_HYB
+CPPOPTS +=	-DUDF
+CPPOPTS +=	-DDVD_VIDEO
 CPPOPTS +=	-DSORTING
 CPPOPTS +=	-I../libhfs_iso/
 CPPOPTS	+=	-DHAVE_CONFIG_H -DUSE_LIBSCHILY -DUSE_SCG \
 		'-DAPPID_DEFAULT="MKISOFS ISO 9660/HFS FILESYSTEM BUILDER & CDRECORD CD-R/DVD CREATOR (C) 1993 E.YOUNGDALE (C) 1997 J.PEARSON/J.SCHILLING"' \
 		-I../cdrecord
-CFILES=		mkisofs.c tree.c write.c hash.c rock.c multi.c \
+CFILES=		mkisofs.c tree.c write.c hash.c rock.c udf.c multi.c \
 		joliet.c match.c name.c fnmatch.c eltorito.c boot.c \
 		getopt.c getopt1.c \
 		scsi.c \
 		scsi_cdr.c cd_misc.c \
 		modes.c \
-		apple.c volume.c desktop.c mac_label.c
+		apple.c volume.c desktop.c mac_label.c \
+		ifo_read.c dvd_file.c dvd_reader.c
 HFILES=		apple.h bootinfo.h config.h defaults.h diskmbr.h exclude.h \
 		fnmatch.h getopt.h iso9660.h mac_label.h mactypes.h match.h \
-		mkisofs.h sunlabel.h vms.h 
+		mkisofs.h sunlabel.h udf.h udf_fs.h vms.h \
+		ifo_read.h dvd_file.h dvd_reader.h bswap.h ifo_types.h
 
 LIBS=		-lhfs -lfile -lunls -lrscg -lscg -lschily $(SCSILIB) $(LIB_SOCKET)
 XMK_FILE=	Makefile.man hybridman.mk
@@ -47,3 +55,5 @@ XMK_FILE=	Makefile.man hybridman.mk
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.cmd
 ###########################################################################
+count:	$(CFILES) $(HFILES)
+	count $r1

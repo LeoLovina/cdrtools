@@ -1,7 +1,7 @@
-/* @(#)drv_sony.c	1.45 01/02/20 Copyright 1997 J. Schilling */
+/* @(#)drv_sony.c	1.59 02/09/24 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_sony.c	1.45 01/02/20 Copyright 1997 J. Schilling";
+	"@(#)drv_sony.c	1.59 02/09/24 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -153,18 +153,18 @@ struct cdd_52x_mode_data {
 
 LOCAL	int	write_continue_sony	__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
 LOCAL	int	write_track_sony	__PR((SCSI *scgp, long track, int sectype));
-LOCAL	int	close_track_sony	__PR((SCSI *scgp, int track, track_t *trackp));
-LOCAL	int	finalize_sony		__PR((SCSI *scgp, int onp, int dummy, int type, int tracks, track_t *trackp));
+LOCAL	int	close_track_sony	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	finalize_sony		__PR((SCSI *scgp, cdr_t *dp, int onp, int dummy, int type, track_t *trackp));
 LOCAL	int	recover_sony		__PR((SCSI *scgp, int track));
-LOCAL	int	next_wr_addr_sony	__PR((SCSI *scgp, int track, track_t *trackp, long *ap));
+LOCAL	int	next_wr_addr_sony	__PR((SCSI *scgp, track_t *trackp, long *ap));
 LOCAL	int	reserve_track_sony	__PR((SCSI *scgp, unsigned long len));
-LOCAL	int	getdisktype_sony	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
+LOCAL	int	getdisktype_sony	__PR((SCSI *scgp, cdr_t *dp));
 LOCAL	void	di_to_dstat_sony	__PR((struct sony_924_mode_page_22 *dip, dstat_t *dsp));
-LOCAL	int	speed_select_sony	__PR((SCSI *scgp, int *speedp, int dummy));
+LOCAL	int	speed_select_sony	__PR((SCSI *scgp, cdr_t *dp, int *speedp, int dummy));
 LOCAL	int	next_writable_address_sony __PR((SCSI *scgp, long *ap, int track, int sectype, int tracktype));
 LOCAL	int	new_track_sony		__PR((SCSI *scgp, int track, int sectype, int tracktype));
-LOCAL	int	open_track_sony		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *track_info));
-LOCAL	int	open_session_sony	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	open_track_sony		__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	open_session_sony	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp, int toctype, int multi));
 LOCAL	int	get_page22_sony		__PR((SCSI *scgp, char *mode));
 LOCAL	int	sony_attach		__PR((SCSI *scgp, cdr_t *dp));
 #ifdef	SONY_DEBUG
@@ -174,11 +174,14 @@ LOCAL	void	print_sony_mp23		__PR((struct sony_924_mode_page_23 *xp, int len));
 LOCAL	int	buf_cap_sony		__PR((SCSI *scgp, long *, long *));
 
 cdr_t	cdr_sony_cdu924 = {
-	0,
-	CDR_TAO|CDR_DAO|CDR_CADDYLOAD|CDR_SWABAUDIO,
+	0, 0,
+/*	CDR_TAO|CDR_SAO|CDR_CADDYLOAD|CDR_SWABAUDIO,*/
+	CDR_TAO|CDR_CADDYLOAD|CDR_SWABAUDIO,
+	2, 4,
 	"sony_cdu924",
 	"driver for Sony CDU-924",
 	0,
+	(dstat_t *)0,
 	drive_identify,
 	sony_attach,
 	getdisktype_sony,
@@ -193,14 +196,17 @@ cdr_t	cdr_sony_cdu924 = {
 	reserve_track_sony,
 	write_continue_sony,
 	no_sendcue,
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
 	open_track_sony,
 	close_track_sony,
 	open_session_sony,
 	cmd_dummy,
 	read_session_offset_philips,
 	finalize_sony,
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
 	blank_dummy,
 	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* opt1		*/
 };
 
 LOCAL int
@@ -256,14 +262,13 @@ write_track_sony(scgp, track, sectype)
 
 /* XXX NOCH NICHT FERTIG */
 LOCAL int
-close_track_sony(scgp, track, trackp)
+close_track_sony(scgp, dp, trackp)
 	SCSI	*scgp;
-	int	track;
+	cdr_t	*dp;
 	track_t	*trackp;
 {
 	register struct	scg_cmd	*scmd = scgp->scmd;
-
-	track = 0;
+	int	track = 0;
 
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
 	scmd->flags = SCG_DISRE_ENA;
@@ -294,12 +299,12 @@ close_track_sony(scgp, track, trackp)
 }
 
 LOCAL int
-finalize_sony(scgp, onp, dummy, type, tracks, trackp)
+finalize_sony(scgp, dp, onp, dummy, type, trackp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	onp;	/* open next program area */
 	int	dummy;
 	int	type;	/* TOC type 0: CD-DA, 1: CD-ROM, 2: CD-ROM/XA1, 3: CD-ROM/XA2, 4: CDI */
-	int	tracks;
 	track_t	*trackp;
 {
 	register struct	scg_cmd	*scmd = scgp->scmd;
@@ -348,9 +353,8 @@ recover_sony(scgp, track)
 }
 
 LOCAL int
-next_wr_addr_sony(scgp, track, trackp, ap)
+next_wr_addr_sony(scgp, trackp, ap)
 	SCSI	*scgp;
-	int	track;
 	track_t	*trackp;
 	long	*ap;
 {
@@ -384,11 +388,11 @@ reserve_track_sony(scgp, len)
 #define	IS(what,flag)	printf("  Is %s%s\n", flag?"":"not ",what);
 
 LOCAL int
-getdisktype_sony(scgp, dp, dsp)
+getdisktype_sony(scgp, dp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	dstat_t	*dsp;
 {
+	dstat_t	*dsp = dp->cdr_dstat;
 	long	dummy;
 	long	lst;
 	msf_t	msf;
@@ -409,9 +413,9 @@ getdisktype_sony(scgp, dp, dsp)
 			dummy = -1;
 	}
 	if (dummy < 0)
-		return (drive_getdisktype(scgp, dp, dsp));
+		return (drive_getdisktype(scgp, dp));
 
-	if (lverbose && dummy >= 0) {
+	if ((dp->cdr_dstat->ds_cdrflags & RF_PRATIP) != 0 && dummy >= 0) {
 
 		printf("ATIP info from disk:\n");
 		printf("  Indicated writing power: %d\n",
@@ -452,7 +456,7 @@ getdisktype_sony(scgp, dp, dsp)
 	}
 	if (dummy >= 0)
 		di_to_dstat_sony(xp, dsp);
-	return (drive_getdisktype(scgp, dp, dsp));
+	return (drive_getdisktype(scgp, dp));
 }
 
 LOCAL void
@@ -463,7 +467,11 @@ di_to_dstat_sony(dip, dsp)
 	msf_t	msf;
 
 	dsp->ds_diskid = a_to_u_4_byte(dip->disk_id_code);
-	if (dsp->ds_diskid != -1)
+#ifdef	PROTOTYPES
+	if (dsp->ds_diskid != 0xFFFFFFFFUL)
+#else
+	if (dsp->ds_diskid != (Ulong)0xFFFFFFFF)
+#endif
 		dsp->ds_flags |= DSF_DID_V;
 	dsp->ds_diskstat = (dip->disk_status >> 6) & 0x03;
 #ifdef	XXX
@@ -515,8 +523,9 @@ int	sony_speeds[] = {
 };
 
 LOCAL int
-speed_select_sony(scgp, speedp, dummy)
+speed_select_sony(scgp, dp, speedp, dummy)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	*speedp;
 	int	dummy;
 {
@@ -644,10 +653,10 @@ new_track_sony(scgp, track, sectype, tracktype)
 	xp->write_method = 0;	/* Track at one recording */
 
 	if (sectype & ST_AUDIOMASK) {
-		xp->data_form = sectype == ST_AUDIO_PRE ? 0x02 : 0x00;
+		xp->data_form = (sectype & ST_MASK) == ST_AUDIO_PRE ? 0x02 : 0x00;
 	} else {
 		if (tracktype == TOC_ROM) {
-			xp->data_form = sectype == ST_ROM_MODE1 ? 0x10 : 0x11;
+			xp->data_form = (sectype & ST_MASK) == ST_ROM_MODE1 ? 0x10 : 0x11;
 		} else if (tracktype == TOC_XA1) {
 			xp->data_form = 0x12;
 		} else if (tracktype == TOC_XA2) {
@@ -675,29 +684,27 @@ new_track_sony(scgp, track, sectype, tracktype)
 }
 
 LOCAL int
-open_track_sony(scgp, dp, track, track_info)
+open_track_sony(scgp, dp, trackp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	track;
-	track_t *track_info;
+	track_t *trackp;
 {
-	if (select_secsize(scgp, track_info->secsize) < 0)
+	if (select_secsize(scgp, trackp->secsize) < 0)
 		return (-1);
 
-	if (new_track_sony(scgp, track, track_info->sectype, track_info->tracktype) < 0)
+	if (new_track_sony(scgp, trackp->trackno, trackp->sectype, trackp->tracktype) < 0)
 		return (-1);
 
-	if (write_track_sony(scgp, 0L, track_info->sectype) < 0)
+	if (write_track_sony(scgp, 0L, trackp->sectype) < 0)
 		return (-1);
 
 	return (0);
 }
 
 LOCAL int
-open_session_sony(scgp, dp, tracks, trackp, toctype, multi)
+open_session_sony(scgp, dp, trackp, toctype, multi)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	tracks;
 	track_t	*trackp;
 	int	toctype;
 	int	multi;

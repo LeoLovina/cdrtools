@@ -1,10 +1,10 @@
-/* @(#)defaults.c	1.6 01/02/21 Copyright 1998 J. Schilling */
+/* @(#)defaults.c	1.9 02/08/14 Copyright 1998-2002 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)defaults.c	1.6 01/02/21 Copyright 1998 J. Schilling";
+	"@(#)defaults.c	1.9 02/08/14 Copyright 1998-2002 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1998 J. Schilling
+ *	Copyright (c) 1998-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -33,37 +33,64 @@ static	char sccsid[] =
 #include <schily.h>
 #include "cdrecord.h"
 
-EXPORT	void	cdr_defaults	__PR((char **devp, int *speedp, long *fsp));
-LOCAL	void	cdr_xdefaults	__PR((char **devp, int *speedp, long *fsp));
+LOCAL	int	open_cdrdefaults __PR((void));
+EXPORT	void	cdr_defaults	__PR((char **devp, int *speedp, long *fsp, char **drvoptp));
+LOCAL	void	cdr_xdefaults	__PR((char **devp, int *speedp, long *fsp, char **drvoptp));
 LOCAL	char *	strsv		__PR((char* s));
 
+LOCAL int
+open_cdrdefaults()
+{
+	/*
+	 * WARNING you are only allowed to change this filename if you also
+	 * change the documentation and add a statement that makes clear
+	 * where the official location of the file is why you did choose a
+	 * nonstandard location and that the nonstandard location only refers
+	 * to inofficial cdrecord versions.
+	 *
+	 * I was forced to add this because some people change cdrecord without
+	 * rational reason and then publish the result. As those people
+	 * don't contribute work and don't give support, they are causing extra
+	 * work for me and this way slow down the cdrecord development.
+	 */
+	return (defltopen("/etc/default/cdrecord"));
+}
+
 EXPORT void
-cdr_defaults(devp, speedp, fsp)
+cdr_defaults(devp, speedp, fsp, drvoptp)
 	char	**devp;
 	int	*speedp;
 	long	*fsp;
+	char	**drvoptp;
 {
-	char	*dev	= *devp;
-	int	speed	= *speedp;
-	long	fs	= *fsp;
+	char	*dev	= NULL;
+	int	speed	= 0;
+	long	fs	= 0L;
 
-	if (!dev) {
+	if (devp != NULL)
+		dev = *devp;
+	if (speedp != NULL)
+		speed = *speedp;
+	if (fsp != NULL)
+		fs = *fsp;
+
+	if (!dev && devp != NULL) {
 		*devp = getenv("CDR_DEVICE");
 
-		if (!*devp && defltopen("/etc/default/cdrecord") == 0) {
+		if (!*devp && open_cdrdefaults() == 0) {
 			dev = defltread("CDR_DEVICE=");
 			if (dev != NULL)
 				*devp = strsv(dev);
 		}
 	}
-	if (*devp)
-		cdr_xdefaults(devp, &speed, &fs);
+	if (devp != NULL && *devp)
+		cdr_xdefaults(devp, &speed, &fs, drvoptp);
 
 	if (speed < 0) {
 		char	*p = getenv("CDR_SPEED");
 
 		if (!p) {
-			if (defltopen("/etc/default/cdrecord") == 0) {
+			if (open_cdrdefaults() == 0) {
 				p = defltread("CDR_SPEED=");
 			}
 		}
@@ -73,14 +100,14 @@ cdr_defaults(devp, speedp, fsp)
 				comerrno(EX_BAD, "Bad speed environment.\n");
 		}
 	}
-	if (speed >= 0)
+	if (speed >= 0 && speedp != NULL)
 		*speedp = speed;
 
 	if (fs < 0L) {
 		char	*p = getenv("CDR_FIFOSIZE");
 
 		if (!p) {
-			if (defltopen("/etc/default/cdrecord") == 0) {
+			if (open_cdrdefaults() == 0) {
 				p = defltread("CDR_FIFOSIZE=");
 			}
 		}
@@ -89,17 +116,21 @@ cdr_defaults(devp, speedp, fsp)
 				comerrno(EX_BAD, "Bad fifo size environment.\n");
 		}
 	}
-	if (fs > 0L)
+	if (fs > 0L && fsp != NULL)
 		*fsp = fs;
 
 	defltclose();
 }
 
+/*
+ * All args execpt "drvoptp" are granted to be non NULL pointers.
+ */
 LOCAL void
-cdr_xdefaults(devp, speedp, fsp)
+cdr_xdefaults(devp, speedp, fsp, drvoptp)
 	char	**devp;
 	int	*speedp;
 	long	*fsp;
+	char	**drvoptp;
 {
 	char	dname[256];
 	char	*p = *devp;
@@ -111,30 +142,36 @@ cdr_xdefaults(devp, speedp, fsp)
 		x++;
 	}
 	js_snprintf(dname, sizeof(dname), "%s=", p);
-	if (defltopen("/etc/default/cdrecord") != 0)
+	if (open_cdrdefaults() != 0)
 		return;
 
 	p = defltread(dname);
 	if (p != NULL) {
-		while (*p == '\t')
+		while (*p == '\t' || *p == ' ')
 			p++;
 		if ((x = strchr(p, '\t')) != NULL)
+			*x = '\0';
+		else if ((x = strchr(p, ' ')) != NULL)
 			*x = '\0';
 		*devp = strsv(p);
 		if (x) {
 			p = ++x;
-			while (*p == '\t')
+			while (*p == '\t' || *p == ' ')
 				p++;
 			if ((x = strchr(p, '\t')) != NULL)
+				*x = '\0';
+			else if ((x = strchr(p, ' ')) != NULL)
 				*x = '\0';
 			if (*speedp < 0)
 				*speedp = atoi(p);
 		}
 		if (x) {
 			p = ++x;
-			while (*p == '\t')
+			while (*p == '\t' || *p == ' ')
 				p++;
 			if ((x = strchr(p, '\t')) != NULL)
+				*x = '\0';
+			else if ((x = strchr(p, ' ')) != NULL)
 				*x = '\0';
 			if (*fsp < 0L) {
 				if (getnum(p, fsp) != 1)
@@ -144,15 +181,18 @@ cdr_xdefaults(devp, speedp, fsp)
 		}
 		if (x) {
 			p = ++x;
-			while (*p == '\t')
+			while (*p == '\t' || *p == ' ')
 				p++;
 			if ((x = strchr(p, '\t')) != NULL)
 				*x = '\0';
-			if (strcmp(p, "\"\"")) {
-				extern	char	*driveropts;
-
-				if (driveropts == NULL)
-					driveropts = strsv(p);
+			else if ((x = strchr(p, ' ')) != NULL)
+				*x = '\0';
+			if (strcmp(p, "\"\"") != '\0') {
+				/*
+				 * Driver opts found.
+				 */
+				if (drvoptp && *drvoptp == NULL)
+					*drvoptp = strsv(p);
 			}
 		}
 	}

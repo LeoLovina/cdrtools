@@ -1,7 +1,7 @@
-/* @(#)eltorito.c	1.20 01/01/25 joerg */
+/* @(#)eltorito.c	1.24 02/05/30 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)eltorito.c	1.20 01/01/25 joerg";
+	"@(#)eltorito.c	1.24 02/05/30 joerg";
 
 #endif
 /*
@@ -55,6 +55,7 @@ static	void	fill_boot_desc		__PR((struct eltorito_defaultboot_entry *boot_desc_e
 static	int	tvd_write		__PR((FILE * outfile));
 
 
+LOCAL	char	*bootcat_path;		/* filename of boot catalog */
 /*
  * Make sure any existing boot catalog is excluded
  */
@@ -62,32 +63,28 @@ void
 init_boot_catalog(path)
 	const char	*path;
 {
-	char           *bootpath;	/* filename of boot catalog */
-
-	bootpath = (char *) e_malloc(strlen(boot_catalog) + strlen(path) + 2);
-	strcpy(bootpath, path);
-	if (bootpath[strlen(bootpath) - 1] != '/') {
-		strcat(bootpath, "/");
+	bootcat_path = (char *) e_malloc(strlen(boot_catalog) + strlen(path) + 2);
+	strcpy(bootcat_path, path);
+	if (bootcat_path[strlen(bootcat_path) - 1] != '/') {
+		strcat(bootcat_path, "/");
 	}
-	strcat(bootpath, boot_catalog);
+	strcat(bootcat_path, boot_catalog);
 
 	/*
 	 * we are going to create a virtual catalog file
 	 * - so make sure any existing is excluded
 	 */
-	add_match(bootpath);
+	add_match(bootcat_path);
 
 	/* flag the file as a memory file */
 	bcat_de_flags = MEMORY_FILE;
 
 	/* find out if we want to "hide" this file */
-	if (i_matches(boot_catalog) || i_matches(bootpath))
+	if (i_matches(boot_catalog) || i_matches(bootcat_path))
 		bcat_de_flags |= INHIBIT_ISO9660_ENTRY;
 
-	if (j_matches(boot_catalog) || j_matches(bootpath))
+	if (j_matches(boot_catalog) || j_matches(bootcat_path))
 		bcat_de_flags |= INHIBIT_JOLIET_ENTRY;
-
-	free(bootpath);
 
 }/* init_boot_catalog(... */
 
@@ -178,6 +175,16 @@ insert_boot_cat()
 	memset(s_entry, 0, sizeof(struct directory_entry));
 	s_entry->next = this_dir->contents;
 	this_dir->contents = s_entry;
+
+#ifdef SORTING
+	/* inherit any sort weight from parent directory */
+	s_entry->sort = this_dir->sort;
+
+	/* see if this entry should have a new weighting */
+	if (do_sort) {
+		s_entry->sort = sort_matches(bootcat_path, s_entry->sort);
+	}
+#endif /* SORTING */
 
 	s_entry->isorec.flags[0] = ISO_FILE;
 	s_entry->priority = 32768;
@@ -363,7 +370,9 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 	 * However, round up to the nearest integral CD (2048-byte) sector.
 	 * This is only used for no-emulation booting.
 	 */
-	nsectors = boot_entry->load_size ? boot_entry->load_size : ((de->size + 2047) / 2048) * 4;
+	nsectors = boot_entry->load_size ? boot_entry->load_size :
+				ISO_BLOCKS(de->size) * (SECTOR_SIZE/512);
+
 	fprintf(stderr, "\nSize of boot image is %d sectors -> ", nsectors);
 
 	if (boot_entry->hard_disk_boot) {
@@ -501,15 +510,15 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 		/* choose size of emulated floppy based on boot image size */
 		if (nsectors == 2880) {
 			boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_144FLOP;
-			fprintf(stderr, "Emulating a 1.44 meg floppy\n");
+			fprintf(stderr, "Emulating a 1440 kB floppy\n");
 
 		} else if (nsectors == 5760) {
 			boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_288FLOP;
-			fprintf(stderr, "Emulating a 2.88 meg floppy\n");
+			fprintf(stderr, "Emulating a 2880 kB floppy\n");
 
 		} else if (nsectors == 2400) {
 			boot_desc_entry->boot_media[0] = EL_TORITO_MEDIA_12FLOP;
-			fprintf(stderr, "Emulating a 1.2 meg floppy\n");
+			fprintf(stderr, "Emulating a 1200 kB floppy\n");
 
 		} else {
 #ifdef	USE_LIBSCHILY
@@ -661,4 +670,4 @@ tvd_write(outfile)
 	return 0;
 }
 
-struct output_fragment torito_desc = {NULL, oneblock_size, NULL, tvd_write};
+struct output_fragment torito_desc = {NULL, oneblock_size, NULL, tvd_write, "Eltorito Volume Descriptor"};

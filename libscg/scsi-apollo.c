@@ -1,7 +1,7 @@
-/* @(#)scsi-apollo.c	1.3 01/03/18 Copyright 1997,2000 J. Schilling */
+/* @(#)scsi-apollo.c	1.4 02/10/19 Copyright 1997,2000 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-apollo.c	1.3 01/03/18 Copyright 1997,2000 J. Schilling";
+	"@(#)scsi-apollo.c	1.4 02/10/19 Copyright 1997,2000 J. Schilling";
 #endif
 /*
  *	Code to support Apollo Domain/OS 10.4.1
@@ -37,7 +37,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-apollo.c-1.3";	/* The version for this transport */
+LOCAL	char	_scg_trans_version[] = "scsi-apollo.c-1.4";	/* The version for this transport */
 
 
 #define	MAX_SCG		1	/* Max # of SCSI controllers */
@@ -82,6 +82,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "scsi_$do_command_2", "SCSI transport from Apollo DomainOS drivers",
+		"", "DomainOS driver name", "A DomainOS device node name", FALSE, TRUE);
+	return (0);
 }
 
 LOCAL int

@@ -1,4 +1,4 @@
-/* @(#)apple.h	1.3 00/04/27 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)apple.h	1.6 02/07/16 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
  *
@@ -53,6 +53,7 @@ typedef struct {
 
 /* from "data.h" - libhfs routines */
 unsigned long d_toutime	__PR((unsigned long));
+unsigned long d_dtoutime __PR((long));
 long d_getl		__PR((unsigned char *));
 short d_getw		__PR((unsigned char *));
 
@@ -241,7 +242,11 @@ typedef struct {
 #define ID_DATA		1
 #define ID_RESOURCE	2
 #define ID_NAME		3
+#define ID_FILEI	7	/* v1 */
+#define ID_FILEDATESI	8	/* v2 */
 #define ID_FINDER	9
+
+#define A_DATE		16
 
 /****** TYPE_MACBIN ******/
 /*
@@ -340,5 +345,26 @@ typedef struct {
 
 #define SFM_MAGIC	0x00504641
 #define SFM_VERSION	0x00010000
+
+/****** TYPE_DHFS ******/
+
+#ifdef IS_MACOS_X
+
+/*
+ *	Code ideas from 'hfstar' by Marcel Weiher marcel@metaobject.com,
+ *	another GNU hfstar by Torres Vedras paulotex@yahoo.com and
+ *	hfspax by Howard Oakley howard@quercus.demon.co.uk
+ */
+
+#include <sys/attr.h>
+
+typedef struct {
+	unsigned long	info_length;
+	struct timespec	ctime;
+	struct timespec	mtime;
+	byte		info[32];
+} attrinfo;
+
+#endif /* IS_MACOS_X */
 
 #endif /* _APPLE_H */

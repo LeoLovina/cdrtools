@@ -1,7 +1,7 @@
-/* @(#)dmaresid.c	1.1 01/03/18 Copyright 1998,2001 J. Schilling */
+/* @(#)dmaresid.c	1.3 01/12/11 Copyright 1998,2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)dmaresid.c	1.1 01/03/18 Copyright 1998,2001 J. Schilling";
+	"@(#)dmaresid.c	1.3 01/12/11 Copyright 1998,2001 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998,2001 J. Schilling
@@ -61,7 +61,7 @@ dmaresid(scgp)
 	int	ret;
 	BOOL	passed;
 
-	printf("Ready to start test for working DMA residual count? Enter <CR> to conitnue: ");
+	printf("Ready to start test for working DMA residual count? Enter <CR> to continue: ");
 	fprintf(logfile, "**********> Testing for working DMA residual count.\n");
 	flushit();
 	(void)getline(abuf, sizeof(abuf));
@@ -92,7 +92,7 @@ dmaresid(scgp)
 		fprintf(logfile, "----------> SCSI DMA residual count == 0 test FAILED\n");
 	}
 
-	printf("Ready to start test for working DMA residual count == DMA count? Enter <CR> to conitnue: ");
+	printf("Ready to start test for working DMA residual count == DMA count? Enter <CR> to continue: ");
 	fprintf(logfile, "**********> Testing for working DMA residual count == DMA count.\n");
 	flushit();
 	(void)getline(abuf, sizeof(abuf));
@@ -120,7 +120,7 @@ dmaresid(scgp)
 		fprintf(logfile, "----------> SCSI DMA residual count == DMA count test FAILED\n");
 	}
 
-	printf("Ready to start test for working DMA residual count == 1? Enter <CR> to conitnue: ");
+	printf("Ready to start test for working DMA residual count == 1? Enter <CR> to continue: ");
 	fprintf(logfile, "**********> Testing for working DMA residual count == 1.\n");
 	flushit();
 	(void)getline(abuf, sizeof(abuf));
@@ -200,7 +200,8 @@ xtinquiry(scgp, cnt, dmacnt)
 	i++;
 	maxcnt = i;
 	rescnt = dmacnt - scg_getresid(scgp);
-	printf("cnt: %d got: %d residual cnt: %d\n", cnt, i, rescnt);
+	printf("CDB cnt: %d DMA cnt: %d got really: %d (System says: RDMA cnt: %d resid %d)\n",
+				cnt, dmacnt, i, rescnt, scg_getresid(scgp));
 
 	fillbytes(ibuf, sizeof(ibuf), 0xFF);
 	tinquiry(scgp, (caddr_t)ibuf, cnt, dmacnt);
@@ -213,7 +214,8 @@ xtinquiry(scgp, cnt, dmacnt)
 	if (i > maxcnt)
 		maxcnt = i;
 	rescnt = dmacnt - scg_getresid(scgp);
-	printf("cnt: %d got: %d residual cnt: %d\n", cnt, i, rescnt);
+	printf("CDB cnt: %d DMA cnt: %d got really: %d (System says: RDMA cnt: %d resid %d)\n",
+				cnt, dmacnt, i, rescnt, scg_getresid(scgp));
 
 	return (maxcnt);
 }

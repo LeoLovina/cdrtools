@@ -1,4 +1,4 @@
-/* @(#)prototyp.h	1.8 00/11/08 Copyright 1995 J. Schilling */
+/* @(#)prototyp.h	1.10 01/10/27 Copyright 1995 J. Schilling */
 /*
  *	Definitions for dealing with ANSI / KR C-Compilers
  *
@@ -20,6 +20,14 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * mconfig.h includes prototype.h so we must do this include before we test
+ * for _PROTOTYP_H
+ */
+#ifndef _MCONFIG_H
+#include <mconfig.h>
+#endif
+
 #ifndef	_PROTOTYP_H
 #define	_PROTOTYP_H
 
@@ -38,11 +46,13 @@
 #	endif
 #endif	/* PROTOTYPES */
 
-#if	!defined(PROTOTYPES) && defined(__cplusplus)
+#if	!defined(PROTOTYPES) && (defined(__cplusplus) || defined(_MSC_VER))
 	/*
 	 * C++ always supports prototypes.
 	 * Define PROTOTYPES so we are not forced to make
 	 * a separtate autoconf run for C++
+	 *
+	 * Microsoft C has prototypes but does not define __STDC__
 	 */
 #	define	PROTOTYPES
 #endif

@@ -9,8 +9,8 @@ from SCSI-3/mmc compliant drives.
 Copying data CD's:
 
 The best way to copy a data disk is to copy the raw data on the master CD.
-This may be done by reading the data from the raw device by using 'dd' or
-'sdd'.
+This may be done by reading the data from the raw device by using 'readcd'.
+
 
 NOTE:	All CD-R's written in Track At Once mode end in two unreadable 
 	run-out sectors. If the disk has been written with a Yamaha CD-R100
@@ -44,7 +44,7 @@ the partition info and does raw SCSI reads.
 If you like to copy audio CD's in a way that preserves as much accuracy as
 possible, use:
 
-cdda2wav -v255 -D... -B
+cdda2wav -vall -D... -B
 cdrecord -v dev=... -dao -useinfo *.wav
 
 This will preserve pre-gap sizes, indices ...

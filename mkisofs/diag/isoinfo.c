@@ -1,7 +1,7 @@
-/* @(#)isoinfo.c	1.21 01/04/02 joerg */
+/* @(#)isoinfo.c	1.32 02/11/30 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isoinfo.c	1.21 01/04/02 joerg";
+	"@(#)isoinfo.c	1.32 02/11/30 joerg";
 #endif
 /*
  * File isodump.c - dump iso9660 directory information.
@@ -54,12 +54,45 @@ static	char sccsid[] =
 
 #include <unls.h>
 
-#ifdef __SVR4
-#include <stdlib.h>
+/*
+ * Make sure we have a definition for this.  If not, take a very conservative
+ * guess.
+ * POSIX requires the max pathname component lenght to be defined in limits.h
+ * If variable, it may be undefined. If undefined, there should be
+ * a definition for _POSIX_NAME_MAX in limits.h or in unistd.h
+ * As _POSIX_NAME_MAX is defined to 14, we cannot use it.
+ * XXX Eric's wrong comment:
+ * XXX From what I can tell SunOS is the only one with this trouble.
+ */
+#ifdef	HAVE_LIMITS_H
+#include <limits.h>
+#endif
+#ifndef NAME_MAX
+#ifdef FILENAME_MAX
+#define NAME_MAX	FILENAME_MAX
 #else
-extern int optind;
-extern char *optarg;
-/* extern int getopt (int __argc, char **__argv, char *__optstring); */
+#define NAME_MAX	256
+#endif
+#endif
+
+#ifndef PATH_MAX
+#ifdef FILENAME_MAX
+#define PATH_MAX	FILENAME_MAX
+#else
+#define PATH_MAX	1024
+#endif
+#endif
+
+/*
+ * XXX JS: Some structures have odd lengths!
+ * Some compilers (e.g. on Sun3/mc68020) padd the structures to even length.
+ * For this reason, we cannot use sizeof (struct iso_path_table) or
+ * sizeof (struct iso_directory_record) to compute on disk sizes.
+ * Instead, we use offsetof(..., name) and add the name size.
+ * See iso9660.h
+ */
+#ifndef	offsetof
+#define	offsetof(TYPE, MEMBER)	((size_t) &((TYPE *)0)->MEMBER)
 #endif
 
 #ifndef S_ISLNK
@@ -78,8 +111,10 @@ int use_rock = 0;
 int use_joliet = 0;
 int do_listing = 0;
 int do_find = 0;
+int do_sectors = 0;
 int do_pathtab = 0;
 int do_pvd = 0;
+BOOL debug = FALSE;
 char * xtract = 0;
 int su_version = 0;
 int aa_version = 0;
@@ -87,8 +122,14 @@ int ucs_level = 0;
 
 struct stat fstat_buf;
 char name_buf[256];
-char xname[256];
+char xname[2048];
 unsigned char date_buf[9];
+/*
+ * Use sector_offset != 0 (-N #) if we have an image file
+ * of a single session and we need to list the directory contents.
+ * This is the session block (sector) number of the start
+ * of the session when it would be on disk.
+ */
 unsigned int sector_offset = 0;
 
 unsigned char buffer[2048];
@@ -103,8 +144,10 @@ struct nls_table *nls;
 int	isonum_721	__PR((char * p));
 int	isonum_723	__PR((char * p));
 int	isonum_731	__PR((char * p));
+int	isonum_732	__PR((char * p));
 int	isonum_733	__PR((unsigned char * p));
 void	printchars	__PR((char *s, int n));
+char	*sdate		__PR((char *dp));
 void	dump_pathtab	__PR((int block, int size));
 int	parse_rr	__PR((unsigned char * pnt, int len, int cont_flag));
 void	find_rr		__PR((struct iso_directory_record * idr, Uchar **pntp, int *lenp));
@@ -150,6 +193,15 @@ isonum_731 (p)
 		| ((p[3] & 0xff) << 24));
 }
 
+int
+isonum_732(p)
+	char	*p;
+{
+	return ((p[3] & 0xff)
+		| ((p[2] & 0xff) << 8)
+		| ((p[1] & 0xff) << 16)
+		| ((p[0] & 0xff) << 24));
+}
 
 int
 isonum_733 (p)
@@ -177,6 +229,31 @@ printchars(s, n)
 		}
 		putchar(*s++);
 	}
+}
+
+/*
+ * Print date info from PVD
+ */
+char *
+sdate(dp)
+	char	*dp;
+{
+	static	char	d[30];
+
+	sprintf(d, "%4.4s %2.2s %2.2s %2.2s:%2.2s:%2.2s.%2.2s",
+			&dp[0],	/* Year */
+			&dp[4],	/* Month */
+			&dp[6],	/* Monthday */
+			&dp[8],	/* Hour */
+			&dp[10],/* Minute */
+			&dp[12],/* Seconds */
+			&dp[14]	/* Hunreds of a Seconds */
+		);
+	/*
+	 * dp[16] contains minute offset from Greenwich
+	 * Positive values are to the east of Greenwich.
+	 */
+	return (d);	
 }
 
 void
@@ -251,6 +328,7 @@ int parse_rr(pnt, len, cont_flag)
 	int		cont_flag;
 {
 	int slen;
+	int xlen;
 	int ncount;
 	int extent;
 	int cont_extent, cont_offset, cont_size;
@@ -315,10 +393,11 @@ int parse_rr(pnt, len, cont_flag)
 			cflag = pnt[4];
 			pnts = pnt+5;
 			slen = pnt[2] - 5;
-			while(slen >= 1){
-				switch(pnts[0] & 0xfe){
+			while (slen >= 1) {
+				switch (pnts[0] & 0xfe) {
 				case 0:
 					strncat(symlinkname, (char *)(pnts+2), pnts[1]);
+					symlinkname[pnts[1]] = 0;
 					break;
 				case 2:
 					strcat (symlinkname, ".");
@@ -327,7 +406,7 @@ int parse_rr(pnt, len, cont_flag)
 					strcat (symlinkname, "..");
 					break;
 				case 8:
-					if((pnts[0] & 1) == 0)strcat (symlinkname, "/");
+					strcat (symlinkname, "/");
 					break;
 				case 16:
 					strcat(symlinkname,"/mnt");
@@ -345,13 +424,15 @@ int parse_rr(pnt, len, cont_flag)
 				if((pnts[0] & 0xfe) && pnts[1] != 0) {
 					printf("Incorrect length in symlink component");
 				}
-				if((pnts[0] & 1) == 0) strcat(symlinkname,"/");
+				if(xname[0] == 0) strcpy(xname, "-> ");
+				strcat(xname, symlinkname);
+				symlinkname[0] = 0;
+				xlen = strlen(xname);
+				if((pnts[0] & 1) == 0 && xname[xlen-1] != '/') strcat(xname, "/");
 
 				slen -= (pnts[1] + 2);
 				pnts += (pnts[1] + 2);
-				if(xname[0] == 0) strcpy(xname, "-> ");
-				strcat(xname, symlinkname);
-		       }
+			}
 			symlinkname[0] = 0;
 		}
 
@@ -363,6 +444,12 @@ int parse_rr(pnt, len, cont_flag)
 		  read(fileno(infile), sector, sizeof(sector));
 		  flag2 |= parse_rr(&sector[cont_offset], cont_size, 1);
 		}
+	}
+	/*
+	 * for symbolic links, strip out the last '/'
+	 */
+	if (xname[0] != 0 && xname[strlen(xname)-1] == '/') {
+		xname[strlen(xname)-1] = '\0';
 	}
 	return flag2;
 }
@@ -378,13 +465,11 @@ find_rr(idr, pntp, lenp)
 	unsigned char * pnt;
 
 	len = idr->length[0] & 0xff;
-	len -= sizeof(struct iso_directory_record);
-	len += sizeof(idr->name);
+	len -= offsetof(struct iso_directory_record, name[0]);
 	len -= idr->name_len[0];
 
 	pnt = (unsigned char *) idr;
-	pnt += sizeof(struct iso_directory_record);
-	pnt -= sizeof(idr->name);
+	pnt += offsetof(struct iso_directory_record, name[0]);
 	pnt += idr->name_len[0];
 	if((idr->name_len[0] & 1) == 0){
 		pnt++;
@@ -475,20 +560,30 @@ dump_stat(extent)
   if( fstat_buf.st_mode & S_IXOTH )
     outline[9] = 'x';
 
+  /*
+   * XXX This is totally ugly code from Eric.
+   * XXX If one field is wider than expected then it is truncated.
+   */
   sprintf(outline+11, "%3ld", (long)fstat_buf.st_nlink);
   sprintf(outline+15, "%4lo", (unsigned long)fstat_buf.st_uid);
   sprintf(outline+20, "%4lo", (unsigned long)fstat_buf.st_gid);
-  sprintf(outline+33, "%8ld", (long)fstat_buf.st_size);
+  sprintf(outline+30, "%10ld", (long)fstat_buf.st_size);
+
+  if (do_sectors == 0) {
+    sprintf(outline+30, "%10ld", (long)fstat_buf.st_size);
+  } else {
+    sprintf(outline+30, "%10ld", (long)((fstat_buf.st_size+PAGE-1)/PAGE));
+  }
 
   if( date_buf[1] >= 1 && date_buf[1] <= 12 )
     {
-      memcpy(outline+42, months[date_buf[1]-1], 3);
+      memcpy(outline+41, months[date_buf[1]-1], 3);
     }
 
-  sprintf(outline+46, "%2d", date_buf[2]);
-  sprintf(outline+49, "%4d", date_buf[0]+1900);
+  sprintf(outline+45, "%2d", date_buf[2]);
+  sprintf(outline+48, "%4d", date_buf[0]+1900);
 
-  sprintf(outline+54, "[%6d]", extent);
+  sprintf(outline+53, "[%7d]", extent);	/* XXX up to 20 GB */
 
   for(i=0; i<63; i++)
     if(outline[i] == 0) outline[i] = ' ';
@@ -524,7 +619,7 @@ parse_dir(rootname, extent, len)
 	int	extent;
 	int	len;
 {
-  char testname[256];
+  char testname[PATH_MAX+1];
   struct todo * td;
   int i;
   struct iso_directory_record * idr;
@@ -568,7 +663,7 @@ parse_dir(rootname, extent, len)
 		int j;
 
 		name_buf[0] = '\0';
-		for(j=0; j < idr->name_len[0] / 2; j++)
+		for(j=0; j < (int)idr->name_len[0] / 2; j++)
 		  {
 		    uh = idr->name[j*2];
 		    ul = idr->name[j*2+1];
@@ -649,7 +744,7 @@ parse_dir(rootname, extent, len)
 	if(do_listing)
 	  dump_stat(isonum_733((unsigned char *)idr->extent));
 	i += buffer[i];
-	if (i > 2048 - sizeof(struct iso_directory_record)) break;
+	if (i > 2048 - offsetof(struct iso_directory_record, name[0])) break;
       }
     }
 }
@@ -658,11 +753,13 @@ void
 usage(excode)
 	int	excode;
 {
-	errmsgno(EX_BAD, "Usage: %s [options]\n",
+	errmsgno(EX_BAD, "Usage: %s [options] -i filename\n",
                 get_progname());
 
 	error("Options:\n");
-	error("\t-h		Print this help\n");
+	error("\t-help,-h	Print this help\n");
+	error("\t-version	Print version info and exit\n");
+	error("\t-debug		Print additional debug info\n");
 	error("\t-d		Print information from the primary volume descriptor\n");
 	error("\t-f		Generate output similar to 'find .  -print'\n");
 	error("\t-J		Print information from from Joliet extensions\n");
@@ -670,6 +767,7 @@ usage(excode)
 	error("\t-l		Generate output similar to 'ls -lR'\n");
 	error("\t-p		Print Path Table\n");
 	error("\t-R		Print information from from Rock Ridge extensions\n");
+	error("\t-s		Print file size infos in multiples of sector size (%ld bytes).\n", (long)PAGE);
 	error("\t-N sector	Sector number where ISO image should start on CD\n");
 	error("\t-T sector	Sector number where actual session starts on CD\n");
 	error("\t-i filename	Filename to read ISO-9660 image from\n");
@@ -682,75 +780,59 @@ main(argc, argv)
 	int	argc;
 	char	*argv[];
 {
-  int c;
-  char * filename = NULL;
-  int toc_offset = 0;
-  int extent;
-  struct todo * td;
-  struct iso_primary_descriptor ipd;
-  struct iso_primary_descriptor jpd;
-  struct iso_directory_record * idr;
-  char *charset = NULL;
-
-	save_args(argc, argv);
-
-  if(argc < 2)
-	usage(EX_BAD);
-  while ((c = getopt(argc, argv, "hdpi:JRlx:fN:T:j:")) != EOF)
-    switch (c)
-      {
-      case 'h':
-	usage(0);
-	break;
-      case 'd':
-	do_pvd++;
-	break;
-      case 'f':
-	do_find++;
-	break;
-      case 'p':
-	do_pathtab++;
-	break;
-      case 'R':
-	use_rock++;
-	break;
-      case 'J':
-	use_joliet++;
-	break;
-      case 'j':
-	use_joliet++;
-	charset = optarg;
-	break;
-      case 'l':
-	do_listing++;
-	break;
-      case 'T':
+	int	cac;
+	char	* const *cav;
+	int	c;
+	char	* filename = NULL;
 	/*
-	 * This is used if we have a complete multi-session
+	 * Use toc_offset != 0 (-T #) if we have a complete multi-session
 	 * disc that we want/need to play with.
 	 * Here we specify the offset where we want to
 	 * start searching for the TOC.
 	 */
-	toc_offset = atol(optarg);
-	break;
-      case 'N':
-	/*
-	 * Use this if we have an image of a single session
-	 * and we need to list the directory contents.
-	 * This is the session block number of the start
-	 * of the session.
-	 */
-	sector_offset = atol(optarg);
-	break;
-      case 'i':
-	filename = optarg;
-	break;
-      case 'x':
-	xtract = optarg;
-	break;
-      default:
-	usage(EX_BAD);
-      }
+	int	toc_offset = 0;
+	int	extent;
+	struct todo * td;
+	struct iso_primary_descriptor ipd;
+	struct iso_primary_descriptor jpd;
+	struct iso_directory_record * idr;
+	char	*charset = NULL;
+	char	*opts = "help,h,version,debug,d,p,i*,J,R,l,x*,f,s,N#l,T#l,j*";
+	BOOL	help = FALSE;
+	BOOL	prvers = FALSE;
+
+
+	save_args(argc, argv);
+
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getallargs(&cac, &cav, opts,
+				&help, &help, &prvers, &debug,
+				&do_pvd, &do_pathtab,
+				&filename,
+				&use_joliet, &use_rock,
+				&do_listing,
+				&xtract,
+				&do_find, &do_sectors,
+				&sector_offset, &toc_offset,
+				&charset
+				) < 0) {
+		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
+		usage(EX_BAD);
+	}
+	if (help)
+		usage(0);
+	if (prvers) {
+		printf("isoinfo %s (%s-%s-%s)\n", "2.0",
+					HOST_CPU, HOST_VENDOR, HOST_OS);
+		exit(0);
+	}
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getfiles(&cac, &cav, opts) != 0) {
+		errmsgno(EX_BAD, "Bad Argument: '%s'\n",cav[0]);
+		usage(EX_BAD);
+	}
 
 	init_nls();		/* Initialize UNICODE tables */
 	init_nls_file(charset);
@@ -776,11 +858,11 @@ main(argc, argv)
   if( filename == NULL )
   {
 #ifdef	USE_LIBSCHILY
-	comerrno(EX_BAD, "Error - file not specified\n");
+	errmsgno(EX_BAD, "ISO-9660 image not specified\n");
 #else
-	fprintf(stderr, "Error - file not specified\n");
-  	exit(1);
+	fprintf(stderr, "ISO-9660 image not specified\n");
 #endif
+	usage(EX_BAD);
   }
 
   infile = fopen(filename,"rb");
@@ -861,9 +943,21 @@ main(argc, argv)
 	putchar('\n');
 
 	printf("Volume set size is: %d\n", isonum_723(ipd.volume_set_size));
-	printf("Volume set seqence number is: %d\n", isonum_723(ipd.volume_sequence_number));
+	printf("Volume set sequence number is: %d\n", isonum_723(ipd.volume_sequence_number));
 	printf("Logical block size is: %d\n", isonum_723(ipd.logical_block_size));
 	printf("Volume size is: %d\n", isonum_733((unsigned char *)ipd.volume_space_size));
+	if (debug) {
+		printf("Path table size is:     %d\n", isonum_733((unsigned char *)ipd.path_table_size));
+		printf("L Path table start:     %d\n", isonum_731(ipd.type_l_path_table));
+		printf("L Path opt table start: %d\n", isonum_731(ipd.opt_type_l_path_table));
+		printf("M Path table start:     %d\n", isonum_732(ipd.type_m_path_table));
+		printf("M Path opt table start: %d\n", isonum_732(ipd.opt_type_m_path_table));
+		printf("Creation Date:     %s\n", sdate(ipd.creation_date));
+		printf("Modification Date: %s\n", sdate(ipd.modification_date));
+		printf("Expiration Date:   %s\n", sdate(ipd.expiration_date));
+		printf("Effective Date:    %s\n", sdate(ipd.effective_date));
+		printf("File structure version: %d\n", ipd.file_structure_version[0]);
+	}
   }
 	/*
 	 * ISO 9660:
@@ -885,13 +979,19 @@ main(argc, argv)
       movebytes(&ipd, &jpd, sizeof(ipd));
       while( (unsigned char) jpd.type[0] != ISO_VD_END )
 	{
-		if( (unsigned char) jpd.type[0] == ISO_VD_SUPPLEMENTARY )
+		if(debug && (unsigned char) jpd.type[0] == ISO_VD_SUPPLEMENTARY )
+			error("Joliet escape sequence 0: '%c' 1: '%c' 2: '%c' 3: '%c'\n",
+					jpd.escape_sequences[0],
+					jpd.escape_sequences[1],
+					jpd.escape_sequences[2],
+					jpd.escape_sequences[3]);
 	  /*
 	   * Find the UCS escape sequence.
 	   */
 	  if(    jpd.escape_sequences[0] == '%'
 	      && jpd.escape_sequences[1] == '/'
-	      && jpd.escape_sequences[3] == '\0'
+	      && (jpd.escape_sequences[3] == '\0'
+	      ||    jpd.escape_sequences[3] == ' ')
 	      && (    jpd.escape_sequences[2] == '@'
 		   || jpd.escape_sequences[2] == 'C'
 		   || jpd.escape_sequences[2] == 'E') )
@@ -936,6 +1036,8 @@ main(argc, argv)
 	  exit(1);
 #endif
 	}
+	if (jpd.escape_sequences[3] == ' ')
+		errmsgno(EX_BAD, "Warning: Joliet escape sequence uses illegal space at offset 3\n");
     }
 	if (do_pvd) {
 		if (ucs_level > 0)

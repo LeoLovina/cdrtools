@@ -1,3 +1,44 @@
+Important notice for ATAPI support on FreeBSD:
+
+A long time it was not possible to decently write CD's using ATAPI drives
+on FreeBSD because ATAPI was not supported in an orthogonal way on FreeBSD.
+
+These days (in the mid of november 2001) first ATAPI support for FreeBSD is
+available as patch. Please read:
+
+http://www.freebsd.org/cgi/getmsg.cgi?fetch=136602+0+/usr/local/www/db/text/2001/freebsd-current/20011111.freebsd-current
+
+and get the FreeBSD kernel patch from:
+
+http://www.cuivre.fr.eu.org/~thomas/atapicam/
+
+Thanks to Thomas Quinot <thomas@cuivre.fr.eu.org> for the patch.
+
+We tested the patch with a collegue today (23.11.2001), here is the result:
+
+-	From our tests, it compiles with FreeBSD 4.x and FreeBSD current (5.0)
+	but does not boot with FreeBSD current so we used 4.x for our tests
+	I hope that Thomas Quinot <thomas@cuivre.fr.eu.org> and
+	Kenneth D. Merry <ken@kdm.org> will help to make it work with
+	FreeBSD current soon.
+
+-	The Author of the patch, Thomas Quinot <thomas@cuivre.fr.eu.org>, observed
+	that it runs on *some* -CURRENT machines and hangs on *some* -STABLE
+	machines so you max whant to test what works best for you.
+
+-	It does not run the SCSI commands in silent mode so the ATAPI low level
+	code prints unwanted kernel messages when you start cdrecord.
+
+-	cdrecord runs without problems so far it has been tested!
+
+You need to apply the patch, change your kernel configuration to include
+
+options                ATAPICAM
+
+and then recompile install and boot the new kernel.
+Make enough /dev/pass* devices and start testing.....
+
+/*--------------------------------------------------------------------------*/
 From shamrock@cypherpunks.to Mon May  3 07:35:50 1999
 Received: from pakastelohi.cypherpunks.to (pakastelohi.cypherpunks.to [212.26.192.194])
 	by mailhub.fokus.gmd.de (8.8.8/8.8.8) with ESMTP id HAA18680

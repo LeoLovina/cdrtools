@@ -1,7 +1,7 @@
-/* @(#)scsi-wnt.c	1.27 01/03/18 Copyright 1998, 1999 J. Schilling, A.L. Faber */
+/* @(#)scsi-wnt.c	1.29 02/10/19 Copyright 1998, 1999 J. Schilling, A.L. Faber */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-wnt.c	1.27 01/03/18 Copyright 1998, 1999 J. Schilling, A.L. Faber";
+	"@(#)scsi-wnt.c	1.29 02/10/19 Copyright 1998, 1999 J. Schilling, A.L. Faber";
 #endif
 /*
  *	Interface for the Win32 ASPI library.
@@ -64,7 +64,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.27";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.29";	/* The version for this transport*/
 
 /*
  * Local defines and constants
@@ -148,6 +148,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "ASPI", "Generic transport independent SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int
@@ -778,7 +788,7 @@ open_driver(scgp)
 
 	if (scgp->debug > 0) {
 		js_fprintf((FILE *)scgp->errfile,
-			"open_driver %X HostASPIStatus=0x%x HACount=0x%x\n", astatus, ASPIStatus, HACount);
+			"open_driver %lX HostASPIStatus=0x%x HACount=0x%x\n", astatus, ASPIStatus, HACount);
 	}
 
 	if (ASPIStatus != SS_COMP && ASPIStatus != SS_NO_ADAPTERS) {
@@ -868,7 +878,7 @@ ha_inquiry(scgp, id, ip)
 	Status = pfnSendASPI32Command((LPSRB)ip);
 
 	if (scgp->debug > 0) {
-		js_fprintf((FILE *)scgp->errfile, "Status : %d\n",	Status);
+		js_fprintf((FILE *)scgp->errfile, "Status : %ld\n",	Status);
 		js_fprintf((FILE *)scgp->errfile, "hacount: %d\n", ip->HA_Count);
 		js_fprintf((FILE *)scgp->errfile, "SCSI id: %d\n", ip->HA_SCSI_ID);
 		js_fprintf((FILE *)scgp->errfile, "Manager: '%.16s'\n", ip->HA_ManagerId);

@@ -1,4 +1,4 @@
-/* @(#)libport.h	1.4 00/11/08 Copyright 1995 J. Schilling */
+/* @(#)libport.h	1.6 02/05/27 Copyright 1995 J. Schilling */
 /*
  *	Copyright (c) 1995 J. Schilling
  */
@@ -28,6 +28,9 @@
 #ifndef	_PROTOTYP_H
 #include <prototyp.h>
 #endif
+#ifndef _STANDARD_H
+#include <standard.h>
+#endif
 
 #ifdef	__cplusplus
 extern "C" {
@@ -53,6 +56,9 @@ extern	int		gethostname	__PR((char *name, int namelen));
 #endif
 #ifndef	HAVE_GETDOMAINNAME
 extern	int		getdomainname	__PR((char *name, int namelen));
+#endif
+#ifndef	HAVE_GETPAGESIZE
+EXPORT	int		getpagesize	__PR((void));
 #endif
 #ifndef	HAVE_USLEEP
 extern	int		usleep		__PR((int usec));

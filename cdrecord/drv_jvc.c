@@ -1,7 +1,7 @@
-/** @(#)drv_jvc.c	1.55 01/02/22 Copyright 1997-2001 J. Schilling */
+/** @(#)drv_jvc.c	1.70 02/10/26 Copyright 1997-2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_jvc.c	1.55 01/02/22 Copyright 1997-2001 J. Schilling";
+	"@(#)drv_jvc.c	1.70 02/10/26 Copyright 1997-2001 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -210,16 +210,16 @@ struct isrc_subcode {		/* subcode for ISRC code */
 
 
 LOCAL	int	teac_attach		__PR((SCSI *scgp, cdr_t *dp));
-LOCAL	int	teac_getdisktype	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
-LOCAL	int	speed_select_teac	__PR((SCSI *scgp, int *speedp, int dummy));
+LOCAL	int	teac_getdisktype	__PR((SCSI *scgp, cdr_t *dp));
+LOCAL	int	speed_select_teac	__PR((SCSI *scgp, cdr_t *dp, int *speedp, int dummy));
 LOCAL	int	select_secsize_teac	__PR((SCSI *scgp, track_t *trackp));
-LOCAL	int	next_wr_addr_jvc	__PR((SCSI *scgp, int track, track_t *, long *ap));
+LOCAL	int	next_wr_addr_jvc	__PR((SCSI *scgp, track_t *, long *ap));
 LOCAL	int	write_teac_xg1		__PR((SCSI *scgp, caddr_t, long, long, int, BOOL));
 LOCAL	int	cdr_write_teac		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
-LOCAL	int	open_track_jvc		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
-LOCAL	int	teac_fixation		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
-LOCAL	int	close_track_teac	__PR((SCSI *scgp, int track, track_t *trackp));
-LOCAL	int	teac_open_session	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	open_track_jvc		__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	teac_fixation		__PR((SCSI *scgp, cdr_t *dp, int onp, int dummy, int toctype, track_t *trackp));
+LOCAL	int	close_track_teac	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	teac_open_session	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp, int toctype, int multi));
 LOCAL	int	teac_init		__PR((SCSI *scgp, int toctype, int multi));
 LOCAL	int	teac_doopc		__PR((SCSI *scgp));
 LOCAL	int	teac_opc		__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
@@ -232,7 +232,7 @@ LOCAL	int	teac_freeze		__PR((SCSI *scgp, int bp_flag));
 LOCAL	int	teac_wr_pma		__PR((SCSI *scgp));
 LOCAL	int	teac_rd_pma		__PR((SCSI *scgp));
 LOCAL	int	next_wr_addr_teac	__PR((SCSI *scgp, long start_lba, long last_lba));
-LOCAL	int	blank_jvc		__PR((SCSI *scgp, long addr, int blanktype));
+LOCAL	int	blank_jvc		__PR((SCSI *scgp, cdr_t *dp, long addr, int blanktype));
 LOCAL	int	buf_cap_teac		__PR((SCSI *scgp, long *sp, long *fp));
 LOCAL	long	read_peak_buffer_cap_teac __PR((SCSI *scgp));
 LOCAL	int	buffer_inquiry_teac	__PR((SCSI *scgp, int fmt));
@@ -245,11 +245,14 @@ LOCAL	void	xxtest_teac		__PR((SCSI *scgp));
 
 
 cdr_t	cdr_teac_cdr50 = {
-	0,
-	CDR_TAO|CDR_DAO|CDR_SWABAUDIO|CDR_NO_LOLIMIT,
+	0, 0,
+/*	CDR_TAO|CDR_SAO|CDR_SWABAUDIO|CDR_NO_LOLIMIT,*/
+	CDR_TAO|CDR_SWABAUDIO|CDR_NO_LOLIMIT,
+	2, 4,
 	"teac_cdr50",
 	"driver for Teac CD-R50S, Teac CD-R55S, JVC XR-W2010, Pinnacle RCD-5020",
 	0,
+	(dstat_t *)0,
 	drive_identify,
 	teac_attach,
 	teac_getdisktype,
@@ -264,23 +267,26 @@ cdr_t	cdr_teac_cdr50 = {
 	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	cdr_write_teac,
 	no_sendcue,
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
 	open_track_jvc,
 	close_track_teac,
 	teac_open_session,
 	cmd_dummy,
 	read_session_offset_philips,
 	teac_fixation,
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
 /*	blank_dummy,*/
 	blank_jvc,
 	teac_opc,
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* opt1		*/
 };
 
 LOCAL int
-teac_getdisktype(scgp, dp, dsp)
+teac_getdisktype(scgp, dp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	dstat_t	*dsp;
 {
+	dstat_t	*dsp = dp->cdr_dstat;
 	struct scsi_mode_data md;
 	int	count = sizeof(struct scsi_mode_header) +
 			sizeof(struct scsi_mode_blockdesc);
@@ -301,12 +307,13 @@ teac_getdisktype(scgp, dp, dsp)
 
 	l = a_to_u_3_byte(md.blockdesc.nlblock);
 	dsp->ds_maxblocks = l;
-	return (0);
+	return (drive_getdisktype(scgp, dp));
 }
 
 LOCAL int
-speed_select_teac(scgp, speedp, dummy)
+speed_select_teac(scgp, dp, speedp, dummy)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	*speedp;
 	int	dummy;
 {
@@ -381,13 +388,12 @@ select_secsize_teac(scgp, trackp)
 }
 
 LOCAL int
-next_wr_addr_jvc(scgp, track, trackp, ap)
+next_wr_addr_jvc(scgp, trackp, ap)
 	SCSI	*scgp;
-	int	track;
 	track_t	*trackp;
 	long	*ap;
 {
-	if (track > 0) {
+	if (trackp != 0 && trackp->track > 0) {
 		*ap = lba_addr;
 	} else {
 		long	nwa;
@@ -457,10 +463,9 @@ cdr_write_teac(scgp, bp, sectaddr, size, blocks, islast)
 }
 
 LOCAL int
-open_track_jvc(scgp, dp, track, trackp)
+open_track_jvc(scgp, dp, trackp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	track;
 	track_t	*trackp;
 {
 	int	status;
@@ -492,7 +497,7 @@ if (trackp->pregapsize != 0) {
 	 * Set pre-gap (pause - index 0)
 	 */
 	set_pgm_subcode(&sc, SC_P,
-			st2mode[trackp->sectype&ST_MASK], ADR_POS, track, 0);
+			st2mode[trackp->sectype&ST_MASK], ADR_POS, trackp->trackno, 0);
 
 	if (lverbose > 1)
 		scg_prbytes("Subcode:", (Uchar *)&sc, sizeof(sc));
@@ -510,7 +515,10 @@ if (trackp->pregapsize != 0) {
 		printf("pad_track(%ld, %ld)-> %ld\n",
 			lba_addr, pregapsize, lba_addr + pregapsize);
 	}
-	if (pad_track(scgp, dp, track, trackp,
+	/*
+	 * XXX Do we need to check isecsize too?
+	 */
+	if (pad_track(scgp, dp, trackp,
 			lba_addr, (Llong)pregapsize*trackp->secsize,
 			FALSE, (Llong *)0) < 0)
 		return (-1);
@@ -518,8 +526,7 @@ if (trackp->pregapsize != 0) {
 
 	blocks = trackp->tracksize/trackp->secsize +
 		 (trackp->tracksize%trackp->secsize?1:0);
-	blocks += trackp->padsize/trackp->secsize +
-		 (trackp->padsize%trackp->secsize?1:0);
+	blocks += trackp->padsecs;
 	if (blocks < 300)
 		blocks = 300;
 	if (!is_audio(trackp))
@@ -545,7 +552,7 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0)
 	 * Set track start (index 1)
 	 */
 	set_pgm_subcode(&sc, SC_TR,
-			st2mode[trackp->sectype&ST_MASK], ADR_POS, track, 1);
+			st2mode[trackp->sectype&ST_MASK], ADR_POS, trackp->trackno, 1);
 
 	if (lverbose > 1)
 		scg_prbytes("Subcode:", (Uchar *)&sc, sizeof(sc));
@@ -570,10 +577,9 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0) {
 	/*
 	 * Set pre-gap (pause - index 0)
 	 */
-	track++;
 	trackp++;
 	set_pgm_subcode(&sc, SC_P,
-			st2mode[trackp->sectype&ST_MASK], ADR_POS, track, 0);
+			st2mode[trackp->sectype&ST_MASK], ADR_POS, trackp->trackno, 0);
 
 	if (lverbose > 1)
 		scg_prbytes("Subcode:", (Uchar *)&sc, sizeof(sc));
@@ -588,9 +594,9 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0) {
 LOCAL	char	sector[3000];
 
 LOCAL int
-close_track_teac(scgp, track, trackp)
+close_track_teac(scgp, dp, trackp)
 	SCSI	*scgp;
-	int	track;
+	cdr_t	*dp;
 	track_t	*trackp;
 {
 	int	ret = 0;
@@ -690,12 +696,12 @@ teac_attach(scgp, dp)
 }
 
 LOCAL int
-teac_fixation(scgp, onp, dummy, toctype, tracks, trackp)
+teac_fixation(scgp, dp, onp, dummy, toctype, trackp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	onp;
 	int	dummy;
 	int	toctype;
-	int	tracks;
 	track_t	*trackp;
 {
 	long	lba;
@@ -704,7 +710,7 @@ teac_fixation(scgp, onp, dummy, toctype, tracks, trackp)
 	int	i;
 extern	char	*buf;
 
-	if (tracks < 1) {
+	if (trackp->tracks < 1) {
 		/*
 		 * We come here if cdrecord isonly called with the -fix option.
 		 * As long as we cannot read and interpret the PMA, we must
@@ -733,7 +739,7 @@ extern	char	*buf;
 	/*
 	 * Set up TOC entries for all tracks
 	 */
-	for(i=1; i <= tracks; i++) {
+	for(i=1; i <= trackp->tracks; i++) {
 		lba = trackp[i].trackstart+150;	/* MSF=00:02:00 is LBA=0 */
 
 		sp = set_toc_subcode(sp,
@@ -764,7 +770,7 @@ extern	char	*buf;
 		/* ctrl/adr for first track */
 		st2mode[trackp[1].sectype&ST_MASK], ADR_POS,
 		0xA1,				/* Point A1 */
-		MSF_CONV(trackp[tracks].trackno),/* last track # */
+		MSF_CONV(trackp[trackp->tracks].trackno),/* last track # */
 		0,				/* reserved */
 		0);				/* reserved */
 
@@ -809,18 +815,17 @@ extern	char	*buf;
 }
 
 LOCAL int
-teac_open_session(scgp, dp, tracks, trackp, toctype, multi)
+teac_open_session(scgp, dp, trackp, toctype, multi)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	tracks;
 	track_t	*trackp;
 	int	toctype;
 	int	multi;
 {
 	int	i;
 
-	for (i = 1; i <= tracks; i++) {
-		if (trackp[i].tracksize < (off_t)0) {
+	for (i = 1; i <= trackp->tracks; i++) {
+		if (trackp[i].tracksize < (tsize_t)0) {
 			/*
 			 * XXX How about setting the subcode range to infinity.
 			 * XXX and correct it in clode track before writing
@@ -1194,8 +1199,9 @@ next_wr_addr_teac(scgp, start_lba, last_lba)
 }
 
 LOCAL int
-blank_jvc(scgp, addr, blanktype)
+blank_jvc(scgp, dp, addr, blanktype)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	long	addr;
 	int	blanktype;
 {

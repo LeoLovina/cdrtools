@@ -1,4 +1,4 @@
-/* @(#)hfs.h	1.3 01/03/20 joerg */
+/* @(#)hfs.h	1.4 01/11/01 joerg */
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-# include <time.h>
-# include <standard.h>
+#include <timedefs.h>
+#include <standard.h>
 
 #ifdef APPLE_HYB
 #include "hybrid.h"

@@ -1,4 +1,5 @@
-/* @(#)interface.h	1.6 00/12/09 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)interface.h	1.12 02/05/27 Copyright 1998-2001 Heiko Eissfeldt */
+
 /***
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Heiko Eissfeldt
@@ -14,25 +15,6 @@
 #endif
 
 #define CD_FRAMESAMPLES (CD_FRAMESIZE_RAW / 4)
-
-#define MAXTRK	100	/* maximum of audio tracks */
-
-typedef struct TOC {	/* structure of table of contents (cdrom) */
-  unsigned char reserved1;
-  unsigned char bFlags;
-  unsigned char bTrack;
-  unsigned char reserved2;
-  unsigned int dwStartSector;
-  int mins;
-  int secs;
-  int frms;
-  unsigned char ISRC[15];
-} TOC;
-
-extern TOC g_toc [MAXTRK]; /* 100 */
-extern unsigned char MCN[14];
-
-#define IS_AUDIO(i) (!(g_toc[i].bFlags & 0x04))
 
 extern unsigned interface;
 
@@ -105,14 +87,18 @@ typedef struct subq_track_isrc {
 
 #if	!defined	NO_SCSI_STUFF
 
+struct TOC;
+
 /* cdrom access function pointer */
-extern void     (*EnableCdda) __PR((SCSI *scgp, int Switch));
-extern unsigned (*ReadToc) __PR(( SCSI *scgp, TOC *ptoc ));
+extern void     (*EnableCdda) __PR((SCSI *scgp, int Switch, unsigned uSectorsize));
+extern unsigned (*doReadToc) __PR(( SCSI *scgp ));
 extern void	(*ReadTocText) __PR(( SCSI *scgp ));
-extern unsigned (*ReadLastAudio) __PR(( SCSI *scgp, unsigned tracks ));
+extern unsigned (*ReadLastAudio) __PR(( SCSI *scgp ));
 extern int      (*ReadCdRom) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
+extern int      (*ReadCdRomSub) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
 extern int      (*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p, unsigned lSector, unsigned SectorBurstVal ));
 extern subq_chnl *(*ReadSubQ) __PR(( SCSI *scgp, unsigned char sq_format, unsigned char track ));
+extern subq_chnl *(*ReadSubChannels) __PR(( SCSI *scgp, unsigned lSector ));
 extern void     (*SelectSpeed) __PR(( SCSI *scgp, unsigned speed ));
 extern int	(*Play_at) __PR(( SCSI *scgp, unsigned from_sector, unsigned sectors));
 extern int	(*StopPlay) __PR(( SCSI *scgp));

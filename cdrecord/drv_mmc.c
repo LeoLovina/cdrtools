@@ -1,14 +1,14 @@
-/* @(#)drv_mmc.c	1.64 01/04/19 Copyright 1997 J. Schilling */
+/* @(#)drv_mmc.c	1.110 02/11/30 Copyright 1997-2002 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_mmc.c	1.64 01/04/19 Copyright 1997 J. Schilling";
+	"@(#)drv_mmc.c	1.110 02/11/30 Copyright 1997-2002 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
  *	SCSI-3/mmc conforming drives
  *	e.g. Yamaha CDR-400, Ricoh MP6200
  *
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -21,9 +21,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 /*#define	DEBUG*/
@@ -50,39 +50,78 @@ static	char sccsid[] =
 #include <scg/scsitransp.h>
 
 #include <scsimmc.h>
+#include "mmcvendor.h"
 #include "cdrecord.h"
 
-extern	BOOL	isgui;
 extern	char	*driveropts;
 
 extern	int	debug;
 extern	int	lverbose;
+extern	int	xdebug;
 
 LOCAL	int	curspeed = 1;
 
+LOCAL	char	clv_to_speed[16] = {
+/*		0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 */
+		0, 2, 4, 6, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+LOCAL	char	hs_clv_to_speed[16] = {
+/*		0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 */
+		0, 2, 4, 6, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+LOCAL	char	us_clv_to_speed[16] = {
+/*		0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 */
+		0, 2, 4, 8, 0, 0,16, 0,24,32,40,48, 0, 0, 0, 0
+};
+
 LOCAL	int	mmc_load		__PR((SCSI *scgp));
 LOCAL	int	mmc_unload		__PR((SCSI *scgp));
-LOCAL	void	mmc_opthelp		__PR((cdr_t *dp, int excode));
+EXPORT	void	mmc_opthelp		__PR((cdr_t *dp, int excode));
+EXPORT	char	*hasdrvopt		__PR((char *optstr, char *optname));
 LOCAL	cdr_t	*identify_mmc		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *));
 LOCAL	int	attach_mmc		__PR((SCSI *scgp, cdr_t *));
+EXPORT	int	check_writemodes_mmc	__PR((SCSI *scgp, cdr_t *dp));
+LOCAL	int	deflt_writemodes_mmc	__PR((SCSI *scgp, BOOL reset_dummy));
 LOCAL	int	get_diskinfo		__PR((SCSI *scgp, struct disk_info *dip));
 LOCAL	void	di_to_dstat		__PR((struct disk_info *dip, dstat_t *dsp));
+LOCAL	int	get_atip		__PR((SCSI *scgp, struct atipinfo *atp));
 #ifdef	PRINT_ATIP
 LOCAL	int	get_pma			__PR((SCSI *scgp));
 #endif
-LOCAL	int	getdisktype_mmc		__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
-LOCAL	int	speed_select_mmc	__PR((SCSI *scgp, int *speedp, int dummy));
-LOCAL	int	next_wr_addr_mmc	__PR((SCSI *scgp, int track, track_t *trackp, long *ap));
-LOCAL	int	open_track_mmc		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
-LOCAL	int	close_track_mmc		__PR((SCSI *scgp, int track, track_t *trackp));
-LOCAL	int	open_session_mmc	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	getdisktype_mmc		__PR((SCSI *scgp, cdr_t *dp));
+LOCAL	int	speed_select_mmc	__PR((SCSI *scgp, cdr_t *dp, int *speedp, int dummy));
+LOCAL	int	mmc_set_speed		__PR((SCSI *scgp, int readspeed, int writespeed, int rotctl));
+LOCAL	int	next_wr_addr_mmc	__PR((SCSI *scgp, track_t *trackp, long *ap));
+LOCAL	int	write_leadin_mmc	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	open_track_mmc		__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	close_track_mmc		__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	open_session_mmc	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp, int toctype, int multi));
 LOCAL	int	waitfix_mmc		__PR((SCSI *scgp, int secs));
-LOCAL	int	fixate_mmc		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
-LOCAL	int	blank_mmc		__PR((SCSI *scgp, long addr, int blanktype));
+LOCAL	int	fixate_mmc		__PR((SCSI *scgp, cdr_t *dp, int onp, int dummy, int toctype, track_t *trackp));
+LOCAL	int	blank_mmc		__PR((SCSI *scgp, cdr_t *dp, long addr, int blanktype));
 LOCAL	int	send_opc_mmc		__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
+LOCAL	int	opt1_mmc		__PR((SCSI *scgp, cdr_t *dp));
 LOCAL	int	scsi_sony_write		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
 
-LOCAL	int	send_cue	__PR((SCSI *scgp, int tracks, track_t *trackp));
+LOCAL	int	send_cue		__PR((SCSI *scgp, track_t *trackp));
+LOCAL int	stats_mmc		__PR((SCSI *scgp, cdr_t *dp));
+
+LOCAL BOOL	mmc_isplextor		__PR((SCSI *scgp));
+LOCAL BOOL	mmc_isyamaha		__PR((SCSI *scgp));
+LOCAL void	do_varirec_plextor	__PR((SCSI *scgp));
+LOCAL int	drivemode_plextor	__PR((SCSI *scgp, caddr_t bp, int cnt, int modecode, void *modeval));
+LOCAL int	check_varirec_plextor	__PR((SCSI *scgp));
+LOCAL int	varirec_plextor		__PR((SCSI *scgp, BOOL on, int val));
+LOCAL int	set_audiomaster_yamaha	__PR((SCSI *scgp, cdr_t *dp, BOOL keep_mode));
+
+EXPORT struct ricoh_mode_page_30 * get_justlink_ricoh	__PR((SCSI *scgp, Uchar *mode));
+LOCAL int	force_speed_yamaha	__PR((SCSI *scgp, int readspeed, int writespeed));
+LOCAL BOOL	get_tattoo_yamaha	__PR((SCSI *scgp, BOOL print, Int32_t *irp, Int32_t *orp));
+LOCAL int	do_tattoo_yamaha	__PR((SCSI *scgp, FILE *f));
+LOCAL int	write_buffer		__PR((SCSI *scgp, int mode, int bufferid, long offset,
+							long parlen, void *buffer, long buflen));
 
 LOCAL int
 mmc_load(scgp)
@@ -99,11 +138,14 @@ mmc_unload(scgp)
 }
 
 cdr_t	cdr_mmc = {
-	0,
-	CDR_TAO|CDR_DAO|CDR_PACKET|CDR_SWABAUDIO,
+	0, 0,
+/*	CDR_TAO|CDR_SAO|CDR_PACKET|CDR_SWABAUDIO,*/
+	CDR_SWABAUDIO,
+	372, 372,
 	"mmc_cdr",
 	"generic SCSI-3/mmc CD-R driver",
 	0,
+	(dstat_t *)0,
 	identify_mmc,
 	attach_mmc,
 	getdisktype_mmc,
@@ -119,22 +161,28 @@ cdr_t	cdr_mmc = {
 	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	scsi_cdr_write,
 	send_cue,
+	write_leadin_mmc,
 	open_track_mmc,
 	close_track_mmc,
 	open_session_mmc,
 	cmd_dummy,
 	read_session_offset,
 	fixate_mmc,
+	stats_mmc,
 	blank_mmc,
 	send_opc_mmc,
+	opt1_mmc,
 };
 
 cdr_t	cdr_mmc_sony = {
-	0,
-	CDR_TAO|CDR_DAO|CDR_PACKET|CDR_SWABAUDIO,
+	0, 0,
+/*	CDR_TAO|CDR_SAO|CDR_PACKET|CDR_SWABAUDIO,*/
+	CDR_SWABAUDIO,
+	372, 372,
 	"mmc_cdr_sony",
 	"generic SCSI-3/mmc CD-R driver (Sony 928 variant)",
 	0,
+	(dstat_t *)0,
 	identify_mmc,
 	attach_mmc,
 	getdisktype_mmc,
@@ -150,25 +198,30 @@ cdr_t	cdr_mmc_sony = {
 	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	scsi_sony_write,
 	send_cue,
+	write_leadin_mmc,
 	open_track_mmc,
 	close_track_mmc,
 	open_session_mmc,
 	cmd_dummy,
 	read_session_offset,
 	fixate_mmc,
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
 	blank_mmc,
 	send_opc_mmc,
+	opt1_mmc,
 };
 
 /*
  * SCSI-3/mmc conformant CD drive
  */
 cdr_t	cdr_cd = {
-	0,
+	0, 0,
 	CDR_ISREADER|CDR_SWABAUDIO,
+	372, 372,
 	"mmc_cd",
 	"generic SCSI-3/mmc CD driver",
 	0,
+	(dstat_t *)0,
 	identify_mmc,
 	attach_mmc,
 	drive_getdisktype,
@@ -179,29 +232,34 @@ cdr_t	cdr_cd = {
 	(int(*)__PR((SCSI *, int)))cmd_dummy,	/* recover		*/
 	speed_select_mmc,
 	select_secsize,
-	(int(*)__PR((SCSI *scgp, int, track_t *, long *)))cmd_ill,	/* next_wr_addr		*/
+	(int(*)__PR((SCSI *scgp, track_t *, long *)))cmd_ill,	/* next_wr_addr		*/
 	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	scsi_cdr_write,
 	no_sendcue,
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
 	open_track_mmc,
 	close_track_mmc,
-	(int(*)__PR((SCSI *scgp, cdr_t *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *scgp, cdr_t *, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset,
-	(int(*)__PR((SCSI *scgp, int, int, int, int, track_t *)))cmd_dummy,	/* fixation */
+	(int(*)__PR((SCSI *scgp, cdr_t *, int, int, int, track_t *)))cmd_dummy,	/* fixation */
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
 	blank_dummy,
 	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* opt1		*/
 };
 
 /*
  * Old pre SCSI-3/mmc CD drive
  */
 cdr_t	cdr_oldcd = {
-	0,
+	0, 0,
 	CDR_ISREADER,
+	372, 372,
 	"scsi2_cd",
 	"generic SCSI-2 CD driver",
 	0,
+	(dstat_t *)0,
 	identify_mmc,
 	drive_attach,
 	drive_getdisktype,
@@ -212,33 +270,157 @@ cdr_t	cdr_oldcd = {
 	(int(*)__PR((SCSI *, int)))cmd_dummy,	/* recover		*/
 	speed_select_mmc,
 	select_secsize,
-	(int(*)__PR((SCSI *scg, int, track_t *, long *)))cmd_ill,	/* next_wr_addr		*/
+	(int(*)__PR((SCSI *scg, track_t *, long *)))cmd_ill,	/* next_wr_addr		*/
 	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	scsi_cdr_write,
 	no_sendcue,
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
 	open_track_mmc,
 	close_track_mmc,
-	(int(*)__PR((SCSI *scgp, cdr_t *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *scgp, cdr_t *, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
-	(int(*)__PR((SCSI *scgp, int, int, int, int, track_t *)))cmd_dummy,	/* fixation */
+	(int(*)__PR((SCSI *scgp, cdr_t *, int, int, int, track_t *)))cmd_dummy,	/* fixation */
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
 	blank_dummy,
 	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* opt1		*/
 };
 
-LOCAL void
+/*
+ * SCSI-3/mmc conformant CD or DVD writer
+ * Checks the current medium and then returns either cdr_mmc or cdr_dvd
+ */
+cdr_t	cdr_cd_dvd = {
+	0, 0,
+	CDR_SWABAUDIO,
+	372, 372,
+	"mmc_cd_dvd",
+	"generic SCSI-3/mmc CD/DVD driver (checks media)",
+	0,
+	(dstat_t *)0,
+	identify_mmc,
+	attach_mmc,
+	drive_getdisktype,
+	scsi_load,
+	scsi_unload,
+	read_buff_cap,
+	(int(*)__PR((SCSI *)))cmd_dummy,	/* recovery_needed	*/
+	(int(*)__PR((SCSI *, int)))cmd_dummy,	/* recover		*/
+	speed_select_mmc,
+	select_secsize,
+	(int(*)__PR((SCSI *scgp, track_t *, long *)))cmd_ill,	/* next_wr_addr		*/
+	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
+	scsi_cdr_write,
+	no_sendcue,
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
+	open_track_mmc,
+	close_track_mmc,
+	(int(*)__PR((SCSI *scgp, cdr_t *, track_t *, int, int)))cmd_dummy,
+	cmd_dummy,
+	read_session_offset,
+	(int(*)__PR((SCSI *scgp, cdr_t *, int, int, int, track_t *)))cmd_dummy,	/* fixation */
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
+	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* opt1		*/
+};
+
+EXPORT void
 mmc_opthelp(dp, excode)
 	cdr_t	*dp;
 	int	excode;
 {
+	BOOL	haveopts = FALSE;
+
 	error("Driver options:\n");
-	if (dp->cdr_cdcap->res_4 != 0) {
-		error("burnproof	Prepare writer to use Sanyo BURN-Proof technology\n");
-		error("noburnproof	Disable using Sanyo BURN-Proof technology\n");
-	} else {
+	if (dp->cdr_flags & CDR_BURNFREE) {
+		error("burnfree	Prepare writer to use BURN-Free technology\n");
+		error("noburnfree	Disable using BURN-Free technology\n");
+		haveopts = TRUE;
+	}
+	if (dp->cdr_flags & CDR_VARIREC) {
+		error("varirec=val	Set VariRec Laserpower to -2, -1, 0, 1, 2\n");
+		error("			Only works for audio and if speed is set to 4\n");
+		haveopts = TRUE;
+	}
+	if (dp->cdr_flags & CDR_AUDIOMASTER) {
+		error("audiomaster	Turn Audio Master feature on (SAO CD-R Audio/Data only)\n");
+		haveopts = TRUE;
+	}
+	if (dp->cdr_flags & CDR_FORCESPEED) {
+		error("forcespeed	Tell the drive to force speed even for low quality media\n");
+		haveopts = TRUE;
+	}
+	if (dp->cdr_flags & CDR_DISKTATTOO) {
+		error("tattooinfo	Print image size info for DiskT@2 feature\n");
+		error("tattoofile=name	Use 'name' as DiskT@2 image file\n");
+		haveopts = TRUE;
+	}
+	if (!haveopts) {
 		error("None supported for this drive.\n");
 	}
 	exit(excode);
+}
+
+EXPORT char *
+hasdrvopt(optstr, optname)
+	char	*optstr;
+	char	*optname;
+{
+	char	*ep;
+	char	*np;
+	char	*ret = NULL;
+	int	optnamelen;
+	int	optlen;
+	BOOL	not = FALSE;
+
+	if (optstr == NULL)
+		return (ret);
+
+	optnamelen = strlen(optname);
+
+	while (*optstr) {
+		if ((ep = strchr(optstr, ',')) != NULL) {
+			optlen = ep - optstr;
+			np = &ep[1];
+		} else {
+			optlen = strlen(optstr);
+			np = &optstr[optlen];
+		}
+		if ((ep = strchr(optstr, '=')) != NULL) {
+			if (ep < np)
+				optlen = ep - optstr;
+		}
+		if (optstr[0] == '!') {
+			optstr++;
+			optlen--;
+			not = TRUE;
+		}
+		if (strncmp(optstr, "no", 2) == 0) {
+			optstr += 2;
+			optlen -= 2;
+			not = TRUE;
+		}
+		if (strncmp(optstr, optname, optlen) == 0) {
+			ret = &optstr[optlen];
+			break;
+		}
+		optstr = np;
+	}
+	if (ret != NULL) {
+		if(*ret == ',' || *ret == '\0') {
+			if (not)
+				return ("0");
+			return ("1");
+		}
+		if(*ret == '=') {
+			if (not)
+				return (NULL);
+			return (++ret);
+		}
+	}
+	return (ret);
 }
 
 LOCAL cdr_t *
@@ -251,6 +433,8 @@ identify_mmc(scgp, dp, ip)
 	BOOL	cdwr	 = FALSE;	/* Write CD-R	*/
 	BOOL	cdrrw	 = FALSE;	/* Read CD-RW	*/
 	BOOL	cdwrw	 = FALSE;	/* Write CD-RW	*/
+	BOOL	dvdwr	 = FALSE;	/* DVD writer	*/
+	BOOL	is_dvd	 = FALSE;	/* use DVD driver*/
 	Uchar	mode[0x100];
 	struct	cd_mode_page_2A *mp;
 
@@ -265,7 +449,7 @@ identify_mmc(scgp, dp, ip)
 	if (mp == NULL)
 		return (&cdr_oldcd);	/* Pre SCSI-3/mmc drive	 	*/
 
-	mmc_getval(mp, &cdrr, &cdwr, &cdrrw, &cdwrw, NULL);
+	mmc_getval(mp, &cdrr, &cdwr, &cdrrw, &cdwrw, NULL, &dvdwr);
 
 	/*
 	 * At this point we know that we have a SCSI-3/mmc compliant drive.
@@ -282,10 +466,68 @@ identify_mmc(scgp, dp, ip)
 	if (strncmp(ip->vendor_info, "SONY", 4) == 0 &&
 	    strncmp(ip->prod_ident, "CD-R   CDU928E", 14) == 0) {
 		dp = &cdr_mmc_sony;
-	}
-	if (!cdwr)			/* SCSI-3/mmc CD drive		*/
-		dp = &cdr_cd;
 
+	} else if (!cdwr && !cdwrw) {	/* SCSI-3/mmc CD drive		*/
+		/*
+		 * If the drive does not support to write CD's, we select the
+		 * CD-ROM driver here. If we have DVD-R/DVD-RW support compiled
+		 * in, we may later decide to switch to the DVD driver.
+		 */
+		dp = &cdr_cd;
+	} else {
+		/*
+		 * We need to set the driver to cdr_mmc because we may come
+		 * here with driver set to cdr_cd_dvd which is not a driver
+		 * that may be used for actual CD/DVD writing.
+		 */
+		dp = &cdr_mmc;
+	}
+
+/*#define	DVD_DEBUG*/
+#ifdef	DVD_DEBUG
+	if (1) {	/* Always check for DVD media in debug mode */
+#else
+	if ((cdwr || cdwrw) && dvdwr) {
+#endif
+		char	xb[32];
+
+#ifndef	DVD_DEBUG
+		scgp->silent++;
+#else
+		error("identify_dvd: checking for DVD media\n");
+#endif
+		if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0) >= 0) {
+			/*
+			 * If read DVD structure is supported and works, then
+			 * we must have a DVD media in the drive. Signal to
+			 * use the DVD driver.
+			 */
+			is_dvd = TRUE;
+		} else {
+			if (scg_sense_key(scgp) == SC_NOT_READY) {
+				/*
+				 * If the SCSI sense key is NOT READY, then the
+				 * drive does not know about the media. First
+				 * close the tray and then try a issue the
+				 * read_dvd_structure() command again.
+				 */
+				load_media(scgp, dp, FALSE);
+				if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0) >= 0) {
+					is_dvd = TRUE;
+				}
+				scsi_prevent_removal(scgp, 0);
+			}
+		}
+#ifndef	DVD_DEBUG
+		scgp->silent--;
+#else
+		error("identify_dvd: is_dvd: %d\n", is_dvd);
+#endif
+	}
+	if (is_dvd) {
+		errmsgno(EX_BAD,
+		"Found DVD media but DVD-R/DVD-RW support code is missing.\n");
+	}
 	return (dp);
 }
 
@@ -294,7 +536,9 @@ attach_mmc(scgp, dp)
 	SCSI	*scgp;
 	cdr_t			*dp;
 {
+	Uchar	mode[0x100];
 	struct	cd_mode_page_2A *mp;
+	struct	ricoh_mode_page_30 *rp = NULL;
 
 	allow_atapi(scgp, TRUE);/* Try to switch to 10 byte mode cmds */
 
@@ -306,24 +550,365 @@ attach_mmc(scgp, dp)
 
 	dp->cdr_cdcap = mp;	/* Store MMC cap pointer	*/
 
+	dp->cdr_dstat->ds_dr_max_rspeed = a_to_u_2_byte(mp->max_read_speed)/176;
+	if (dp->cdr_dstat->ds_dr_max_rspeed == 0)
+		dp->cdr_dstat->ds_dr_max_rspeed = 372;
+	dp->cdr_dstat->ds_dr_cur_rspeed = a_to_u_2_byte(mp->cur_read_speed)/176;
+	if (dp->cdr_dstat->ds_dr_cur_rspeed == 0)
+		dp->cdr_dstat->ds_dr_cur_rspeed = 372;
+
+	dp->cdr_dstat->ds_dr_max_wspeed = a_to_u_2_byte(mp->max_write_speed)/176;
+	if (mp->p_len >= 28)
+		dp->cdr_dstat->ds_dr_cur_wspeed = a_to_u_2_byte(mp->v3_cur_write_speed)/176;
+	else
+		dp->cdr_dstat->ds_dr_cur_wspeed = a_to_u_2_byte(mp->cur_write_speed)/176;
+
+	if (dp->cdr_speedmax > dp->cdr_dstat->ds_dr_max_wspeed)
+		dp->cdr_speedmax = dp->cdr_dstat->ds_dr_max_wspeed;
+
+	if (dp->cdr_speeddef > dp->cdr_speedmax)
+		dp->cdr_speeddef = dp->cdr_speedmax;
+
+	rp = get_justlink_ricoh(scgp, mode);
+
+	if (mp->p_len >= 28)
+		dp->cdr_flags |= CDR_MMC3;
+	if (mp->p_len >= 24)
+		dp->cdr_flags |= CDR_MMC2;
+	dp->cdr_flags |= CDR_MMC;
+
 	if (mp->loading_type == LT_TRAY)
 		dp->cdr_flags |= CDR_TRAYLOAD;
 	else if (mp->loading_type == LT_CADDY)
 		dp->cdr_flags |= CDR_CADDYLOAD;
 
+	if (mp->BUF != 0) {
+		dp->cdr_flags |= CDR_BURNFREE;
+	} else if (rp) {
+		if ((dp->cdr_cmdflags & F_DUMMY) && rp->TWBFS && rp->BUEFS)
+			dp->cdr_flags |= CDR_BURNFREE;
+
+		if (rp->BUEFS)
+			dp->cdr_flags |= CDR_BURNFREE;
+	}
+
+	if (mmc_isplextor(scgp)) {
+		if (check_varirec_plextor(scgp) >= 0)
+			dp->cdr_flags |= CDR_VARIREC;
+	}
+	if (mmc_isyamaha(scgp)) {
+		if (set_audiomaster_yamaha(scgp, dp, FALSE) >= 0)
+			dp->cdr_flags |= CDR_AUDIOMASTER;
+
+		/*
+		 * Starting with CRW 2200 / CRW 3200
+		 */
+		if ((mp->p_len+2) >= 28)
+			dp->cdr_flags |= CDR_FORCESPEED;
+
+		if (get_tattoo_yamaha(scgp, FALSE, 0, 0))
+			dp->cdr_flags |= CDR_DISKTATTOO;
+	}
+
+	if (rp && rp->AWSCS)
+		dp->cdr_flags |= CDR_FORCESPEED;
+
+#ifdef	FUTURE_ROTCTL
+	if (mp->p_len >= 28) {
+		int	val;
+
+		val = dp->cdr_dstat->ds_dr_cur_wspeed;
+		if (val == 0)
+			val = 372;
+
+		scgp->verbose++;
+		if (scsi_set_speed(scgp, -1, val, ROTCTL_CAV) < 0) {
+			error("XXX\n");
+		}
+		scgp->verbose--;
+	}
+#endif
+
+	check_writemodes_mmc(scgp, dp);
+
 	if (driveropts != NULL) {
+		char	*p;
+
 		if (strcmp(driveropts, "help") == 0) {
 			mmc_opthelp(dp, 0);
+		}
+
+		p = hasdrvopt(driveropts, "burnfree");
+		if (p == NULL)
+			p = hasdrvopt(driveropts, "burnproof");
+		if (p != NULL && (dp->cdr_flags & CDR_BURNFREE) != 0) {
+			if (*p == '1') {
+				dp->cdr_dstat->ds_cdrflags |= RF_BURNFREE;
+			} else if (*p == '0') {
+				dp->cdr_dstat->ds_cdrflags &= ~RF_BURNFREE;
+			}
+		}
+
+		p = hasdrvopt(driveropts, "varirec");
+		if (p != NULL && (dp->cdr_flags & CDR_VARIREC) != 0) {
+			dp->cdr_dstat->ds_cdrflags |= RF_VARIREC;
+		}
+
+		p = hasdrvopt(driveropts, "audiomaster");
+		if (p != NULL && *p == '1' && (dp->cdr_flags & CDR_AUDIOMASTER) != 0) {
+			dp->cdr_dstat->ds_cdrflags |= RF_AUDIOMASTER;
+			dp->cdr_dstat->ds_cdrflags &= ~RF_BURNFREE;
+		}
+		p = hasdrvopt(driveropts, "forcespeed");
+		if (p != NULL && *p == '1' && (dp->cdr_flags & CDR_FORCESPEED) != 0) {
+			dp->cdr_dstat->ds_cdrflags |= RF_FORCESPEED;
+		}
+		p = hasdrvopt(driveropts, "tattooinfo");
+		if (p != NULL && *p == '1' && (dp->cdr_flags & CDR_DISKTATTOO) != 0) {
+			get_tattoo_yamaha(scgp, TRUE, 0, 0);
+		}
+		p = hasdrvopt(driveropts, "tattoofile");
+		if (p != NULL && (dp->cdr_flags & CDR_DISKTATTOO) != 0) {
+			FILE	*f;
+
+			if ((f = fileopen(p, "rb")) == NULL)
+				comerr("Cannot open '%s'.\n", p);
+
+			if (do_tattoo_yamaha(scgp, f) < 0)
+				errmsgno(EX_BAD, "Cannot do DiskT@2.\n");
+			fclose(f);
 		}
 	}
 
 	return (0);
 }
 
+
+EXPORT int
+check_writemodes_mmc(scgp, dp)
+	SCSI	*scgp;
+	cdr_t	*dp;
+{
+	Uchar	mode[0x100];
+	int	len;
+	struct	cd_mode_page_05 *mp;
+
+	if (xdebug)
+		printf("Checking possible write modes: ");
+
+	/*
+	 * Reset mp->test_write (-dummy) here.
+	 */
+	deflt_writemodes_mmc(scgp, TRUE);
+
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+
+	scgp->silent++;
+	if (!get_mode_params(scgp, 0x05, "CD write parameter",
+			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len)) {
+		scgp->silent--;
+		return (-1);
+	}
+	if (len == 0) {
+		scgp->silent--;
+		return (-1);
+	}
+
+	mp = (struct cd_mode_page_05 *)
+		(mode + sizeof(struct scsi_mode_header) +
+		((struct scsi_mode_header *)mode)->blockdesc_len);
+#ifdef	DEBUG
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
+#endif
+
+	/*
+	 * mp->test_write has already been reset in deflt_writemodes_mmc()
+	 * Do not reset mp->test_write (-dummy) here. It should be set
+	 * only at one place and only one time.
+	 */
+
+	mp->write_type = WT_TAO;
+	mp->track_mode = TM_DATA; 
+	mp->dbtype = DB_ROM_MODE1;
+
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+		dp->cdr_flags |= CDR_TAO;
+		if (xdebug)
+			printf("TAO ");
+	} else
+		dp->cdr_flags &= ~CDR_TAO;
+
+	mp->write_type = WT_PACKET;
+	mp->track_mode |= TM_INCREMENTAL;
+/*	mp->fp = (trackp->pktsize > 0) ? 1 : 0;*/
+/*	i_to_4_byte(mp->packet_size, trackp->pktsize);*/
+	mp->fp = 0;
+	i_to_4_byte(mp->packet_size, 0);
+
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+		dp->cdr_flags |= CDR_PACKET;
+		if (xdebug)
+			printf("PACKET ");
+	} else
+		dp->cdr_flags &= ~CDR_PACKET;
+	mp->fp = 0;
+	i_to_4_byte(mp->packet_size, 0);
+	mp->track_mode = TM_DATA; 
+
+
+	mp->write_type = WT_SAO;
+
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+		dp->cdr_flags |= CDR_SAO;
+		if (xdebug)
+			printf("SAO ");
+	} else
+		dp->cdr_flags &= ~CDR_SAO;
+
+	if (dp->cdr_flags & CDR_SAO) {
+		mp->dbtype = DB_RAW_PQ;
+
+#ifdef	__needed__
+		if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+			dp->cdr_flags |= CDR_SRAW16;
+			if (xdebug)
+				printf("SAO/R16 ");
+		}
+#endif
+
+		mp->dbtype = DB_RAW_PW;
+
+		if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+			dp->cdr_flags |= CDR_SRAW96P;
+			if (xdebug)
+				printf("SAO/R96P ");
+		}
+
+		mp->dbtype = DB_RAW_PW_R;
+
+		if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+			dp->cdr_flags |= CDR_SRAW96R;
+			if (xdebug)
+				printf("SAO/R96R ");
+		}
+	}
+
+	mp->write_type = WT_RAW;
+	mp->dbtype = DB_RAW_PQ;
+
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+		dp->cdr_flags |= CDR_RAW;
+		dp->cdr_flags |= CDR_RAW16;
+		if (xdebug)
+			printf("RAW/R16 ");
+	}
+
+	mp->dbtype = DB_RAW_PW;
+
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+		dp->cdr_flags |= CDR_RAW;
+		dp->cdr_flags |= CDR_RAW96P;
+		if (xdebug)
+			printf("RAW/R96P ");
+	}
+
+	mp->dbtype = DB_RAW_PW_R;
+
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1)) {
+		dp->cdr_flags |= CDR_RAW;
+		dp->cdr_flags |= CDR_RAW96R;
+		if (xdebug)
+			printf("RAW/R96R ");
+	}
+
+	if (xdebug)
+		printf("\n");
+
+	/*
+	 * Reset mp->test_write (-dummy) here.
+	 */
+	deflt_writemodes_mmc(scgp, TRUE);
+	scgp->silent--;
+
+	return (0);
+}
+
+LOCAL int
+deflt_writemodes_mmc(scgp, reset_dummy)
+	SCSI	*scgp;
+	BOOL	reset_dummy;
+{
+	Uchar	mode[0x100];
+	int	len;
+	struct	cd_mode_page_05 *mp;
+
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+
+	scgp->silent++;
+	if (!get_mode_params(scgp, 0x05, "CD write parameter",
+			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len)) {
+		scgp->silent--;
+		return (-1);
+	}
+	if (len == 0) {
+		scgp->silent--;
+		return (-1);
+	}
+
+	mp = (struct cd_mode_page_05 *)
+		(mode + sizeof(struct scsi_mode_header) +
+		((struct scsi_mode_header *)mode)->blockdesc_len);
+#ifdef	DEBUG
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
+#endif
+
+	/*
+	 * This is the only place where we reset mp->test_write (-dummy)
+	 */
+	if (reset_dummy)
+		mp->test_write = 0;
+
+	/*
+	 * Set default values:
+	 * Write type = 01 (track at once)
+	 * Track mode = 04 (CD-ROM)
+	 * Data block type = 08 (CD-ROM)
+	 * Session format = 00 (CD-ROM)
+	 *
+	 * XXX Note:	the same code appears in check_writemodes_mmc() and
+	 * XXX		in speed_select_mmc().
+	 */
+	mp->write_type = WT_TAO;
+	mp->track_mode = TM_DATA; 
+	mp->dbtype = DB_ROM_MODE1;
+	mp->session_format = SES_DA_ROM;/* Matsushita has illegal def. value */
+
+
+#ifdef	DEBUG
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
+#endif
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1) < 0) {
+
+		mp->write_type	= WT_SAO;
+		mp->LS_V	= 0;
+		mp->copy	= 0;
+		mp->fp		= 0;
+		mp->multi_session = MS_NONE;
+		mp->host_appl_code= 0;
+
+		if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1) < 0) {
+			scgp->silent--;
+			return (-1);
+		}
+	}
+	scgp->silent--;
+	return (0);
+}
+
 #ifdef	PRINT_ATIP
-LOCAL	int	get_atip		__PR((SCSI *scgp, struct atipinfo *atp));
-	void	print_di		__PR((struct disk_info *dip));
-	void	print_atip		__PR((SCSI *scgp, struct atipinfo *atp));
+LOCAL	void	print_di		__PR((struct disk_info *dip));
+LOCAL	void	atip_printspeed		__PR((char *fmt, int speedindex, char speedtab[]));
+LOCAL	void	print_atip		__PR((SCSI *scgp, struct atipinfo *atp));
 #endif	/* PRINT_ATIP */
 
 LOCAL int
@@ -362,8 +947,15 @@ di_to_dstat(dip, dsp)
 	dsp->ds_diskid = a_to_u_4_byte(dip->disk_id);
 	if (dip->did_v)
 		dsp->ds_flags |= DSF_DID_V;
+	dsp->ds_disktype = dip->disk_type;
 	dsp->ds_diskstat = dip->disk_status;
 	dsp->ds_sessstat = dip->sess_status;
+	if (dip->erasable)
+		dsp->ds_flags |= DSF_ERA;
+
+	dsp->ds_trfirst    = dip->first_track;
+	dsp->ds_trlast     = dip->last_track_ls;
+	dsp->ds_trfirst_ls = dip->first_track_ls;
 
 	dsp->ds_maxblocks = msf_to_lba(dip->last_lead_out[1],
 					dip->last_lead_out[2],
@@ -371,22 +963,18 @@ di_to_dstat(dip, dsp)
 	/*
 	 * Check for 0xFF:0xFF/0xFF which is an indicator for a complete disk
 	 */
-	if (dsp->ds_maxblocks == 716730)
+	if (dsp->ds_maxblocks == 1166730)
 		dsp->ds_maxblocks = -1L;
 
-	if (dsp->ds_first_leadin == 0) {
-		dsp->ds_first_leadin = msf_to_lba(dip->last_lead_in[1],
-						dip->last_lead_in[2],
-						dip->last_lead_in[3], FALSE);
-		if (dsp->ds_first_leadin > 0)
-			dsp->ds_first_leadin = 0;
-	}
+	dsp->ds_first_leadin = msf_to_lba(dip->last_lead_in[1],
+					dip->last_lead_in[2],
+					dip->last_lead_in[3], FALSE);
+	if (dsp->ds_first_leadin > 0)
+		dsp->ds_first_leadin = 0;
 
 	if (dsp->ds_last_leadout == 0 && dsp->ds_maxblocks >= 0)
 		dsp->ds_last_leadout = dsp->ds_maxblocks;
 }
-
-#ifdef	PRINT_ATIP
 
 LOCAL int
 get_atip(scgp, atp)
@@ -442,6 +1030,8 @@ get_atip(scgp, atp)
 	return (ret);
 }
 
+#ifdef	PRINT_ATIP
+
 LOCAL int
 /*get_pma(atp)*/
 get_pma(scgp)
@@ -486,21 +1076,20 @@ char	atp[1024];
 #endif	/* PRINT_ATIP */
 
 LOCAL int
-getdisktype_mmc(scgp, dp, dsp)
+getdisktype_mmc(scgp, dp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	dstat_t	*dsp;
 {
 extern	char	*buf;
+	dstat_t	*dsp = dp->cdr_dstat;
 	struct disk_info *dip;
 	Uchar	mode[0x100];
-	char	ans[2];
 	msf_t	msf;
 	BOOL	did_atip = FALSE;
 	BOOL	did_dummy = FALSE;
 
 	msf.msf_min = msf.msf_sec = msf.msf_frame = 0;
-#ifdef	PRINT_ATIP
+
 	/*
 	 * It seems that there are drives that do not support to
 	 * read ATIP (e.g. HP 7100)
@@ -509,18 +1098,51 @@ extern	char	*buf;
 	 */
 	scgp->silent++;
 	if (get_atip(scgp, (struct atipinfo *)mode) >= 0) {
+		struct atipinfo *atp = (struct atipinfo *)mode;
+
 		msf.msf_min =		mode[8];
 		msf.msf_sec =		mode[9];
 		msf.msf_frame =		mode[10];
-		did_atip = TRUE;
-		if (lverbose) {
-			print_atip(scgp, (struct atipinfo *)mode);
-			pr_manufacturer(&msf,
-				((struct atipinfo *)mode)->desc.erasable,
-				((struct atipinfo *)mode)->desc.uru);
+		if (atp->desc.erasable) {
+			dsp->ds_flags |= DSF_ERA;
+			if (atp->desc.sub_type == 1)
+				dsp->ds_flags |= DSF_HIGHSP_ERA;
+			else if (atp->desc.sub_type == 2)
+				dsp->ds_flags |= DSF_ULTRASP_ERA;
 		}
+		if (atp->desc.a1_v) {
+			if (atp->desc.clv_low != 0)
+				dsp->ds_at_min_speed = clv_to_speed[atp->desc.clv_low];
+			if (atp->desc.clv_high != 0)
+				dsp->ds_at_max_speed = clv_to_speed[atp->desc.clv_high];
+
+			if (atp->desc.erasable && atp->desc.sub_type == 1) {
+				if (atp->desc.clv_high != 0)
+					dsp->ds_at_max_speed = hs_clv_to_speed[atp->desc.clv_high];
+			}
+		}
+		if (atp->desc.a2_v && atp->desc.erasable && atp->desc.sub_type == 2) {
+			Uint	vlow;
+			Uint	vhigh;
+
+			vlow = (atp->desc.a2[0] >> 4) & 0x07;
+			vhigh = atp->desc.a2[0] & 0x0F;
+			if (vlow != 0)
+				dsp->ds_at_min_speed = us_clv_to_speed[vlow];
+			if (vhigh != 0)
+				dsp->ds_at_max_speed = us_clv_to_speed[vhigh];
+		}
+		did_atip = TRUE;
 	}
 	scgp->silent--;
+
+#ifdef	PRINT_ATIP
+	if ((dp->cdr_dstat->ds_cdrflags & RF_PRATIP) != 0 && did_atip) {
+		print_atip(scgp, (struct atipinfo *)mode);
+		pr_manufacturer(&msf,
+			((struct atipinfo *)mode)->desc.erasable,
+			((struct atipinfo *)mode)->desc.uru);
+	}
 #endif
 again:
 	dip = (struct disk_info *)buf;
@@ -530,7 +1152,8 @@ again:
 	/*
 	 * Check for non writable disk first.
 	 */
-	if (dip->disk_status == DS_COMPLETE && dsp->ds_cdrflags & RF_WRITE) {
+	if (dip->disk_status == DS_COMPLETE &&
+			(dsp->ds_cdrflags & (RF_WRITE|RF_BLANK)) == RF_WRITE) {
 		if (!did_dummy) {
 			int	xspeed = 0xFFFF;
 
@@ -541,32 +1164,14 @@ again:
 			 */
 			if (lverbose)
 				printf("Trying to clear drive status.\n");
-			speed_select_mmc(scgp, &xspeed, FALSE);
+			speed_select_mmc(scgp, dp, &xspeed, FALSE);
 			did_dummy = TRUE;
 			goto again;
 		}
-		errmsgno(EX_BAD, "Drive needs to reload the media to return to proper status.\n");
-		unload_media(scgp, dp, F_EJECT);
-
-		if ((dp->cdr_flags & CDR_TRAYLOAD) != 0) {
-			scgp->silent++;
-			load_media(scgp, dp, FALSE);
-			scgp->silent--;
-		}
-		scgp->silent++;
-		if (((dp->cdr_flags & CDR_TRAYLOAD) == 0) ||
-				!wait_unit_ready(scgp, 5)) {
-			scgp->silent--;
-
-			printf("Re-load disk and hit <CR>");
-			if (isgui)
-				printf("\n");
-			flush();
-			getline(ans, 1);
-		} else {
-			scgp->silent--;
-		}
-		load_media(scgp, dp, TRUE);
+		/*
+		 * Trying to clear drive status did not work...
+		 */
+		reload_media(scgp, dp);
 	}
 	if (get_diskinfo(scgp, dip) < 0)
 		return (-1);
@@ -574,7 +1179,7 @@ again:
 	if (!did_atip && dsp->ds_first_leadin < 0)
 		lba_to_msf(dsp->ds_first_leadin, &msf);
 
-	if (lverbose && !did_atip) {
+	if ((dp->cdr_dstat->ds_cdrflags & RF_PRATIP) != 0 && !did_atip) {
 		print_min_atip(dsp->ds_first_leadin, dsp->ds_last_leadout);
 		if (dsp->ds_first_leadin < 0)
 	                pr_manufacturer(&msf,
@@ -608,7 +1213,7 @@ again:
 	print_atip(scgp, (struct atipinfo *)mode);
 #endif
 #endif	/* PRINT_ATIP */
-	return (drive_getdisktype(scgp, dp, dsp));
+	return (drive_getdisktype(scgp, dp));
 }
 
 #ifdef	PRINT_ATIP
@@ -618,7 +1223,7 @@ again:
 #define	VAL(what,val)	printf("  %s: %d\n", what, val[0]*256 + val[1]);
 #define	SVAL(what,val)	printf("  %s: %s\n", what, val);
 
-void
+LOCAL void
 print_di(dip)
 	struct disk_info	*dip;
 {
@@ -666,10 +1271,6 @@ static	char *ss_name[] = { "empty", "incomplete/appendable", "illegal", "complet
 	}
 }
 
-LOCAL	char	clv_to_speed[8] = {
-		0, 2, 4, 6, 8, 0, 0, 0
-};
-
 char	*cdr_subtypes[] = {
 	"Normal Rewritable (CLV) media",
 	"High speed Rewritable (CAV) media",
@@ -681,12 +1282,39 @@ char	*cdr_subtypes[] = {
 	"Medium Type C, high Beta category (C+)",
 };
 
-void
+char	*cdrw_subtypes[] = {
+	"Normal Rewritable (CLV) media",
+	"High speed Rewritable (CAV) media",
+	"Ultra High speed Rewritable media",
+	"Medium Type A, high Beta category (A+)",
+	"Medium Type B, low Beta category (B-)",
+	"Medium Type B, high Beta category (B+)",
+	"Medium Type C, low Beta category (C-)",
+	"Medium Type C, high Beta category (C+)",
+};
+
+LOCAL void
+atip_printspeed(fmt, speedindex, speedtab)
+	char	*fmt;
+	int	speedindex;
+	char	speedtab[];
+{
+	printf("%s:", fmt);
+	if (speedtab[speedindex] == 0) {
+		printf(" %2d (reserved val %2d)",
+			speedtab[speedindex], speedindex);
+	} else {
+		printf(" %2d", speedtab[speedindex]);
+	}
+}
+
+LOCAL void
 print_atip(scgp, atp)
 	SCSI		*scgp;
 	struct atipinfo *atp;
 {
 	char	*sub_type;
+	char	*speedvtab = clv_to_speed;
 
 	if (scgp->verbose)
 		scg_prbytes("ATIP info: ", (Uchar *)atp, sizeof (*atp));
@@ -698,7 +1326,10 @@ print_atip(scgp, atp)
 	IS("unrestricted", atp->desc.uru);
 /*	printf("  Disk application code: %d\n", atp->desc.res5_05);*/
 	IS("erasable", atp->desc.erasable);
-	sub_type = cdr_subtypes[atp->desc.sub_type];
+	if (atp->desc.erasable)
+		sub_type = cdrw_subtypes[atp->desc.sub_type];
+	else
+		sub_type = cdr_subtypes[atp->desc.sub_type];
 	if (atp->desc.sub_type)
 		printf("  Disk sub type: %s (%d)\n", sub_type, atp->desc.sub_type);
 	printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
@@ -716,13 +1347,45 @@ print_atip(scgp, atp)
 		atp->desc.lead_out[2],
 		atp->desc.lead_out[3]);
 	if (atp->desc.a1_v) {
-		if (atp->desc.clv_low != 0 || atp->desc.clv_high != 0)
-			printf("  speed low: %d speed high: %d\n",
-				clv_to_speed[atp->desc.clv_low],
-				clv_to_speed[atp->desc.clv_high]);
+		if (atp->desc.erasable && atp->desc.sub_type == 1) {
+			speedvtab = hs_clv_to_speed;
+		}
+		if (atp->desc.a2_v && atp->desc.sub_type == 2) {
+			speedvtab = us_clv_to_speed;
+		}
+		if (atp->desc.clv_low != 0 || atp->desc.clv_high != 0) {
+			atip_printspeed("  1T speed low",
+				atp->desc.clv_low, speedvtab);
+			atip_printspeed(" 1T speed high",
+				atp->desc.clv_high, speedvtab);
+			printf("\n");
+		}
+	}
+	if (atp->desc.a2_v) {
+		Uint	vlow;
+		Uint	vhigh;
+
+		vlow = (atp->desc.a2[0] >> 4) & 0x07;
+		vhigh = atp->desc.a2[0] & 0x0F;
+
+		if (vlow != 0 || vhigh != 0) {
+			atip_printspeed("  2T speed low",
+					vlow, speedvtab);
+			atip_printspeed(" 2T speed high",
+					vhigh, speedvtab);
+			printf("\n");
+		}
+	}
+	if (atp->desc.a1_v) {
 		printf("  power mult factor: %d %d\n", atp->desc.power_mult, atp->desc.tgt_y_pow);
 		if (atp->desc.erasable)
 			printf("  recommended erase/write power: %d\n", atp->desc.rerase_pwr_ratio);
+	}
+	if (atp->desc.a1_v) {
+		printf("  A1 values: %02X %02X %02X\n",
+				(&atp->desc.res15)[1],
+				(&atp->desc.res15)[2],
+				(&atp->desc.res15)[3]);
 	}
 	if (atp->desc.a2_v) {
 		printf("  A2 values: %02X %02X %02X\n",
@@ -740,18 +1403,27 @@ print_atip(scgp, atp)
 #endif	/* PRINT_ATIP */
 
 LOCAL int
-speed_select_mmc(scgp, speedp, dummy)
+speed_select_mmc(scgp, dp, speedp, dummy)
 	SCSI	*scgp;
+	cdr_t 	*dp;
 	int	*speedp;
 	int	dummy;
 {
 	Uchar	mode[0x100];
+	Uchar	moder[0x100];
 	int	len;
 	struct	cd_mode_page_05 *mp;
+	struct	ricoh_mode_page_30 *rp = NULL;
 	int	val;
+	BOOL	forcespeed = FALSE;
 
 	if (speedp)
 		curspeed = *speedp;
+
+	/*
+	 * Do not reset mp->test_write (-dummy) here.
+	 */
+	deflt_writemodes_mmc(scgp, FALSE);
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
@@ -770,18 +1442,6 @@ speed_select_mmc(scgp, speedp, dummy)
 
 
 	mp->test_write = dummy != 0;
-	/*
-	 * Set default values:
-	 * Write type = 01 (track at once)
-	 * Track mode = 04 (CD-ROM)
-	 * Data block type = 08 (CD-ROM)
-	 * Session format = 00 (CD-ROM)
-	 */
-	mp->write_type = WT_TAO;
-	mp->track_mode = TM_DATA; 
-	mp->dbtype = DB_ROM_MODE1;
-	mp->session_format = SES_DA_ROM;/* Matsushita has illegal def. value */
-
 
 #ifdef	DEBUG
 	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
@@ -789,11 +1449,39 @@ speed_select_mmc(scgp, speedp, dummy)
 	if (!set_mode_params(scgp, "CD write parameter", mode, len, 0, -1))
 		return (-1);
 
-	if (speedp == 0)
-		return (0);
 	/*
 	 * Neither set nor get speed.
 	 */
+	if (speedp == 0)
+		return (0);
+
+
+	rp = get_justlink_ricoh(scgp, moder);
+	if (mmc_isyamaha(scgp)) {
+		forcespeed = FALSE;
+	} else if ((dp->cdr_flags & CDR_FORCESPEED) != 0) {
+		forcespeed = rp && rp->AWSCD != 0;
+	}
+
+	if (lverbose && (dp->cdr_flags & CDR_FORCESPEED) != 0)
+		printf("Forcespeed is %s.\n", forcespeed?"ON":"OFF");
+
+	if (!forcespeed && (dp->cdr_dstat->ds_cdrflags & RF_FORCESPEED) != 0) {
+		printf("Turning forcespeed on\n");
+		forcespeed = TRUE;
+	}
+	if (forcespeed && (dp->cdr_dstat->ds_cdrflags & RF_FORCESPEED) == 0) {
+		printf("Turning forcespeed off\n");
+		forcespeed = FALSE;
+	}
+	if (!mmc_isyamaha(scgp) && (dp->cdr_flags & CDR_FORCESPEED) != 0) {
+
+		if (rp) {
+			rp->AWSCD = forcespeed?1:0;
+			set_mode_params(scgp, "Ricoh Vendor Page", moder, moder[0]+1, 0, -1);
+			rp = get_justlink_ricoh(scgp, moder);
+		}
+	}
 
 	/*
 	 * 44100 * 2 * 2 =  176400 bytes/s
@@ -804,8 +1492,15 @@ speed_select_mmc(scgp, speedp, dummy)
 	 * But the standard is rounding the wrong way.
 	 * Furtunately rounding down is guaranteed.
 	 */
-	if (scsi_set_speed(scgp, -1, curspeed*177) < 0)
+	val = curspeed*177;
+	if (val > 0xFFFF)
+		val = 0xFFFF;
+	if (mmc_isyamaha(scgp) && forcespeed) {
+		if (force_speed_yamaha(scgp, -1, val) < 0)
+			return (-1);
+	} else if (mmc_set_speed(scgp, -1, val, ROTCTL_CLV) < 0) {
 		return (-1);
+	}
 
 	if (scsi_get_speed(scgp, 0, &val) >= 0) {
 		if (val > 0) {
@@ -816,10 +1511,63 @@ speed_select_mmc(scgp, speedp, dummy)
 	return (0);
 }
 
+/*
+ * Some drives do not round up when writespeed is e.g. 1 and
+ * the minimum write speed of the drive is higher. Try to increment
+ * the write speed unti it gets accepted by the drive.
+ */
 LOCAL int
-next_wr_addr_mmc(scgp, track, trackp, ap)
+mmc_set_speed(scgp, readspeed, writespeed, rotctl)
 	SCSI	*scgp;
-	int	track;
+	int	readspeed;
+	int	writespeed;
+	int	rotctl;
+{
+	int	rs;
+	int	ws;
+	int	ret = -1;
+	int	c;
+	int	k;
+
+	if (scsi_get_speed(scgp, &rs, &ws) >= 0) {
+		if (readspeed < 0)
+			readspeed = rs;
+		if (writespeed < 0)
+			writespeed = ws;
+	}
+	if (writespeed < 0 || writespeed > 0xFFFF)
+		return (ret);
+
+	scgp->silent++;
+	while (writespeed <= 0xFFFF) {
+		ret = scsi_set_speed(scgp, readspeed, writespeed, rotctl);
+		if (ret >= 0)
+			break;
+		c = scg_sense_code(scgp);
+		k = scg_sense_key(scgp);
+		/*
+		 * Abort quickly if it does not make sense to repeat.
+		 * 0x24 == Invalid field in cdb
+		 * 0x24 means illegal speed.
+		 */
+		if ((k != SC_ILLEGAL_REQUEST) || (c != 0x24)) {
+			if (scgp->silent <= 1)
+				scg_printerr(scgp);
+			scgp->silent--;
+			return (-1);
+		}
+		writespeed += 177;
+	}
+	if (ret < 0 && scgp->silent <= 1)
+		scg_printerr(scgp);
+	scgp->silent--;
+
+	return (ret);
+}
+
+LOCAL int
+next_wr_addr_mmc(scgp, trackp, ap)
+	SCSI	*scgp;
 	track_t	*trackp;
 	long	*ap;
 {
@@ -834,9 +1582,10 @@ next_wr_addr_mmc(scgp, track, trackp, ap)
 	 * or with 0xFF (if the track hasn't been started yet and is invisible
 	 */
 
-	if (track > 0 && is_packet(trackp)) {
+	if (trackp != 0 && trackp->track > 0 && is_packet(trackp)) {
 		scgp->silent++;
-		result = read_track_info(scgp, (caddr_t)&track_info, track,
+		result = read_track_info(scgp, (caddr_t)&track_info,
+							trackp->trackno,
 							sizeof(track_info));
 		scgp->silent--;
 	}
@@ -855,6 +1604,87 @@ next_wr_addr_mmc(scgp, track, trackp, ap)
 	return (0);
 }
 
+LOCAL int
+write_leadin_mmc(scgp, dp, trackp)
+	SCSI	*scgp;
+	cdr_t	*dp;
+	track_t *trackp;
+{
+	int	i;
+	long	startsec = 0L;
+
+/*	if (flags & F_SAO) {*/
+	if (wm_base(dp->cdr_dstat->ds_wrmode) == WM_SAO) {
+		if (debug || lverbose) {
+			printf("Sending CUE sheet...\n");
+			flush();
+		}
+		if ((*dp->cdr_send_cue)(scgp, trackp) < 0) {
+			errmsgno(EX_BAD, "Cannot send CUE sheet.\n");
+			return (-1);
+		}
+
+		(*dp->cdr_next_wr_address)(scgp, &trackp[0], &startsec);
+		if (trackp[0].flags & TI_TEXT) {
+			startsec = dp->cdr_dstat->ds_first_leadin;
+			printf("SAO startsec: %ld\n", startsec);
+		} else if (startsec <= 0 && startsec != -150) {
+			errmsgno(EX_BAD, "WARNING: Drive returns wrong startsec (%ld) using -150\n",
+					startsec);
+			startsec = -150;
+		}
+		if (debug)
+			printf("SAO startsec: %ld\n", startsec);
+
+		if (trackp[0].flags & TI_TEXT) {
+			if (startsec > 0) {
+				errmsgno(EX_BAD, "CD-Text must be in first session.\n");
+				return (-1);
+			}
+			if (debug || lverbose)
+				printf("Writing lead-in...\n");
+			if (write_cdtext(scgp, dp, startsec) < 0)
+				return (-1);
+				
+			dp->cdr_dstat->ds_cdrflags |= RF_LEADIN;
+		} else for (i = 1; i <= trackp->tracks; i++) {
+			trackp[i].trackstart += startsec +150;
+		}
+#ifdef	XXX
+		if (debug || lverbose)
+			printf("Writing lead-in...\n");
+
+		pad_track(scgp, dp, &trackp[1], -150, (Llong)0,
+					FALSE, 0);
+#endif
+	}
+/*	if (flags & F_RAW) {*/
+	if (wm_base(dp->cdr_dstat->ds_wrmode) == WM_RAW) {
+		/*
+		 * In RAW write mode, we now write the lead in (TOC).
+		 */
+		(*dp->cdr_next_wr_address)(scgp, &trackp[0], &startsec);
+		if (startsec > -4500) {
+			/*
+			 * There must be at least 1 minute lead-in.
+			 */
+			errmsgno(EX_BAD, "WARNING: Drive returns wrong startsec (%ld) using %ld from ATIP\n",
+					startsec, (long)dp->cdr_dstat->ds_first_leadin);
+			startsec = dp->cdr_dstat->ds_first_leadin;
+		}
+		if (startsec > -4500) {
+			errmsgno(EX_BAD, "Illegal startsec (%ld)\n", startsec);
+			return (-1);
+		}
+		if (debug || lverbose)
+			printf("Writing lead-in at sector %ld\n", startsec);
+		if (write_leadin(scgp, dp, trackp, startsec) < 0)
+			return (-1);
+		dp->cdr_dstat->ds_cdrflags |= RF_LEADIN;
+	}
+	return (0);
+}
+
 int	st2mode[] = {
 	0,		/* 0			*/
 	TM_DATA,	/* 1 ST_ROM_MODE1	*/
@@ -867,10 +1697,9 @@ int	st2mode[] = {
 };
 
 LOCAL int
-open_track_mmc(scgp, dp, track, trackp)
+open_track_mmc(scgp, dp, trackp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	track;
 	track_t *trackp;
 {
 	Uchar	mode[0x100];
@@ -881,10 +1710,13 @@ open_track_mmc(scgp, dp, track, trackp)
 		if (trackp->pregapsize > 0 && (trackp->flags & TI_PREGAP) == 0) {
 			if (lverbose) {
 				printf("Writing pregap for track %d at %ld\n",
-					track,
+					(int)trackp->trackno,
 					trackp->trackstart-trackp->pregapsize);
 			}
-			pad_track(scgp, dp, track, trackp,
+			/*
+			 * XXX Do we need to check isecsize too?
+	 		 */
+			pad_track(scgp, dp, trackp,
 				trackp->trackstart-trackp->pregapsize,
 				(Llong)trackp->pregapsize*trackp->secsize,
 					FALSE, 0);
@@ -942,9 +1774,9 @@ open_track_mmc(scgp, dp, track, trackp)
 }
 
 LOCAL int
-close_track_mmc(scgp, track, trackp)
+close_track_mmc(scgp, dp, trackp)
 	SCSI	*scgp;
-	int	track;
+	cdr_t	*dp;
 	track_t	*trackp;
 {
 	int	ret;
@@ -952,14 +1784,14 @@ close_track_mmc(scgp, track, trackp)
 	if (!is_tao(trackp))
 		return (0);
 
-	if (scsi_flush_cache(scgp) < 0) {
+	if (scsi_flush_cache(scgp, (dp->cdr_cmdflags&F_IMMED) != 0) < 0) {
 		printf("Trouble flushing the cache\n");
 		return -1;
 	}
 	wait_unit_ready(scgp, 300);		/* XXX Wait for ATAPI */
 	if (is_packet(trackp) && !is_noclose(trackp)) {
 			/* close the incomplete track */
-		ret = scsi_close_tr_session(scgp, 1, 0xFF, FALSE);
+		ret = scsi_close_tr_session(scgp, 1, 0xFF, (dp->cdr_cmdflags&F_IMMED) != 0);
 		wait_unit_ready(scgp, 300);	/* XXX Wait for ATAPI */
 		return (ret);
 	}
@@ -977,17 +1809,19 @@ int	toc2sess[] = {
 };
 
 LOCAL int
-open_session_mmc(scgp, dp, tracks, trackp, toctype, multi)
+open_session_mmc(scgp, dp, trackp, toctype, multi)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	tracks;
 	track_t	*trackp;
 	int	toctype;
 	int	multi;
 {
 	Uchar	mode[0x100];
+	Uchar	moder[0x100];
 	int	len;
 	struct	cd_mode_page_05 *mp;
+	struct	ricoh_mode_page_30 *rp = NULL;
+	BOOL	burnfree = FALSE;
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
@@ -1002,25 +1836,68 @@ open_session_mmc(scgp, dp, tracks, trackp, toctype, multi)
 		((struct scsi_mode_header *)mode)->blockdesc_len);
 
 	mp->write_type = WT_TAO; /* fix to allow DAO later */
+	/*
+	 * We need to set the right dbtype here because Sony drives
+	 * don't like multi session in to be set with DB_ROM_MODE1
+	 * which is set by us at the beginning as default as some drives
+	 * have illegal default values.
+	 */
+	mp->track_mode = st2mode[trackp[0].sectype & ST_MASK];
+	mp->dbtype = trackp[0].dbtype;
+
 	if (!is_tao(trackp)) {
 		mp->write_type = WT_SAO;
+		if (dp->cdr_dstat->ds_cdrflags & RF_AUDIOMASTER)
+			mp->write_type = 8;
 		mp->track_mode = 0;
 		mp->dbtype = DB_RAW;
 	}
+	if (is_raw(trackp)) {
+		mp->write_type = WT_RAW;
+		mp->track_mode = 0;
 
-	if (driveropts != NULL) {
-		if (strcmp(driveropts, "burnproof") == 0 && dp->cdr_cdcap->res_4 != 0) {
-			errmsgno(EX_BAD, "Turning BURN-Proof on\n");
-			mp->res_2 |= 2;
-		} else if (strcmp(driveropts, "noburnproof") == 0) {
-			errmsgno(EX_BAD, "Turning BURN-Proof off\n");
-			mp->res_2 &= ~2;
-		} else if (strcmp(driveropts, "help") == 0) {
-			mmc_opthelp(dp, 0);
+		if (is_raw16(trackp)) {
+			mp->dbtype = DB_RAW_PQ;
+		} else if (is_raw96r(trackp)) {
+			mp->dbtype = DB_RAW_PW_R;
 		} else {
-			errmsgno(EX_BAD, "Bad driver opts '%s'.\n", driveropts);
-			mmc_opthelp(dp, EX_BAD);
+			mp->dbtype = DB_RAW_PW;
 		}
+	}
+
+	rp = get_justlink_ricoh(scgp, moder);
+
+	if (dp->cdr_cdcap->BUF != 0) {
+		burnfree = mp->BUFE != 0;
+	} else if ((dp->cdr_flags & CDR_BURNFREE) != 0) {
+		burnfree = rp && rp->BUEFE != 0;
+	}
+
+	if (lverbose && (dp->cdr_flags & CDR_BURNFREE) != 0)
+		printf("BURN-Free is %s.\n", burnfree?"ON":"OFF");
+
+	if (!burnfree && (dp->cdr_dstat->ds_cdrflags & RF_BURNFREE) != 0) {
+		printf("Turning BURN-Free on\n");
+		burnfree = TRUE;
+	}
+	if (burnfree && (dp->cdr_dstat->ds_cdrflags & RF_BURNFREE) == 0) {
+		printf("Turning BURN-Free off\n");
+		burnfree = FALSE;
+	}
+	if (dp->cdr_cdcap->BUF != 0) {
+		mp->BUFE = burnfree?1:0;
+	} else if ((dp->cdr_flags & CDR_BURNFREE) != 0) {
+
+		if (rp)
+			rp->BUEFE = burnfree?1:0;
+	}
+	if (rp) {
+		i_to_2_byte(rp->link_counter, 0);
+		if (xdebug)
+			scg_prbytes("Mode Select Data ", moder, moder[0]+1);
+
+		set_mode_params(scgp, "Ricoh Vendor Page", moder, moder[0]+1, 0, -1);
+		rp = get_justlink_ricoh(scgp, moder);
 	}
 
 	mp->multi_session = (multi != 0) ? MS_MULTI : MS_NONE;
@@ -1038,6 +1915,10 @@ open_session_mmc(scgp, dp, tracks, trackp, toctype, multi)
 #endif
 	if (!set_mode_params(scgp, "CD write parameter", mode, len, 0, -1))
 		return (-1);
+
+	if (mmc_isplextor(scgp)) {
+		do_varirec_plextor(scgp);
+	}
 
 	return (0);
 }
@@ -1069,12 +1950,12 @@ waitfix_mmc(scgp, secs)
 }
 
 LOCAL int
-fixate_mmc(scgp, onp, dummy, toctype, tracks, trackp)
+fixate_mmc(scgp, dp, onp, dummy, toctype, trackp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	onp;
 	int	dummy;
 	int	toctype;
-	int	tracks;
 	track_t	*trackp;
 {
 	int	ret = 0;
@@ -1093,9 +1974,9 @@ fixate_mmc(scgp, onp, dummy, toctype, tracks, trackp)
 
 	scgp->silent++;
 	if (is_tao(trackp)) {
-		ret = scsi_close_tr_session(scgp, 2, 0, FALSE);
+		ret = scsi_close_tr_session(scgp, 2, 0, (dp->cdr_cmdflags&F_IMMED) != 0);
 	} else {
-		if (scsi_flush_cache(scgp) < 0) {
+		if (scsi_flush_cache(scgp, (dp->cdr_cmdflags&F_IMMED) != 0) < 0) {
 			if (!scsi_in_progress(scgp))
 				printf("Trouble flushing the cache\n");
 		}
@@ -1185,8 +2066,9 @@ char	*blank_types[] = {
 };
 
 LOCAL int
-blank_mmc(scgp, addr, blanktype)
+blank_mmc(scgp, dp, addr, blanktype)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	long	addr;
 	int	blanktype;
 {
@@ -1194,17 +2076,24 @@ blank_mmc(scgp, addr, blanktype)
 	BOOL	cdwr	 = FALSE;	/* Write CD-R	*/
 	BOOL	cdrrw	 = FALSE;	/* Read CD-RW	*/
 	BOOL	cdwrw	 = FALSE;	/* Write CD-RW	*/
+	int	ret;
 
-	mmc_check(scgp, &cdrr, &cdwr, &cdrrw, &cdwrw, NULL);
+	mmc_check(scgp, &cdrr, &cdwr, &cdrrw, &cdwrw, NULL, NULL);
 	if (!cdwrw)
-		return (blank_dummy(scgp, addr, blanktype));
+		return (blank_dummy(scgp, dp, addr, blanktype));
 
 	if (lverbose) {
 		printf("Blanking %s\n", blank_types[blanktype & 0x07]);
 		flush();
 	}
 
-	return (scsi_blank(scgp, addr, blanktype, FALSE));
+	ret = scsi_blank(scgp, addr, blanktype, (dp->cdr_cmdflags&F_IMMED) != 0);
+	if (ret < 0)
+		return (ret);
+
+	wait_unit_ready(scgp, 90*60/curspeed);	/* XXX Wait for ATAPI */
+	waitfix_mmc(scgp, 90*60/curspeed);	/* XXX Wait for ATAPI */
+	return (ret);
 }
 
 LOCAL int
@@ -1257,6 +2146,43 @@ send_opc_mmc(scgp, bp, cnt, doopc)
 }
 
 LOCAL int
+opt1_mmc(scgp, dp)
+	SCSI	*scgp;
+	cdr_t	*dp;
+{
+	int	oflags = dp->cdr_dstat->ds_cdrflags;
+
+	if ((dp->cdr_dstat->ds_cdrflags & RF_AUDIOMASTER) != 0) {
+		printf("Turning Audio Master Q. R. on\n");
+		if (set_audiomaster_yamaha(scgp, dp, TRUE) < 0)
+			return (-1);
+		if (!debug && lverbose <= 1)
+			dp->cdr_dstat->ds_cdrflags &= ~RF_PRATIP;
+		if (getdisktype_mmc(scgp, dp) < 0) {
+			dp->cdr_dstat->ds_cdrflags = oflags;
+			return (-1);
+		}
+		dp->cdr_dstat->ds_cdrflags = oflags;
+		if (oflags & RF_PRATIP) {
+			msf_t   msf;
+			lba_to_msf(dp->cdr_dstat->ds_first_leadin, &msf);
+			printf("New start of lead in: %ld (%02d:%02d/%02d)\n",
+				(long)dp->cdr_dstat->ds_first_leadin,
+		                msf.msf_min,
+        		        msf.msf_sec,
+                		msf.msf_frame);
+			lba_to_msf(dp->cdr_dstat->ds_maxblocks, &msf);
+			printf("New start of lead out: %ld (%02d:%02d/%02d)\n",
+				(long)dp->cdr_dstat->ds_maxblocks,
+		                msf.msf_min,
+        		        msf.msf_sec,
+                		msf.msf_frame);
+		}
+	}
+	return (0);
+}
+
+LOCAL int
 scsi_sony_write(scgp, bp, sectaddr, size, blocks, islast)
 	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
@@ -1288,26 +2214,25 @@ Uchar	db2df[] = {
 };
 
 LOCAL	void	fillcue		__PR((struct mmc_cue *cp, int ca, int tno, int idx, int dataform, int scms, msf_t *mp));
-EXPORT	int	do_cue		__PR((int tracks, track_t *trackp, struct mmc_cue **cuep));
-EXPORT	int	_do_cue		__PR((int tracks, track_t *trackp, struct mmc_cue **cuep, BOOL needgap));
-LOCAL	int	send_cue	__PR((SCSI *scgp, int tracks, track_t *trackp));
+EXPORT	int	do_cue		__PR((track_t *trackp, struct mmc_cue **cuep));
+EXPORT	int	_do_cue		__PR((track_t *trackp, struct mmc_cue **cuep, BOOL needgap));
+LOCAL	int	send_cue	__PR((SCSI *scgp, track_t *trackp));
 
 EXPORT int
-do_cue(tracks, trackp, cuep)
-	int	tracks;
+do_cue(trackp, cuep)
 	track_t	*trackp;
 	struct mmc_cue	**cuep;
 {
-	return (_do_cue(tracks, trackp, cuep, FALSE));
+	return (_do_cue(trackp, cuep, FALSE));
 }
 
 EXPORT int
-_do_cue(tracks, trackp, cuep, needgap)
-	int	tracks;
+_do_cue(trackp, cuep, needgap)
 	track_t	*trackp;
 	struct mmc_cue	**cuep;
 	BOOL	needgap;
 {
+	int	tracks = trackp->tracks;
 	int	i;
 	struct mmc_cue	*cue;
 	struct mmc_cue	*cp;
@@ -1319,7 +2244,7 @@ _do_cue(tracks, trackp, cuep, needgap)
 	int	df;
 	int	scms;
 
-	cue = (struct mmc_cue *)malloc(1);
+	cue = malloc(1);
 
 	for (i = 0; i <= tracks; i++) {
 		ctl = (st2mode[trackp[i].sectype & ST_MASK]) << 4;
@@ -1329,7 +2254,7 @@ _do_cue(tracks, trackp, cuep, needgap)
 
 		if (trackp[i].isrc) {	/* MCN or ISRC */
 			ncue += 2;
-			cue = (struct mmc_cue *)realloc(cue, ncue * sizeof(*cue));
+			cue = realloc(cue, ncue * sizeof(*cue));
 			cp = &cue[icue++];
 			if (i == 0) {
 				cp->cs_ctladr = 0x02;
@@ -1352,8 +2277,10 @@ _do_cue(tracks, trackp, cuep, needgap)
 				df |= 1;
 			else
 				df |= 4;
+			if (trackp[0].flags & TI_TEXT)	/* CD-Text in Lead-in*/
+				df |= 0x40;
 			lba_to_msf(-150, &m);
-			cue = (struct mmc_cue *)realloc(cue, ++ncue * sizeof(*cue));
+			cue = realloc(cue, ++ncue * sizeof(*cue));
 			cp = &cue[icue++];
 			fillcue(cp, ctl|0x01, i, 0, df, 0, &m);
 		} else {
@@ -1365,13 +2292,13 @@ _do_cue(tracks, trackp, cuep, needgap)
 			if (pgsize == 0 && needgap)
 				pgsize++;
 			lba_to_msf(trackp[i].trackstart-pgsize, &m);
-			cue = (struct mmc_cue *)realloc(cue, ++ncue * sizeof(*cue));
+			cue = realloc(cue, ++ncue * sizeof(*cue));
 			cp = &cue[icue++];
 			fillcue(cp, ctl|0x01, i, 0, df, scms, &m);
 
 			if (trackp[i].nindex == 1) {
 				lba_to_msf(trackp[i].trackstart, &m);
-				cue = (struct mmc_cue *)realloc(cue, ++ncue * sizeof(*cue));
+				cue = realloc(cue, ++ncue * sizeof(*cue));
 				cp = &cue[icue++];
 				fillcue(cp, ctl|0x01, i, 1, df, scms, &m);
 			} else {
@@ -1380,7 +2307,7 @@ _do_cue(tracks, trackp, cuep, needgap)
 
 				ncue += trackp[i].nindex;
 				idxlist = trackp[i].tindex;
-				cue = (struct mmc_cue *)realloc(cue, ncue * sizeof(*cue));
+				cue = realloc(cue, ncue * sizeof(*cue));
 
 				for(idx = 1; idx <=trackp[i].nindex; idx++) {
 					lba_to_msf(trackp[i].trackstart + idxlist[idx], &m);
@@ -1398,7 +2325,7 @@ _do_cue(tracks, trackp, cuep, needgap)
 	else
 		df |= 4;
 	lba_to_msf(trackp[tracks+1].trackstart, &m);
-	cue = (struct mmc_cue *)realloc(cue, ++ncue * sizeof(*cue));
+	cue = realloc(cue, ++ncue * sizeof(*cue));
 	cp = &cue[icue++];
 	fillcue(cp, ctl|0x01, 0xAA, 1, df, 0, &m);
 
@@ -1433,9 +2360,8 @@ fillcue(cp, ca, tno, idx, dataform, scms, mp)
 }
 
 LOCAL int
-send_cue(scgp, tracks, trackp)
+send_cue(scgp, trackp)
 	SCSI	*scgp;
-	int	tracks;
 	track_t	*trackp;
 {
 	struct mmc_cue	*cp;
@@ -1443,9 +2369,9 @@ send_cue(scgp, tracks, trackp)
 	int		ret;
 	int		i;
 
-	ncue = do_cue(tracks, trackp, &cp);
-	for (i = 1; i <= tracks; i++) {
-		if (trackp[i].tracksize < (off_t)0) {
+	ncue = do_cue(trackp, &cp);
+	for (i = 1; i <= trackp->tracks; i++) {
+		if (trackp[i].tracksize < (tsize_t)0) {
 			errmsgno(EX_BAD, "Track %d has unknown length.\n", i);
 			return (-1);
 		}
@@ -1456,9 +2382,490 @@ send_cue(scgp, tracks, trackp)
 	free(cp);
 	if (ret < 0) {
 		errmsgno(EX_BAD, "CUE sheet not accepted. Retrying with minimum pregapsize = 1.\n");
-		ncue = _do_cue(tracks, trackp, &cp, TRUE);
+		ncue = _do_cue(trackp, &cp, TRUE);
 		ret = send_cue_sheet(scgp, (caddr_t)cp, ncue*8);
 		free(cp);
 	}
 	return (ret);
+}
+
+LOCAL int
+stats_mmc(scgp, dp)
+	SCSI	*scgp;
+	cdr_t	*dp;
+{
+	Uchar mode[256];
+	struct	ricoh_mode_page_30 *rp;
+	UInt32_t count;
+
+	if ((dp->cdr_dstat->ds_cdrflags & RF_BURNFREE) == 0)
+		return (0);
+
+	rp = get_justlink_ricoh(scgp, mode);
+	if (rp) {
+		count = a_to_u_2_byte(rp->link_counter);
+		if (lverbose) {
+			if (count == 0)
+				printf("BURN-Free was never needed.\n");
+			else
+				printf("BURN-Free was %d times used.\n",
+					(int)count);
+		}
+	}
+	return (0);
+}
+/*--------------------------------------------------------------------------*/
+LOCAL BOOL
+mmc_isplextor(scgp)
+	SCSI	*scgp;
+{
+	if (scgp->inq != NULL &&
+			strncmp(scgp->inq->vendor_info, "PLEXTOR", 7) == 0) {
+		return (TRUE);
+	}
+	return (FALSE);
+}
+
+LOCAL BOOL
+mmc_isyamaha(scgp)
+	SCSI	*scgp;
+{
+	if (scgp->inq != NULL &&
+			strncmp(scgp->inq->vendor_info, "YAMAHA", 6) == 0) {
+		return (TRUE);
+	}
+	return (FALSE);
+}
+
+LOCAL void
+do_varirec_plextor(scgp)
+	SCSI	*scgp;
+{
+	char	*p;
+	int	voff;
+
+	p = hasdrvopt(driveropts, "varirec=");
+	if (p == NULL || curspeed != 4) {
+		if (check_varirec_plextor(scgp) >= 0)
+			varirec_plextor(scgp, FALSE, 0);
+	} else {
+		if (*astoi(p, &voff) != '\0')
+			comerrno(EX_BAD,
+				"Bad varirec value '%s'.\n", p);
+		if (check_varirec_plextor(scgp) < 0)
+			comerrno(EX_BAD, "Drive does not support VariRec.\n");
+		varirec_plextor(scgp, TRUE, voff);
+	}
+}
+
+LOCAL int
+drivemode_plextor(scgp, bp, cnt, modecode, modeval)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	cnt;
+	int	modecode;
+	void	*modeval;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	if (modeval == NULL) {
+		scmd->flags |= SCG_RECV_DATA;
+		scmd->addr = bp;
+		scmd->size = cnt;
+	} else {
+		scmd->cdb.g5_cdb.res = 0x08;
+	}
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xE9;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.g1_cdb.addr[0] = modecode;
+	if (modeval)
+		movebytes(modeval, &scmd->cdb.g1_cdb.addr[1], 6);
+	else
+		i_to_2_byte(&scmd->cdb.g1_cdb.count[2], cnt);
+
+	scgp->cmdname = "plextor drive mode";
+
+	if (scg_cmd(scgp) < 0)
+		return (-1);
+	return (0);
+}
+
+LOCAL int
+check_varirec_plextor(scgp)
+	SCSI	*scgp;
+{
+	int	modecode = 2;
+	Uchar	getmode[8];
+
+	fillbytes(getmode, sizeof(getmode), '\0');
+	scgp->silent++;
+	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof(getmode), modecode, NULL) < 0) {
+		scgp->silent--;
+		return (-1);
+	}
+	scgp->silent--;
+
+	return (0);
+}
+
+LOCAL int
+varirec_plextor(scgp, on, val)
+	SCSI	*scgp;
+	BOOL	on;
+	int	val;
+{
+	int	modecode = 2;
+	Uchar	setmode[8];
+	Uchar	getmode[8];
+
+	fillbytes(getmode, sizeof(getmode), '\0');
+	scgp->silent++;
+	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof(getmode), modecode, NULL) < 0) {
+		scgp->silent--;
+		return (-1);
+	}
+	scgp->silent--;
+
+	if (lverbose > 1)
+		scg_prbytes("Modes", getmode, sizeof(getmode));
+
+
+	fillbytes(setmode, sizeof(setmode), '\0');
+	setmode[0] = on?1:0;
+	if (on) {
+		if (val < -2 || val > 2)
+			comerrno(EX_BAD, "Bad VariRec offset %d\n", val);
+		printf("Turning Varirec on.\n");
+		printf("Varirec offset is %d.\n", val);
+
+		if (val > 0) {
+			setmode[1] = val & 0x7F;
+		} else {
+			setmode[1] = (-val) & 0x7F;
+			setmode[1] |= 0x80;
+		}
+	}
+	
+	if (drivemode_plextor(scgp, NULL, 0, modecode, setmode) < 0)
+		return (-1);
+
+	fillbytes(getmode, sizeof(getmode), '\0');
+	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof(getmode), modecode, NULL) < 0)
+		return (-1);
+
+	if (lverbose > 1)
+		scg_prbytes("Modes", getmode, sizeof(getmode));
+
+	return (0);
+}
+
+LOCAL int
+set_audiomaster_yamaha(scgp, dp, keep_mode)
+	SCSI	*scgp;
+	cdr_t	*dp;
+	BOOL	keep_mode;
+{
+	Uchar	mode[0x100];
+	int	len;
+	int	ret = 0;
+	struct	cd_mode_page_05 *mp;
+
+	if (xdebug && !keep_mode)
+		printf("Checking for Yamaha Audio Master feature: ");
+
+	/*
+	 * Do not reset mp->test_write (-dummy) here.
+	 */
+	deflt_writemodes_mmc(scgp, FALSE);
+
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+
+	scgp->silent++;
+	if (!get_mode_params(scgp, 0x05, "CD write parameter",
+			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len)) {
+		scgp->silent--;
+		return (-1);
+	}
+	if (len == 0) {
+		scgp->silent--;
+		return (-1);
+	}
+
+	mp = (struct cd_mode_page_05 *)
+		(mode + sizeof(struct scsi_mode_header) +
+		((struct scsi_mode_header *)mode)->blockdesc_len);
+#ifdef	DEBUG
+	scg_prbytes("CD write parameter:", (Uchar *)mode, len);
+#endif
+
+	/*
+	 * Do not set mp->test_write (-dummy) here. It should be set
+	 * only at one place and only one time.
+	 */
+	mp->BUFE = 0;
+
+	mp->write_type = 8;
+	mp->track_mode = 0;
+	mp->dbtype = DB_RAW;
+
+	if (!set_mode_params(scgp, "CD write parameter", mode, len, 0, -1))
+		ret = -1;
+
+	/*
+	 * Do not reset mp->test_write (-dummy) here.
+	 */
+	if (!keep_mode || ret < 0)
+		deflt_writemodes_mmc(scgp, FALSE);
+	scgp->silent--;
+
+	return (ret);
+}
+
+EXPORT struct ricoh_mode_page_30 *
+get_justlink_ricoh(scgp, mode)
+	SCSI	*scgp;
+	Uchar	*mode;
+{
+	Uchar	modec[0x100];
+	int	len;
+	struct	ricoh_mode_page_30 *mp;
+
+	scgp->silent++;
+	if (!get_mode_params(scgp, 0x30, "Ricoh Vendor Page", mode, modec, NULL, NULL, &len)) {
+		scgp->silent--;
+		return ((struct ricoh_mode_page_30 *)0);
+	}
+	scgp->silent--;
+
+	/*
+	 * SCSI mode header + 6 bytes mode page 30.
+	 * This is including the Burn-Free counter.
+	 */
+	if (len < 10)
+		return ((struct ricoh_mode_page_30 *)0);
+
+	if (xdebug) {
+		error("Mode len: %d\n", len);
+		scg_prbytes("Mode Sense Data ", mode, len);
+		scg_prbytes("Mode Sence CData", modec, len);
+	}
+
+	mp = (struct ricoh_mode_page_30 *)
+		(mode + sizeof(struct scsi_mode_header) +
+		((struct scsi_mode_header *)mode)->blockdesc_len);
+
+	/*
+	 * 6 bytes mode page 30.
+	 * This is including the Burn-Free counter.
+	 */
+	if ((len - ((Uchar *)mp - mode) -1) < 5)
+		return ((struct ricoh_mode_page_30 *)0);
+
+	if (xdebug) {
+		error("Burnfree counter: %d\n", a_to_u_2_byte(mp->link_counter));
+	}
+	return (mp);
+}
+
+LOCAL int
+force_speed_yamaha(scgp, readspeed, writespeed)
+	SCSI	*scgp;
+	int	readspeed;
+	int	writespeed;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xBB;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+
+	if (readspeed < 0)
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], 0xFFFF);
+	else
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], readspeed);
+	if (writespeed < 0)
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], 0xFFFF);
+	else
+		i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], writespeed);
+
+	scmd->cdb.cmd_cdb[11] = 0x80;
+
+	scgp->cmdname = "yamaha force cd speed";
+
+	if (scg_cmd(scgp) < 0)
+		return (-1);
+	return (0);
+}
+
+LOCAL BOOL
+get_tattoo_yamaha(scgp, print, irp, orp)
+	SCSI	*scgp;
+	BOOL	print;
+	Int32_t	*irp;
+	Int32_t	*orp;
+{
+	Uchar	mode[0x100];
+	int	len;
+	UInt32_t ival;
+	UInt32_t oval;
+	Uchar	*mp;
+
+	scgp->silent++;
+	if (!get_mode_params(scgp, 0x31, "Yamaha Tattoo Page", mode, NULL, NULL, NULL, &len)) {
+		scgp->silent--;
+		return (FALSE);
+	}
+	scgp->silent--;
+
+	/*
+	 * SCSI mode header + 16 bytes mode page 31.
+	 * This is including the Burn-Free counter.
+	 */
+	if (len < 20)
+		return (FALSE);
+
+	mp = (Uchar *)
+		(mode + sizeof(struct scsi_mode_header) +
+		((struct scsi_mode_header *)mode)->blockdesc_len);
+
+	/*
+	 * 10 bytes mode page 31.
+	 * This is including the Burn-Free counter.
+	 */
+	if ((len - ((Uchar *)mp - mode) -1) < 10)
+		return (FALSE);
+
+	ival = a_to_u_3_byte(&mp[4]);
+	oval = a_to_u_3_byte(&mp[7]);
+
+	if (irp)
+		*irp = ival;
+	if (orp)
+		*orp = oval;
+
+	if (print && ival > 0 && oval > 0) {
+		printf("DiskT@2 inner r: %d\n", (int)ival);
+		printf("DiskT@2 outer r: %d\n", (int)oval);
+		printf("DiskT@2 image size: 3744 x %d pixel.\n",
+						(int)(oval-ival)+1);
+	}
+
+	return (TRUE);
+}
+
+LOCAL int
+do_tattoo_yamaha(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	Int32_t ival = 0;
+	Int32_t oval = 0;
+	Int32_t	lines;
+	off_t	fsize;
+	char	*buf = scgp->bufptr;
+	long	bufsize = scgp->maxbuf;
+	long	nsecs;
+	long	amt;
+
+	nsecs = bufsize / 2048;
+	bufsize = nsecs * 2048;
+
+	if (!get_tattoo_yamaha(scgp, FALSE, &ival, &oval)) {
+		errmsgno(EX_BAD, "Cannot get DiskT@2 info.\n");
+		return (-1);
+	}
+
+	if (ival == 0 || oval == 0) {
+		errmsgno(EX_BAD, "DiskT@2 info not valid.\n");
+		return (-1);
+	}
+
+	lines = oval - ival + 1;
+	fsize = filesize(f);
+	if ((fsize % 3744) != 0 || fsize < (lines*3744)) {
+		errmsgno(EX_BAD, "Illegal DiskT@2 file size.\n");
+		return (-1);
+	}
+	if (fsize > (lines*3744))
+		fsize = lines*3744;
+
+	if (lverbose)
+		printf("Starting to write DiskT@2 data.\n");
+	fillbytes(buf, bufsize, '\0');
+	if ((amt = fileread(f, buf, bufsize)) <= 0) {
+		errmsg("DiskT@2 file read error.\n");
+		return (-1);
+	}
+
+	if (write_buffer(scgp, 1, 0, ival, amt/2048, buf, amt) < 0) {
+		errmsgno(EX_BAD, "DiskT@2 1st write error.\n");
+		return (-1);
+	}
+	amt = (amt+2047) / 2048 * 2048;
+	fsize -= amt;
+
+	while (fsize > 0) {
+		fillbytes(buf, bufsize, '\0');
+		if ((amt = fileread(f, buf, bufsize)) <= 0) {
+			errmsg("DiskT@2 file read error.\n");
+			return (-1);
+		}
+		amt = (amt+2047) / 2048 * 2048;
+		fsize -= amt;
+		if (write_buffer(scgp, 1, 0, 0, amt/2048, buf, amt) < 0) {
+			errmsgno(EX_BAD, "DiskT@2 write error.\n");
+			return (-1);
+		}
+	}
+
+	if (write_buffer(scgp, 1, 0, oval, 0, buf, 0) < 0) {
+		errmsgno(EX_BAD, "DiskT@2 final error.\n");
+		return (-1);
+	}
+
+	wait_unit_ready(scgp, 1000);	/* Wait for DiskT@2 */
+	waitfix_mmc(scgp, 1000);	/* Wait for DiskT@2 */
+
+	return (0);
+}
+
+LOCAL int
+write_buffer(scgp, mode, bufferid, offset, parlen, buffer, buflen)
+	SCSI	*scgp;
+	int	mode;
+	int	bufferid;
+	long	offset;
+	long	parlen;
+	void	*buffer;
+	long	buflen;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+		Uchar	*CDB;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = buffer;
+	scmd->size = buflen;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g1_cdb.cmd = 0x3B;
+
+	CDB = (Uchar *)scmd->cdb.cmd_cdb;
+	CDB[1]= mode & 7;
+	CDB[2]= bufferid;
+	i_to_3_byte(&CDB[3], offset);
+	i_to_3_byte(&CDB[6], parlen);
+
+	scgp->cmdname = "write_buffer";
+
+	if (scg_cmd(scgp) >= 0)
+		return (1);
+	return 0;
 }

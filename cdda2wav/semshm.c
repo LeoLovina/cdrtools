@@ -1,7 +1,7 @@
-/* @(#)semshm.c	1.5 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)semshm.c	1.11 02/11/28 Copyright 1998-2002 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)semshm.c	1.5 00/06/02 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)semshm.c	1.11 02/11/28 Copyright 1998-2002 Heiko Eissfeldt";
 
 #endif
 #define IPCTST
@@ -24,7 +24,7 @@ static char     sccsid[] =
 #define USE_MMAP
 #endif
 
-#ifndef HAVE_SMMAP
+#if	!defined HAVE_SMMAP && defined FIFO
 #       undef   USE_MMAP
 #       define  USE_USGSHM      /* SYSV shared memory is the default    */
 #endif
@@ -40,13 +40,8 @@ static char     sccsid[] =
 #endif
 
 #include <stdio.h>
-#include <stdlib.h>
-
-#if defined (HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
-#include <sys/types.h>
-#include <unistd.h>
-#endif
-
+#include <stdxlib.h>
+#include <unixstd.h>
 #include <fctldefs.h>
 #include <errno.h>
 #include <standard.h>
@@ -58,12 +53,10 @@ static char     sccsid[] =
 #include <sys/sem.h>
 #endif
 
-#ifdef  USE_USGSHM
 #if defined(HAVE_SHMAT) && (HAVE_SHMAT == 1)
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#endif
 #endif
 
 #ifdef  USE_MMAP
@@ -78,6 +71,7 @@ static char     sccsid[] =
 #include "interface.h"
 #include "ringbuff.h"
 #include "global.h"
+#include "exitcodes.h"
 #include "semshm.h"
 
 #ifdef DEBUG_SHM
@@ -182,11 +176,11 @@ void init_pipes()
 {
   if (pipe(pipefdp2c) < 0) {
     perror("cannot create pipe parent to child");
-    exit(1);
+    exit(PIPE_ERROR);
   }
   if (pipe(pipefdc2p) < 0) {
     perror("cannot create pipe child to parent");
-    exit(1);
+    exit(PIPE_ERROR);
   }
 }
 
@@ -268,12 +262,11 @@ int flush_buffers()
 
 
 
-#ifdef  USE_USGSHM
 #if defined(HAVE_SHMAT) && (HAVE_SHMAT == 1)
-static int shm_request	__PR((int size, unsigned char **memptr));
+static int shm_request_nommap	__PR((int size, unsigned char **memptr));
 
 /* request a shared memory block */
-static int shm_request(size, memptr)
+static int shm_request_nommap(size, memptr)
 	int size;
 	unsigned char **memptr;
 {
@@ -323,7 +316,21 @@ static int shm_request(size, memptr)
 #endif
   return 0;
 }
-#endif
+
+
+#endif	/* #if defined(HAVE_SHMAT) && (HAVE_SHMAT == 1) */
+
+
+static int shm_request	__PR((int size, unsigned char **memptr));
+
+#ifdef  USE_USGSHM
+/* request a shared memory block */
+static int shm_request(size, memptr)
+	int size;
+	unsigned char **memptr;
+{
+	return shm_request_nommap(size, memptr);
+}
 #endif
 
 /* release semaphores */
@@ -347,8 +354,7 @@ void free_sem()
 }
 
 #ifdef  USE_MMAP
-#if defined(HAVE_SMMAP) && defined(USE_MMAP)
-static int shm_request	__PR((int size, unsigned char **memptr));
+#if defined(HAVE_SMMAP)
 
 int shm_id;
 /* request a shared memory block */
@@ -368,8 +374,14 @@ static int shm_request(size, memptr)
 	addr = mmap(0, mmap_sizeparm(size), PROT_READ|PROT_WRITE, MAP_SHARED, f, 0);
 #endif
 
-	if (addr == (char *)-1)
-		comerr("Cannot get mmap for %d Bytes on /dev/zero.\n", size);
+	if (addr == (char *)-1) {
+#if	defined HAVE_SHMAT && (HAVE_SHMAT == 1)
+		unsigned char *address;
+		/* fallback to alternate method */
+		if (0 != shm_request_nommap(size, &address) || (addr = (char *)address) == NULL)
+#endif
+			comerr("Cannot get mmap for %d Bytes on /dev/zero.\n", size);
+	}
 	close(f);
 
 	if (memptr != NULL)
@@ -377,11 +389,10 @@ static int shm_request(size, memptr)
 
 	return 0;
 }
-#endif
-#endif
+#endif	/* HAVE_SMMAP */
+#endif	/* USE_MMAP */
 
 #ifdef	USE_OS2SHM
-static int shm_request	__PR((int size, unsigned char **memptr));
 
 /* request a shared memory block */
 static int shm_request(size, memptr)
@@ -391,7 +402,10 @@ static int shm_request(size, memptr)
 	char    *addr;
 
 	/*
-	 * The OS/2 implementation of shm (using shm.dll) limits the size of one         * memory segment to 0x3fa000 (aprox. 4MBytes). Using OS/2 native API we         * no such restriction so I decided to use it allowing fifos of arbitrar         */
+	 * The OS/2 implementation of shm (using shm.dll) limits the size of one
+         * memory segment to 0x3fa000 (aprox. 4MBytes). Using OS/2 native API we
+         * no such restriction so I decided to use it allowing fifos of arbitrary size
+         */
 	if(DosAllocSharedMem(&addr,NULL,size,0X100L | 0x1L | 0x2L | 0x10L))
       		comerr("DosAllocSharedMem() failed\n");
 
@@ -411,7 +425,7 @@ void *request_shm_sem(amount_of_sh_mem, pointer)
     sem_id = seminstall(IPC_PRIVATE,2);
     if ( sem_id == -1 ) {
       perror("seminstall");
-      exit(1);
+      exit(SEMAPHORE_ERROR);
     }
 
 #endif
@@ -419,7 +433,7 @@ void *request_shm_sem(amount_of_sh_mem, pointer)
 #if defined(FIFO)
     if (-1 == shm_request(amount_of_sh_mem, pointer)) {
 	perror("shm_request");
-	exit(1);
+	exit(SHMMEM_ERROR);
     }
 
     return *pointer;

@@ -1,7 +1,7 @@
-/* @(#)fnmatch.c	1.3 99/03/02 eric */
+/* @(#)fnmatch.c	1.4 02/02/10 eric */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)fnmatch.c	1.3 99/03/02 eric";
+	"@(#)fnmatch.c	1.4 02/02/10 eric";
 #endif
 /* Copyright (C) 1991, 1992, 1993 Free Software Foundation, Inc.
 
@@ -27,6 +27,7 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #endif
 
 #include <errno.h>
+#include <utypes.h>
 #include <fnmatch.h>
 
 #ifndef	__STDC__
@@ -88,7 +89,7 @@ fnmatch (pattern, string, flags)
 
   while ((c = *p++) != '\0')
     {
-      c = FOLD ((unsigned char)c);
+      c = FOLD ((Uchar)c);
 
       switch (c)
 	{
@@ -106,9 +107,9 @@ fnmatch (pattern, string, flags)
 	  if (!(flags & FNM_NOESCAPE))
 	    {
 	      c = *p++;
-	      c = FOLD ((unsigned char )c);
+	      c = FOLD ((Uchar )c);
 	    }
-	  if (FOLD ((unsigned char )*n) != c)
+	  if (FOLD ((Uchar )*n) != c)
 	    return FNM_NOMATCH;
 	  break;
 
@@ -127,9 +128,9 @@ fnmatch (pattern, string, flags)
 
 	  {
 	    char c1 = (!(flags & FNM_NOESCAPE) && c == '\\') ? *p : c;
-	    c1 = FOLD ((unsigned char )c1);
+	    c1 = FOLD ((Uchar )c1);
 	    for (--p; *n != '\0'; ++n)
-	      if ((c == '[' || FOLD ((unsigned char )*n) == c1) &&
+	      if ((c == '[' || FOLD ((Uchar )*n) == c1) &&
 		  fnmatch (p, n, flags & ~FNM_PERIOD) == 0)
 		return 0;
 	    return FNM_NOMATCH;
@@ -159,14 +160,14 @@ fnmatch (pattern, string, flags)
 		if (!(flags & FNM_NOESCAPE) && c == '\\')
 		  cstart = cend = *p++;
 
-		cstart = cend = FOLD ((unsigned char)cstart);
+		cstart = cend = FOLD ((Uchar)cstart);
 
 		if (c == '\0')
 		  /* [ (unterminated) loses.  */
 		  return FNM_NOMATCH;
 
 		c = *p++;
-		c = FOLD ((unsigned char)c);
+		c = FOLD ((Uchar)c);
 
 		if ((flags & FNM_FILE_NAME) && c == '/')
 		  /* [/] can never match.  */
@@ -179,12 +180,12 @@ fnmatch (pattern, string, flags)
 		      cend = *p++;
 		    if (cend == '\0')
 		      return FNM_NOMATCH;
-		    cend = FOLD ((unsigned char)cend);
+		    cend = FOLD ((Uchar)cend);
 
 		    c = *p++;
 		  }
 
-		if (FOLD ((unsigned char)*n) >= cstart && FOLD ((unsigned char)*n) <= cend)
+		if ((Uchar)FOLD((Uchar)*n) >= (Uchar)cstart && (Uchar)FOLD((Uchar)*n) <= (Uchar)cend)
 		  goto matched;
 
 		if (c == ']')
@@ -213,7 +214,7 @@ fnmatch (pattern, string, flags)
 	  break;
 
 	default:
-	  if (c != FOLD ((unsigned char)*n))
+	  if (c != FOLD ((Uchar)*n))
 	    return FNM_NOMATCH;
 	}
 

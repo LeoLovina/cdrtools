@@ -1,7 +1,7 @@
-/* @(#)multi.c	1.49 01/04/20 joerg */
+/* @(#)multi.c	1.54 02/12/25 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)multi.c	1.49 01/04/20 joerg";
+	"@(#)multi.c	1.54 02/12/25 joerg";
 #endif
 /*
  * File multi.c - scan existing iso9660 image and merge into
@@ -30,8 +30,8 @@ static	char sccsid[] =
 #include <timedefs.h>
 #include <errno.h>
 #include <utypes.h>
-#include <ctype.h>			/* Needed for printasc()	*/
 #include <schily.h>
+#include <ctype.h>			/* Needed for printasc()	*/
 
 #ifdef VMS
 
@@ -394,7 +394,7 @@ parse_rrflags(pnt, len, cont_flag)
 		len -= pnt[2];
 		pnt += pnt[2];
 		if (len <= 3 && cont_extent) {
-			unsigned char   sector[2048];
+			unsigned char   sector[SECTOR_SIZE];
 
 			readsecs(cont_extent, sector, 1);
 			flag2 |= parse_rrflags(&sector[cont_offset], cont_size, 1);
@@ -639,7 +639,7 @@ read_merging_directory(mrootp, nent)
 	while (i < len) {
 		idr = (struct iso_directory_record *) & dirbuff[i];
 		if (idr->length[0] == 0) {
-			i = (i + SECTOR_SIZE - 1) & ~(SECTOR_SIZE - 1);
+			i = ISO_ROUND_UP(i);
 			continue;
 		}
 		(*nent)++;
@@ -665,7 +665,7 @@ read_merging_directory(mrootp, nent)
 	while (i < len) {
 		idr = (struct iso_directory_record *) & dirbuff[i];
 		if (idr->length[0] == 0) {
-			i = (i + SECTOR_SIZE - 1) & ~(SECTOR_SIZE - 1);
+			i = ISO_ROUND_UP(i);
 			continue;
 		}
 		*pnt = (struct directory_entry *) e_malloc(sizeof(**rtn));
@@ -1118,7 +1118,7 @@ merge_isofs(path)
 	get_session_start(&file_addr);
 
 	for (i = 0; i < 100; i++) {
-		if (readsecs(file_addr / SECTOR_SIZE, buffer,
+		if (readsecs(file_addr, buffer,
 				sizeof(buffer) / SECTOR_SIZE) != sizeof(buffer)) {
 #ifdef	USE_LIBSCHILY
 			comerr(" Read error on old image %s\n", path);
@@ -1133,7 +1133,7 @@ merge_isofs(path)
 			&& (isonum_711((unsigned char *) vdp->type) == ISO_VD_PRIMARY)) {
 			break;
 		}
-		file_addr += SECTOR_SIZE;
+		file_addr += 1;
 	}
 
 	if (i == 100) {
@@ -1148,7 +1148,7 @@ merge_isofs(path)
 	}
 	/* Get the location and size of the root directory. */
 	rootp = (struct iso_directory_record *)
-		malloc(sizeof(struct iso_directory_record));
+		e_malloc(sizeof(struct iso_directory_record));
 
 	memcpy(rootp, pri->root_directory_record, sizeof(*rootp));
 
@@ -1165,7 +1165,7 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 	struct directory_entry *s_entry;
 	unsigned int	ttbl_extent = 0;
 	unsigned int	ttbl_index = 0;
-	char		whole_path[1024];
+	char		whole_path[PATH_MAX];
 #ifdef APPLE_HYB
 	struct directory_entry *assoc = NULL;
 #endif /* APPLE_HYB */
@@ -1331,7 +1331,7 @@ merge_old_directory_into_tree(dpnt, parent)
 	int		n_orig;
 	struct directory *this_dir,
 			*next_brother;
-	char		whole_path[1024];
+	char		whole_path[PATH_MAX];
 
 	this_dir = (struct directory *) e_malloc(sizeof(struct directory));
 	memset(this_dir, 0, sizeof(struct directory));
@@ -1453,7 +1453,7 @@ get_session_start(file_addr)
 	 * we start from the session that starts at 0.
 	 */
 	if (file_addr != NULL)
-		*file_addr = (16 << 11);
+		*file_addr = 16;
 
 	/*
 	 * We need to coordinate with cdrecord to get the next writable address
@@ -1463,7 +1463,7 @@ get_session_start(file_addr)
 #else
 
 	if (file_addr != NULL)
-		*file_addr = 0L * SECTOR_SIZE;
+		*file_addr = 0L;
 	session_start = last_extent = last_extent_written = 0L;
 	if (check_session && cdrecord_data == NULL)
 		return (0);
@@ -1493,7 +1493,7 @@ get_session_start(file_addr)
 
 	*pnt = '\0';
 	if (file_addr != NULL) {
-		*file_addr = atol(cdrecord_data) * SECTOR_SIZE;
+		*file_addr = atol(cdrecord_data);
 	}
 	pnt++;
 

@@ -1,12 +1,12 @@
-/* @(#)diskid.c	1.28 00/07/20 Copyright 1998 J. Schilling */
+/* @(#)diskid.c	1.36 02/11/10 Copyright 1998-2002 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)diskid.c	1.28 00/07/20 Copyright 1998 J. Schilling";
+	"@(#)diskid.c	1.36 02/11/10 Copyright 1998-2002 J. Schilling";
 #endif
 /*
  *	Disk Idientification Method
  *
- *	Copyright (c) 1998 J. Schilling
+ *	Copyright (c) 1998-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -28,7 +28,6 @@ static	char sccsid[] =
 
 #include <stdio.h>
 #include <standard.h>
-#include <sys/types.h>
 #include <utypes.h>
 
 #include "cdrecord.h"
@@ -81,9 +80,8 @@ LOCAL	char	m_ritek[]	= "Ritek Co.";
 /*
  * Tentative codes.
  */
-LOCAL	char	m_grandadvance[]= "Grand Advance Technology LTD.";
 LOCAL	char	m_bestdisk[]	= "Bestdisc Technology Corporation";
-LOCAL	char	m_wealth_fair[]	= "WEALTH FAIR INVESTMENT LIMITE";
+LOCAL	char	m_wealth_fair[]	= "WEALTH FAIR INVESTMENT LIMITED";
 LOCAL	char	m_general_mag[]	= "General Magnetics Ld";
 LOCAL	char	m_mpo[]		= "MPO";
 LOCAL	char	m_jvc[]		= "VICTOR COMPANY OF JAPAN, LIMITED";
@@ -132,6 +130,10 @@ LOCAL	char	m_mmmm[]	= "Multi Media Masters & Machinary SA";
  * Guessed codes.
  */
 /*LOCAL	char	m_seantram[]	= "Seantram Technology Inc.";*/
+LOCAL	char	m_advanced[]	= "Advanced Digital Media";
+LOCAL	char	m_moser[]	= "Moser Baer India Limited";
+LOCAL	char	m_nanya[]	= "NAN-YA Plastics Corporation";
+LOCAL	char	m_shenzen[]	= "SHENZEN SG&GAST DIGITAL OPTICAL DISCS";
 
 LOCAL	struct disk_man notable =
 	{{00, 00, 00},  -1, "unknown (not in table)" };
@@ -165,6 +167,8 @@ LOCAL	struct disk_man odman[] = {
 	 */
 	{{00, 00, 00}, 0, NULL },
 };
+
+#define	noman	(sizeof(oman)/sizeof(oman[0]))
 
 /*
  * Actual code table. It lists code ranges (97:xx:y0 - 97:xx:y9).
@@ -234,7 +238,6 @@ LOCAL	struct disk_man dman[] = {
 	/*
 	 * Tentative codes.
 	 */
-	{{97, 16, 30}, 68, m_grandadvance },
 	{{97, 21, 30}, 67, m_bestdisk },
 	{{97, 18, 10}, 66, m_wealth_fair },
 	{{97, 29, 50}, 65, m_general_mag },
@@ -271,6 +274,7 @@ LOCAL	struct disk_man dman[] = {
 	{{97, 25, 50}, 42, m_ams },
 	{{97, 29, 10}, 38, m_vanguard },
 	{{97, 50, 10}, 38, m_vanguard },
+	{{97, 16, 30}, 35, m_grandadv },
 	{{97, 31, 30}, 35, m_grandadv },
 	{{97, 51, 10}, 35, m_grandadv },
 	{{97, 49, 20}, 36, m_kingpro },
@@ -293,15 +297,28 @@ LOCAL	struct disk_man dman[] = {
 	 * Guessed codes.
 	 */
 	{{97, 20, 10}, 32, m_xalbrechts },			/* XXX guess */
-	{{97, 23, 40}, 32, m_xalbrechts },			/* XXX guess */
-	{{97, 24, 40}, 29, "????? Princo Corporation" },	/* XXX guess */
-	{{97, 28, 00}, 28, "?????" },				/* XXX guess */
+/*	{{97, 23, 40}, 32, m_xalbrechts },*/			/* Really is JVC */
+
+	/*
+	 * New guessed codes (2002 ff.).
+	 * Id code >= 68 referres to a new manufacturer.
+	 */
+#define	I_GUESS	105
+	{{97, 22, 20}, 68, m_advanced },
+	{{97, 42, 20}, 68, m_advanced },
+	{{97, 24, 60}, 50, m_harmonic },
+	{{97, 17, 00}, 69, m_moser },
+	{{97, 15, 30}, 70, m_nanya },
+	{{97, 16, 20}, 71, m_shenzen },
+	{{97, 45, 10}, 41, m_unitech },
 
 	/*
 	 * List end marker
 	 */
 	{{00, 00, 00},  0, NULL },
 };
+
+#define	ndman	(sizeof(dman)/sizeof(dman[0]))
 
 LOCAL struct disk_man *
 man_ptr(mp)
@@ -367,7 +384,7 @@ pr_manufacturer(mp, rw, audio)
 	if (dp != NULL) {
 		if (dp->mi_num == 0 || dp->mi_num >= 80) {
 			if (!rw) {
-				tname = "unknown";
+				tname = "unknown dye (old id code)";
 			} else {
 				xdman = *dp;
 				dp = &xdman;
@@ -376,12 +393,26 @@ pr_manufacturer(mp, rw, audio)
 			}
 		}
 	} else {
-		tname = "unknown";
+		tname = "unknown dye (reserved id code)";
 		dp = &notable;
 	}
 	printf("Disk type:    %s\n", tname);
 	printf("Manuf. index: %d\n", dp->mi_num);
 	printf("Manufacturer: %s\n", dp->mi_name);
+
+	if (mp->msf_min != 97)	/* This may be garbage ATIP from a DVD */
+		return;
+
+	if (dp >= &dman[I_GUESS] && dp <&dman[ndman]) {
+		printf("Manufacturer is guessed because of the orange forum embargo.\n");
+		printf("The orange forum likes to get money for recent information.\n");
+		printf("The information for this media may not be correct.\n");
+	}
+	if (dp == &notable) {
+		printf("Manufacturer is unknown because of the orange forum embargo.\n");
+		printf("As the orange forum likes to get money for recent information,\n");
+		printf("it may be that this media does not use illegal manufacturer coding.\n");
+	}
 }
 
 EXPORT int

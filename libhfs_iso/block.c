@@ -1,7 +1,7 @@
-/* @(#)block.c	1.1 00/03/05 joerg */
+/* @(#)block.c	1.3 01/11/01 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)block.c	1.1 00/03/05 joerg";
+	"@(#)block.c	1.3 01/11/01 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -24,10 +24,8 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include <strdefs.h>
-#include <sys/types.h>
 #include <unixstd.h>
 #include <errno.h>
-#include <time.h>
 
 #include "internal.h"
 #include "data.h"

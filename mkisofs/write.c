@@ -1,7 +1,7 @@
-/* @(#)write.c	1.49 01/02/15 joerg */
+/* @(#)write.c	1.66 02/12/15 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)write.c	1.49 01/02/15 joerg";
+	"@(#)write.c	1.66 02/12/15 joerg";
 #endif
 /*
  * Program write.c - dump memory  structures to  file for iso9660 filesystem.
@@ -36,6 +36,14 @@ static	char sccsid[] =
 #endif /* SORTING */
 #include <errno.h>
 #include <schily.h>
+#ifdef DVD_VIDEO
+#include "dvd_reader.h"
+#include "dvd_file.h"
+#include "ifo_read.h"
+#endif
+#ifdef APPLE_HYB
+#include <ctype.h>
+#endif
 
 #ifdef __SVR4
 extern char    *strdup	__PR((const char *));
@@ -106,6 +114,8 @@ static	int	file_write	__PR((FILE *outfile));
 static	int	pvd_write	__PR((FILE *outfile));
 static	int	evd_write	__PR((FILE *outfile));
 static	int	vers_write	__PR((FILE *outfile));
+static	int	graftcp		__PR((char *to, char *from, char *ep));
+static	int	pathcp		__PR((char *to, char *from, char *ep));
 static	int	pathtab_write	__PR((FILE *outfile));
 static	int	exten_write	__PR((FILE *outfile));
 	int	oneblock_size	__PR((int starting_extent));
@@ -123,9 +133,10 @@ static	int	padblock_write	__PR((FILE *outfile));
 static	int	padend_write	__PR((FILE *outfile));
 #ifdef APPLE_HYB
 static	int	hfs_pad;
+static	int	hfs_get_parms	__PR((char * key));
 static	void	hfs_file_gen	__PR((int start_extent));
 static	void	gen_prepboot	__PR((void));
-	int	get_adj_size	__PR((int Csize));
+	Ulong	get_adj_size	__PR((int Csize));
 	int	adj_size	__PR((int Csize, int start_extent, int extra));
 	void	adj_size_other	__PR((struct directory *dpnt));
 static	int	hfs_hce_write	__PR((FILE * outfile));
@@ -326,7 +337,7 @@ assign_directory_addresses(node)
 		dpnt->path_index = next_path_index++;
 		if (dpnt->extent == 0) {
 			dpnt->extent = last_extent;
-			dir_size = (dpnt->size + (SECTOR_SIZE - 1)) >> 11;
+			dir_size = ISO_BLOCKS(dpnt->size);
 
 			last_extent += dir_size;
 
@@ -336,8 +347,7 @@ assign_directory_addresses(node)
 			 * access will be quick.
 			 */
 			if (dpnt->ce_bytes) {
-				last_extent +=
-					ISO_ROUND_UP(dpnt->ce_bytes) >> 11;
+				last_extent += ISO_BLOCKS(dpnt->ce_bytes);
 			}
 		}
 		if (dpnt->subdir) {
@@ -381,11 +391,11 @@ static	char		buffer[SECTOR_SIZE * NSECT];
 #ifdef	USE_LIBSCHILY
 		comerr("cannot open '%s'\n", filename);
 #else
-#if defined(sun) || defined(_AUX_SOURCE)
-		fprintf(stderr, "cannot open %s: (%d)\n",
+#ifndef	HAVE_STRERROR
+		fprintf(stderr, "cannot open '%s': (%d)\n",
 				filename, errno);
 #else
-		fprintf(stderr, "cannot open %s: %s\n",
+		fprintf(stderr, "cannot open '%s': %s\n",
 				filename, strerror(errno));
 #endif
 		exit(1);
@@ -404,9 +414,9 @@ static	char		buffer[SECTOR_SIZE * NSECT];
 		memset(buffer, 0, use);
 		if (fread(buffer, 1, use, infile) == 0) {
 #ifdef	USE_LIBSCHILY
-			comerr("cannot read from %s\n", filename);
+			comerr("cannot read from '%s'\n", filename);
 #else
-			fprintf(stderr, "cannot read from %s\n", filename);
+			fprintf(stderr, "cannot read from '%s'\n", filename);
 			exit(1);
 #endif
 		}
@@ -434,7 +444,7 @@ static	char		buffer[SECTOR_SIZE * NSECT];
 			fprintf(stderr, "%3d.%-02d%% done, estimate finish %s",
 				(int)(frac * 100.),
 				(int)((frac+.00005) * 10000.)%100,
-                                ctime(&the_end));
+				ctime(&the_end));
 #endif
 			fflush(stderr);
 		}
@@ -453,13 +463,18 @@ write_files(outfile)
 
 	dwpnt = dw_head;
 	while (dwpnt) {
+#ifdef DEBUG
+		fprintf(stderr,
+		"The file name is %s and pad is %d, size is %d and extent is %d\n",
+				dwpnt->name, dwpnt->pad,
+				dwpnt->size, dwpnt->extent);
+#endif
 		if (dwpnt->table) {
 			xfwrite(dwpnt->table, 1, ISO_ROUND_UP(dwpnt->size),
 								outfile);
-			last_extent_written +=
-				ISO_ROUND_UP(dwpnt->size) / SECTOR_SIZE;
+			last_extent_written += ISO_BLOCKS(dwpnt->size);
 			table_size += dwpnt->size;
-/*			fprintf(stderr,"Size %d ", dwpnt->size); */
+/*			fprintf(stderr, "Size %d ", dwpnt->size); */
 			free(dwpnt->table);
 			dwpnt->table = NULL;
 		} else {
@@ -477,9 +492,19 @@ write_files(outfile)
 			free(dwpnt->name);
 			dwpnt->name = NULL;
 		}
+		
 
-#ifdef APPLE_HYB
-		if (apple_hyb) {
+#ifndef DVD_VIDEO
+#define	dvd_video	0
+#endif
+
+#ifndef APPLE_HYB
+#define	apple_hyb	0
+#endif 
+
+#if	defined(APPLE_HYB) || defined(DVD_VIDEO)
+
+		if (apple_hyb || dvd_video) {
 			/*
 			 * we may have to pad out ISO files to work with HFS
 			 * clump sizes
@@ -492,7 +517,8 @@ write_files(outfile)
 
 			last_extent_written += dwpnt->pad;
 		}
-#endif	/* APPLE_HYB */
+#endif	/* APPLE_HYB || DVD_VIDEO */
+
 
 		dwnext = dwpnt;
 		dwpnt = dwpnt->next;
@@ -547,12 +573,14 @@ compare_dirs(rr, ll)
 	if (strcmp(rpnt, lpnt) == 0) {
 #ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD,
-			"Error: %s and %s have the same ISO9660 name\n",
-			(*r)->whole_name, (*l)->whole_name);
+			"Error: '%s' and '%s' have the same ISO9660 name '%s'.\n",
+			(*r)->whole_name, (*l)->whole_name,
+			rpnt);
 #else
 		fprintf(stderr,
-			"Error: %s and %s have the same ISO9660 name\n",
-			(*r)->whole_name, (*l)->whole_name);
+			"Error: '%s' and '%s' have the same ISO9660 name '%s'.\n",
+			(*r)->whole_name, (*l)->whole_name,
+			rpnt);
 #endif
 		sort_goof++;
 	}
@@ -565,12 +593,14 @@ compare_dirs(rr, ll)
 		if (!(strcmp((*r)->name, (*l)->name))) {
 #ifdef	USE_LIBSCHILY
 			errmsgno(EX_BAD,
-			"Error: %s and %s have the same Rock Ridge name\n",
-				(*r)->whole_name, (*l)->whole_name);
+			"Error: '%s' and '%s' have the same Rock Ridge name '%s'.\n",
+				(*r)->whole_name, (*l)->whole_name,
+				(*r)->name);
 #else
 			fprintf(stderr,
-			"Error: %s and %s have the same Rock Ridge name\n",
-				(*r)->whole_name, (*l)->whole_name);
+			"Error: '%s' and '%s' have the same Rock Ridge name '%s'.\n",
+				(*r)->whole_name, (*l)->whole_name,
+				(*r)->name);
 #endif
 			sort_goof++;
 		}
@@ -772,7 +802,10 @@ compare_sort(rr, ll)
 	r_sort = (*r)->s_entry->sort;
 	l_sort = (*l)->s_entry->sort;
 
-	return (r_sort < l_sort ? 1 : -1);
+	if (r_sort != l_sort)
+		return (r_sort < l_sort ? 1 : -1);
+	else
+		return (*r)->extent - (*l)->extent;
 }
 
 /*
@@ -795,12 +828,12 @@ reassign_link_addresses(dpnt)
 
 			/* update the start extent */
 			s_hash = find_hash(s_entry->dev, s_entry->inode);
-			if(s_hash) {
+			if (s_hash) {
 				set_733((char *) s_entry->isorec.extent, s_hash->starting_block);
 				s_entry->starting_block = s_hash->starting_block;
 			}
 		}
-		if(dpnt->subdir) {
+		if (dpnt->subdir) {
 			reassign_link_addresses(dpnt->subdir);
 		}
 
@@ -843,7 +876,7 @@ sort_file_addresses()
 	sortlist = (struct deferred_write **)
 		e_malloc(sizeof(struct deferred_write *) * num);
 
-	for (i=0,dwpnt=dw_head;i<num;i++,dwpnt=dwpnt->next)
+	for (i=0, dwpnt=dw_head; i<num; i++, dwpnt=dwpnt->next)
 		sortlist[i] = dwpnt;
 
 	/* sort the list */
@@ -865,11 +898,22 @@ sort_file_addresses()
 	free(sortlist);
 
 	/* set the new start extents for the sorted list */
-	for (i=0,dwpnt=dw_head;i<num;i++,dwpnt=dwpnt->next) {
+	for (i=0, dwpnt=dw_head; i<num; i++, dwpnt=dwpnt->next) {
 		s_entry = dwpnt->s_entry;
 		dwpnt->extent = s_entry->starting_block = start_extent;
 		set_733((char *) s_entry->isorec.extent, start_extent);
-		start_extent += ISO_ROUND_UP(s_entry->size) >> 11;
+
+		start_extent += ISO_BLOCKS(s_entry->size);
+#ifdef DVD_VIDEO
+		/*
+		 * Shouldn't this be done for every type of sort? Otherwise
+		 * we will loose every pad info we add if we sort the files
+		 */
+		if (dvd_video) {
+			start_extent += dwpnt->pad;
+		}
+#endif /*DVD_VIDEO*/
+
 		/* cache start extents for any linked files */
 		add_hash(s_entry);
 	}
@@ -877,6 +921,7 @@ sort_file_addresses()
 	return (0);
 }
 #endif /* SORTING */
+
 
 
 static void
@@ -887,7 +932,30 @@ assign_file_addresses(dpnt)
 	struct directory_entry *s_entry;
 	struct file_hash *s_hash;
 	struct deferred_write *dwpnt;
-	char		whole_path[1024];
+	char		whole_path[PATH_MAX];
+#ifdef DVD_VIDEO
+	char		dvd_path[PATH_MAX];
+	title_set_info_t * title_set_info=NULL;
+#endif
+
+#ifdef DVD_VIDEO
+	if (dvd_video && (strstr(dpnt->whole_name, "VIDEO_TS") != 0)) {
+		int	maxlen = strlen(dpnt->whole_name)-8;
+
+		if (maxlen > (sizeof(dvd_path)-1))
+			maxlen = sizeof(dvd_path)-1;
+		strncpy(dvd_path, dpnt->whole_name, maxlen);
+		dvd_path[maxlen] = '\0'; 
+#ifdef DEBUG
+		fprintf(stderr, "Found it the path is %s \n", dvd_path);
+#endif
+		title_set_info = DVDGetFileSet(dvd_path);
+		if (title_set_info == 0) {
+			dvd_video = 0;
+			errmsgno(EX_BAD, "Unable to make a DVD-Video image.\n");
+		}
+	}
+#endif /*DVD_VIDEO*/
 
 	while (dpnt) {
 		s_entry = dpnt->contents;
@@ -909,7 +977,7 @@ assign_file_addresses(dpnt)
 			s_hash = find_hash(s_entry->dev, s_entry->inode);
 			if (s_hash) {
 				if (verbose > 2) {
-					fprintf(stderr, "Cache hit for %s%s%s\n", s_entry->filedir->de_name,
+					fprintf(stderr, "Cache hit for '%s%s%s'\n", s_entry->filedir->de_name,
 						SPATH_SEPARATOR,
 						s_entry->name);
 				}
@@ -945,6 +1013,11 @@ assign_file_addresses(dpnt)
 					finddir = finddir->next;
 					if (!finddir) {
 #ifdef	USE_LIBSCHILY
+#ifdef	DVD_VIDEO
+						if (title_set_info != 0) {
+							DVDFreeFileSet(title_set_info);
+						}
+#endif
 						comerrno(EX_BAD,
 							"Fatal goof - could not find dir entry for '%s'\n",
 							s_entry->name);
@@ -952,6 +1025,11 @@ assign_file_addresses(dpnt)
 						fprintf(stderr,
 							"Fatal goof - could not find dir entry for '%s'\n",
 							s_entry->name);
+#ifdef DVD_VIDEO
+						if (title_set_info != 0) {
+							DVDFreeFileSet(title_set_info);
+						}
+#endif
 						exit(1);
 #endif
 					}
@@ -1023,6 +1101,25 @@ assign_file_addresses(dpnt)
 				dwpnt->s_entry = s_entry;
 				/* set the initial padding to zero */
 				dwpnt->pad = 0;
+#ifdef DVD_VIDEO
+				if (dvd_video && (title_set_info != 0)) {
+					int pad;
+
+					pad = DVDGetFilePad(title_set_info, s_entry->name);
+					if (pad < 0) {
+						errmsgno(EX_BAD,
+						"Implementation botch. Video pad for file %s is %d\n",
+						s_entry->name, pad),
+						comerrno(EX_BAD,
+						"Either the *.IFO file is bad or you found a mkisofs bug.\n");
+					}
+					dwpnt->pad = pad;
+					if (verbose > 0 && pad != 0) {
+						fprintf(stderr,
+							"The pad was %d for file %s\n", dwpnt->pad, s_entry->name);
+					}
+				}
+#endif /*DVD_VIDEO*/
 #ifdef APPLE_HYB
 				/*
 				 * maybe an offset to start of the real
@@ -1058,18 +1155,22 @@ assign_file_addresses(dpnt)
 								last_extent);
 				s_entry->starting_block = last_extent;
 				add_hash(s_entry);
-				last_extent +=
-					ISO_ROUND_UP(s_entry->size) >> 11;
+				last_extent += ISO_BLOCKS(s_entry->size);
+#ifdef DVD_VIDEO
+				/* Shouldn't we always add the pad info? */
+				if (dvd_video) {
+					last_extent += dwpnt->pad;
+				}
+#endif /*DVD_VIDEO*/
 				if (verbose > 2) {
 					fprintf(stderr, "%d %d %s\n",
 						s_entry->starting_block,
 						last_extent - 1, whole_path);
 				}
 #ifdef DBG_ISO
-				if ((ISO_ROUND_UP(s_entry->size) >> 11) >
-									500) {
+				if (ISO_BLOCKS(s_entry->size) > 500) {
 					fprintf(stderr,
-						"Warning: large file %s\n",
+						"Warning: large file '%s'\n",
 						whole_path);
 					fprintf(stderr,
 						"Starting block is %d\n",
@@ -1085,7 +1186,7 @@ assign_file_addresses(dpnt)
 				if (last_extent > (800000000 >> 11)) {
 					/* More than 800Mb? Punt */
 					fprintf(stderr,
-					"Extent overflow processing file %s\n",
+					"Extent overflow processing file '%s'\n",
 						 whole_path);
 					fprintf(stderr,
 						"Starting block is %d\n",
@@ -1112,6 +1213,11 @@ assign_file_addresses(dpnt)
 		}
 		dpnt = dpnt->next;
 	}
+#ifdef DVD_VIDEO
+	if (title_set_info != NULL) {
+		DVDFreeFileSet(title_set_info);
+	}
+#endif /*DVD_VIDEO*/
 }/* assign_file_addresses(... */
 
 static void
@@ -1177,12 +1283,12 @@ generate_one_directory(dpnt, outfile)
 	struct directory_entry *s_entry_d;
 	unsigned int	total_size;
 
-	total_size = (dpnt->size + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1);
+	total_size = ISO_ROUND_UP(dpnt->size);
 	directory_buffer = (char *) e_malloc(total_size);
 	memset(directory_buffer, 0, total_size);
 	dir_index = 0;
 
-	ce_size = (dpnt->ce_bytes + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1);
+	ce_size = ISO_ROUND_UP(dpnt->ce_bytes);
 	ce_buffer = NULL;
 
 	if (ce_size > 0) {
@@ -1210,8 +1316,7 @@ generate_one_directory(dpnt, outfile)
 		new_reclen = s_entry->isorec.length[0];
 		if ((dir_index & (SECTOR_SIZE - 1)) + new_reclen >=
 								SECTOR_SIZE) {
-			dir_index = (dir_index + (SECTOR_SIZE - 1)) &
-				~(SECTOR_SIZE - 1);
+			dir_index = ISO_ROUND_UP(dir_index);
 		}
 		memcpy(directory_buffer + dir_index, &s_entry->isorec,
 			offsetof(struct iso_directory_record, name[0]) +
@@ -1397,18 +1502,7 @@ generate_path_tables()
 	/*
 	 * Now start filling in the path tables.  Start with root directory
 	 */
-	if (next_path_index > 0xffff) {
-#ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD,
-		"Unable to generate sane path tables - too many directories (%d)\n",
-			next_path_index);
-#else
-		fprintf(stderr,
-		"Unable to generate sane path tables - too many directories (%d)\n",
-			next_path_index);
-		exit(1);
-#endif
-	}
+
 	path_table_index = 0;
 	pathlist = (struct directory **) e_malloc(sizeof(struct directory *)
 		* next_path_index);
@@ -1476,6 +1570,19 @@ generate_path_tables()
 		set_732(path_table_m + path_table_index, dpnt->extent);
 		path_table_index += 4;
 
+		if (dpnt->parent->path_index > 0xffff) {
+#ifdef	USE_LIBSCHILY
+			comerrno(EX_BAD,
+			"Unable to generate sane path tables - too many directories (%d)\n",
+				dpnt->parent->path_index);
+#else
+			fprintf(stderr,
+			"Unable to generate sane path tables - too many directories (%d)\n",
+				dpnt->parent->path_index);
+			exit(1);
+#endif
+		}
+
 		set_721(path_table_l + path_table_index,
 			dpnt->parent->path_index);
 		set_722(path_table_m + path_table_index,
@@ -1533,6 +1640,7 @@ outputlist_insert(frag)
 
 	nfrag = e_malloc(sizeof(*frag));
 	movebytes(frag, nfrag, sizeof(*frag));
+	nfrag->of_start_extent = 0;
 
 	if (out_tail == NULL) {
 		out_list = out_tail = nfrag;
@@ -1567,10 +1675,11 @@ file_write(outfile)
 	}
 #endif	/* APPLE_HYB */
 
- /* OK, all done with that crap.  Now write out the directories. This is where
-    the fur starts to fly, because we need to keep track of each file as we
-    find it and keep track of where we put it. */
-
+	/*
+	 * OK, all done with that crap.  Now write out the directories. This is
+	 * where the fur starts to fly, because we need to keep track of each
+	 * file as we find it and keep track of where we put it.
+	 */
 	should_write = last_extent - session_start;
 
 	if (verbose > 2) {
@@ -1806,7 +1915,7 @@ static int
 vers_write(outfile)
 	FILE	*outfile;
 {
-	char		vers[SECTOR_SIZE];
+	char		vers[SECTOR_SIZE+1];
 	int		X_ac;
 	char		**X_av;
 	char		*cp;
@@ -1814,6 +1923,7 @@ vers_write(outfile)
 	int		idx = 4;
 	int		len;
 	extern char	version_string[];
+	extern int	path_ind;
 
 	/* Now write the version descriptor. */
 	memset(vers, 0, sizeof(vers));
@@ -1828,10 +1938,20 @@ vers_write(outfile)
 	idx += strlen(version_string);
 	for (i = 1; i < X_ac; i++) {
 		len = strlen(X_av[i]);
-		if ((idx + len + 1) >= SECTOR_SIZE)
+		if ((idx + len + 2) >= SECTOR_SIZE)
 			break;
 		cp[idx++] = ' ';
-		strcpy(&cp[idx], X_av[i]);
+		/*
+		 * Do not give away secret information when not in debug mode.
+		 */
+		if (debug)
+			strcpy(&cp[idx], X_av[i]);
+		else if (i >= path_ind)
+			len = graftcp(&cp[idx], X_av[i], &vers[SECTOR_SIZE-1]);
+		else if (X_av[i][0] == '/')
+			len = pathcp(&cp[idx], X_av[i], &vers[SECTOR_SIZE-1]);
+		else
+			strcpy(&cp[idx], X_av[i]);
 		idx += len;
 	}
 
@@ -1840,6 +1960,68 @@ vers_write(outfile)
 	last_extent_written += 1;
 	return 0;
 }
+
+/*
+ * Avoid to write unwanted information into the version info string.
+ */
+LOCAL int
+graftcp(to, from, ep)
+	char	*to;
+	char	*from;
+	char	*ep;
+{
+	int	len = strlen(from);
+	char	*node = NULL;
+
+	if (use_graft_ptrs)
+		node = findgequal(from);
+
+	if (node == NULL) {
+		len = 0;
+		node = from;
+	} else {
+		len = node - from;
+		*node = '\0';
+		strncpy(to, from, ep - to);
+		*node++ = '=';
+		to += len++;
+		*to++ = '=';
+	}
+	return (len + pathcp(to, node, ep));
+}
+
+LOCAL int
+pathcp(to, from, ep)
+	char	*to;
+	char	*from;
+	char	*ep;
+{
+	int	len = strlen(from);
+	char	*p;
+
+	p = strrchr(from, '/');
+	if (p == NULL) {
+		strncpy(to, from, ep - to);
+	} else {
+		if (p[1] == '\0') {
+			--p;
+			while (p > from && *p != '/')
+				--p;
+		}
+		len = 0;
+		if (*p == '/') {
+			strncpy(to, "...", ep - to);
+			to += 3;
+			len = 3;
+		}
+		if (to < ep) {
+			strncpy(to, p, ep - to);
+			len += strlen(to);
+		}
+	}
+	return (len);
+}
+
 
 /*
  * Function to write the path table for the disc.
@@ -2064,6 +2246,28 @@ padend_write(outfile)
 #ifdef APPLE_HYB
 
 /*
+ *	hfs_get_parms:	get HFS parameters from the command line
+ */
+
+static int
+hfs_get_parms(key)
+	char	*key;
+{
+	int	ret = 0;
+	char	*p;
+
+	if (hfs_parms == NULL)
+		return (ret);
+
+	if ((p = strstr(hfs_parms, key)) != NULL) {
+		p += strlen(key) + 1;
+		sscanf(p, "%d", &ret);
+	}
+
+	return (ret);
+}
+
+/*
  *	hfs_file_gen:	set up "fake" HFS volume using the ISO9660 tree
  */
 static void
@@ -2071,8 +2275,9 @@ hfs_file_gen(start_extent)
 	int	start_extent;
 {
 	int	Csize;	/* clump size for HFS vol */
-	int	loop = CTC_LOOP;
+	int	loop;
 	int	last_extent_save = last_extent;
+	char	*p;
 
 	/* allocate memory for the libhfs/mkisofs extra info */
 	hce = (hce_mem *) e_malloc(sizeof(hce_mem));
@@ -2093,8 +2298,23 @@ hfs_file_gen(start_extent)
 	else
 		hce->hfs_map_size = 0;
 
-	/* set the intial factor to increase Catalog file size */
-	hce->ctc_size = CTC;
+	/* set the HFS parameter string to upper case */
+	if (hfs_parms) {
+		for (p=hfs_parms;*p;p++)
+       			*p = toupper(*p);
+	}
+
+	/* set the initial factor to increase Catalog file size */
+	if ((hce->ctc_size = hfs_get_parms("CTC")) == 0)
+		hce->ctc_size = CTC;
+
+	/* set the max size of the Catalog file */
+	if ((hce->max_XTCsize = hfs_get_parms("MAX_XTCSIZE")) == 0)
+		hce->max_XTCsize = MAX_XTCSIZE;
+
+	/* set the number of time to try to make an HFS volume */
+	if ((loop = hfs_get_parms("CTC_LOOP")) == 0)
+		loop = CTC_LOOP;
 
 	/*
 	 * "create" the HFS volume (just the header, catalog/extents files) if
@@ -2220,17 +2440,17 @@ gen_prepboot()
  *	get_adj_size:	get the ajusted size of the volume with the HFS
  *			allocation block size for each file
  */
-int
+Ulong
 get_adj_size(Csize)
 	int	Csize;
 {
 	struct deferred_write *dw;
-	int		size = 0;
+	Ulong		size = 0;
 	int		count = 0;
 
 	/* loop through all the files finding the new total size */
 	for (dw = dw_head; dw; dw = dw->next) {
-		size += ROUND_UP(dw->size, Csize);
+		size += (ROUND_UP(dw->size, Csize)/HFS_BLOCKSZ);
 		count++;
 	}
 
@@ -2239,6 +2459,7 @@ get_adj_size(Csize)
 	 * maximum of about 65536 forks (actually less) - this will trap cases
 	 * when we have far too many files
 	 */
+
 	if (count >= 65536)
 		return (-1);
 	else
@@ -2360,6 +2581,13 @@ hfs_hce_write(outfile)
 
 	memset(buffer, 0, sizeof(buffer));
 
+	/* hack time ... if the tot_size is greater than 32Kb then
+	 * it won't fit in the first 16 blank SECTORS (64 512 byte 
+	 * blocks, as most of this is padding, we just truncate this
+	 * data to 64x4xHFS_BLOCKSZ ... hope this is OK ... 
+	 */
+
+	if (tot_size > 64) tot_size = 64;
 
 	/* get size in CD blocks == 4xHFS_BLOCKSZ == 2048 */
 	n = tot_size / HFS_BLK_CONV;
@@ -2419,23 +2647,23 @@ insert_padding_file(size)
 	dwpnt->next = NULL;
 	dwpnt->size = size;
 	dwpnt->extent = last_extent;
-	last_extent += ISO_ROUND_UP(size) >> 11;
+	last_extent += ISO_BLOCKS(size);
 
 	/* retune the size in HFS blocks */
 	return (ISO_ROUND_UP(size) / HFS_BLOCKSZ);
 }
 
-struct output_fragment hfs_desc = {NULL, NULL, NULL, hfs_hce_write};
+struct output_fragment hfs_desc	      = {NULL, NULL, NULL, hfs_hce_write, "HFS volume header"};
 
 #endif	/* APPLE_HYB */
 
-struct output_fragment padblock_desc  = {NULL, padblock_size, NULL,     padblock_write};
-struct output_fragment voldesc_desc   = {NULL, oneblock_size, root_gen, pvd_write};
-struct output_fragment end_vol	      = {NULL, oneblock_size, NULL,     evd_write};
-struct output_fragment version_desc   = {NULL, oneblock_size, NULL,     vers_write};
-struct output_fragment pathtable_desc = {NULL, pathtab_size,  generate_path_tables,     pathtab_write};
-struct output_fragment dirtree_desc   = {NULL, dirtree_size,  NULL,     dirtree_write};
-struct output_fragment dirtree_clean  = {NULL, dirtree_fixup, dirtree_dump,     dirtree_cleanup};
-struct output_fragment extension_desc = {NULL, ext_size,      NULL,     exten_write};
-struct output_fragment files_desc     = {NULL, NULL,          file_gen, file_write};
-struct output_fragment padend_desc    = {NULL, padend_size,   NULL,     padend_write};
+struct output_fragment padblock_desc  = {NULL, padblock_size, NULL,     padblock_write, "Initial Padbock"};
+struct output_fragment voldesc_desc   = {NULL, oneblock_size, root_gen, pvd_write,      "Primary Volume Descriptor"};
+struct output_fragment end_vol	      = {NULL, oneblock_size, NULL,     evd_write,      "End Volume Descriptor" };
+struct output_fragment version_desc   = {NULL, oneblock_size, NULL,     vers_write,     "Version block" };
+struct output_fragment pathtable_desc = {NULL, pathtab_size,  generate_path_tables,     pathtab_write, "Path table"};
+struct output_fragment dirtree_desc   = {NULL, dirtree_size,  NULL,     dirtree_write,  "Directory tree" };
+struct output_fragment dirtree_clean  = {NULL, dirtree_fixup, dirtree_dump,     dirtree_cleanup, "Directory tree cleanup" };
+struct output_fragment extension_desc = {NULL, ext_size,      NULL,     exten_write,    "Extension record" };
+struct output_fragment files_desc     = {NULL, NULL,          file_gen, file_write,     "The File(s)"};
+struct output_fragment padend_desc    = {NULL, padend_size,   NULL,     padend_write,   "Ending pad block"};

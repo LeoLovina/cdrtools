@@ -1,7 +1,7 @@
-/* @(#)resample.c	1.9 00/05/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)resample.c	1.15 02/11/21 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)resample.c	1.9 00/05/02 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)resample.c	1.15 02/11/21 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 
 #endif
@@ -23,11 +23,9 @@ static char     sccsid[] =
 #include "config.h"
 #include <timedefs.h>
 #include <stdio.h>
-#include <stdlib.h>
-#if defined (HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
-#include <sys/types.h>
-#include <unistd.h>
-#endif
+#include <stdxlib.h>
+#include <utypes.h>
+#include <unixstd.h>
 #include <standard.h>
 #include <strdefs.h>
 #include <limits.h>
@@ -42,9 +40,11 @@ static char     sccsid[] =
 #include "byteorder.h"
 #include "ringbuff.h"
 #include "resample.h"
+#include "toc.h"
 #include "sndfile.h"
 #include "sndconfig.h"
 #include "global.h"
+#include "exitcodes.h"
 
 
 int waitforsignal = 0;	/* flag: wait for any audio response */
@@ -65,7 +65,7 @@ static long interpolate				__PR((long p1, long p2, long p3));
 static void emit_sample				__PR((long lsumval, long rsumval, long channels));
 static void change_endianness			__PR((UINT4 *pSam, unsigned int Samples));
 static void swap_channels			__PR((UINT4 *pSam, unsigned int Samples));
-static int guess_endianess			__PR((UINT4 *p, short *p2, unsigned int SamplesToDo));
+static int guess_endianess			__PR((UINT4 *p, Int16_t *p2, unsigned int SamplesToDo));
 
 
 #ifdef CHECK_MEM
@@ -82,7 +82,7 @@ static void check_mem(p, amount, q, line, file)
 	if (p < q || p+amount > q + ENTRY_SIZE) {
 		fprintf(stderr, "file %s, line %u: invalid buffer range (%p - %p), allowed is (%p - %p)\n",
 			file,line,p, p+amount-1, q, q + ENTRY_SIZE-1);
-		exit(1);
+		exit(INTERNAL_ERROR);
 	}
 }
 #endif
@@ -287,7 +287,7 @@ emit_sample( lsumval, rsumval, channels )
     }
     /* convert to output format */
     if ( channels == 1 ) {
-	short sum;       /* mono section */
+	Int16_t sum;       /* mono section */
 	sum = ( lsumval + rsumval ) >> (global.sh_bits + 1);
 	if ( global.sh_bits == 8 ) {
 	    if ( waitforsignal == 1 ) {
@@ -300,16 +300,16 @@ emit_sample( lsumval, rsumval, channels )
 	      } else *pDst++ = ( unsigned char ) sum + ( 1 << 7 );
             } else *pDst++ = ( unsigned char ) sum + ( 1 << 7 );
 	} else {
-	    short * myptr = (short *) pDst;
+	    Int16_t * myptr = (Int16_t *) pDst;
 	    if ( waitforsignal == 1 ) {
 	      if ( any_signal == 0 ) {
 	        if ( sum != 0 ) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
-		    *myptr = sum; pDst += sizeof( short );
+		    *myptr = sum; pDst += sizeof( Int16_t );
 		} else global.SkippedSamples++;
-	      } else { *myptr = sum; pDst += sizeof( short ); }
-	    } else { *myptr = sum; pDst += sizeof( short ); }
+	      } else { *myptr = sum; pDst += sizeof( Int16_t ); }
+	    } else { *myptr = sum; pDst += sizeof( Int16_t ); }
 	}
     } else {
 	/* stereo section */
@@ -333,25 +333,25 @@ emit_sample( lsumval, rsumval, channels )
 		*pDst++ = ( unsigned char )( short ) rsumval + ( 1 << 7 );
 	    }
 	} else {
-	    short * myptr = (short *) pDst;
+	    Int16_t * myptr = (Int16_t *) pDst;
 	    if ( waitforsignal == 1 ) {
 	      if ( any_signal == 0 ) {
-	        if ( ((( short ) lsumval != 0) || (( short ) rsumval != 0))) {
+	        if ( ((( Int16_t ) lsumval != 0) || (( Int16_t ) rsumval != 0))) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
-		    *myptr++ = ( short ) lsumval;
-		    *myptr   = ( short ) rsumval;
-		    pDst += 2*sizeof( short );
+		    *myptr++ = ( Int16_t ) lsumval;
+		    *myptr   = ( Int16_t ) rsumval;
+		    pDst += 2*sizeof( Int16_t );
 		} else global.SkippedSamples++;
 	      } else {
-		*myptr++ = ( short ) lsumval;
-		*myptr   = ( short ) rsumval;
-		pDst += 2*sizeof( short );
+		*myptr++ = ( Int16_t ) lsumval;
+		*myptr   = ( Int16_t ) rsumval;
+		pDst += 2*sizeof( Int16_t );
 	      }
 	    } else {
-	      *myptr++ = ( short ) lsumval;
-	      *myptr   = ( short ) rsumval;
-	      pDst += 2*sizeof( short );
+	      *myptr++ = ( Int16_t ) lsumval;
+	      *myptr   = ( Int16_t ) rsumval;
+	      pDst += 2*sizeof( Int16_t );
 	    }
 	}
     }
@@ -497,7 +497,7 @@ static long ReSampleBuffer( p, newp, samples, samplesize)
 	if (global.playback_rate == 100.0) {
 		memcpy(newp, p, samplesize* samples);
 		di = samples;
-	} else while( si < samples ){
+	} else while( si < (UINT4)samples ){
 		memcpy( newp+(di*samplesize), p+(si*samplesize), samplesize );
 		idx += (double)(global.playback_rate/100.0);
 		si = (UINT4)idx;
@@ -509,7 +509,7 @@ static long ReSampleBuffer( p, newp, samples, samplesize)
 
 static int guess_endianess(p, p2, SamplesToDo)
 	UINT4 *p;
-	short *p2;
+	Int16_t *p2;
 	unsigned SamplesToDo;
 {
     /* analyse samples */
@@ -561,21 +561,17 @@ static int guess_endianess(p, p2, SamplesToDo)
 
 int jitterShift = 0; 
 
-unsigned char *synchronize(p, SamplesToDo, TotSamplesDone)
+void	handle_inputendianess(p, SamplesToDo)
 	UINT4 *p;
 	unsigned SamplesToDo;
-	unsigned TotSamplesDone;
 {
-  static int jitter = 0;
-  char *pSrc;                   /* start of cdrom buffer */
-
   /* if endianess is unknown, guess endianess based on 
      differences between succesive samples. If endianess
      is correct, the differences are smaller than with the
      opposite byte order.
    */
   if ((*in_lendian) < 0) {
-    short *p2 = (short *)p;
+    Int16_t *p2 = (Int16_t *)p;
 
     /* skip constant samples */
     while ((((UINT4 *)p2 - p) + (unsigned) 1 < SamplesToDo)
@@ -616,6 +612,15 @@ unsigned char *synchronize(p, SamplesToDo, TotSamplesDone)
     /* change endianess of delivered samples to native cpu order */
     change_endianness(p, SamplesToDo);
   }
+}
+
+unsigned char *synchronize(p, SamplesToDo, TotSamplesDone)
+	UINT4 *p;
+	unsigned SamplesToDo;
+	unsigned TotSamplesDone;
+{
+  static int jitter = 0;
+  char *pSrc;                   /* start of cdrom buffer */
 
   /* synchronisation code */
   if (TotSamplesDone != 0 && global.overlap != 0 && SamplesToDo > CD_FRAMESAMPLES) {
@@ -665,7 +670,7 @@ SaveBuffer (p, SamplesToDo, TotSamplesDone)
        ) || global.swapchannels != 0) {
      static UINT4 *localoutputbuffer;
      if (localoutputbuffer == NULL) {
-       localoutputbuffer = (UINT4 *) malloc(global.nsectors*CD_FRAMESIZE_RAW);
+       localoutputbuffer = malloc(global.nsectors*CD_FRAMESIZE_RAW);
        if (localoutputbuffer == NULL) {
          perror("cannot allocate local buffer");
          return 1;
@@ -683,8 +688,8 @@ SaveBuffer (p, SamplesToDo, TotSamplesDone)
   /* code for subsampling and output stage */
 
   if (global.ismono && global.findmono) {
-    short *pmm;
-    for (pmm = (short *)pStart; (UINT4 *) pmm < pSrcStop; pmm += 2) {
+    Int16_t *pmm;
+    for (pmm = (Int16_t *)pStart; (UINT4 *) pmm < pSrcStop; pmm += 2) {
       if (*pmm != *(pmm+1)) {
         global.ismono = 0;
         break;
@@ -699,8 +704,8 @@ SaveBuffer (p, SamplesToDo, TotSamplesDone)
      */
       
     if ( waitforsignal != 0 && any_signal == 0) {
-      int *myptr = (int *)pStart;
-      while ((UINT4 *)myptr < pSrcStop && *myptr == 0) myptr++;
+      UINT4 *myptr = (UINT4 *)pStart;
+      while (myptr < pSrcStop && *myptr == 0) myptr++;
       pStart = (unsigned char *) myptr;
       /* scan for first signal */
       if ( (UINT4 *)pStart != pSrcStop ) {
@@ -713,13 +718,13 @@ SaveBuffer (p, SamplesToDo, TotSamplesDone)
     }
     pDst = (unsigned char *) pSrcStop;		/* set pDst to end */
 
-    if (global.deemphasize && (g_toc[get_current_track()-1].bFlags & 1) ) {
+    if (global.deemphasize && (Get_Preemphasis(get_current_track())) ) {
       /* this implements an attenuation treble shelving filter 
          to undo the effect of pre-emphasis. The filter is of
          a recursive first order */
-      static short lastin[2] = { 0, 0 };
+      static Int16_t lastin[2] = { 0, 0 };
       static double lastout[2] = { 0.0, 0.0 };
-      short *pmm;
+      Int16_t *pmm;
 
       /* Here is the gnuplot file for the frequency response
          of the deemphasis. The error is below +-0.1dB
@@ -770,13 +775,18 @@ pause -1 "Hit return to continue"
 #define a1	((B - 1.)/(B + 1.))
 #define b0 	(1.0 + (1.0 - a1) * H0/2.0)
 #define b1 	(a1 + (a1 - 1.0) * H0/2.0)
+#undef	V0
+#undef	OMEGAG
+#undef	T
+#undef	H0
+#undef	B
 #else
 #define a1	-0.62786881719628784282
 #define b0 	0.45995451989513153057
 #define b1 	-0.08782333709141937339
 #endif
 
-      for (pmm = (short *)pStart; pmm < (short *)pDst;) {
+      for (pmm = (Int16_t *)pStart; pmm < (Int16_t *)pDst;) {
         lastout[0] = *pmm * b0 + lastin[0] * b1 - lastout[0] * a1;
         lastin[0] = *pmm;
         *pmm++ = lastout[0] > 0.0 ? lastout[0] + 0.5 : lastout[0] - 0.5;
@@ -784,6 +794,9 @@ pause -1 "Hit return to continue"
         lastin[1] = *pmm;
         *pmm++ = lastout[1] > 0.0 ? lastout[1] + 0.5 : lastout[1] - 0.5;
       }
+#undef	a1
+#undef	b0
+#undef	b1
     }
 
     if (global.swapchannels == 1) {
@@ -791,8 +804,8 @@ pause -1 "Hit return to continue"
     }
 
     if (global.findminmax) {
-      short *pmm;
-      for (pmm = (short *)pStart; pmm < (short *)pDst; pmm++) {
+      Int16_t *pmm;
+      for (pmm = (Int16_t *)pStart; pmm < (Int16_t *)pDst; pmm++) {
         if (*pmm < global.minamp[1]) global.minamp[1] = *pmm;
         if (*pmm > global.maxamp[1]) global.maxamp[1] = *pmm;
         pmm++;
@@ -819,8 +832,8 @@ pause -1 "Hit return to continue"
 	  
 	long l,r;
 
-	long iSamples_left = (pSrcStop - pSrc) / sizeof(short) / 2;
-	short *myptr = (short *) pSrc;
+	long iSamples_left = (pSrcStop - pSrc) / sizeof(Int16_t) / 2;
+	Int16_t *myptr = (Int16_t *) pSrc;
 
 	/* LSB l, MSB l */
 	l = *myptr++;	/* left channel */
@@ -946,7 +959,7 @@ none__missing:
 
                newlen = (100*(outlen/4))/global.playback_rate;
                newlen = (newlen*4);
-               if ( (newp != NULL) || (newp = (unsigned char *) malloc( 2*global.nsectors*CD_FRAMESIZE_RAW+32 )) ) {
+               if ( (newp != NULL) || (newp = malloc( 2*global.nsectors*CD_FRAMESIZE_RAW+32 )) ) {
 			newlen = ReSampleBuffer( pStart, newp, outlen/4, global.OutSampleSize*global.channels );
 			write_snd_device((char *)newp, newlen);
                }

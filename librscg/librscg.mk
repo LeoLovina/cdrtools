@@ -1,4 +1,4 @@
-#ident %W% %E% %Q%
+#ident @(#)librscg.mk	1.2 02/11/22 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -11,6 +11,7 @@ INSDIR=		lib
 TARGETLIB=	rscg
 #CPPOPTS +=	-Ispecincl
 CPPOPTS +=	-DUSE_PG
+CPPOPTS +=	-DUSE_RCMD_RSH
 #include		Targets
 CFILES=		scsi-remote.c
 LIBS=		

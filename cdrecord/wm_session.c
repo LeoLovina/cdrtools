@@ -1,7 +1,7 @@
-/* @(#)wm_session.c	1.2 98/10/08 Copyright 1995, 1997 J. Schilling */
+/* @(#)wm_session.c	1.4 02/07/07 Copyright 1995, 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)wm_session.c	1.2 98/10/08 Copyright 1995, 1997 J. Schilling";
+	"@(#)wm_session.c	1.4 02/07/07 Copyright 1995, 1997 J. Schilling";
 #endif
 /*
  *	CDR write method abtraction layer
@@ -27,12 +27,12 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include <stdio.h>
-#include <standard.h>
 #include <stdxlib.h>
 #include <unixstd.h>
-#include <sys/types.h>
+#include <standard.h>
 #include <utypes.h>
 
+#include <scg/scsitransp.h>
 #include "cdrecord.h"
 
 extern	int	debug;
@@ -41,4 +41,4 @@ extern	int	lverbose;
 
 extern	char	*buf;			/* The transfer buffer */
 
-EXPORT	int	write_session_data __PR((cdr_t *dp, int track, track_t *trackp));
+EXPORT	int	write_session_data __PR((SCSI *scgp, cdr_t *dp, track_t *trackp));

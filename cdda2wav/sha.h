@@ -1,4 +1,4 @@
-/* @(#)sha.h	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)sha.h	1.3 01/10/27 Copyright 1998,1999 Heiko Eissfeldt */
 /*____________________________________________________________________________
 //
 //   CD Index - The Internet CD Index
@@ -51,7 +51,8 @@ void sha_final __PR((unsigned char [20], SHA_INFO *));
 
 #ifdef SHA_FOR_C
 
-#include <stdlib.h>
+#include <mconfig.h>
+#include <stdxlib.h>
 #include <stdio.h>
 
 void sha_stream __PR((unsigned char [20], SHA_INFO *, FILE *));
@@ -62,8 +63,6 @@ char *sha_version __PR((void));
 #define SHA_VERSION 1
 
 #ifndef WIN32 
-#include "xconfig.h"
-
 #ifdef WORDS_BIGENDIAN
 #  if SIZEOF_UNSIGNED_LONG_INT == 4
 #    define SHA_BYTE_ORDER  4321

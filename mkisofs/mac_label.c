@@ -1,7 +1,7 @@
-/* @(#)mac_label.c	1.4 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)mac_label.c	1.6 02/05/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)mac_label.c	1.4 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)mac_label.c	1.6 02/05/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -180,7 +180,7 @@ gen_mac_label(mac_boot)
 		 * get size in SECTOR_SIZE blocks
 		 * - shouldn't need to round up
 		 */
-		mpm[mpc].size = ISO_ROUND_UP(mac_boot->size) / SECTOR_SIZE;
+		mpm[mpc].size = ISO_BLOCKS(mac_boot->size);
 
 		mpm[mpc].ntype = PM2;
 		mpm[mpc].type = (char *) mac_part->pmPartType;
@@ -199,9 +199,9 @@ gen_mac_label(mac_boot)
 	/* set info about our hybrid volume */
 	mpm[mpc].ntype = PM4;
 	mpm[mpc].type = pmPartType_4;
-	mpm[mpc].start = session_start + hce->hfs_map_size / HFS_BLK_CONV;
+	mpm[mpc].start = hce->hfs_map_size / HFS_BLK_CONV;
 	mpm[mpc].size = last_extent - mpm[mpc].start -
-			(ISO_ROUND_UP(mac_boot->size) / SECTOR_SIZE);
+			ISO_BLOCKS(mac_boot->size);
 	mpm[mpc].name = volume_id;
 
 	mpc++;

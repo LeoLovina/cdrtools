@@ -1,7 +1,7 @@
-/* @(#)interface.c	1.15 00/12/01 Copyright 1998-2000 Heiko Eissfeldt */
+/* @(#)interface.c	1.30 02/11/21 Copyright 1998-2002 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)interface.c	1.15 00/12/01 Copyright 1998-2000 Heiko Eissfeldt";
+"@(#)interface.c	1.30 02/11/21 Copyright 1998-2002 Heiko Eissfeldt";
 
 #endif
 /***
@@ -40,12 +40,11 @@ static char     sccsid[] =
 #include <strdefs.h>
 #include <errno.h>
 #include <signal.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 #include <assert.h>
 #include <schily.h>
 
 #include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <statdefs.h>
 
 
@@ -76,6 +75,7 @@ static char     sccsid[] =
 #include "toc.h"
 #include "global.h"
 #include "ioctl.h"
+#include "exitcodes.h"
 #include "scsi_cmds.h"
 
 #include <utypes.h>
@@ -85,20 +85,33 @@ unsigned interface;
 
 int trackindex_disp = 0;
 
-TOC g_toc [MAXTRK]; /* 100 */
-unsigned char MCN[14];  /* including a zero string terminator */
-
-void     (*EnableCdda) __PR((SCSI *, int Switch));
-unsigned (*ReadToc) __PR(( SCSI *scgp, TOC *ptoc ));
+void     (*EnableCdda) __PR((SCSI *, int Switch, unsigned uSectorsize));
+unsigned (*doReadToc) __PR(( SCSI *scgp ));
 void	 (*ReadTocText) __PR(( SCSI *scgp ));
-unsigned (*ReadLastAudio) __PR(( SCSI *scgp, unsigned tracks ));
+unsigned (*ReadLastAudio) __PR(( SCSI *scgp ));
 int      (*ReadCdRom) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
 int      (*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p, unsigned lSector, unsigned SectorBurstVal ));
+int      (*ReadCdRomSub) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
+subq_chnl *(*ReadSubChannels) __PR(( SCSI *scgp, unsigned lSector ));
 subq_chnl *(*ReadSubQ) __PR(( SCSI *scgp, unsigned char sq_format, unsigned char track ));
 void     (*SelectSpeed) __PR(( SCSI *scgp, unsigned speed ));
 int	(*Play_at) __PR(( SCSI *scgp, unsigned int from_sector, unsigned int sectors));
 int	(*StopPlay) __PR(( SCSI *scgp));
 void	(*trash_cache) __PR((UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
+
+#if	defined	USE_PARANOIA
+long cdda_read __PR((void *d, void * buffer, long beginsector, long sectors));
+
+long cdda_read(d, buffer, beginsector, sectors)
+	void *d;
+	void * buffer;
+	long beginsector;
+	long sectors;
+{
+	long ret = ReadCdRom(d, buffer, beginsector, sectors);
+	return ret;
+}
+#endif
 
 typedef struct string_len {
   char *str;
@@ -168,7 +181,7 @@ static void SetupSCSI( )
 	/* unfortunately we have the wrong interface and are
 	 * not able to change on the fly */
 	fprintf(stderr, "The generic SCSI interface and devices are required\n");
-	exit(1);
+	exit(SYNTAX_ERROR);
     }
 
     /* do a test unit ready to 'init' the device. */
@@ -183,12 +196,12 @@ static void SetupSCSI( )
 #define TYPE_WORM  4
     if (p == NULL) {
 	fprintf(stderr, "Inquiry command failed. Aborting...\n");
-	exit(1);
+	exit(DEVICE_ERROR);
     }
 
     if ((*p != TYPE_ROM && *p != TYPE_WORM)) {
 	fprintf(stderr, "this is neither a scsi cdrom nor a worm device\n");
-	exit(1);
+	exit(SYNTAX_ERROR);
     }
 
     if (global.quiet == 0) {
@@ -202,8 +215,9 @@ static void SetupSCSI( )
     /* generic Sony type defaults */
     density = 0x0;
     accepts_fua_bit = -1;
-    EnableCdda = (void (*) __PR((SCSI *, int)))Dummy;
+    EnableCdda = (void (*) __PR((SCSI *, int, unsigned)))Dummy;
     ReadCdRom = ReadCdda12;
+    ReadCdRomSub = ReadCddaSubSony;
     ReadCdRomData = (int (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadStandard;
     ReadLastAudio = ReadFirstSessionTOCSony;
     SelectSpeed = SpeedSelectSCSISony;
@@ -211,6 +225,9 @@ static void SetupSCSI( )
     StopPlay = StopPlaySCSI;
     trash_cache = trash_cache_SCSI;
     ReadTocText = ReadTocTextSCSIMMC;
+    doReadToc = ReadTocSCSI;
+    ReadSubQ = ReadSubQSCSI;
+    ReadSubChannels = NULL;
 
     /* check for brands and adjust special peculiaritites */
 
@@ -275,14 +292,18 @@ lost_toshibas:
 	   global.overlap = 0;
 	 else
            global.overlap = 1;
-         ReadCdRom = ReadCddaMMC12;
+         ReadCdRom = ReadCddaFallbackMMC;
+	 ReadCdRomSub = ReadCddaSubSony;
          ReadLastAudio = ReadFirstSessionTOCMMC;
          SelectSpeed = SpeedSelectSCSIMMC;
     	 ReadTocText = ReadTocTextSCSIMMC;
+	 doReadToc = ReadTocMMC;
+	 ReadSubChannels = ReadSubChannelsFallbackMMC;
 	 if (!memcmp(p+8,"SONY    CD-RW  CRX100E  1.0", 27)) ReadTocText = NULL;
 	 if (!global.quiet) fprintf(stderr, "MMC+CDDA\n");
        break;
        case -1: /* "MMC drive does not support cdda reading, sorry\n." */
+	 doReadToc = ReadTocMMC;
 	 if (!global.quiet) fprintf(stderr, "MMC-CDDA\n");
 	 /* FALLTHROUGH */
        case 0:      /* non SCSI-3 cdrom drive */
@@ -301,6 +322,7 @@ lost_toshibas:
 	    }
 	density = 0x82;
 	EnableCdda = EnableCddaModeSelect;
+	ReadSubChannels = ReadStandardSub;
  	ReadCdRom = ReadStandard;
         SelectSpeed = SpeedSelectSCSIToshiba;
         if (!memcmp(p+15, " CD-ROM XM-3401",15)) {
@@ -338,6 +360,8 @@ lost_toshibas:
 	global.overlap = 0;
         ReadLastAudio = ReadFirstSessionTOCSony;
     	ReadTocText = ReadTocTextSCSIMMC;
+	doReadToc = ReadTocSony;
+	ReadSubChannels = ReadSubChannelsSony;
     } else if (!memcmp(p+8,"SONY",4)) {
 	global.in_lendian = 1;
         if (!memcmp(p+16, "CD-ROM CDU55E",13)) {
@@ -345,6 +369,8 @@ lost_toshibas:
 	}
         ReadLastAudio = ReadFirstSessionTOCSony;
     	ReadTocText = ReadTocTextSCSIMMC;
+	doReadToc = ReadTocSony;
+	ReadSubChannels = ReadSubChannelsSony;
     } else if (!memcmp(p+8,"NEC",3)) {
 	ReadCdRom = ReadCdda10;
         ReadTocText = NULL;
@@ -359,8 +385,6 @@ lost_toshibas:
     } /* switch (get_mmc) */
     }
 
-    ReadToc = ReadTocSCSI;
-    ReadSubQ = ReadSubQSCSI;
 
     /* look if caddy is loaded */
     if (interface == GENERIC_SCSI) {
@@ -388,7 +412,7 @@ static void Check_interface_for_device( statstruct, pdev_name)
     if (!S_ISCHR(statstruct->st_mode) &&
 	!S_ISBLK(statstruct->st_mode)) {
       fprintf(stderr, "%s is not a device\n",pdev_name);
-      exit(1);
+      exit(SYNTAX_ERROR);
     }
 #endif
 
@@ -403,7 +427,7 @@ static void Check_interface_for_device( statstruct, pdev_name)
 #if defined (__linux__)
        if (!S_ISCHR(statstruct->st_mode)) {
 	 fprintf(stderr, "%s is not a char device\n",pdev_name);
-	 exit(1);
+	 exit(SYNTAX_ERROR);
        }
 
        if (interface != GENERIC_SCSI) {
@@ -422,11 +446,12 @@ static void Check_interface_for_device( statstruct, pdev_name)
     case 117:
 	if (!S_ISCHR(statstruct->st_mode)) {
 	    fprintf(stderr, "%s is not a char device\n",pdev_name);
-	    exit(1);
+	    exit(SYNTAX_ERROR);
 	}
 	if (interface != COOKED_IOCTL) {
-	    fprintf(stderr, "cdrom device (%s) is not of type generic SCSI. "
-		    "Setting interface to cooked_ioctl.\n", pdev_name);
+	    fprintf(stderr,
+"cdrom device (%s) is not of type generic SCSI. \
+Setting interface to cooked_ioctl.\n", pdev_name);
 	    interface = COOKED_IOCTL;
 	}
 	break;
@@ -435,11 +460,12 @@ static void Check_interface_for_device( statstruct, pdev_name)
 #endif
 	if (!S_ISBLK(statstruct->st_mode)) {
 	    fprintf(stderr, "%s is not a block device\n",pdev_name);
-	    exit(1);
+	    exit(SYNTAX_ERROR);
 	}
 	if (interface != COOKED_IOCTL) {
-	    fprintf(stderr, "cdrom device (%s) is not of type generic SCSI. "
-		    "Setting interface to cooked_ioctl.\n", pdev_name);
+	    fprintf(stderr, 
+"cdrom device (%s) is not of type generic SCSI. \
+Setting interface to cooked_ioctl.\n", pdev_name);
 	    interface = COOKED_IOCTL;
 	}
 	break;
@@ -472,7 +498,7 @@ static int OpenCdRom ( pdev_name )
   if (have_named_device) {
     if (stat(pdev_name, &statstruct)) {
       fprintf(stderr, "cannot stat device %s\n", pdev_name);
-      exit(1);
+      exit(STAT_ERROR);
     } else {
       Check_interface_for_device( &statstruct, pdev_name );
     }
@@ -482,15 +508,22 @@ static int OpenCdRom ( pdev_name )
   if (interface == GENERIC_SCSI) {
 	char	errstr[80];
 
-      needroot(0);
-      needgroup(0);
+	needroot(0);
+	needgroup(0);
 	/*
 	 * Call scg_remote() to force loading the remote SCSI transport library
 	 * code that is located in librscg instead of the dummy remote routines
 	 * that are located inside libscg.
 	 */
 	scg_remote();
-		/* device name, debug, verboseopen */
+	if (pdev_name != NULL &&
+	    ((strncmp(pdev_name, "HELP", 4) == 0) ||
+	     (strncmp(pdev_name, "help", 4) == 0))) {
+		scg_help(stderr);
+		exit(NO_ERROR);
+	}
+
+	/* device name, debug, verboseopen */
 	scgp = scg_open(pdev_name, errstr, sizeof(errstr), 0, 0);
 
 	if (scgp == NULL) {
@@ -510,7 +543,8 @@ static int OpenCdRom ( pdev_name )
 	fprintf(stderr, "You can scan the SCSI bus(es) with 'cdrecord -scanbus'.\n");
         fprintf(stderr, "Set the CDDA_DEVICE environment variable or use the -D option.\n");
         fprintf(stderr, "You can also define the default device in the Makefile.\n");
-        exit(1);
+	fprintf(stderr, "For possible transport specifiers try 'cdda2wav dev=help'.\n");
+        exit(SYNTAX_ERROR);
       }
 	scg_settimeout(scgp, 300);
 	if (scgp) {
@@ -519,8 +553,8 @@ static int OpenCdRom ( pdev_name )
 	}
       dontneedgroup();
       dontneedroot();
-      if (global.nsectors > (unsigned) scg_bufsize(scgp, 100*1024*1024)/CD_FRAMESIZE_RAW)
-        global.nsectors = scg_bufsize(scgp, 100*1024*1024)/CD_FRAMESIZE_RAW;
+      if (global.nsectors > (unsigned) scg_bufsize(scgp, 3*1024*1024)/CD_FRAMESIZE_RAW)
+        global.nsectors = scg_bufsize(scgp, 3*1024*1024)/CD_FRAMESIZE_RAW;
       if (global.overlap >= global.nsectors)
         global.overlap = global.nsectors-1;
 
@@ -537,14 +571,14 @@ static int OpenCdRom ( pdev_name )
       if (retval < 0) {
         fprintf(stderr, "while opening %s :", pdev_name);
         perror("");
-        exit(1);
+        exit(DEVICEOPEN_ERROR);
       }
 
       /* Do final security checks here */
       if (fstat(retval, &fstatstruct)) {
         fprintf(stderr, "Could not fstat %s (fd %d): ", pdev_name, retval);
         perror("");
-        exit(1);
+        exit(STAT_ERROR);
       }
       Check_interface_for_device( &fstatstruct, pdev_name );
 
@@ -554,10 +588,10 @@ static int OpenCdRom ( pdev_name )
           && (fstatstruct.st_dev != statstruct.st_dev ||
               fstatstruct.st_ino != statstruct.st_ino)) {
          fprintf(stderr,"Race condition attempted in OpenCdRom.  Exiting now.\n");
-         exit(1);
+         exit(RACE_ERROR);
       }
 #endif
-	if (global.scsi_verbose) {
+	if (scgp != NULL && global.scsi_verbose) {
 		scgp->verbose = global.scsi_verbose;
 	}
   }
@@ -678,7 +712,7 @@ static unsigned ReadToc_sim ( x, toc )
     sim_indices = scen[scenario][1];
 
     for (i = 0; i < trcks; i++) {
-        toc[i].bFlags = (scenario == 6 && i == 0) ? 0x4 : 0x1b;
+        toc[i].bFlags = (scenario == 6 && i == 0) ? 0x40 : 0xb1;
         toc[i].bTrack = i + 1;
         toc[i].dwStartSector = i * scen[scenario][2];
         toc[i].mins = (toc[i].dwStartSector+150) / (60*75);
@@ -776,12 +810,13 @@ static void SetupSimCd __PR((void));
 
 static void SetupSimCd()
 {
-    EnableCdda = (void (*) __PR((SCSI *, int)))Dummy;
+    EnableCdda = (void (*) __PR((SCSI *, int, unsigned)))Dummy;
     ReadCdRom = ReadCdRom_sim;
     ReadCdRomData = (int (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadCdRom_sim;
-    ReadToc = ReadToc_sim;
+    doReadToc = ReadToc_sim;
     ReadTocText = NULL;
     ReadSubQ = ReadSubQ_sim;
+    ReadSubChannels = NULL;
     ReadLastAudio = NULL;
     SelectSpeed = SelectSpeed_sim;
     Play_at = Play_at_sim;
@@ -809,17 +844,17 @@ void SetupInterface( )
 #endif
 
     /* request one sector for table of contents */
-    bufferTOC = (unsigned char *) malloc( CD_FRAMESIZE );      /* assumes sufficient aligned addresses */
+    bufferTOC = malloc( CD_FRAMESIZE_RAW + 96 );      /* assumes sufficient aligned addresses */
     /* SubQchannel buffer */
-    SubQbuffer = (subq_chnl *) malloc( 48 );               /* assumes sufficient aligned addresses */
-    cmd = (unsigned char *) malloc( 18 );                      /* assumes sufficient aligned addresses */
+    SubQbuffer = malloc( 48 );               /* assumes sufficient aligned addresses */
+    cmd = malloc( 18 );                      /* assumes sufficient aligned addresses */
     if ( !bufferTOC || !SubQbuffer || !cmd ) {
        fprintf( stderr, "Too low on memory. Giving up.\n");
-       exit(2);
+       exit(NOMEM_ERROR);
     }
 
 #if	defined SIM_CD
-    scgp = (SCSI *) malloc(sizeof(* scgp));
+    scgp = malloc(sizeof(* scgp));
     if (scgp == NULL) {
 	FatalError("No memory for SCSI structure.\n");
     }
@@ -844,14 +879,16 @@ void SetupInterface( )
 
 	/* set cache to zero */
 
-#if defined (HAVE_IOCTL_INTERFACE)
     } else {
-	scgp = (SCSI *) malloc(sizeof(* scgp));
+#if defined (HAVE_IOCTL_INTERFACE)
+	scgp = malloc(sizeof(* scgp));
 	if (scgp == NULL) {
 		FatalError("No memory for SCSI structure.\n");
 	}
 	scgp->silent = 0;
 	SetupCookedIoctl( global.dev_name );
+#else
+	FatalError("Sorry, there is no known method to access the device.\n");
 #endif
     }
 #endif	/* if def SIM_CD */

@@ -1,7 +1,7 @@
-/* @(#)boot.c	1.7 00/12/05 Copyright 1999 J. Schilling */
+/* @(#)boot.c	1.9 02/05/30 Copyright 1999 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)boot.c	1.7 00/12/05 Copyright 1999 J. Schilling";
+	"@(#)boot.c	1.9 02/05/30 Copyright 1999 J. Schilling";
 #endif
 /*
  *	Support for generic boot (sector 0..16)
@@ -250,7 +250,7 @@ LOCAL int
 sunlabel_size(starting_extent)
 	int	starting_extent;
 {
-	if (last_extent != 0)
+	if (last_extent != session_start)
 		comerrno(EX_BAD, "Cannot create sparc boot on offset != 0.\n");
 	last_extent++;
 	return 0;
@@ -309,9 +309,9 @@ LOCAL int
 genboot_size(starting_extent)
 	int	starting_extent;
 {
-	if (last_extent > 1)
+	if (last_extent > (session_start + 1))
 		comerrno(EX_BAD, "Cannot create generic boot on offset != 0.\n");
-	last_extent = 16;
+	last_extent = session_start + 16;
 	return 0;
 }
 
@@ -335,7 +335,7 @@ genboot_write(outfile)
 		if (read(f, buffer, SECTOR_SIZE) < 0)
 			comerr("Read error on '%s'.\n", genboot_image);
 
-		if (i != 0 || last_extent_written == 0) {
+		if (i != 0 || last_extent_written == session_start) {
 		 	xfwrite(buffer, 1, SECTOR_SIZE, outfile);
 			last_extent_written++;
 		}
@@ -344,6 +344,6 @@ genboot_write(outfile)
 	return (0);
 }
 
-struct output_fragment sunboot_desc	= {NULL, NULL,		NULL,	sunboot_write};
-struct output_fragment sunlabel_desc	= {NULL, sunlabel_size,	NULL,	sunlabel_write};
-struct output_fragment genboot_desc	= {NULL, genboot_size,	NULL,	genboot_write};
+struct output_fragment sunboot_desc	= {NULL, NULL,		NULL,	sunboot_write,  "Sun Boot" };
+struct output_fragment sunlabel_desc	= {NULL, sunlabel_size,	NULL,	sunlabel_write, "Sun Disk Label" };
+struct output_fragment genboot_desc	= {NULL, genboot_size,	NULL,	genboot_write,  "Generic Boot" };

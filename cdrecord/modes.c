@@ -1,7 +1,7 @@
-/* @(#)modes.c	1.22 01/04/08 Copyright 1988 J. Schilling */
+/* @(#)modes.c	1.24 01/10/29 Copyright 1988 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)modes.c	1.22 01/04/08 Copyright 1988 J. Schilling";
+	"@(#)modes.c	1.24 01/10/29 Copyright 1988 J. Schilling";
 #endif
 /*
  *	SCSI mode page handling
@@ -25,7 +25,7 @@ static	char sccsid[] =
  */
 
 #include <mconfig.h>
-#include <sys/types.h>
+#include <utypes.h>
 #include <standard.h>
 #include <schily.h>
 #include <scg/scgcmd.h>
@@ -287,9 +287,11 @@ BOOL set_mode_params(scgp, pagename, modep, len, save, secsize)
 		(void)unit_ready(scgp);
 		scgp->silent--;
 		if (mode_select(scgp, modep, len, 0, scgp->inq->data_format >= 2) < 0) {
-			errmsgno(EX_BAD,
-			   "Warning: using default %s data.\n", pagename);
-			scg_prbytes("Mode Select Data", modep, len);
+			if (scgp->silent == 0) {
+				errmsgno(EX_BAD,
+				   "Warning: using default %s data.\n", pagename);
+				scg_prbytes("Mode Select Data", modep, len);
+			}
 			return (FALSE);
 		}
 	}

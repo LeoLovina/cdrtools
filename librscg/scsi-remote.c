@@ -1,9 +1,8 @@
 #define	USE_REMOTE
-#ifdef	USE_REMOTE
-/* @(#)scsi-remote.c	1.3 00/09/10 Copyright 1990,2000 J. Schilling */
+/* @(#)scsi-remote.c	1.11 02/11/22 Copyright 1990,2000-2001 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-remote.c	1.3 00/09/10 Copyright 1990,2000 J. Schilling";
+	"@(#)scsi-remote.c	1.11 02/11/22 Copyright 1990,2000-2001 J. Schilling";
 #endif
 /*
  *	Remote SCSI user level command transport routines
@@ -14,7 +13,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1990,2000 J. Schilling
+ *	Copyright (c) 1990,2000-2001 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -33,6 +32,15 @@ static	char __sccsid[] =
  */
 
 #include <mconfig.h>
+
+#if !defined(HAVE_NETDB_H) || !defined(HAVE_RCMD)
+#undef	USE_REMOTE				/* There is no rcmd() */
+#endif
+#if !defined(HAVE_SOCKETPAIR) || !defined(HAVE_DUP2)
+#undef	USE_RCMD_RSH
+#endif
+
+#ifdef	USE_REMOTE
 #include <stdio.h>
 #include <sys/types.h>
 #include <fctldefs.h>
@@ -54,6 +62,16 @@ static	char __sccsid[] =
 #define	signal	sigset
 #endif
 
+/*
+ * On Cygwin, there are no privilleged ports.
+ * On UNIX, rcmd() uses privilleged port that only work for root.
+ */
+#ifdef	IS_CYGWIN
+#define	privport_ok()	(1)
+#else
+#define	privport_ok()	(geteuid() == 0)
+#endif
+
 #define	CMD_SIZE	80
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
@@ -63,11 +81,12 @@ static	char __sccsid[] =
 /*extern	BOOL	debug;*/
 LOCAL	BOOL	debug = 1;
 
-LOCAL	char	_scg_trans_version[] = "remote-1.3";	/* The version for remote SCSI	*/
+LOCAL	char	_scg_trans_version[] = "remote-1.11";	/* The version for remote SCSI	*/
 LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 LOCAL	int	scgo_rsend		__PR((SCSI *scgp));
 LOCAL	char *	scgo_rversion		__PR((SCSI *scgp, int what));
+LOCAL	int	scgo_rhelp		__PR((SCSI *scgp, FILE *f));
 LOCAL	int	scgo_ropen		__PR((SCSI *scgp, char *device));
 LOCAL	int	scgo_rclose		__PR((SCSI *scgp));
 LOCAL	long	scgo_rmaxdma		__PR((SCSI *scgp, long amt));
@@ -79,6 +98,11 @@ LOCAL	int	scgo_rinitiator_id	__PR((SCSI *scgp));
 LOCAL	int	scgo_risatapi		__PR((SCSI *scgp));
 LOCAL	int	scgo_rreset		__PR((SCSI *scgp, int what));
 
+/*
+ * XXX We should rethink the fd parameter now that we introduced
+ * XXX the rscsirchar() function and most access of remfd is done
+ * XXX via scglocal(scgp)->remfd.
+ */
 LOCAL	void	rscsiabrt		__PR((int sig));
 LOCAL	int	rscsigetconn		__PR((SCSI *scgp, char* host));
 LOCAL	char	*rscsiversion		__PR((SCSI *scgp, int fd, int what));
@@ -93,6 +117,8 @@ LOCAL	int	rscsiinitiator_id	__PR((SCSI *scgp, int fd));
 LOCAL	int	rscsiisatapi		__PR((SCSI *scgp, int fd));
 LOCAL	int	rscsireset		__PR((SCSI *scgp, int fd, int what));
 LOCAL	int	rscsiscmd		__PR((SCSI *scgp, int fd, struct scg_cmd *sp));
+LOCAL	int	rscsifillrbuf		__PR((SCSI *scgp));
+LOCAL	int	rscsirchar		__PR((SCSI *scgp, char *cp));
 LOCAL	int	rscsireadbuf		__PR((SCSI *scgp, int fd, char *buf, int count));
 LOCAL	void	rscsivoidarg		__PR((SCSI *scgp, int fd, int count));
 LOCAL	int	rscsicmd		__PR((SCSI *scgp, int fd, char* name, char* cbuf));
@@ -101,11 +127,23 @@ LOCAL	int	rscsigetline		__PR((SCSI *scgp, int fd, char* line, int count));
 LOCAL	int	rscsireadnum		__PR((SCSI *scgp, int fd));
 LOCAL	int	rscsigetstatus		__PR((SCSI *scgp, int fd, char* name));
 LOCAL	int	rscsiaborted		__PR((SCSI *scgp, int fd));
+#ifdef	USE_RCMD_RSH
+LOCAL	int	_rcmdrsh		__PR((char **ahost, int inport,
+						const char *locuser,
+						const char *remuser,
+						const char *cmd,
+						const char *rsh));
+#endif
 
 /*--------------------------------------------------------------------------*/
 
+#define	READBUF_SIZE	128
+
 struct scg_local {
 	int	remfd;
+	char	readbuf[READBUF_SIZE];
+	char	*readbptr;
+	int	readbcnt;
 	BOOL	isopen;
 	int	rsize;
 	int	wsize;
@@ -114,11 +152,13 @@ struct scg_local {
 	char	*v_sccs_id;
 };
 
+
 #define scglocal(p)	((struct scg_local *)((p)->local))
 
 scg_ops_t remote_ops = {
 	scgo_rsend,		/* "S" end	*/
 	scgo_rversion,		/* "V" ersion	*/
+	scgo_rhelp,		/*     help	*/
 	scgo_ropen,		/* "O" pen	*/
 	scgo_rclose,		/* "C" lose	*/
 	scgo_rmaxdma,		/* "D" MA	*/
@@ -192,6 +232,16 @@ scgo_rversion(scgp, what)
 }
 
 LOCAL int
+scgo_rhelp(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "RSCSI", "Remote SCSI",
+		"REMOTE:", "rscsi@host:bus,target,lun", "REMOTE:rscsi@host:1,2,0", TRUE, FALSE);
+	return (0);
+}
+
+LOCAL int
 scgo_ropen(scgp, device)
 	SCSI	*scgp;
 	char	*device;
@@ -221,6 +271,8 @@ scgo_ropen(scgp, device)
 		if (scgp->local == NULL)
 			return (0);
 		scglocal(scgp)->remfd = -1;
+		scglocal(scgp)->readbptr = scglocal(scgp)->readbuf;
+		scglocal(scgp)->readbcnt = 0;
 		scglocal(scgp)->isopen = FALSE;
 		scglocal(scgp)->rsize = 0;
 		scglocal(scgp)->wsize = 0;
@@ -449,6 +501,10 @@ rscsigetconn(scgp, host)
 	static	struct passwd	*pw = 0;
 		char		*name = "root";
 		char		*p;
+		char		*rscsi;
+#ifdef	USE_RCMD_RSH
+		char		*rsh;
+#endif
 		int		rscsisock;
 		char		*rscsipeer;
 		char		rscsiuser[128];
@@ -468,19 +524,34 @@ rscsigetconn(scgp, host)
 		}
 	}
 	if ((p = strchr(host, '@')) != NULL) {
-		js_snprintf(rscsiuser, sizeof(rscsiuser), "%.*s", p - host, host);
+		size_t d = p - host;
+
+		if (d > sizeof(rscsiuser))
+			d = sizeof(rscsiuser);
+		js_snprintf(rscsiuser, sizeof(rscsiuser), "%.*s", (int)d, host);
 		name = rscsiuser;
 		host = &p[1];
 	} else {
 		name = pw->pw_name;
 	}
-	if (scgp->debug)
+	if (scgp->debug > 0)
 		errmsgno(EX_BAD, "locuser: '%s' rscsiuser: '%s' host: '%s'\n",
 						pw->pw_name, name, host);
 	rscsipeer = host;
-	rscsisock = rcmd(&rscsipeer, (unsigned short)sp->s_port,
-					pw->pw_name, name, "/opt/schily/sbin/rscsi", 0);
-/*					pw->pw_name, name, "/etc/xrscsi", 0);*/
+
+	if ((rscsi = getenv("RSCSI")) == NULL)
+		rscsi = "/opt/schily/sbin/rscsi";
+
+#ifdef	USE_RCMD_RSH
+	rsh = getenv("RSH");
+
+	if (!privport_ok() || rsh != NULL)
+		rscsisock = _rcmdrsh(&rscsipeer, (unsigned short)sp->s_port,
+					pw->pw_name, name, rscsi, rsh);
+	else
+#endif
+		rscsisock = rcmd(&rscsipeer, (unsigned short)sp->s_port,
+					pw->pw_name, name, rscsi, 0);
 
 	return (rscsisock);
 }
@@ -576,7 +647,7 @@ rscsigetbuf(scgp, fd, amt)
 	}
 	if (size > scglocal(scgp)->wsize) {
 		scglocal(scgp)->wsize = size;
-		if (scgp->debug)
+		if (scgp->debug > 0)
 			errmsgno(EX_BAD, "sndsize: %d\n", size);
 	}
 #endif
@@ -588,7 +659,7 @@ rscsigetbuf(scgp, fd, amt)
 	}
 	if (size > scglocal(scgp)->rsize) {
 		scglocal(scgp)->rsize = size;
-		if (scgp->debug)
+		if (scgp->debug > 0)
 			errmsgno(EX_BAD, "rcvsize: %d\n", size);
 	}
 #endif
@@ -690,11 +761,11 @@ rscsiscmd(scgp, fd, sp)
 		}
 	}
 	errno = 0;
-	if (write(fd, cbuf, ret) != ret)
+	if (_nixwrite(fd, cbuf, ret) != ret)
 		rscsiaborted(scgp, fd);
 	
 	if (amt > 0) {
-		if (write(fd, sp->addr, amt) != amt)
+		if (_nixwrite(fd, sp->addr, amt) != amt)
 			rscsiaborted(scgp, fd);
 	}
 
@@ -724,6 +795,31 @@ rscsiscmd(scgp, fd, sp)
 }
 
 LOCAL int
+rscsifillrbuf(scgp)
+	SCSI	*scgp;
+{
+	scglocal(scgp)->readbptr = scglocal(scgp)->readbuf;
+
+	return (scglocal(scgp)->readbcnt =
+			_niread(scglocal(scgp)->remfd,
+			     scglocal(scgp)->readbuf, READBUF_SIZE));
+}
+
+LOCAL int
+rscsirchar(scgp, cp)
+	SCSI	*scgp;
+	char	*cp;
+{
+	if (--(scglocal(scgp)->readbcnt) < 0) {
+		if (rscsifillrbuf(scgp) <= 0)
+			return (scglocal(scgp)->readbcnt);
+		--(scglocal(scgp)->readbcnt);
+	}
+	*cp = *(scglocal(scgp)->readbptr)++;
+	return (1);
+}
+
+LOCAL int
 rscsireadbuf(scgp, fd, buf, count)
 	SCSI	*scgp;
 	int	fd;
@@ -734,8 +830,17 @@ rscsireadbuf(scgp, fd, buf, count)
 	register int	amt = 0;
 	register int	cnt;
 
+	if (scglocal(scgp)->readbcnt > 0) {
+		cnt = scglocal(scgp)->readbcnt;
+		if (cnt > n)
+			cnt = n;
+		movebytes(scglocal(scgp)->readbptr, buf, cnt);
+		scglocal(scgp)->readbptr += cnt;
+		scglocal(scgp)->readbcnt -= cnt;
+		amt += cnt;
+	}
 	while (amt < n) {
-		if ((cnt = read(fd, &buf[amt], n - amt)) <= 0) {
+		if ((cnt = _niread(fd, &buf[amt], n - amt)) <= 0) {
 			return (rscsiaborted(scgp, fd));
 		}
 		amt += cnt;
@@ -782,7 +887,7 @@ rscsisendcmd(scgp, fd, name, cbuf)
 	int	buflen = strlen(cbuf);
 
 	errno = 0;
-	if (write(fd, cbuf, buflen) != buflen)
+	if (_nixwrite(fd, cbuf, buflen) != buflen)
 		rscsiaborted(scgp, fd);
 }
 
@@ -796,7 +901,7 @@ rscsigetline(scgp, fd, line, count)
 	register char	*cp;
 
 	for (cp = line; cp < &line[count]; cp++) {
-		if (read(fd, cp, 1) != 1)
+		if (rscsirchar(scgp, cp) != 1)
 			return (rscsiaborted(scgp, fd));
 
 		if (*cp == '\n') {
@@ -852,7 +957,7 @@ rscsigetstatus(scgp, fd, name)
 			rscsireadbuf(scgp, fd, scgp->errstr, count);
 			rscsivoidarg(scgp, fd, voidsize);
 		}
-		if (scgp->debug)
+		if (scgp->debug > 0)
 			errmsgno(number, "Remote status(%s): %d '%s'.\n",
 							name, number, cbuf);
 		errno = number;
@@ -860,7 +965,7 @@ rscsigetstatus(scgp, fd, name)
 	}
 	if (code != 'A') {
 		/* XXX Hier kommt evt Command not found ... */
-		if (scgp->debug)
+		if (scgp->debug > 0)
 			errmsgno(EX_BAD, "Protocol error (got %s).\n", cbuf);
 		return (rscsiaborted(scgp, fd));
 	}
@@ -872,7 +977,7 @@ rscsiaborted(scgp, fd)
 	SCSI	*scgp;
 	int	fd;
 {
-	if ((scgp && scgp->debug) || debug)
+	if ((scgp && scgp->debug > 0) || debug)
 		errmsgno(EX_BAD, "Lost connection to remote host ??\n");
 	/* if fd >= 0 */
 	/* close file */
@@ -881,3 +986,142 @@ rscsiaborted(scgp, fd)
 	return (-1);
 }
 #endif	/* USE_REMOTE */
+
+/*--------------------------------------------------------------------------*/
+#ifdef	USE_RCMD_RSH
+/*
+ * If we make a separate file for libschily, we would need these include files:
+ *
+ * socketpair():	sys/types.h + sys/socket.h
+ * dup2():		unixstd.h (hat auch sys/types.h)
+ * strrchr():		strdefs.h
+ *
+ * and make sure that we use sigset() instead of signal() if possible.
+ */
+#include <waitdefs.h>
+LOCAL int
+_rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
+	char		**ahost;
+	int		inport;		/* port is ignored */
+	const char	*locuser;
+	const char	*remuser;
+	const char	*cmd;
+	const char	*rsh;
+{
+	struct passwd	*pw;
+	int	pp[2];
+	int	pid;
+
+	if (rsh == 0)
+		rsh = "rsh";
+
+	/*
+	 * Verify that 'locuser' is present on local host.
+	 */
+	if ((pw = getpwnam(locuser)) == NULL) {
+		errmsgno(EX_BAD, "Unknown user: %s\n", locuser);
+		return (-1);
+	}
+	/* XXX Check the existence for 'ahost' here? */
+
+	/*
+	 * rcmd(3) creates a single socket to be used for communication.
+	 * We need a bi-directional pipe to implement the same interface.
+	 * On newer OS that implement bi-directional we could use pipe(2)
+	 * but it makes no sense unless we find an OS that implements a
+	 * bi-directional pipe(2) but no socketpair().
+	 */
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, pp) == -1) {
+		errmsg("Cannot create socketpair.\n");
+		return (-1);
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		return (-1);
+	} else if (pid == 0) {
+		const char	*p;
+		const char	*av0;
+		int		xpid;
+
+		(void)close(pp[0]);
+		if (dup2(pp[1], 0) == -1 ||	/* Pipe becomes 'stdin'  */
+		    dup2(0, 1) == -1) {		/* Pipe becomes 'stdout' */
+
+			errmsg("dup2 failed.\n");
+			_exit(EX_BAD);
+		}
+		(void)close(pp[1]);		/* We don't need this anymore*/
+
+		/*
+		 * Become 'locuser' to tell the rsh program the local user id.
+		 */
+		if (getuid() != pw->pw_uid &&
+		    setuid(pw->pw_uid) == -1) {
+			errmsg("setuid(%lld) failed.\n",
+							(Llong)pw->pw_uid);
+			_exit(EX_BAD);
+		}
+
+		/*
+		 * Fork again to completely detach from parent
+		 * and avoid the need to wait(2).
+		 */
+		if ((xpid = fork()) == -1) {
+			perror("rcmdsh: fork to lose parent failed");
+			_exit(EX_BAD);
+		}
+		if (xpid > 0)
+			_exit(0);
+
+		/*
+		 * Always use remote shell programm (even for localhost).
+		 * The client command may call getpeername() for security
+		 * reasons and this would fail on a simple pipe.
+		 */
+
+
+		/*
+		 * By default, 'rsh' handles terminal created signals
+		 * but this is not what we like.
+		 * For this reason, we tell 'rsh' to ignore these signals.
+		 * Ignoring these signals is important to allow 'star' / 'sdd'
+		 * to e.g. implement SIGQUIT as signal to trigger intermediate
+		 * status printing.
+		 *
+		 * For now (late 2002), we know that the following programs
+		 * are broken and do not implement signal handling correctly:
+		 *
+		 *	rsh	on SunOS-5.0...SunOS-5.9
+		 *	ssh	from ssh.com
+		 *	ssh	from openssh.org
+		 *
+		 * Sun already did accept a bug report for 'rsh'. For the ssh
+		 * commands we need to send out bug reports. Meanwhile it could
+		 * help to call setsid() if we are running under X so the ssh
+		 * X pop up for passwd reading will work.
+		 */
+		signal(SIGINT, SIG_IGN);
+		signal(SIGQUIT, SIG_IGN);
+#ifdef	SIGTSTP
+		signal(SIGTSTP, SIG_IGN); /* We would not be able to continue*/
+#endif
+
+		av0 = rsh;
+		if ((p = strrchr(rsh, '/')) != NULL)
+			av0 = ++p;
+		execlp(rsh, av0, *ahost, "-l", remuser, cmd, NULL);
+
+		errmsg("execlp '%s' failed.\n", rsh);
+		_exit(EX_BAD);
+	} else {
+		(void)close(pp[1]);
+		/*
+		 * Wait for the intermediate child.
+		 * The real 'rsh' program is completely detached from us.
+		 */
+		wait(0);
+		return (pp[0]);
+	}
+}
+#endif	/* USE_RCMD_RSH */

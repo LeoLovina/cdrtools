@@ -92,7 +92,7 @@ If you want to check, whether mkisofs make everything right, you should create
 another image by using the following command line.
 
 On Linux:
-mkisofs -o isoimage_3.raw -R  -C xx,0 -M /dev/cdwriter_blk_dev  first_dir
+mkisofs -o isoimage_2.raw -R  -C xx,0 -M /dev/cdwriter_blk_dev  first_dir
 
 On SunOS:
 mkisofs -o isoimage_2.raw -R  -C xx,0 -M target,lun first_dir
@@ -103,7 +103,7 @@ You may check ***this** image by mounting it with my "fbk" on Solaris
 or the loopback driver on Linux.
 
 On Linux type:
-	mount isoimage_3.raw -r -t iso9660 -o loop /mnt
+	mount isoimage_2.raw -r -t iso9660 -o loop /mnt
 
 On SunOS type:
 	mount -r -F fbk -o type=hsfs /dev/fbk0:isoimage_3.raw /mnt
@@ -176,6 +176,15 @@ In addition, please read README.joliet in the mkisofs directory.
 This is the answer to a commonly asked question is why can't I continue a
 multisession CD that has been started on a Microsoft system using mkisofs. 
 
+
+Note: It is not possible to create a multi-session HFS CD. If you create
+a multi-session CD using any of the HFS options, then each new HFS
+session will ignore HFS files from any previous sessions. A warning will
+be printed if you attempt this. However, if you use the '-part' option to
+mkisofs for each session you create, then each session will appear as 
+separate volumes when mounted on a Mac. In this case, it is worth using the 
+'-V' or '-hfs-volid' option to give each session a unique volume name,
+otherwise each "volume" will appear on the Desktop with the same name.
 
 
 Joerg Schilling

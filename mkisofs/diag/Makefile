@@ -1,4 +1,4 @@
-#ident "@(#)Makefile	1.5 99/03/08 "
+#ident "@(#)Makefile	1.6 01/04/03 "
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ RULESDIR=	RULES
 include		$(SRCROOT)/$(RULESDIR)/rules.top
 ###########################################################################
 
-MK_FILES=	dump.mk isodump.mk isoinfo.mk isovfy.mk
+MK_FILES=	dump.mk isodump.mk isoinfo.mk isovfy.mk isodebug.mk
 #XMK_FILE=	Makefile.man
 
 ###########################################################################

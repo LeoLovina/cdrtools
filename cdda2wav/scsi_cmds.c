@@ -1,18 +1,20 @@
-/* @(#)scsi_cmds.c	1.11 01/03/11 Copyright 1998-2001 Heiko Eissfeldt */
+/* @(#)scsi_cmds.c	1.27 02/12/08 Copyright 1998-2002 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)scsi_cmds.c	1.11 01/03/11 Copyright 1998-2001 Heiko Eissfeldt";
+"@(#)scsi_cmds.c	1.27 02/12/08 Copyright 1998-2002 Heiko Eissfeldt";
 
 #endif
 /* file for all SCSI commands
  * FUA (Force Unit Access) bit handling copied from Monty's cdparanoia.
  */
+#undef	DEBUG_FULLTOC
+#undef	WARN_FULLTOC
 #define TESTSUBQFALLBACK	0
 
 #include "config.h"
 #include <stdio.h>
 #include <standard.h>
-#include <stdlib.h>
+#include <stdxlib.h>
 #include <strdefs.h>
 #include <schily.h>
 
@@ -35,11 +37,17 @@ static char     sccsid[] =
 #include "byteorder.h"
 #include "global.h"
 #include "cdrecord.h"
+#include "toc.h"
 #include "scsi_cmds.h"
+#include "exitcodes.h"
 
 unsigned char *bufferTOC;
 subq_chnl *SubQbuffer;
 unsigned char *cmd;
+
+static unsigned ReadFullTOCSony __PR(( SCSI *scgp ));
+static unsigned ReadFullTOCMMC __PR(( SCSI *scgp ));
+
 
 int SCSI_emulated_ATAPI_on(scgp)
 	SCSI *scgp;
@@ -98,7 +106,7 @@ get_orig_sectorsize(scgp, m4, m10, m11)
       static unsigned char *modesense = NULL;
    
       if (modesense == NULL) {
-        modesense = (unsigned char *) malloc(12);
+        modesense = malloc(12);
         if (modesense == NULL) {
           fprintf(stderr, "Cannot allocate memory for mode sense command in line %d\n", __LINE__);
           return 0;
@@ -158,9 +166,10 @@ int set_sectorsize (scgp, secsize)
 
 
 /* switch Toshiba/DEC and HP drives from/to cdda density */
-void EnableCddaModeSelect (scgp, fAudioMode)
+void EnableCddaModeSelect (scgp, fAudioMode, uSectorsize)
 	SCSI *scgp;
 	int fAudioMode;
+	unsigned uSectorsize;
 {
   /* reserved, Medium type=0, Dev spec Parm = 0, block descriptor len 0 oder 8,
      Density (cd format) 
@@ -193,8 +202,8 @@ void EnableCddaModeSelect (scgp, fAudioMode)
   if (fAudioMode) {
     /* prepare to read audio cdda */
     mode [4] = density;  			/* cdda density */
-    mode [10] = (CD_FRAMESIZE_RAW >> 8L);   /* block length "msb" */
-    mode [11] = (CD_FRAMESIZE_RAW & 0xFF);  /* block length "lsb" */
+    mode [10] = (uSectorsize >> 8L);   /* block length "msb" */
+    mode [11] = (uSectorsize & 0xFF);  /* block length "lsb" */
   } else {
     /* prepare to read cds in the previous mode */
     mode [4] = orgmode4; /* 0x00; 			\* normal density */
@@ -213,12 +222,12 @@ void EnableCddaModeSelect (scgp, fAudioMode)
 void ReadTocTextSCSIMMC ( scgp )
 	SCSI *scgp;
 {
-    short int datalength;
-    unsigned char *p = bufferTOC;
+    short datalength;
 
 #if 1
   /* READTOC, MSF, format, res, res, res, Start track/session, len msb,
      len lsb, control */
+	unsigned char *p = bufferTOC;
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
@@ -247,8 +256,9 @@ void ReadTocTextSCSIMMC ( scgp )
         }
         scgp->silent--;
 
-    datalength  = (p[0] << 8) | (p[1]);
-    if (datalength <= 2) return;
+	datalength  = (p[0] << 8) | (p[1]);
+	if (datalength <= 2)
+		return;
 
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
         scmd->addr = (caddr_t)bufferTOC;
@@ -263,7 +273,7 @@ void ReadTocTextSCSIMMC ( scgp )
         g1_cdblen(&scmd->cdb.g1_cdb, 2+datalength);
 
         scgp->silent++;
-        if (scgp->verbose) fprintf(stderr, "\nRead TOC CD Text data ...");
+        if (scgp->verbose) fprintf(stderr, "\nRead TOC CD Text data (length %hd)...", 2+datalength);
 
 	scgp->cmdname = "read toc data (text)";
 
@@ -278,8 +288,9 @@ void ReadTocTextSCSIMMC ( scgp )
 #else
 	{ FILE *fp;
 	int read_;
-	fp = fopen("PearlJam.cdtext", "rb");
+	/*fp = fopen("PearlJam.cdtext", "rb");*/
 	/*fp = fopen("celine.cdtext", "rb");*/
+	fp = fopen("japan.cdtext", "rb");
 	if (fp == NULL) { perror(""); return; }
 	fillbytes(bufferTOC, CD_FRAMESIZE, '\0');
 	read_ = fread(bufferTOC, 1, CD_FRAMESIZE, fp );
@@ -290,41 +301,424 @@ fprintf(stderr, "read %d bytes. sizeof(bufferTOC)=%u\n", read_, CD_FRAMESIZE);
 #endif
 }
 
-/* read the start of the lead-out from the first session TOC */
-unsigned ReadFirstSessionTOCSony ( scgp, tracks )
+/* read the full TOC */
+static unsigned ReadFullTOCSony ( scgp )
 	SCSI *scgp;
-	unsigned tracks;
 {
   /* READTOC, MSF, format, res, res, res, Start track/session, len msb,
      len lsb, control */
 	register struct	scg_cmd	*scmd = scgp->scmd;
+	unsigned tracks = 99;
 
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
         scmd->addr = (caddr_t)bufferTOC;
-        scmd->size = 4 + (tracks + 3) * 11;
+        scmd->size = 4 + (3 + tracks + 6) * 11;
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
         scmd->cdb.g1_cdb.cmd = 0x43;		/* Read TOC command */
         scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.res6 = 1;    		/* session */
-        g1_cdblen(&scmd->cdb.g1_cdb, 4 + (tracks + 3) * 11);
+        g1_cdblen(&scmd->cdb.g1_cdb, 4 + (3 + tracks + 6) * 11);
         scmd->cdb.g1_cdb.vu_97 = 1;   		/* format */
 
         scgp->silent++;
-        if (scgp->verbose) fprintf(stderr, "\nRead TOC first session ...");
+        if (scgp->verbose) fprintf(stderr, "\nRead Full TOC Sony ...");
 
-	scgp->cmdname = "read toc first session";
+	scgp->cmdname = "read full toc sony";
 
         if (scg_cmd(scgp) < 0) {
           scgp->silent--;
 	  if (global.quiet != 1)
-            fprintf (stderr, "Read TOC first session failed (probably not supported).\n");
+            fprintf (stderr, "Read Full TOC Sony failed (probably not supported).\n");
           return 0;
         }
         scgp->silent--;
 
-        if ((unsigned)((bufferTOC[0] << 8) | bufferTOC[1]) >= 4 + (tracks + 3) * 11 -2) {
+	return (unsigned)((bufferTOC[0] << 8) | bufferTOC[1]);
+}
+
+struct msf_address {
+	unsigned char	mins;
+	unsigned char	secs;
+	unsigned char	frame;
+};
+
+struct zmsf_address {
+	unsigned char	zero;
+	unsigned char	mins;
+	unsigned char	secs;
+	unsigned char	frame;
+};
+
+#ifdef	WARN_FULLTOC
+static unsigned lba __PR((struct msf_address *ad));
+
+static unsigned lba(ad)
+	struct msf_address *ad;
+{
+	return	ad->mins*60*75 + ad->secs*75 + ad->frame;
+}
+#endif
+
+static unsigned dvd_lba __PR((struct zmsf_address *ad));
+
+static unsigned dvd_lba(ad)
+	struct zmsf_address *ad;
+{
+	return	ad->zero*1053696 + ad->mins*60*75 + ad->secs*75 + ad->frame;
+}
+
+struct tocdesc {
+	unsigned char	session;
+	unsigned char	adrctl;
+	unsigned char	tno;
+	unsigned char	point;
+	struct msf_address	adr1;
+	struct zmsf_address	padr2;
+};
+
+struct outer {
+	unsigned char	len_msb;
+	unsigned char	len_lsb;
+	unsigned char	first_track;
+	unsigned char	last_track;
+	struct tocdesc ent[1];
+};
+
+static unsigned collect_tracks __PR((struct outer *po, unsigned entries, BOOL bcd_flag));
+
+static unsigned collect_tracks(po, entries, bcd_flag)
+	struct outer *po;
+	unsigned entries;
+	BOOL bcd_flag;
+{
+	unsigned tracks = 0;
+	int i;
+	unsigned session;
+	unsigned last_start;
+	unsigned leadout_start_orig;
+	unsigned leadout_start;
+	unsigned max_leadout = 0;
+
+#ifdef	DEBUG_FULLTOC
+	for (i = 0; i < entries; i++) {
+fprintf(stderr, "%3d: %d %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n" 
+	,i
+	,bufferTOC[4+0 + (i * 11)]
+	,bufferTOC[4+1 + (i * 11)]
+	,bufferTOC[4+2 + (i * 11)]
+	,bufferTOC[4+3 + (i * 11)]
+	,bufferTOC[4+4 + (i * 11)]
+	,bufferTOC[4+5 + (i * 11)]
+	,bufferTOC[4+6 + (i * 11)]
+	,bufferTOC[4+7 + (i * 11)]
+	,bufferTOC[4+8 + (i * 11)]
+	,bufferTOC[4+9 + (i * 11)]
+	,bufferTOC[4+10 + (i * 11)]
+	);
+	}
+#endif
+	/* reformat to standard toc format */
+
+	bufferTOC[2] = 0;
+	bufferTOC[3] = 0;
+	session = 0;
+	last_start = 0;
+	leadout_start_orig = 0;
+	leadout_start = 0;
+
+	for (i = 0; i < entries; i++) {
+#ifdef	WARN_FULLTOC
+		if (po->ent[i].tno != 0) {
+			fprintf(stderr,
+"entry %d, tno is not 0: %d!\n",
+i, po->ent[i].tno);
+		}
+#endif
+		if (bcd_flag) {
+			po->ent[i].session     = from_bcd(po->ent[i].session);
+			po->ent[i].adr1.mins    = from_bcd(po->ent[i].adr1.mins);
+			po->ent[i].adr1.secs    = from_bcd(po->ent[i].adr1.secs);
+			po->ent[i].adr1.frame  = from_bcd(po->ent[i].adr1.frame);
+			po->ent[i].padr2.mins   = from_bcd(po->ent[i].padr2.mins);
+			po->ent[i].padr2.secs   = from_bcd(po->ent[i].padr2.secs);
+			po->ent[i].padr2.frame = from_bcd(po->ent[i].padr2.frame);
+		}
+		switch (po->ent[i].point) {
+		case	0xa0:
+
+			/* check if session is monotonous increasing */
+
+			if (session+1 == po->ent[i].session) {
+				session = po->ent[i].session;
+			}
+#ifdef	WARN_FULLTOC
+			else fprintf(stderr,
+"entry %d, session anomaly %d != %d!\n",
+i, session+1, po->ent[i].session);
+
+			/* check the adrctl field */
+			if (0x10 != (po->ent[i].adrctl & 0x10)) {
+				fprintf(stderr,
+"entry %d, incorrect adrctl field %x!\n",
+i, po->ent[i].adrctl);
+			}
+#endif
+			/* first track number */
+			if (bufferTOC[2] < po->ent[i].padr2.mins
+			    && bufferTOC[3] < po->ent[i].padr2.mins) {
+				bufferTOC[2] = po->ent[i].padr2.mins;
+			}
+#ifdef	WARN_FULLTOC
+			else
+				fprintf(stderr,
+"entry %d, session %d: start tracknumber anomaly: %d <= %d,%d(last)!\n",
+i, session, po->ent[i].padr2.mins, bufferTOC[2], bufferTOC[3]);
+#endif
+			break;
+
+		case	0xa1:
+#ifdef	WARN_FULLTOC
+			/* check if session is constant */
+			if (session != po->ent[i].session) {
+				fprintf(stderr,
+"entry %d, session anomaly %d != %d!\n",
+i, session, po->ent[i].session);
+			}
+
+			/* check the adrctl field */
+			if (0x10 != (po->ent[i].adrctl & 0x10)) {
+				fprintf(stderr,
+"entry %d, incorrect adrctl field %x!\n",
+i, po->ent[i].adrctl);
+			}
+#endif
+			/* last track number */
+			if (bufferTOC[2] <= po->ent[i].padr2.mins
+			    && bufferTOC[3] < po->ent[i].padr2.mins) {
+				bufferTOC[3] = po->ent[i].padr2.mins;
+			}
+#ifdef	WARN_FULLTOC
+			else
+				fprintf(stderr,
+"entry %d, session %d: end tracknumber anomaly: %d <= %d,%d(last)!\n",
+i, session, po->ent[i].padr2.mins, bufferTOC[2], bufferTOC[3]);
+#endif
+			break;
+
+		case	0xa2:
+#ifdef	WARN_FULLTOC
+			/* check if session is constant */
+			if (session != po->ent[i].session) {
+				fprintf(stderr,
+"entry %d, session anomaly %d != %d!\n",
+i, session, po->ent[i].session);
+			}
+
+			/* check the adrctl field */
+			if (0x10 != (po->ent[i].adrctl & 0x10)) {
+				fprintf(stderr,
+"entry %d, incorrect adrctl field %x!\n",
+i, po->ent[i].adrctl);
+			}
+#endif
+			/* register leadout position */
+		{
+			unsigned leadout_start_tmp  = 
+				dvd_lba(&po->ent[i].padr2);
+
+			if (leadout_start_tmp > leadout_start) {
+				leadout_start_orig = leadout_start_tmp;
+				leadout_start = leadout_start_tmp;
+			}
+#ifdef	WARN_FULLTOC
+			else
+				fprintf(stderr,
+"entry %d, leadout position anomaly %u!\n",
+i, leadout_start_tmp);
+#endif
+		}
+			break;
+
+		case	0xb0:
+#ifdef	WARN_FULLTOC
+			/* check if session is constant */
+			if (session != po->ent[i].session) {
+				fprintf(stderr,
+"entry %d, session anomaly %d != %d!\n",
+i, session, po->ent[i].session);
+			}
+
+			/* check the adrctl field */
+			if (0x50 != (po->ent[i].adrctl & 0x50)) {
+				fprintf(stderr,
+"entry %d, incorrect adrctl field %x!\n",
+i, po->ent[i].adrctl);
+			}
+
+			/* check the next program area */
+			if (lba(&po->ent[i].adr1) < 6750 + leadout_start) {
+				fprintf(stderr,
+"entry %d, next program area %u < leadout_start + 6750 = %u!\n",
+i, lba(&po->ent[i].adr1), 6750 + leadout_start);
+			}
+
+			/* check the maximum leadout_start */
+			if (max_leadout != 0 && dvd_lba(&po->ent[i].padr2) != max_leadout) {
+				fprintf(stderr,
+"entry %d, max leadout_start %u != last max_leadout_start %u!\n",
+i, dvd_lba(&po->ent[i].padr2), max_leadout);
+			}
+#endif
+			if (max_leadout == 0)
+				max_leadout = dvd_lba(&po->ent[i].padr2);
+
+			break;
+		case	0xb1:
+		case	0xb2:
+		case	0xb3:
+		case	0xb4:
+		case	0xb5:
+		case	0xb6:
+			break;
+		case	0xc0:
+		case	0xc1:
+			break;
+		default:
+			/* check if session is constant */
+			if (session != po->ent[i].session) {
+#ifdef	WARN_FULLTOC
+				fprintf(stderr,
+"entry %d, session anomaly %d != %d!\n",
+i, session, po->ent[i].session);
+#endif
+				continue;
+			}
+
+			/* check tno */
+			if (bcd_flag)
+				po->ent[i].point  = from_bcd(po->ent[i].point);
+
+			if (po->ent[i].point < bufferTOC[2]
+			    || po->ent[i].point > bufferTOC[3]) {
+#ifdef	WARN_FULLTOC
+				fprintf(stderr,
+"entry %d, track number anomaly %d - %d - %d!\n",
+i, bufferTOC[2], po->ent[i].point, bufferTOC[3]);
+#endif
+			} else {
+				/* check start position */
+				unsigned trackstart = dvd_lba(&po->ent[i].padr2);
+
+				/* correct illegal leadouts */
+				if (leadout_start < trackstart) {
+					leadout_start = trackstart+1;
+				}
+				if (trackstart < last_start || trackstart >= leadout_start) {
+#ifdef	WARN_FULLTOC
+					fprintf(stderr,
+"entry %d, track %d start position anomaly %d - %d - %d!\n",
+i, po->ent[i].point, last_start, trackstart, leadout_start);
+#endif
+				} else {
+					last_start = trackstart;
+					memcpy(&po->ent[tracks], &po->ent[i], sizeof(struct tocdesc));
+					tracks++;
+				}
+			}
+		}	/* switch */
+	}	/* for */
+
+	/* patch leadout track */
+	po->ent[tracks].session = session;
+	po->ent[tracks].adrctl = 0x10;
+	po->ent[tracks].tno = 0;
+	po->ent[tracks].point = 0xAA;
+	po->ent[tracks].adr1.mins = 0;
+	po->ent[tracks].adr1.secs = 0;
+	po->ent[tracks].adr1.frame = 0;
+	po->ent[tracks].padr2.zero = leadout_start_orig / (1053696);
+	po->ent[tracks].padr2.mins = (leadout_start_orig / (60*75)) % 100;
+	po->ent[tracks].padr2.secs = (leadout_start_orig / 75) % 60;
+	po->ent[tracks].padr2.frame = leadout_start_orig % 75;
+	tracks++;
+
+	/* length */
+	bufferTOC[0] = ((tracks * 8) + 2) >> 8;
+	bufferTOC[1] = ((tracks * 8) + 2) & 0xff;
+
+
+	/* reformat 11 byte blocks to 8 byte entries */
+
+	/* 1: Session	\	/	reserved
+	   2: adr ctrl	|	|	adr ctrl
+	   3: TNO	|	|	track number
+	   4: Point	|	|	reserved
+	   5: Min	+-->----+	0
+	   6: Sec	|	|	Min
+	   7: Frame	|	|	Sec
+	   8: Zero	|	\	Frame
+	   9: PMin	|
+	   10: PSec	|
+	   11: PFrame	/
+	*/
+	for (i = 0; i < tracks; i++) {
+		bufferTOC[4+0 + (i << 3)] = 0;
+		bufferTOC[4+1 + (i << 3)] = bufferTOC[4+1 + (i*11)];
+		bufferTOC[4+1 + (i << 3)] = (bufferTOC[4+1 + (i << 3)] >> 4) | (bufferTOC[4+1 + (i << 3)] << 4);
+		bufferTOC[4+2 + (i << 3)] = bufferTOC[4+3 + (i*11)];
+		bufferTOC[4+3 + (i << 3)] = 0;
+		bufferTOC[4+4 + (i << 3)] = bufferTOC[4+7 + (i*11)];
+		bufferTOC[4+5 + (i << 3)] = bufferTOC[4+8 + (i*11)];
+		bufferTOC[4+6 + (i << 3)] = bufferTOC[4+9 + (i*11)];
+		bufferTOC[4+7 + (i << 3)] = bufferTOC[4+10 + (i*11)];
+#ifdef	DEBUG_FULLTOC
+fprintf(stderr, "%02x %02x %02x %02x %02x %02x\n"
+	,bufferTOC[4+ 1 + i*8]
+	,bufferTOC[4+ 2 + i*8]
+	,bufferTOC[4+ 4 + i*8]
+	,bufferTOC[4+ 5 + i*8]
+	,bufferTOC[4+ 6 + i*8]
+	,bufferTOC[4+ 7 + i*8]
+);
+#endif
+	}
+
+	TOC_entries(tracks, NULL, bufferTOC+4, 0);
+	return tracks;
+}
+
+/* read the table of contents from the cd and fill the TOC array */
+unsigned ReadTocSony ( scgp )
+	SCSI *scgp;
+{
+	unsigned tracks = 0;
+	unsigned return_length;
+
+	struct outer *po = (struct outer *)bufferTOC;
+
+	return_length = ReadFullTOCSony(scgp);
+
+	/* Check if the format was understood */
+	if ((return_length & 7) == 2 && (bufferTOC[3] - bufferTOC[2]) == (return_length >> 3)) {
+		/* The extended format seems not be understood, fallback to
+		 * the classical format. */
+		return ReadTocSCSI( scgp );
+	}
+
+	tracks = collect_tracks(po, ((return_length - 2) / 11), TRUE);
+
+	return --tracks;           /* without lead-out */
+}
+
+/* read the start of the lead-out from the first session TOC */
+unsigned ReadFirstSessionTOCSony ( scgp )
+	SCSI *scgp;
+{
+	unsigned return_length;
+	return_length = ReadFullTOCSony(scgp);
+        if (return_length >= 4 + (3 * 11) -2) {
           unsigned off;
 
           /* We want the entry with POINT = 0xA2, which has the start position
@@ -350,19 +744,19 @@ unsigned ReadFirstSessionTOCSony ( scgp, tracks )
         return 0;
 }
 
-/* read the start of the lead-out from the first session TOC */
-unsigned ReadFirstSessionTOCMMC ( scgp, tracks )
+/* read the full TOC */
+static unsigned ReadFullTOCMMC ( scgp )
 	SCSI *scgp;
-	unsigned tracks;
 {
 
   /* READTOC, MSF, format, res, res, res, Start track/session, len msb,
      len lsb, control */
 	register struct	scg_cmd	*scmd = scgp->scmd;
+	unsigned tracks = 99;
 
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
         scmd->addr = (caddr_t)bufferTOC;
-        scmd->size = 4 + (tracks + 3) * 11;
+        scmd->size = 4 + (tracks + 8) * 11;
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
@@ -370,46 +764,72 @@ unsigned ReadFirstSessionTOCMMC ( scgp, tracks )
         scmd->cdb.g1_cdb.lun = scg_lun(scgp);
         scmd->cdb.g1_cdb.addr[0] = 2;		/* format */
         scmd->cdb.g1_cdb.res6 = 1;		/* session */
-        g1_cdblen(&scmd->cdb.g1_cdb, 4 + (tracks + 3) * 11);
+        g1_cdblen(&scmd->cdb.g1_cdb, 4 + (tracks + 8) * 11);
 
         scgp->silent++;
-        if (scgp->verbose) fprintf(stderr, "\nRead TOC first session ...");
+        if (scgp->verbose) fprintf(stderr, "\nRead Full TOC MMC...");
 
-	scgp->cmdname = "read toc first session";
+	scgp->cmdname = "read full toc mmc";
 
         if (scg_cmd(scgp) < 0) {
-          scgp->silent--;
 	  if (global.quiet != 1)
-            fprintf (stderr, "Read TOC first session failed (probably not supported).\n");
+            fprintf (stderr, "Read Full TOC MMC failed (probably not supported).\n");
+#ifdef	B_BEOS_VERSION
+#else
+          scgp->silent--;
           return 0;
+#endif
         }
         scgp->silent--;
 
-        if ((unsigned)((bufferTOC[0] << 8) | bufferTOC[1]) >= 4 + (tracks + 3) * 11 - 2) {
-          unsigned off;
+	return (unsigned)((bufferTOC[0] << 8) | bufferTOC[1]);
+}
 
-          /* We want the entry with POINT = 0xA2, which has the start position
+/* read the start of the lead-out from the first session TOC */
+unsigned ReadFirstSessionTOCMMC ( scgp )
+	SCSI *scgp;
+{
+        unsigned off;
+	unsigned return_length;
+	return_length = ReadFullTOCMMC(scgp);
+
+        /* We want the entry with POINT = 0xA2, which has the start position
              of the first session lead out */
-          off = 4 + 3;
-          while (off < 4 + (tracks + 3) * 11 && bufferTOC[off] != 0xA2) {
-            off += 11;
-          }
-          if (off < 4 + (tracks + 3) * 11) {
-            off += 5;
-            return (bufferTOC[off]*60 + bufferTOC[off+1])*75 + bufferTOC[off+2] - 150;
-          }
+        off = 4 + 3;
+        while (off < return_length && bufferTOC[off] != 0xA2) {
+          off += 11;
+        }
+        if (off < return_length) {
+          off += 5;
+          return (bufferTOC[off]*60 + bufferTOC[off+1])*75 + bufferTOC[off+2] - 150;
         }
         return 0;
 }
 
 /* read the table of contents from the cd and fill the TOC array */
-unsigned ReadTocSCSI ( scgp, toc )
+unsigned ReadTocMMC ( scgp )
 	SCSI *scgp;
-	TOC *toc;
 {
-    unsigned i;
+	unsigned tracks = 0;
+	unsigned return_length;
+
+	struct outer *po = (struct outer *)bufferTOC;
+
+	return_length = ReadFullTOCMMC(scgp);
+	if (return_length - 2 < 4*11 || ((return_length - 2) % 11) != 0)
+		return ReadTocSCSI(scgp);
+
+	tracks = collect_tracks(po, ((return_length - 2) / 11), FALSE);
+	return --tracks;           /* without lead-out */
+}
+
+/* read the table of contents from the cd and fill the TOC array */
+unsigned ReadTocSCSI ( scgp )
+	SCSI *scgp;
+{
     unsigned tracks;
     int	result;
+    unsigned char bufferTOCMSF[CD_FRAMESIZE];
 
     /* first read the first and last track number */
     /* READTOC, MSF format flag, res, res, res, res, Start track, len msb,
@@ -440,8 +860,9 @@ unsigned ReadTocSCSI ( scgp, toc )
     if (tracks == 0) return 0;
     
     
+    memset(bufferTOCMSF, 0, sizeof(bufferTOCMSF));
     fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
-    scmd->addr = (caddr_t)bufferTOC;
+    scmd->addr = (caddr_t)bufferTOCMSF;
     scmd->size = 4 + tracks * 8;
     scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
     scmd->cdb_len = SC_G1_CDBLEN;
@@ -458,13 +879,26 @@ unsigned ReadTocSCSI ( scgp, toc )
     scgp->cmdname = "read toc tracks ";
     result = scg_cmd(scgp);
 
-    if (result >= 0) {
-	/* MSF format succeeded */
-	/* copy to our structure */
+    if (result < 0) {
+	/* MSF format did not succeeded */
+	memset(bufferTOCMSF, 0, sizeof(bufferTOCMSF));
+    } else {
+	int	i;
 	for (i = 0; i < tracks; i++) {
-	    toc[i].mins = bufferTOC[4 + 8*i + 5];
-	    toc[i].secs = bufferTOC[4 + 8*i + 6];
-	    toc[i].frms = bufferTOC[4 + 8*i + 7];
+		bufferTOCMSF[4+1 + (i << 3)] = (bufferTOCMSF[4+1 + (i << 3)] >> 4) | (bufferTOCMSF[4+1 + (i << 3)] << 4);
+#if	0
+fprintf(stderr, "MSF %d %02x %02x %02x %02x %02x %02x %02x %02x\n" 
+	,i
+	,bufferTOCMSF[4+0 + (i * 8)]
+	,bufferTOCMSF[4+1 + (i * 8)]
+	,bufferTOCMSF[4+2 + (i * 8)]
+	,bufferTOCMSF[4+3 + (i * 8)]
+	,bufferTOCMSF[4+4 + (i * 8)]
+	,bufferTOCMSF[4+5 + (i * 8)]
+	,bufferTOCMSF[4+6 + (i * 8)]
+	,bufferTOCMSF[4+7 + (i * 8)]
+	);
+#endif
 	}
     }
 
@@ -486,18 +920,28 @@ unsigned ReadTocSCSI ( scgp, toc )
 
     scgp->cmdname = "read toc tracks ";
     if (scg_cmd(scgp) < 0) {
-	FatalError ("Read TOC tracks failed.\n");
+	FatalError ("Read TOC tracks (lba) failed.\n");
     }
-    for (i = 0; i < tracks; i++) {
-	memcpy (&toc[i], bufferTOC + 4 + 8*i, 8);
-	toc[i].ISRC[0] = 0;
-	toc[i].dwStartSector = be32_to_cpu(toc[i].dwStartSector);
-	if (result < 0) {
-	    lba_2_msf((long)toc[i].dwStartSector, &toc[i].mins, &toc[i].secs, &toc[i].frms);
+    {
+	int	i;
+	for (i = 0; i < tracks; i++) {
+		bufferTOC[4+1 + (i << 3)] = (bufferTOC[4+1 + (i << 3)] >> 4) | (bufferTOC[4+1 + (i << 3)] << 4);
+#if	0
+fprintf(stderr, "LBA %d %02x %02x %02x %02x %02x %02x %02x %02x\n" 
+	,i
+	,bufferTOC[4+0 + (i * 8)]
+	,bufferTOC[4+1 + (i * 8)]
+	,bufferTOC[4+2 + (i * 8)]
+	,bufferTOC[4+3 + (i * 8)]
+	,bufferTOC[4+4 + (i * 8)]
+	,bufferTOC[4+5 + (i * 8)]
+	,bufferTOC[4+6 + (i * 8)]
+	,bufferTOC[4+7 + (i * 8)]
+	);
+#endif
 	}
-	if ( toc [i].bTrack != i+1 )
-	    toc [i].bTrack = i+1;
     }
+    TOC_entries(tracks, bufferTOC+4, bufferTOCMSF+4, result);
     return --tracks;           /* without lead-out */
 }
 
@@ -505,11 +949,14 @@ unsigned ReadTocSCSI ( scgp, toc )
 
 /* Read max. SectorBurst of cdda sectors to buffer
    via standard SCSI-2 Read(10) command */
-int ReadStandard (scgp, p, lSector, SectorBurstVal )
+static int ReadStandardLowlevel __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal, unsigned secsize ));
+
+static int ReadStandardLowlevel (scgp, p, lSector, SectorBurstVal, secsize )
 	SCSI *scgp;
 	UINT4 *p;
 	unsigned lSector;
 	unsigned SectorBurstVal;
+	unsigned secsize;
 {
   /* READ10, flags, block1 msb, block2, block3, block4 lsb, reserved, 
      transfer len msb, transfer len lsb, block addressing mode */
@@ -517,7 +964,7 @@ int ReadStandard (scgp, p, lSector, SectorBurstVal )
 
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
         scmd->addr = (caddr_t)p;
-        scmd->size = SectorBurstVal*CD_FRAMESIZE_RAW;
+        scmd->size = SectorBurstVal * secsize;
         scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
         scmd->cdb_len = SC_G1_CDBLEN;
         scmd->sense_len = CCS_SENSE_LEN;
@@ -533,7 +980,17 @@ int ReadStandard (scgp, p, lSector, SectorBurstVal )
 	if (scg_cmd(scgp)) return 0;
 
 	/* has all or something been read? */
-	return SectorBurstVal - scg_getresid(scgp)/CD_FRAMESIZE_RAW;
+	return SectorBurstVal - scg_getresid(scgp)/secsize;
+}
+
+
+int ReadStandard (scgp, p, lSector, SectorBurstVal )
+	SCSI *scgp;
+	UINT4 *p;
+	unsigned lSector;
+	unsigned SectorBurstVal;
+{
+	return ReadStandardLowlevel(scgp, p, lSector, SectorBurstVal, CD_FRAMESIZE);
 }
 
 /* Read max. SectorBurst of cdda sectors to buffer
@@ -673,6 +1130,33 @@ int ReadCddaMMC12 (scgp, p, lSector, SectorBurstVal )
 	return SectorBurstVal - scg_getresid(scgp)/CD_FRAMESIZE_RAW;
 }
 
+int ReadCddaFallbackMMC (scgp, p, lSector, SectorBurstVal )
+	SCSI *scgp;
+	UINT4 *p;
+	unsigned lSector;
+	unsigned SectorBurstVal;
+{
+	static int ReadCdda12_unknown = 0;
+	int retval = -999;
+
+	scgp->silent++;
+	if (ReadCdda12_unknown 
+	    || ((retval = ReadCdda12(scgp, p, lSector, SectorBurstVal)) <= 0)) {
+		/* if the command is not available, use the regular
+		 * MMC ReadCd 
+		 */
+		if (retval <= 0 && scg_sense_key(scgp) == 0x05) {
+			ReadCdda12_unknown = 1;
+		}
+		scgp->silent--;
+		ReadCdRom = ReadCddaMMC12;
+		ReadCdRomSub = ReadCddaSubMMC12;
+		return ReadCddaMMC12(scgp, p, lSector, SectorBurstVal);
+	}
+	scgp->silent--;
+	return retval;
+}
+
 /* Read the Sub-Q-Channel to SubQbuffer. This is the method for
  * drives that do not support subchannel parameters. */
 #ifdef	PROTOTYPES
@@ -712,6 +1196,8 @@ static subq_chnl *ReadSubQFallback ( scgp, sq_format, track )
 	{ unsigned char *p = (unsigned char *) SubQbuffer;
 	  if ((((unsigned)p[2] << 8) | p[3]) /* LENGTH */ > ULONG_C(11) &&
 	    (p[5] >> 4) /* ADR */ == sq_format) {
+	    if (sq_format == GET_POSITIONDATA)
+		p[5] = (p[5] << 4) | (p[5] >> 4);
 	    return SubQbuffer;
 	  }
 	}
@@ -773,9 +1259,190 @@ subq_chnl *ReadSubQSCSI ( scgp, sq_format, track )
     return ReadSubQFallback(scgp, sq_format, track);
   }
 
+	if (sq_format == GET_POSITIONDATA)
+		SubQbuffer->control_adr = (SubQbuffer->control_adr << 4) | (SubQbuffer->control_adr >> 4);
   return SubQbuffer;
 }
 
+static subq_chnl sc;
+
+static subq_chnl* fill_subchannel __PR((unsigned char bufferwithQ[]));
+static subq_chnl* fill_subchannel(bufferwithQ)
+	unsigned char bufferwithQ[];
+{
+	sc.subq_length = 0;
+	sc.control_adr = bufferwithQ[CD_FRAMESIZE_RAW + 0];
+	sc.track = bufferwithQ[CD_FRAMESIZE_RAW + 1];
+	sc.index = bufferwithQ[CD_FRAMESIZE_RAW + 2];
+	return &sc;
+}
+
+int ReadCddaSubSony (scgp, p, lSector, SectorBurstVal )
+	SCSI *scgp;
+	UINT4 *p;
+	unsigned lSector;
+	unsigned SectorBurstVal;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+        scmd->addr = (caddr_t)p;
+	scmd->size = SectorBurstVal*(CD_FRAMESIZE_RAW + 16);
+        scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+        scmd->cdb_len = SC_G5_CDBLEN;
+        scmd->sense_len = CCS_SENSE_LEN;
+        scmd->cdb.g5_cdb.cmd = 0xd8;		/* read audio command */
+        scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.g5_cdb.res |= (accepts_fua_bit == 1 ? 1 << 2 : 0);
+	scmd->cdb.g5_cdb.res10 = 0x01;	/* subcode 1 -> cdda + 16 * q sub */
+        g5_cdbaddr(&scmd->cdb.g5_cdb, lSector);
+        g5_cdblen(&scmd->cdb.g5_cdb, SectorBurstVal);
+
+        if (scgp->verbose) fprintf(stderr, "\nReadSony12 CDDA + SubChannels...");
+
+	scgp->cmdname = "Read12SubChannelsSony";
+
+	if (scg_cmd(scgp)) return -1;
+
+	/* has all or something been read? */
+	return scg_getresid(scgp) != 0;
+}
+
+int ReadCddaSub96Sony __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
+
+int ReadCddaSub96Sony (scgp, p, lSector, SectorBurstVal )
+	SCSI *scgp;
+	UINT4 *p;
+	unsigned lSector;
+	unsigned SectorBurstVal;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+        scmd->addr = (caddr_t)p;
+	scmd->size = SectorBurstVal*(CD_FRAMESIZE_RAW + 96);
+        scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+        scmd->cdb_len = SC_G5_CDBLEN;
+        scmd->sense_len = CCS_SENSE_LEN;
+        scmd->cdb.g5_cdb.cmd = 0xd8;		/* read audio command */
+        scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.g5_cdb.res |= (accepts_fua_bit == 1 ? 1 << 2 : 0);
+	scmd->cdb.g5_cdb.res10 = 0x02;	/* subcode 2 -> cdda + 96 * q sub */
+        g5_cdbaddr(&scmd->cdb.g5_cdb, lSector);
+        g5_cdblen(&scmd->cdb.g5_cdb, SectorBurstVal);
+
+        if (scgp->verbose) fprintf(stderr, "\nReadSony12 CDDA + 96 byte SubChannels...");
+
+	scgp->cmdname = "Read12SubChannelsSony";
+
+	if (scg_cmd(scgp)) return -1;
+
+	/* has all or something been read? */
+	return scg_getresid(scgp) != 0;
+}
+
+subq_chnl *ReadSubChannelsSony(scgp, lSector)
+	SCSI *scgp;
+	unsigned lSector;
+{
+	/*int retval = ReadCddaSub96Sony(scgp, (UINT4 *)bufferTOC, lSector, 1);*/
+	int retval = ReadCddaSubSony(scgp, (UINT4 *)bufferTOC, lSector, 1);
+	if (retval != 0) return NULL;
+
+	return fill_subchannel(bufferTOC);
+}
+
+/* Read max. SectorBurst of cdda sectors to buffer
+   via MMC standard READ CD command */
+int ReadCddaSubMMC12 (scgp, p, lSector, SectorBurstVal )
+	SCSI *scgp;
+	UINT4 *p;
+	unsigned lSector;
+	unsigned SectorBurstVal;
+{
+	register struct	scg_cmd	*scmd;
+	scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+        scmd->addr = (caddr_t)p;
+        scmd->size = SectorBurstVal*(CD_FRAMESIZE_RAW + 16);
+        scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+        scmd->cdb_len = SC_G5_CDBLEN;
+        scmd->sense_len = CCS_SENSE_LEN;
+        scmd->cdb.g5_cdb.cmd = 0xbe;		/* read cd command */
+        scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+        scmd->cdb.g5_cdb.res = 1 << 1; /* expected sector type field CDDA */
+        g5_cdbaddr(&scmd->cdb.g5_cdb, lSector);
+        g5x_cdblen(&scmd->cdb.g5_cdb, SectorBurstVal);
+	scmd->cdb.g5_cdb.count[3] = 1 << 4;	/* User data */
+	scmd->cdb.g5_cdb.res10 = 0x02;	/* subcode 2 -> cdda + 16 * q sub */
+
+        if (scgp->verbose) fprintf(stderr, "\nReadMMC12 CDDA + SUB...");
+
+	scgp->cmdname = "ReadCD Sub MMC 12";
+
+	if (scg_cmd(scgp)) return -1;
+
+	/* has all or something been read? */
+	return scg_getresid(scgp) != 0;
+}
+
+static subq_chnl *ReadSubChannelsMMC __PR((SCSI *scgp, unsigned lSector));
+static subq_chnl *ReadSubChannelsMMC(scgp, lSector)
+	SCSI *scgp;
+	unsigned lSector;
+{
+	int retval = ReadCddaSubMMC12(scgp, (UINT4 *)bufferTOC, lSector, 1);
+	if (retval != 0) return NULL;
+
+	return fill_subchannel(bufferTOC);
+}
+
+subq_chnl *ReadSubChannelsFallbackMMC(scgp, lSector)
+	SCSI *scgp;
+	unsigned lSector;
+{
+	static int ReadSubSony_unknown = 0;
+	subq_chnl *retval = NULL;
+
+	scgp->silent++;
+	if (ReadSubSony_unknown 
+	    || ((retval = ReadSubChannelsSony(scgp, lSector)) == NULL)) {
+		/* if the command is not available, use the regular
+		 * MMC ReadCd 
+		 */
+		if (retval == NULL && scg_sense_key(scgp) == 0x05) {
+			ReadSubSony_unknown = 1;
+		}
+		scgp->silent--;
+		return ReadSubChannelsMMC(scgp, lSector);
+	}
+	scgp->silent--;
+	return retval;
+}
+
+subq_chnl *ReadStandardSub(scgp, lSector)
+	SCSI *scgp;
+	unsigned lSector;
+{
+	if (0 == ReadStandardLowlevel (scgp, (UINT4 *)bufferTOC, lSector, 1, CD_FRAMESIZE_RAW + 16 )) {
+		return NULL;
+	}
+#if	0
+fprintf(stderr, "Subchannel Sec %x: %02x %02x %02x %02x\n"
+	,lSector
+	,bufferTOC[CD_FRAMESIZE_RAW + 0]
+	,bufferTOC[CD_FRAMESIZE_RAW + 1]
+	,bufferTOC[CD_FRAMESIZE_RAW + 2]
+	,bufferTOC[CD_FRAMESIZE_RAW + 3]
+	);
+#endif
+	sc.control_adr = (bufferTOC[CD_FRAMESIZE_RAW + 0] << 4)
+		| bufferTOC[CD_FRAMESIZE_RAW + 1];
+	sc.track = from_bcd(bufferTOC[CD_FRAMESIZE_RAW + 2]);
+	sc.index = from_bcd(bufferTOC[CD_FRAMESIZE_RAW + 3]);
+	return &sc;
+}
 /********* non standardized speed selects ***********************/
 
 void SpeedSelectSCSIToshiba (scgp, speed)
@@ -949,23 +1616,23 @@ unsigned char *Inquiry ( scgp )
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
   if (Inqbuffer == NULL) {
-    Inqbuffer = (unsigned char *) malloc(42);
+    Inqbuffer = malloc(36);
     if (Inqbuffer == NULL) {
       fprintf(stderr, "Cannot allocate memory for inquiry command in line %d\n", __LINE__);
         return NULL;
     }
   }
 
-  fillbytes(Inqbuffer, 42, '\0');
+  fillbytes(Inqbuffer, 36, '\0');
 	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
   scmd->addr = (caddr_t)Inqbuffer;
-  scmd->size = 42;
+  scmd->size = 36;
   scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
   scmd->cdb_len = SC_G0_CDBLEN;
   scmd->sense_len = CCS_SENSE_LEN;
   scmd->cdb.g0_cdb.cmd = SC_INQUIRY;
   scmd->cdb.g0_cdb.lun = scg_lun(scgp);
-  scmd->cdb.g0_cdb.count = 42;
+  scmd->cdb.g0_cdb.count = 36;
         
 	scgp->cmdname = "inquiry";
 
@@ -1093,11 +1760,11 @@ void init_scsibuf(scgp, amt)
 {
 	if (scsibuffer != NULL) {
 		fprintf(stderr, "the SCSI transfer buffer has already been allocated!\n");
-		exit(3);
+		exit(SETUPSCSI_ERROR);
 	}
 	scsibuffer = scg_getbuf(scgp, amt);
 	if (scsibuffer == NULL) {
 		fprintf(stderr, "could not get SCSI transfer buffer!\n");
-		exit(3);
+		exit(SETUPSCSI_ERROR);
 	}
 }

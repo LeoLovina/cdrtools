@@ -1,4 +1,4 @@
-/* @(#)scsimmc.h	1.4 99/03/28 Copyright 1997 J. Schilling */
+/* @(#)scsimmc.h	1.7 02/03/29 Copyright 1997 J. Schilling */
 /*
  *	Definitions for SCSI/mmc compliant drives
  *
@@ -96,10 +96,42 @@ struct cd_mode_data {
 };
 
 struct tocheader {
-	char	len[2];
-	char	first;
-	char	last;
+	Uchar	len[2];
+	Uchar	first;
+	Uchar	last;
 };
+
+/*
+ * Full TOC entry
+ */
+struct ftrackdesc {
+	Uchar	sess_number;
+
+#if defined(_BIT_FIELDS_LTOH)		/* Intel byteorder */
+	Ucbit	control		: 4;
+	Ucbit	adr		: 4;
+#else					/* Motorola byteorder */
+	Ucbit	adr		: 4;
+	Ucbit	control		: 4;
+#endif
+
+	Uchar	track;
+	Uchar	point;
+	Uchar	amin;
+	Uchar	asec;
+	Uchar	aframe;
+	Uchar	res7;
+	Uchar	pmin;
+	Uchar	psec;
+	Uchar	pframe;
+};
+
+struct fdiskinfo {
+	struct tocheader	hd;
+	struct ftrackdesc	desc[1];
+};
+
+
 
 #if defined(_BIT_FIELDS_LTOH)	/* Intel bitorder */
 
@@ -415,11 +447,14 @@ struct dvd_structure_0E {
 	Uchar	field_id_2;		/* Field ID (2)			*/
 	Uchar	ind_wr_power;		/* Recommended writing power	*/
 	Uchar	ind_wavelength;		/* Wavelength for ind_wr_power	*/
-	Uchar	opt_wr_strategy;	/* Optimum write Strategy	*/
-	Uchar	res_b[4];		/* Reserved			*/
+	Uchar	opt_wr_strategy[4];	/* Optimum write Strategy	*/
+	Uchar	res_b[1];		/* Reserved			*/
 	Uchar	field_id_3;		/* Field ID (3)			*/
 	Uchar	man_id[6];		/* Manufacturer ID		*/
-	Uchar	res;			/* Reserved			*/
+	Uchar	res_m1;			/* Reserved			*/
+	Uchar	field_id_4;		/* Field ID (4)			*/
+	Uchar	man_id2[6];		/* Manufacturer ID		*/
+	Uchar	res_m2;			/* Reserved			*/
 };
 
 struct dvd_structure_0F {

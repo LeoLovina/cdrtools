@@ -1,7 +1,7 @@
-/* @(#)scsi-next.c	1.30 01/03/18 Copyright 1997 J. Schilling */
+/* @(#)scsi-next.c	1.31 02/10/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-next.c	1.30 01/03/18 Copyright 1997 J. Schilling";
+	"@(#)scsi-next.c	1.31 02/10/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the NeXT Step generic SCSI implementation.
@@ -42,7 +42,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-next.c-1.30";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-next.c-1.31";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -91,6 +91,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "SGIOCREQ", "Generic SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int

@@ -1,7 +1,7 @@
-/* @(#)scsiopen.c	1.89 01/03/18 Copyright 1995,2000 J. Schilling */
+/* @(#)scsiopen.c	1.93 02/11/19 Copyright 1995,2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsiopen.c	1.89 01/03/18 Copyright 1995,2000 J. Schilling";
+	"@(#)scsiopen.c	1.93 02/11/19 Copyright 1995,2000 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -62,6 +62,7 @@ extern	int	lverbose;
 
 EXPORT	SCSI	*scg_open	__PR((char *scsidev, char *errs, int slen, int debug,
 								int be_verbose));
+EXPORT	int	scg_help	__PR((FILE *f));
 LOCAL	int	scg_scandev	__PR((char *devp, char *errs, int slen, 
 							int *busp, int *tgtp, int *lunp));
 EXPORT	int	scg_close	__PR((SCSI * scgp));
@@ -100,10 +101,10 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 {
 	char	devname[256];
 	char	*devp = NULL;
-	char	*sdev;
+	char	*sdev = NULL;
 	int	x1;
-	int	bus;
-	int	tgt;
+	int	bus = 0;
+	int	tgt = 0;
 	int	lun = 0;
 	int	n = 0;
 	SCSI	*scgp;
@@ -122,6 +123,11 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 	devname[0] = '\0';
 	if (scsidev != NULL && scsidev[0] != '\0') {
 		sdev = scsidev;
+		if ((strncmp(scsidev, "HELP", 4) == 0) ||
+		    (strncmp(scsidev, "help", 4) == 0)) {
+
+			return ((SCSI *)0);
+		}
 		if (strncmp(scsidev, "REMOTE", 6) == 0) {
 			/*
 			 * REMOTE:user@host:scsidev or
@@ -162,6 +168,7 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 				/* Notation form: 'devname' (undocumented)   */
 				/* Forward complete name to scg__open()	     */
 				/* Fetch bus/tgt/lun values from OS	     */
+				/* We may come here too with 'USCSI'	     */
 				n = -1;
 				lun  = -2;	/* Lun must be known	     */
 				if (devname[0] == '\0') {
@@ -175,7 +182,11 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 			}
 		} else {
 			/* Notation form: 'devname:bus,tgt,lun'/'devname:@'  */
+			/* We may come here too with 'USCSI:'		     */
 			if (devname[0] == '\0') {
+				/*
+				 * Copy over the part before the ':'
+				 */
 				x1 = devp - scsidev;
 				if (x1 >= (int)sizeof(devname))
 					x1 = sizeof(devname)-1;
@@ -199,6 +210,24 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 				}
 				n = -1;
 				/*
+				 * Got device:@ or device:@,lun
+				 * Make sure not to call scg_scandev()
+				 */
+				devp = NULL;
+			} else if (devp[0] == '\0') {
+				/*
+				 * Got USCSI: or ATAPI:
+				 * Make sure not to call scg_scandev()
+				 */
+				devp = NULL;
+			} else if (strchr(sdev, ',') == NULL) { 
+				/* We may come here with 'ATAPI:/dev/hdc'    */
+				strncpy(devname, scsidev,
+						sizeof(devname)-1);
+				devname[sizeof(devname)-1] = '\0';
+				n = -1;
+				lun  = -2;	/* Lun must be known	     */
+				/*
 				 * Make sure not to call scg_scandev()
 				 */
 				devp = NULL;
@@ -206,6 +235,8 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 		}
 	}
 nulldevice:
+
+/*error("10 scsidev '%s' sdev '%s' devp '%s' b: %d t: %d l: %d\n", scsidev, sdev, devp, bus, tgt, lun);*/
 
 	if (devp != NULL) {
 		n = scg_scandev(devp, errs, slen, &bus, &tgt, &lun);
@@ -244,6 +275,26 @@ nulldevice:
 		return ((SCSI *)0);
 	}
 	return (scgp);
+}
+
+EXPORT int
+scg_help(f)
+	FILE	*f;
+{
+	SCSI	*scgp;
+
+	scgp = scg_smalloc();
+	if (scgp != NULL) {
+extern	scg_ops_t scg_std_ops;
+
+		scgp->ops = &scg_std_ops;
+
+		printf("Supported SCSI transports for this platform:\n");
+		SCGO_HELP(scgp, f);
+		scg_remote()->scgo_help(scgp, f);
+		scg_sfree(scgp);
+	}
+	return (0);
 }
 
 /*
@@ -356,7 +407,7 @@ extern	scg_ops_t scg_dummy_ops;
 
 	fillbytes(scgp, sizeof(*scgp), 0);
 	scgp->ops	= &scg_dummy_ops;
-	scg_settarget(scgp, -1, -1, -1),
+	scg_settarget(scgp, -1, -1, -1);
 	scgp->fd	= -1;
 	scgp->deftimeout = 20;
 	scgp->running	= FALSE;

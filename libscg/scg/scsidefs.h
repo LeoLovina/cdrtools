@@ -1,4 +1,4 @@
-/* @(#)scsidefs.h	1.24 01/02/23 Copyright 1988 J. Schilling */
+/* @(#)scsidefs.h	1.27 01/09/27 Copyright 1988 J. Schilling */
 /*
  *	Definitions for SCSI devices i.e. for error strings in scsierrs.c
  *
@@ -30,6 +30,12 @@ extern "C" {
 /*
  * Disks
  */
+#ifdef	DEV_UNKNOWN
+/*
+ * True64 defines DEV_UNKNOWN in /usr/include/sys/devio.h as "UNKNOWN"
+ */
+#undef	DEV_UNKNOWN
+#endif
 #define	DEV_UNKNOWN		0
 #define	DEV_ACB40X0		1
 #define	DEV_ACB4000		2
@@ -73,6 +79,7 @@ extern "C" {
 #define	DEV_MMC_CDR		502
 #define	DEV_MMC_CDRW		503
 #define	DEV_MMC_DVD		504
+#define	DEV_MMC_DVD_WR		505
 
 #define	DEV_CDD_521_OLD		510
 #define	DEV_CDD_521		511
@@ -80,6 +87,7 @@ extern "C" {
 #define	DEV_PCD_600		513
 #define	DEV_CDD_2000		514
 #define	DEV_CDD_2600		515
+#define	DEV_TYUDEN_EW50		516
 #define	DEV_YAMAHA_CDR_100	520
 #define	DEV_YAMAHA_CDR_400	521
 #define	DEV_PLASMON_RF_4100	530

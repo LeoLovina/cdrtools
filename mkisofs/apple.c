@@ -1,7 +1,7 @@
-/* @(#)apple.c	1.12 01/02/23 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)apple.c	1.18 02/07/21 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)apple.c	1.12 01/02/23 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)apple.c	1.18 02/07/21 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -47,6 +47,7 @@ static	char sccsid[] =
 #include <ctype.h>
 #include <netinet/in.h>
 #include <apple.h>
+#include <schily.h>
 
 /* tidy up mkisofs definition ... */
 typedef struct directory_entry dir_ent;
@@ -70,6 +71,14 @@ static int	get_fe_info	__PR((char *, char *, dir_ent *, int));
 static int	get_sgi_dir	__PR((char *, char *, dir_ent *, int));
 static int	get_sgi_info	__PR((char *, char *, dir_ent *, int));
 static int	get_sfm_info	__PR((char *, char *, dir_ent *, int));
+
+#ifdef IS_MACOS_X
+static int	get_xhfs_dir	__PR((char *, char *, dir_ent *, int));
+static int	get_xhfs_info	__PR((char *, char *, dir_ent *, int));
+#else
+#define get_xhfs_dir	get_none_dir
+#define get_xhfs_info	get_none_info
+#endif /* IS_MACOS_X */
 
 static void	set_ct		__PR((hfsdirent *, char *, char *));
 static void	set_Dinfo	__PR((byte *, hfsdirent *));
@@ -136,7 +145,11 @@ static struct hfs_type hfs_types[] = {
 	{TYPE_DAVE, INSERT, "resource.frk/", "resource.frk/",
 				get_dbl_info, get_dbl_dir, "DAVE"},
 	{TYPE_SFM, APPEND | NORSRC, ":Afp_AfpInfo", ":Afp_Resource",
-				get_sfm_info, get_none_dir, "SFM"}
+				get_sfm_info, get_none_dir, "SFM"},
+	{TYPE_XDBL, INSERT, "._", "._", get_dbl_info, get_dbl_dir,
+				"MacOS X AppleDouble"},
+	{TYPE_XHFS, APPEND | NOINFO, "/rsrc", "/rsrc", get_xhfs_info, get_xhfs_dir,
+				"MacOS X HFS"}
 };
 
 /* used by get_magic_match() return */
@@ -574,7 +587,6 @@ get_cap_info(hname, dname, s_entry, ret)
 		}
 
 		set_Finfo(info.finderinfo, hfs_ent);
-
 #ifdef USE_MAC_DATES
 		/*
 		 * set created/modified dates - these date should have already
@@ -850,7 +862,7 @@ get_mb_info(hname, dname, s_entry, ret)
 			return (TYPE_NONE);
 
 		/* check that the filename is OKish */
-		for (i = 0; i < info->nlen; i++)
+		for (i = 0; i < (int)info->nlen; i++)
 			if (info->name[i] == 0)
 				return (TYPE_NONE);
 
@@ -1039,6 +1051,23 @@ get_dbl_dir(hname, dname, s_entry, ret)
 }
 
 /*
+ *	Depending on the version, AppleDouble/Single stores dates
+ *	relative to 1st Jan 1904 (v1) or 1st Jan 2000 (v2)
+ *
+ *	The d_toutime() function uses 1st Jan 1904 to convert to
+ *	Unix time (1st Jan 1970).
+ *
+ *	The d_dtoutime() function uses 1st Jan 2000 to convert to
+ *	Unix time (1st Jan 1970).
+ *
+ *	However, NetaTalk files seem to do their own thing - older
+ *	Netatalk files don't have a magic number of version and 
+ *	store dates in ID=7 (don't know how). Newer Netatalk files
+ *	claim to be version 1, but store dates in ID=7 as if they
+ *	were version 2 files.
+ */
+
+/*
  *	get_dbl_info:	get Apple double finderinfo for a file
  *
  *	Based on code from cvt2cap.c (c) May 1988, Paul Campbell
@@ -1062,11 +1091,14 @@ get_dbl_info(hname, dname, s_entry, ret)
 	int		i;
 	int		fail = 0;
 	int		len = 0;
+	unsigned char	dates[A_DATE];
+	int		ver = 0, dlen;
 
 	hp = (a_hdr *) p_buf;
 	memset(hp, 0, A_HDR_SIZE);
 
 	memset(name, 0, sizeof(name));
+	memset(dates, 0, sizeof(dates));
 
 	/* get the rsrc file info - should exist ... */
 	if ((s_entry1 = s_entry->assoc) == NULL)
@@ -1080,10 +1112,11 @@ get_dbl_info(hname, dname, s_entry, ret)
 	 * check finder info is OK - some Netatalk files don't have magic
 	 * or version set - ignore if it's a netatalk file
 	 */
+
+	ver = d_getl(hp->version);
 	if (num == A_HDR_SIZE && ((ret == TYPE_NETA) ||
 			(d_getl(hp->magic) == APPLE_DOUBLE &&
-				(d_getl(hp->version) == A_VERSION1 ||
-					d_getl(hp->version) == A_VERSION2)))) {
+				(ver == A_VERSION1 || ver == A_VERSION2)))) {
 
 		/* read TOC of the AppleDouble file */
 		nentries = (int) d_getw(hp->nentries);
@@ -1117,6 +1150,39 @@ get_dbl_info(hname, dname, s_entry, ret)
 					*name = '\0';
 				len = d_getl(ep->length);
 				break;
+			case ID_FILEI:
+				/* Workround for NetaTalk files ... */
+				if (ret == TYPE_NETA && ver == A_VERSION1)
+					ver = A_VERSION2;
+				/* fall through */
+			case ID_FILEDATESI:
+				/* get file info */
+				fseek(fp, d_getl(ep->offset), 0);
+				dlen = MIN(d_getl(ep->length), A_DATE);
+				if (fread(dates, dlen, 1, fp) < 1) {
+					fail = 1;
+				} else {
+					/* get the correct Unix time */
+					switch (ver) {
+
+					case (A_VERSION1):
+						hfs_ent->crdate =
+						d_toutime(d_getl(dates));
+						hfs_ent->mddate =
+						d_toutime(d_getl(dates+4));
+						break;
+					case (A_VERSION2):
+						hfs_ent->crdate =
+						d_dtoutime(d_getl(dates));
+						hfs_ent->mddate =
+						d_dtoutime(d_getl(dates+4));
+						break;
+					default:
+						/* Use Unix dates */
+						break;
+					}
+				}
+				break;
 			default:
 				break;
 			}
@@ -1126,7 +1192,6 @@ get_dbl_info(hname, dname, s_entry, ret)
 
 		/* skip this if we had a problem */
 		if (!fail) {
-
 			set_Finfo(info.finderinfo, hfs_ent);
 
 			/* use stored name if it exists */
@@ -1190,11 +1255,13 @@ get_sgl_info(hname, dname, s_entry, ret)
 	char		name[64];
 	int		i;
 	int		len = 0;
+	unsigned char	*dates;
+	int		ver = 0;
 
 	/*
 	 * routine called twice for each file
 	 * - first to check that it is a valid
-	 * MacBinary file, second to fill in the HFS info.
+	 * AppleSingle file, second to fill in the HFS info.
 	 * p_buf holds the required
 	 * raw data and it *should* remain the same between the two calls
 	 */
@@ -1204,7 +1271,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 		if (p_num < A_HDR_SIZE ||
 			d_getl(hp->magic) != APPLE_SINGLE ||
 			(d_getl(hp->version) != A_VERSION1 &&
-				d_getl(hp->version) != A_VERSION1))
+				d_getl(hp->version) != A_VERSION2))
 			return (TYPE_NONE);
 
 		/* check we have TOC for the AppleSingle file */
@@ -1227,6 +1294,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 		hfs_ent = s_entry->hfs_ent;
 
 		nentries = (int) d_getw(hp->nentries);
+		ver = d_getl(hp->version);
 
 		/* extract what is needed */
 		for (i = 0, ep = entries; i < nentries; i++, ep++) {
@@ -1254,9 +1322,29 @@ get_sgl_info(hname, dname, s_entry, ret)
 								s_entry1->size);
 				break;
 			case ID_NAME:
+				/* get Mac file name */
 				strncpy(name, (p_buf + d_getl(ep->offset)),
 					d_getl(ep->length));
 				len = d_getl(ep->length);
+				break;
+			case ID_FILEI:
+				/* get file info - ignore at the moment*/
+				break;
+			case ID_FILEDATESI:
+				/* get file info */
+				dates =(unsigned char *)p_buf + d_getl(ep->offset);
+				/* get the correct Unix time */
+				if (ver == A_VERSION1) {
+					hfs_ent->crdate =
+						d_toutime(d_getl(dates));
+					hfs_ent->mddate =
+						d_toutime(d_getl(dates+4));
+				} else {
+					hfs_ent->crdate =
+						d_dtoutime(d_getl(dates));
+					hfs_ent->mddate =
+						d_dtoutime(d_getl(dates+4));
+				}
 				break;
 			default:
 				break;
@@ -1716,8 +1804,8 @@ get_sfm_info(hname, dname, s_entry, ret)
 
 	/* check finder info is OK */
 	if (num == sizeof(info)
-		&& !strncmp((char *)info.afpi_Signature, (char *)sfm_magic, 4)
-		&& !strncmp((char *)info.afpi_Version, (char *)sfm_version, 4)) {
+		&& !memcmp((char *)info.afpi_Signature, (char *)sfm_magic, 4)
+		&& !memcmp((char *)info.afpi_Version, (char *)sfm_version, 4)) {
 		/* use Unix name */
 		hstrncpy((unsigned char *)(hfs_ent->name), dname, HFS_MAX_FLEN);
 
@@ -1736,6 +1824,168 @@ get_sfm_info(hname, dname, s_entry, ret)
 	return (ret);
 }
 
+#ifdef IS_MACOS_X
+/*
+ *	get_xhfs_dir:	get MacOS X HFS finderinfo for a directory
+ *
+ *	Code ideas from 'hfstar' by Marcel Weiher marcel@metaobject.com
+ *	and another GNU hfstar by Torres Vedras paulotex@yahoo.com
+ *
+ *	Here we are dealing with actual HFS files - not some encoding
+ *	we have to use a system call to get the finderinfo
+ *	
+ *	The file name here is the pseudo name for the resource fork
+ */
+static int
+get_xhfs_dir(hname, dname, s_entry, ret)
+	char		*hname;		/* whole path */
+	char		*dname;		/* this dir name */
+	dir_ent		*s_entry;	/* directory entry */
+	int		ret;
+{
+	int		err;
+	hfsdirent	*hfs_ent = s_entry->hfs_ent;
+	attrinfo	ainfo;
+	struct attrlist attrs;
+	int		i;
+
+	memset(&attrs, 0, sizeof(attrs));
+
+	/* set flags we need to get info from getattrlist() */
+	attrs.bitmapcount = ATTR_BIT_MAP_COUNT;
+	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME
+				| ATTR_CMN_FNDRINFO ;
+
+	/* get the info */
+	err = getattrlist(hname, &attrs, &ainfo, sizeof(ainfo), 0);
+
+	if (err == 0) {
+		/*
+		 * If the Finfo is blank then we assume it's not a
+		 * 'true' HFS directory ...
+		 */
+		err = 1;
+		for(i=0; i < sizeof(ainfo.info); i++) {
+			if (ainfo.info[i] != 0) {
+				err = 0;
+				break;
+			}
+		}
+	}
+
+	/* check finder info is OK */
+	if (err == 0) {
+
+		hstrncpy((unsigned char *) (s_entry->hfs_ent->name),
+							dname, HFS_MAX_FLEN);
+
+		set_Dinfo(ainfo.info, hfs_ent);
+
+		return (ret);
+	} else {
+		/* otherwise give it it's Unix name */
+		hstrncpy((unsigned char *) (s_entry->hfs_ent->name),
+							dname, HFS_MAX_FLEN);
+		return (TYPE_NONE);
+	}
+}
+
+/*
+ *	get_xhfs_info:	get MacOS X HFS finderinfo for a file
+ *
+ *	Code ideas from 'hfstar' by Marcel Weiher marcel@metaobject.com,
+ *	another GNU hfstar by Torres Vedras paulotex@yahoo.com and
+ *	hfspax by Howard Oakley howard@quercus.demon.co.uk
+ *
+ *	Here we are dealing with actual HFS files - not some encoding
+ *	we have to use a system call to get the finderinfo
+ *	
+ *	The file name here is the pseudo name for the resource fork
+ */
+static int
+get_xhfs_info(hname, dname, s_entry, ret)
+	char		*hname;		/* whole path */
+	char		*dname;		/* this dir name */
+	dir_ent		*s_entry;	/* directory entry */
+	int		ret;
+{
+	int		err;
+	hfsdirent	*hfs_ent = s_entry->hfs_ent;
+	attrinfo	ainfo;
+	struct attrlist attrs;
+	int		i;
+	int		size;
+
+	memset(&attrs, 0, sizeof(attrs));
+
+	/* set flags we need to get info from getattrlist() */
+	attrs.bitmapcount = ATTR_BIT_MAP_COUNT;
+	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME
+				| ATTR_CMN_FNDRINFO ;
+
+	/* get the info */
+	err = getattrlist(hname, &attrs, &ainfo, sizeof(ainfo), 0);
+
+	/* check finder info is OK */
+	if (err == 0) {
+
+		/* If the Finfo is blank and the resource file is empty,
+		 * then we assume it's not a 'true' HFS file ...
+		 * There will be not associated file if the resource fork
+		 * is empty
+		 */
+
+		if (s_entry->assoc == NULL) {
+			err = 1;
+			for(i=0; i < sizeof(ainfo.info); i++) {
+				if (ainfo.info[i] != 0) {
+					err = 0;
+					break;
+				}
+			}
+		}
+
+		if (err == 0) {
+
+			/* use Unix name */
+			hstrncpy((unsigned char *) (hfs_ent->name), dname,
+						HFS_MAX_FLEN);
+
+			set_Finfo(ainfo.info, hfs_ent);
+
+			/*
+			 * dates have already been set - but we will
+			 * set them here as well from the HFS info
+			 * shouldn't need to check for byte order, as
+			 * the source is HFS ... but we will just in case
+			 */
+			hfs_ent->crdate = d_getl((byte *)&ainfo.ctime.tv_sec);
+		
+			hfs_ent->mddate = d_getl((byte *)&ainfo.mtime.tv_sec);
+		}
+
+	}
+
+	if (err) {
+		/* not a 'true' HFS file - so try afpfile mapping */
+#if 0
+		/*
+		 * don't print a warning as we will get lots on HFS
+		 * file systems ...
+		 */
+		if (verbose > 2) {
+			fprintf(stderr,
+				"warning: %s doesn't appear to be a %s file\n",
+				s_entry->whole_name, hfs_types[ret].desc);
+		}
+#endif
+		ret = get_none_info(hname, dname, s_entry, TYPE_NONE);
+	}
+
+	return (ret);
+}
+#endif /* IS_MACOS_X */
+
 /*
  *	get_hfs_itype: get the type of HFS info for a file
  */
@@ -1747,6 +1997,7 @@ get_hfs_itype(wname, dname, htmp)
 {
 	int	wlen,
 		i;
+	int	no_type = TYPE_NONE;
 
 	wlen = strlen(wname) - strlen(dname);
 
@@ -1760,24 +2011,36 @@ get_hfs_itype(wname, dname, htmp)
 
 		strcpy(htmp, wname);
 
-		/* append or insert finderinfo filename part */
-		if (hfs_types[i].flags & APPEND)
-			strcat(htmp, hfs_types[i].info);
-		else
-			sprintf(htmp + wlen, "%s%s", hfs_types[i].info,
-				(hfs_types[i].flags & NOPEND) ? "" : dname);
+		/*
+		 * special case - if the info file doesn't exist
+		 * for a requested type, then remember the type -
+		 * we don't return here, as we _may_ find another type
+		 * so we save the type here in case - we will have
+		 * problems if more than one of this type ever exists ...
+		 */
+		if (hfs_types[i].flags & NOINFO) {
+			no_type = i;
+		} else {
 
-		/* hack time ... Netatalk is a special case ... */
-		if (i == TYPE_NETA) {
-			strcpy(htmp, wname);
-			strcat(htmp, "/.AppleDouble/.Parent");
+			/* append or insert finderinfo filename part */
+			if (hfs_types[i].flags & APPEND)
+				strcat(htmp, hfs_types[i].info);
+			else
+				sprintf(htmp + wlen, "%s%s", hfs_types[i].info,
+					(hfs_types[i].flags & NOPEND) ? "" : dname);
+
+			/* hack time ... Netatalk is a special case ... */
+			if (i == TYPE_NETA) {
+				strcpy(htmp, wname);
+				strcat(htmp, "/.AppleDouble/.Parent");
+			}
+
+			if (!access(htmp, R_OK))
+				return (hfs_types[i].type);
 		}
-
-		if (!access(htmp, R_OK))
-			return (hfs_types[i].type);
 	}
 
-	return (TYPE_NONE);
+	return (no_type);
 }
 
 /*
@@ -1901,6 +2164,11 @@ get_hfs_info(wname, dname, s_entry)
 
 /*
  *	get_hfs_rname: set the name of the Unix rsrc file for a file
+ *
+ *	For the time being we ignore the 'NOINFO' flag - the only case
+ *	at the moment is for MacOS X HFS files - for files the resource
+ *	fork exists - so testing the "filename/rsrc" pseudo file as
+ *	the 'info' filename is OK ...
  */
 int
 get_hfs_rname(wname, dname, rname)
@@ -2130,6 +2398,12 @@ hfs_exclude(d_name)
 	}
 #endif	/* _WIN32 */
 
+	if (DO_XDBL & hselect) {
+		/* XDB */
+		if(!strncmp(d_name, "._", 2))
+			return 1;
+	}
+
 	return 0;
 }
 
@@ -2211,8 +2485,7 @@ hfs_init(name, fdflags, hfs_select)
 	map_num = last_ent = 0;
 
 	/* allocate memory for the default entry */
-	if ((defmap = (afpmap *) malloc(sizeof(afpmap))) == NULL)
-		perr("not enough memory");
+	defmap = (afpmap *) e_malloc(sizeof(afpmap));
 
 	/* set default values */
 	defmap->extn = DEFMATCH;
@@ -2247,8 +2520,7 @@ hfs_init(name, fdflags, hfs_select)
 	if ((fp = fopen(name, "r")) == NULL)
 		perr("unable to open mapping file");
 
-	if ((map = (afpmap **) malloc(NUMMAP * sizeof(afpmap *))) == NULL)
-		perr("not enough memory");
+	map = (afpmap **) e_malloc(NUMMAP * sizeof(afpmap *));
 
 	/* read afpfile line by line */
 	while (fgets(buf, PATH_MAX, fp) != NULL) {
@@ -2266,8 +2538,7 @@ hfs_init(name, fdflags, hfs_select)
 				perr("not enough memory");
 		}
 		/* allocate memory for this entry */
-		if ((amap = (afpmap *) malloc(sizeof(afpmap))) == NULL)
-			perr("not enough memory");
+		amap = (afpmap *) e_malloc(sizeof(afpmap));
 
 		t = amap->type;
 		c = amap->creator;
@@ -2441,8 +2712,15 @@ void
 perr(a)
 	char	*a;
 {
+#ifdef	USE_LIBSCHILY
+	if (a)
+		comerr("%s\n", a);
+	else
+		comerr("<no error message given>\n");
+#else
 	if (a)
 		fprintf(stderr, "mkhybrid: %s\n", a);
 	perror("mkhybrid");
 	exit(1);
+#endif
 }

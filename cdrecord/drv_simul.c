@@ -1,12 +1,12 @@
-/* @(#)drv_simul.c	1.16 00/07/30 Copyright 1998 J. Schilling */
+/* @(#)drv_simul.c	1.37 02/09/27 Copyright 1998-2002 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_simul.c	1.16 00/07/30 Copyright 1998 J. Schilling";
+	"@(#)drv_simul.c	1.37 02/09/27 Copyright 1998-2002 J. Schilling";
 #endif
 /*
  *	Simulation device driver
  *
- *	Copyright (c) 1998 J. Schilling
+ *	Copyright (c) 1998-2002 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,9 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	DEBUG
 #define	DEBUG
+#endif
 #include <mconfig.h>
 
 #include <stdio.h>
@@ -33,9 +35,7 @@ static	char sccsid[] =
 #include <unixstd.h>
 #include <errno.h>
 #include <strdefs.h>
-
-#include <sys/types.h>
-#include <sys/time.h>
+#include <timedefs.h>
 #include <utypes.h>
 #include <btorder.h>
 #include <schily.h>
@@ -53,39 +53,43 @@ extern	int	silent;
 extern	int	verbose;
 extern	int	lverbose;
 
-LOCAL	int	simul_load		__PR((SCSI *scgp));
-LOCAL	int	simul_unload		__PR((SCSI *scgp));
+LOCAL	int	simul_load		__PR((SCSI *scgp, cdr_t *));
+LOCAL	int	simul_unload		__PR((SCSI *scgp, cdr_t *));
 LOCAL	cdr_t	*identify_simul		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *));
-LOCAL	int	getdisktype_simul	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
-LOCAL	int	speed_select_simul	__PR((SCSI *scgp, int *speedp, int dummy));
-LOCAL	int	next_wr_addr_simul	__PR((SCSI *scgp, int track, track_t *trackp, long *ap));
+LOCAL	int	getdisktype_simul	__PR((SCSI *scgp, cdr_t *dp));
+LOCAL	int	speed_select_simul	__PR((SCSI *scgp, cdr_t *dp, int *speedp, int dummy));
+LOCAL	int	next_wr_addr_simul	__PR((SCSI *scgp, track_t *trackp, long *ap));
 LOCAL	int	cdr_write_simul		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
-LOCAL	int	open_track_simul	__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
-LOCAL	int	close_track_simul	__PR((SCSI *scgp, int track, track_t *trackp));
-LOCAL	int	open_session_simul	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
-LOCAL	int	fixate_simul		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
+LOCAL	int	open_track_simul	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	close_track_simul	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+LOCAL	int	open_session_simul	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp, int toctype, int multi));
+LOCAL	int	fixate_simul		__PR((SCSI *scgp, cdr_t *dp, int onp, int dummy, int toctype, track_t *trackp));
 LOCAL	void	tv_sub			__PR((struct timeval *tvp1, struct timeval *tvp2));
 
 LOCAL int
-simul_load(scgp)
+simul_load(scgp, dp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 {
 	return (0);
 }
 
 LOCAL int
-simul_unload(scgp)
+simul_unload(scgp, dp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 {
 	return (0);
 }
 
 cdr_t	cdr_cdr_simul = {
-	0,
-	CDR_TAO|CDR_DAO|CDR_PACKET,
+	0, 0,
+	CDR_TAO|CDR_SAO|CDR_PACKET|CDR_RAW|CDR_RAW16|CDR_RAW96P|CDR_RAW96R|CDR_SRAW96P|CDR_SRAW96R|CDR_TRAYLOAD|CDR_SIMUL,
+	40, 372,
 	"cdr_simul",
 	"simulation CD-R driver for timing/speed tests",
 	0,
+	(dstat_t *)0,
 	identify_simul,
 	drive_attach,
 	getdisktype_simul,
@@ -99,23 +103,28 @@ cdr_t	cdr_cdr_simul = {
 	next_wr_addr_simul,
 	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	cdr_write_simul,
-	(int(*)__PR((SCSI *scgp, int, track_t *)))cmd_dummy,	/* send_cue */
+	(int(*)__PR((SCSI *scgp, track_t *)))cmd_dummy,	/* send_cue */
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
 	open_track_simul,
 	close_track_simul,
 	open_session_simul,
 	cmd_dummy,
 	read_session_offset,
 	fixate_simul,
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
 	blank_dummy,
 	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* opt1		*/
 };
 
 cdr_t	cdr_dvd_simul = {
-	0,
-	CDR_TAO|CDR_DAO|CDR_PACKET,
+	0, 0,
+	CDR_TAO|CDR_SAO|CDR_PACKET|CDR_RAW|CDR_RAW16|CDR_RAW96P|CDR_RAW96R|CDR_SRAW96P|CDR_SRAW96R|CDR_DVD|CDR_TRAYLOAD|CDR_SIMUL,
+	2, 1000,
 	"dvd_simul",
 	"simulation DVD-R driver for timing/speed tests",
 	0,
+	(dstat_t *)0,
 	identify_simul,
 	drive_attach,
 	getdisktype_simul,
@@ -129,15 +138,18 @@ cdr_t	cdr_dvd_simul = {
 	next_wr_addr_simul,
 	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	cdr_write_simul,
-	(int(*)__PR((SCSI *scgp, int, track_t *)))cmd_dummy,	/* send_cue */
+	(int(*)__PR((SCSI *scgp, track_t *)))cmd_dummy,	/* send_cue */
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
 	open_track_simul,
 	close_track_simul,
 	open_session_simul,
 	cmd_dummy,
 	read_session_offset,
 	fixate_simul,
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* stats		*/
 	blank_dummy,
 	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
+	(int(*)__PR((SCSI *, cdr_t *)))cmd_dummy,/* opt1		*/
 };
 
 LOCAL cdr_t *
@@ -149,6 +161,7 @@ identify_simul(scgp, dp, ip)
 	return (dp);
 }
 
+LOCAL	long	simul_nwa;
 LOCAL	int	simul_speed = 1;
 LOCAL	int	simul_dummy;
 LOCAL	int	simul_isdvd;
@@ -158,26 +171,29 @@ LOCAL	Uint	sleep_max;
 LOCAL	Uint	sleep_min;
 
 LOCAL int
-getdisktype_simul(scgp, dp, dsp)
+getdisktype_simul(scgp, dp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	dstat_t	*dsp;
 {
+	dstat_t	*dsp = dp->cdr_dstat;
+
 	if (strcmp(dp->cdr_drname, cdr_cdr_simul.cdr_drname) == 0) {
 		dsp->ds_maxblocks = 333000;
 		simul_isdvd = FALSE;
 	} else {
 		dsp->ds_maxblocks = 2464153;	/* 4.7 GB  */
 /*		dsp->ds_maxblocks = 1927896;*/	/* 3.95 GB */
+		dsp->ds_flags |= DSF_DVD;
 		simul_isdvd = TRUE;
 	}
-	return (drive_getdisktype(scgp, dp, dsp));
+	return (drive_getdisktype(scgp, dp));
 }
 
 
 LOCAL int
-speed_select_simul(scgp, speedp, dummy)
+speed_select_simul(scgp, dp, speedp, dummy)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	*speedp;
 	int	dummy;
 {
@@ -202,24 +218,36 @@ speed_select_simul(scgp, speedp, dummy)
 	 * simul_bufsize is the number of kilobytes in drive buffer.
 	 */
 	sleep_max = 6 * 1000 * simul_bufsize / simul_speed;
+
+	/*
+	 * DVD single speed is 1385 * 1000 Bytes/s (676.27 sectors/s)
+	 * 
+	 */
+	if ((dp->cdr_flags & CDR_DVD) != 0)
+		sleep_max = 739 * simul_bufsize / simul_speed;
+
 	if (lverbose) {
 		printf("Simulation drive buffer size: %d KB\n", simul_bufsize);
-		printf("Mamimum reserve time in drive buffer: %d.%3.3d ms\n",
+		printf("Maximum reserve time in drive buffer: %d.%3.3d ms for speed %dx\n",
 					sleep_max / 1000,
-					sleep_max % 1000);
+					sleep_max % 1000,
+					simul_speed);
 	}
 	return (0);
 }
 
 LOCAL int
-next_wr_addr_simul(scgp, track, trackp, ap)
+next_wr_addr_simul(scgp, trackp, ap)
 	SCSI	*scgp;
-	int	track;
 	track_t	*trackp;
 	long	*ap;
 {
+	/*
+	 * This will most likely not 100% correct for TAO CDs
+	 * but it is better than returning 0 in all cases.
+	 */
 	if (ap)
-		*ap = 0L;
+		*ap = simul_nwa;
 	return (0);
 }
 
@@ -240,6 +268,8 @@ static	struct timeval	tv2;
 
 	if (lverbose > 1 && islast)
 		printf("\nWriting last record for this track.\n");
+
+	simul_nwa += blocks;
 
 	gettimeofday(&tv1, (struct timezone *)0);
 	if (tv2.tv_sec != 0) {		/* Already did gettimeofday(&tv2) */
@@ -272,19 +302,32 @@ static	struct timeval	tv2;
 	}
 	/*
 	 * Speed 1 ist 150 Sektoren/s
+	 * Bei DVD 767.27 Sektoren/s
 	 */
 	sleep_time = 1000000 * blocks / 75 / simul_speed;
+	if (simul_isdvd)
+		sleep_time = 1000000 * blocks / 676 / simul_speed;
+
 	sleep_time += sleep_rest;
+
 	if (sleep_time > sleep_max) {
 		int	mod;
+		long	rsleep;
 
 		sleep_rest = sleep_max;
 		sleep_time -= sleep_rest;
 		mod = sleep_time % 20000;
 		sleep_rest += mod;
 		sleep_time -= mod;
-		if (sleep_time > 0)
+		if (sleep_time > 0) {
+			gettimeofday(&tv1, (struct timezone *)0);
 			usleep(sleep_time);
+			gettimeofday(&tv2, (struct timezone *)0);
+			tv2.tv_sec -= tv1.tv_sec;
+			tv2.tv_usec -= tv1.tv_usec;
+			rsleep = tv2.tv_sec * 1000000 + tv2.tv_usec;
+			sleep_rest -= rsleep - sleep_time;
+		}
 	} else {
 		sleep_rest = sleep_time;
 	}
@@ -294,10 +337,9 @@ static	struct timeval	tv2;
 }
 
 LOCAL int
-open_track_simul(scgp, dp, track, trackp)
+open_track_simul(scgp, dp, trackp)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	track;
 	track_t *trackp;
 {
 	sleep_min = 999 * 1000000;
@@ -305,9 +347,9 @@ open_track_simul(scgp, dp, track, trackp)
 }
 
 LOCAL int
-close_track_simul(scgp, track, trackp)
+close_track_simul(scgp, dp, trackp)
 	SCSI	*scgp;
-	int	track;
+	cdr_t	*dp;
 	track_t	*trackp;
 {
 	if (lverbose) {
@@ -324,24 +366,24 @@ close_track_simul(scgp, track, trackp)
 }
 
 LOCAL int
-open_session_simul(scgp, dp, tracks, trackp, toctype, multi)
+open_session_simul(scgp, dp, trackp, toctype, multi)
 	SCSI	*scgp;
 	cdr_t	*dp;
-	int	tracks;
 	track_t	*trackp;
 	int	toctype;
 	int	multi;
 {
+	simul_nwa = 0L;
 	return (0);
 }
 
 LOCAL int
-fixate_simul(scgp, onp, dummy, toctype, tracks, trackp)
+fixate_simul(scgp, dp, onp, dummy, toctype, trackp)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	onp;
 	int	dummy;
 	int	toctype;
-	int	tracks;
 	track_t	*trackp;
 {
 	return (0);

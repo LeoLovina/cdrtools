@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-pg.c	1.39 01/03/18 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-pg.c	1.42 02/10/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char ___sccsid[] =
-	"@(#)scsi-linux-pg.c	1.39 01/03/18 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-pg.c	1.42 02/10/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the Linux PARIDE implementation.
@@ -48,7 +48,7 @@ static	char ___sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.39";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.42";	/* The version for this transport*/
 
 #ifdef	USE_PG_ONLY
 
@@ -67,6 +67,7 @@ struct scg_local {
 #else
 
 #define	scgo_version	pg_version
+#define	scgo_help	pg_help
 #define	scgo_open	pg_open
 #define	scgo_close	pg_close
 #define	scgo_send	pg_send
@@ -76,6 +77,7 @@ struct scg_local {
 #define	scgo_reset	pg_reset
 
 LOCAL	char	*pg_version	__PR((SCSI *scgp, int what));
+LOCAL	int	pg_help		__PR((SCSI *scgp, FILE *f));
 LOCAL	int	pg_open		__PR((SCSI *scgp, char *device));
 LOCAL	int	pg_close	__PR((SCSI *scgp));
 LOCAL	long	pg_maxdma	__PR((SCSI *scgp, long amt));
@@ -116,6 +118,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "pg", "SCSI transport for ATAPI over Parallel Port",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int
@@ -195,7 +207,7 @@ scgo_open(scgp, device)
 			return (0);
 #endif
 		js_snprintf(devname, sizeof(devname), "/dev/pg%d", tgt);
-		f = open(devname, 2);
+		f = open(devname, O_RDWR | O_NONBLOCK);
 		if (f < 0) {
 			if (scgp->errstr)
 				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -208,20 +220,37 @@ scgo_open(scgp, device)
 		tlun = 0;
 		for(tgt=0;tgt<MAX_TGT;tgt++) {
 			js_snprintf(devname, sizeof(devname), "/dev/pg%d", tgt);
-			f = open(devname, 2);
-			if (f >= 0) {
+			f = open(devname, O_RDWR | O_NONBLOCK);
+			if (f < 0) {
+				/*
+				 * Set up error string but let us clear it later
+				 * if at least one open succeeded.
+				 */
+				if (scgp->errstr)
+					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"Cannot open '/dev/pg*'");
+				if (errno != ENOENT && errno != ENXIO && errno != ENODEV) {
+					if (scgp->errstr)
+						js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"Cannot open '%s'", devname);
+					return (0);
+				}
+			} else {
 				scglocal(scgp)->scgfiles[scglocal(scgp)->pgbus][tgt][tlun] = f;
 				nopen++;
 			}
 		}
 	}
+	if (nopen > 0 && scgp->errstr)
+		scgp->errstr[0] = '\0';
+
 openbydev:
 	if (device != NULL && *device != '\0') {
 		char	*p;
 
 		if (tlun < 0)
 			return (0);
-		f = open(device, 2);
+		f = open(device, O_RDWR | O_NONBLOCK);
 /*		if (f < 0 && errno == ENOENT) {*/
 		if (f < 0) {
 			if (scgp->errstr)
@@ -567,6 +596,7 @@ scgo_send(scgp)
 #ifndef	USE_PG_ONLY
 
 #undef	scgo_version
+#undef	scgo_help
 #undef	scgo_open
 #undef	scgo_close
 #undef	scgo_send

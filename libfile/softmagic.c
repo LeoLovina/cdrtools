@@ -1,7 +1,7 @@
-/* @(#)softmagic.c	1.4 01/02/17 joerg */
+/* @(#)softmagic.c	1.5 01/11/11 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)softmagic.c	1.4 01/02/17 joerg";
+	"@(#)softmagic.c	1.5 01/11/11 joerg";
 #endif
 /*
 **	find file types by using a modified "magic" file
@@ -60,7 +60,8 @@ int	debug = 1; 	/* debugging 				*/
 static char *match	__P((unsigned char *, int));
 static int mget		__P((union VALUETYPE *,
 			     unsigned char *, struct magic *, int));
-static int mcheck	__P((union VALUETYPE *, struct magic *));
+/* QNX has a mcheck() prototyp in a public include file */
+static int magcheck	__P((union VALUETYPE *, struct magic *));
 #ifdef	__used__
 static void mdebug	__P((Int32_t, char *, int));
 #endif
@@ -118,7 +119,7 @@ int nbytes;
 	for (magindex = 0; magindex < __f_nmagic; magindex++) {
 		/* if main entry matches, print it... */
 		if (!mget(&p, s, &__f_magic[magindex], nbytes) ||
-		    !mcheck(&p, &__f_magic[magindex])) {
+		    !magcheck(&p, &__f_magic[magindex])) {
 			    /* 
 			     * main entry didn't match,
 			     * flush its continuations
@@ -245,7 +246,7 @@ int nbytes;
 }
 
 static int
-mcheck(p, m)
+magcheck(p, m)
 union VALUETYPE* p;
 struct magic *m;
 {

@@ -1,7 +1,7 @@
-/* @(#)file.c	1.3 01/02/17 joerg */
+/* @(#)file.c	1.4 01/10/29 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)file.c	1.3 01/02/17 joerg";
+	"@(#)file.c	1.4 01/10/29 joerg";
 #endif
 /*
 **	find file types by using a modified "magic" file
@@ -69,8 +69,7 @@ static char *moduleid =
 #include <stdio.h>
 #include <stdxlib.h>
 #include <unixstd.h>	/* for read() */
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <statdefs.h>
 #include <fctldefs.h>	/* for open() */
 
 #ifdef RESTORE_TIME

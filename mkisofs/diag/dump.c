@@ -1,7 +1,7 @@
-/* @(#)dump.c	1.11 00/12/09 joerg */
+/* @(#)dump.c	1.16 02/11/30 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)dump.c	1.11 00/12/09 joerg";
+	"@(#)dump.c	1.16 02/11/30 joerg";
 #endif
 /*
  * File dump.c - dump a file/device both in hex and in ASCII.
@@ -43,10 +43,9 @@ static	char sccsid[] =
 
 FILE *	infile;
 off_t	file_addr;
-unsigned char buffer[256];
-unsigned char search[64];
-
 #define PAGE 256
+unsigned char buffer[PAGE];
+unsigned char search[64];
 
 #ifdef HAVE_TERMIOS_H
 struct termios savetty;
@@ -192,6 +191,8 @@ usage(excode)
                 get_progname());
 
 	error("Options:\n");
+	error("\t-help,-h	Print this help\n");
+	error("\t-version	Print version info and exit\n");
 	exit(excode);
 }
 
@@ -200,27 +201,54 @@ main(argc, argv)
 	int	argc;
 	char	*argv[];
 {
+	int	cac;
+	char	* const *cav;
+	char	*opts = "help,h,version";
+	BOOL	help = FALSE;
+	BOOL	prvers = FALSE;
   char c;
   int i,j;
 
 	save_args(argc, argv);
 
-  if(argc < 2)
-	usage(EX_BAD);
-  infile = fopen(argv[1],"rb");
-  if (infile == NULL) {
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getallargs(&cac, &cav, opts, &help, &help, &prvers) < 0) {
+		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
+		usage(EX_BAD);
+	}
+	if (help)
+		usage(0);
+	if (prvers) {
+		printf("devdump %s (%s-%s-%s)\n", "2.0",
+					HOST_CPU, HOST_VENDOR, HOST_OS);
+		exit(0);
+	}
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getfiles(&cac, &cav, opts) == 0) {
+		errmsgno(EX_BAD, "Missing Argument\n");
+		usage(EX_BAD);
+	}
+	infile = fopen(cav[0],"rb");
+	if (infile == NULL) {
 #ifdef	USE_LIBSCHILY
-	comerr("Cannot open '%s'.\n", argv[1]);
+		comerr("Cannot open '%s'.\n", cav[0]);
 #else
-	printf("Cannot open '%s'.\n", argv[1]);
-	exit(1);
+		printf("Cannot open '%s'.\n", cav[0]);
+		exit(1);
 #endif
-  }
-  for(i=0;i<30;i++) printf("\n");
-  file_addr = (off_t)0;
+	}
+	cac--, cav++;
+	if (getfiles(&cac, &cav, opts) != 0) {
+		errmsgno(EX_BAD, "Bad Argument: '%s'\n",cav[0]);
+		usage(EX_BAD);
+	}
+	for(i=0;i<30;i++) printf("\n");
+	file_addr = (off_t)0;
 /* Now setup the keyboard for single character input. */
 #ifdef HAVE_TERMIOS_H
-  if(tcgetattr(0, &savetty) == -1)
+	if(tcgetattr(0, &savetty) == -1)
 #else
 	if(ioctl(0, TCGETA, &savetty) == -1)
 #endif
@@ -277,7 +305,7 @@ main(argc, argv)
 	  c = getbyte();
 	  if (c == search[0]) break;
 	};
-	for (j=1;j<strlen((char *)search);j++) 
+	for (j=1;j < (int)strlen((char *)search);j++) 
 	  if(search[j] != getbyte()) break;
 	if(j==strlen((char *)search)) break;
       };

@@ -1,4 +1,4 @@
-/* @(#)scgops.h	1.4 00/11/07 Copyright 2000 J. Schilling */
+/* @(#)scgops.h	1.5 02/10/19 Copyright 2000 J. Schilling */
 /*
  *	Copyright (c) 2000 J. Schilling
  */
@@ -29,6 +29,11 @@ typedef struct scg_ops {
 	int	(*scgo_send)		__PR((SCSI *scgp));
 
 	char *	(*scgo_version)		__PR((SCSI *scgp, int what));
+#ifdef	EOF	/* stdio.h has been included */
+	int	(*scgo_help)		__PR((SCSI *scgp, FILE *f));
+#else
+	int	(*scgo_help)		__PR((SCSI *scgp, void *f));
+#endif
 	int	(*scgo_open)		__PR((SCSI *scgp, char *device));
 	int	(*scgo_close)		__PR((SCSI *scgp));
 	long	(*scgo_maxdma)		__PR((SCSI *scgp, long amt));
@@ -45,6 +50,7 @@ typedef struct scg_ops {
 
 #define	SCGO_SEND(scgp)				(*(scgp)->ops->scgo_send)(scgp)
 #define	SCGO_VERSION(scgp, what)		(*(scgp)->ops->scgo_version)(scgp, what)
+#define	SCGO_HELP(scgp, f)			(*(scgp)->ops->scgo_help)(scgp, f)
 #define	SCGO_OPEN(scgp, device)			(*(scgp)->ops->scgo_open)(scgp, device)
 #define	SCGO_CLOSE(scgp)			(*(scgp)->ops->scgo_close)(scgp)
 #define	SCGO_MAXDMA(scgp, amt)			(*(scgp)->ops->scgo_maxdma)(scgp, amt)

@@ -1,554 +1,321 @@
-%!PS
-%%Version: 3.15
-%%DocumentFonts: (atend)
-%%Pages: (atend)
-%%EndComments
-%ident	"@(#)lp:filter/postscript/postscript/dpost.ps	1.1"
-%
-% Version 3.16 prologue for troff files.
-%
-
-/#copies 1 store
-/aspectratio 1 def
-/formsperpage 1 def
-/landscape false def
-/linewidth .3 def
-/magnification 1 def
-/margin 0 def
-/orientation 0 def
-/resolution 720 def
-/xoffset 0 def
-/yoffset 0 def
-
-/roundpage true def
-/useclippath true def
-/pagebbox [0 0 612 792] def
-
-/R  /Times-Roman def
-/I  /Times-Italic def
-/B  /Times-Bold def
-/BI /Times-BoldItalic def
-/H  /Helvetica def
-/HI /Helvetica-Oblique def
-/HB /Helvetica-Bold def
-/HX /Helvetica-BoldOblique def
-/CW /Courier def
-/CO /Courier def
-/CI /Courier-Oblique def
-/CB /Courier-Bold def
-/CX /Courier-BoldOblique def
-/PA /Palatino-Roman def
-/PI /Palatino-Italic def
-/PB /Palatino-Bold def
-/PX /Palatino-BoldItalic def
-/Hr /Helvetica-Narrow def
-/Hi /Helvetica-Narrow-Oblique def
-/Hb /Helvetica-Narrow-Bold def
-/Hx /Helvetica-Narrow-BoldOblique def
-/KR /Bookman-Light def
-/KI /Bookman-LightItalic def
-/KB /Bookman-Demi def
-/KX /Bookman-DemiItalic def
-/AR /AvantGarde-Book def
-/AI /AvantGarde-BookOblique def
-/AB /AvantGarde-Demi def
-/AX /AvantGarde-DemiOblique def
-/NR /NewCenturySchlbk-Roman def
-/NI /NewCenturySchlbk-Italic def
-/NB /NewCenturySchlbk-Bold def
-/NX /NewCenturySchlbk-BoldItalic def
-/ZD /ZapfDingbats def
-/ZI /ZapfChancery-MediumItalic def
-/VR /Varitimes#Roman def
-/VI /Varitimes#Italic def
-/VB /Varitimes#Bold def
-/VX /Varitimes#BoldItalic def
-/S  /S def
-/S1 /S1 def
-/GR /Symbol def
-
-/inch {72 mul} bind def
-/min {2 copy gt {exch} if pop} bind def
-
-/setup {
-	counttomark 2 idiv {def} repeat pop
-
-	landscape {/orientation 90 orientation add def} if
-	/scaling 72 resolution div def
-	linewidth setlinewidth
-	1 setlinecap
-
-	pagedimensions
-	xcenter ycenter translate
-	orientation neg rotate
-	width 2 div neg height 2 div translate
-	xoffset inch yoffset inch translate
-	margin 2 div dup neg translate
-	magnification dup aspectratio mul scale
-	scaling scaling scale
-
-	/Symbol /S Sdefs cf
-	/Times-Roman /S1 S1defs cf
-	0 0 moveto
-} def
-
-/pagedimensions {
-	useclippath userdict /gotpagebbox known not and {
-		/pagebbox [clippath pathbbox newpath] def
-		roundpage currentdict /roundpagebbox known and {roundpagebbox} if
-	} if
-	pagebbox aload pop
-	4 -1 roll exch 4 1 roll 4 copy
-	landscape {4 2 roll} if
-	sub /width exch def
-	sub /height exch def
-	add 2 div /xcenter exch def
-	add 2 div /ycenter exch def
-	userdict /gotpagebbox true put
-} def
-
-/pagesetup {
-	/page exch def
-	currentdict /pagedict known currentdict page known and {
-		page load pagedict exch get cvx exec
-	} if
-} def
-
-/decodingdefs [
-	{counttomark 2 idiv {y moveto show} repeat}
-	{neg /y exch def counttomark 2 idiv {y moveto show} repeat}
-	{neg moveto {2 index stringwidth pop sub exch div 0 32 4 -1 roll widthshow} repeat}
-	{neg moveto {spacewidth sub 0.0 32 4 -1 roll widthshow} repeat}
-	{counttomark 2 idiv {y moveto show} repeat}
-	{neg setfunnytext}
-] def
-
-/setdecoding {/t decodingdefs 3 -1 roll get bind def} bind def
-
-/w {neg moveto show} bind def
-/m {neg dup /y exch def moveto} bind def
-/done {/lastpage where {pop lastpage} if} def
-
-/f {
-	dup /font exch def findfont exch
-	dup /ptsize exch def scaling div dup /size exch def scalefont setfont
-	linewidth ptsize mul scaling 10 mul div setlinewidth
-	/spacewidth ( ) stringwidth pop def
-} bind def
-
-/changefont {
-	/fontheight exch def
-	/fontslant exch def
-	currentfont [
-		1 0
-		fontheight ptsize div fontslant sin mul fontslant cos div
-		fontheight ptsize div
-		0 0
-	] makefont setfont
-} bind def
-
-/sf {f} bind def
-
-/cf {
-	dup length 2 idiv
-	/entries exch def
-	/chtab exch def
-	/newfont exch def
-
-	findfont dup length 1 add dict
-	/newdict exch def
-	{1 index /FID ne {newdict 3 1 roll put} {pop pop} ifelse} forall
-
-	newdict /Metrics entries dict put
-	newdict /Metrics get
-	begin
-		chtab aload pop
-		1 1 entries {pop def} for
-		newfont newdict definefont pop
-	end
-} bind def
-
-%
-% A few arrays used to adjust reference points and character widths in some
-% of the printer resident fonts. If square roots are too high try changing
-% the lines describing /radical and /radicalex to,
-%
-%	/radical	[0 -75 550 0]
-%	/radicalex	[-50 -75 500 0]
-%
-
-/Sdefs [
-	/bracketlefttp		[220 500]
-	/bracketleftbt		[220 500]
-	/bracketrighttp		[-70 380]
-	/bracketrightbt		[-70 380]
-	/braceleftbt		[220 490]
-	/bracketrightex		[220 -125 500 0]
-	/radical		[0 0 550 0]
-	% NeWSprint's \(br is too low, compensate
-	statusdict /product get (NeWS Server) eq {
-		/radicalex		[-50 100 500 0]
-		/parenleftex		[-20 100 0 0]
-
-	} {
-		/radicalex		[-50 0 500 0]
-		/parenleftex		[-20 -170 0 0]
-	} ifelse
-	/integral		[100 -50 500 0]
-	/infinity		[10 -75 730 0]
-] def
-
-/S1defs [
-	/underscore		[0 80 500 0]
-	/endash			[7 90 650 0]
-] def
-%%EndProlog
-%%BeginSetup
-mark
-/resolution 720 def
-setup
-2 setdecoding
-%%EndSetup
-%%Page: 1 1
-save
-mark
-1 pagesetup
-10 R f
-( \( 8 \))3 164( ISOINFO)1 1681( Procedures)1 476( Maintenance)1 1801(ISOINFO \( 8 \))3 558 5 720 480 t
-9 B f
-(NAME)720 960 w
-10 R f
-(devdump, isoinfo, isovfy, isodump)3 1419 1 1080 1080 t
-10 S1 f
-(\261)2532 1080 w
-10 R f
-(Utility programs for dumping and verifying iso9660 images.)7 2477 1 2630 1080 t
-9 B f
-(SYNOPSIS)720 1248 w
-10 B f
-(devdump)1080 1368 w
-10 I f
-(isoimage)1514 1368 w
-10 B f
-(isodump)1080 1536 w
-10 I f
-(isoimage)1481 1536 w
-10 B f
-(isoinfo)1080 1704 w
-10 R f
-([)1401 1704 w
-10 S1 f
-(\261)1471 1704 w
-10 B f
-(d)1536 1704 w
-10 R f
-(] [)1 103 1 1629 1704 t
-10 S1 f
-(\261)1769 1704 w
-10 B f
-(h)1834 1704 w
-10 R f
-(] [)1 103 1 1927 1704 t
-10 S1 f
-(\261)2067 1704 w
-10 B f
-(R)2132 1704 w
-10 R f
-(] [)1 103 1 2241 1704 t
-10 S1 f
-(\261)2381 1704 w
-10 B f
-(J)2446 1704 w
-10 R f
-(] [)1 103 1 2533 1704 t
-10 S1 f
-(\261)2673 1704 w
-10 B f
-(j)2738 1704 w
-10 I f
-(charset)2808 1704 w
-10 R f
-(] [)1 103 1 3139 1704 t
-10 S1 f
-(\261)3279 1704 w
-10 B f
-(f)3344 1704 w
-10 R f
-(] [)1 103 1 3414 1704 t
-10 S1 f
-(\261)3554 1704 w
-10 B f
-(l)3619 1704 w
-10 R f
-(] [)1 103 1 3684 1704 t
-10 S1 f
-(\261)3824 1704 w
-10 B f
-(p)3889 1704 w
-10 R f
-(] [)1 103 1 3982 1704 t
-10 S1 f
-(\261)4122 1704 w
-10 B f
-(T)4187 1704 w
-10 I f
-(sector)4291 1704 w
-10 R f
-(] [)1 103 1 4572 1704 t
-10 S1 f
-(\261)4712 1704 w
-10 B f
-(N)4777 1704 w
-10 I f
-(sector)4886 1704 w
-10 R f
-(] [)1 103 1 5167 1704 t
-10 S1 f
-(\261)5307 1704 w
-10 B f
-(i)5372 1704 w
-10 I f
-(isoimage)1080 1824 w
-10 R f
-(] [)1 99 1 1474 1824 t
-10 S1 f
-(\261)1606 1824 w
-10 B f
-(x)1671 1824 w
-10 I f
-(path)1754 1824 w
-10 R f
-(])1965 1824 w
-10 B f
-(isovfy)1080 1992 w
-10 I f
-(isoimage)1363 1992 w
-9 B f
-(DESCRIPTION)720 2160 w
-10 B f
-(devdump)1080 2280 w
-10 R f
-( ini-)1 174( The)1 223(is a crude utility to interactively display the contents of device or \256lesystem images.)13 3488 3 1515 2280 t
-( commands are the same)4 1029( The)1 225( \256rst 2048 byte sector.)4 939(tial screen is a display of the \256rst 256 bytes of the)11 2127 4 1080 2400 t
-(as with)1 294 1 1080 2520 t
-10 B f
-(isodump)1407 2520 w
-10 R f
-(.)1775 2520 w
-10 B f
-(isodump)1080 2688 w
-10 R f
-( in order to verify)4 800(is a crude utility to interactively display the contents of iso9660 images)11 3104 2 1496 2688 t
-( directory, and the prompt)4 1092( initial screen is a display of the \256rst part of the root)12 2238( The)1 227(directory integrity.)1 763 4 1080 2808 t
-(shows you the extent number and offset in the extent.)9 2208 1 1080 2928 t
-( and forwards within the image. The)6 1516(You can use the 'a' and 'b' commands to move backwards)10 2444 2 1440 3096 t
-( allows you to goto an arbitrary extent, and the 'f' command speci\256es a search)14 3404('g' command)1 556 2 1440 3216 t
-( of the search string,)4 860(string to be used. The '+' command searches forward for the next instance)12 3100 2 1440 3336 t
-(and the 'q' command exits)4 1097 1 1440 3456 t
-10 B f
-(devdump)2570 3456 w
-10 R f
-(or)3004 3456 w
-10 B f
-(isodump)3120 3456 w
-10 R f
-(.)3488 3456 w
-10 B f
-(isoinfo)1080 3624 w
-10 R f
-(is a utility to perform directory like listings of iso9660 images.)10 2588 1 1397 3624 t
-10 B f
-(isovfy)1080 3792 w
-10 R f
-( the integrity of an iso9660 image. Most of the tests in)11 2375(is a utility to verify)4 839 2 1373 3792 t
-10 B f
-(isovfy)4631 3792 w
-10 R f
-(were added)1 475 1 4925 3792 t
-(after bugs were discovered in early versions of)7 1920 1 1080 3912 t
-10 B f
-(mkisofs.)3033 3912 w
-10 R f
-(It isn't all that clear how useful this is anymore,)9 1981 1 3419 3912 t
-(but it doesn't hurt to have this around.)7 1583 1 1080 4032 t
-9 B f
-(OPTIONS)720 4320 w
-10 R f
-(Only the)1 355 1 1080 4440 t
-10 B f
-(isoinfo)1468 4440 w
-10 R f
-(program has any command line options. These are:)7 2097 1 1785 4440 t
-10 S1 f
-(\261)1080 4608 w
-10 B f
-(h)1145 4608 w
-10 R f
-(print a summary of all options.)5 1273 1 1440 4608 t
-10 S1 f
-(\261)1080 4776 w
-10 B f
-(d)1145 4776 w
-10 R f
-( descriptor \(PVD\) of the iso9660 image. This)7 2061(Print information from the primary volume)5 1899 2 1440 4776 t
-(includes information about Rock Ridge and Joliet extensions if present.)9 2931 1 1440 4896 t
-10 S1 f
-(\261)1080 5064 w
-10 B f
-(f)1145 5064 w
-10 R f
-( had been run on the iso9660 image. You should)9 2036(generate output as if a '\256nd . -print' command)8 1924 2 1440 5064 t
-(not use the)2 449 1 1440 5184 t
-10 B f
-(-l)1922 5184 w
-10 R f
-(image with the)2 610 1 2016 5184 t
-10 B f
-(-f)2659 5184 w
-10 R f
-(option.)2758 5184 w
-10 S1 f
-(\261)1080 5352 w
-10 B f
-(i iso)1 178 1 1145 5352 t
-10 S f
-(_)1323 5352 w
-10 B f
-(image)1373 5352 w
-10 R f
-(Speci\256es the path of the iso9660 image that we wish to examine.)11 2680 1 1440 5472 t
-10 S1 f
-(\261)1080 5640 w
-10 B f
-(l)1145 5640 w
-10 R f
-( should not)2 473( You)1 244( iso9660 image.)2 664(generate output as if a 'ls -lR' command had been run on the)12 2579 4 1440 5640 t
-(use the)1 288 1 1440 5760 t
-10 B f
-(-f)1761 5760 w
-10 R f
-(image with the)2 610 1 1860 5760 t
-10 B f
-(-l)2503 5760 w
-10 R f
-(option.)2597 5760 w
-10 S1 f
-(\261)1080 5928 w
-10 B f
-(N sector)1 359 1 1145 5928 t
-10 R f
-( help examine single session disc \256les that are to be written to a multi-session)14 3364(Quick hack to)2 596 2 1440 6048 t
-( be)1 135(disc. The sector number speci\256ed is the sector number at which the iso9660 image should)14 3825 2 1440 6168 t
-(written when send to the cd-writer. Not used for the \256rst session on the disc.)14 3158 1 1440 6288 t
-10 S1 f
-(\261)1080 6456 w
-10 B f
-(p)1145 6456 w
-10 R f
-(Print path table information.)3 1157 1 1440 6456 t
-10 S1 f
-(\261)1080 6624 w
-10 B f
-(R)1145 6624 w
-10 R f
-( Ridge extensions \(if present\) for permissions, \256le names and)9 2654(Extract information from Rock)3 1306 2 1440 6624 t
-(ownerships.)1440 6744 w
-10 S1 f
-(\261)1080 6912 w
-10 B f
-(J)1145 6912 w
-10 R f
-(Extract information from Joliet extensions \(if present\) for \256le names.)9 2829 1 1440 6912 t
-10 S1 f
-(\261)1080 7080 w
-10 B f
-(j charset)1 376 1 1145 7080 t
-10 R f
-(Convert Joliet \256le names \(if present\) to the supplied charset. See)10 2657 1 1440 7200 t
-10 B f
-(mkisofs)4130 7200 w
-10 R f
-(\(8\) for details.)2 584 1 4458 7200 t
-( 1)1 1888( change: 01/04/19)2 732( Last)1 1536(Version 1.14)1 524 4 720 7680 t
-cleartomark
-showpage
-restore
-%%EndPage: 1 1
-%%Page: 2 2
-save
-mark
-2 pagesetup
-10 R f
-( \( 8 \))3 164( ISOINFO)1 1681( Procedures)1 476( Maintenance)1 1801(ISOINFO \( 8 \))3 558 5 720 480 t
-10 S1 f
-(\261)1080 960 w
-10 B f
-(T sector)1 354 1 1145 960 t
-10 R f
-( a multi-)2 385(Quick hack to help examine multi-session images that have already been burned to)12 3575 2 1440 1080 t
-( number for the start of the session we)8 1661(session disc. The sector number speci\256ed is the sector)8 2299 2 1440 1200 t
-(wish to display.)2 647 1 1440 1320 t
-10 S1 f
-(\261)1080 1488 w
-10 B f
-(x pathname)1 511 1 1145 1488 t
-10 R f
-(Extract speci\256ed \256le to stdout.)4 1251 1 1440 1608 t
-9 B f
-(AUTHOR)720 1776 w
-10 R f
-(Eric Youngdale)1 642 1 1080 1896 t
-10 S1 f
-(<)1760 1896 w
-10 R f
-(ericy)1816 1896 w
-10 S1 f
-(@)2015 1896 w
-10 R f
-(gnu.ai.mit.edu)2107 1896 w
-10 S1 f
-(>)2682 1896 w
-10 R f
-(or)2776 1896 w
-10 S1 f
-(<)2897 1896 w
-10 R f
-(eric)2953 1896 w
-10 S1 f
-(@)3102 1896 w
-10 R f
-(andante.jic.com)3194 1896 w
-10 S1 f
-(>)3826 1896 w
-10 R f
-( hacks.)1 291(is to blame for these shoddy)5 1189 2 3920 1896 t
-(Patches to improve general usability would be gladly accepted.)8 2585 1 1080 2016 t
-9 B f
-(BUGS)720 2184 w
-10 R f
-(The user interface really sucks.)4 1275 1 1080 2304 t
-9 B f
-(FUTURE IMPROVEMENTS)1 1170 1 720 2472 t
-10 R f
-( an)1 131(These utilities are really quick hacks, which are very useful for debugging problems in mkisofs or in)16 4189 2 1080 2592 t
-( daemon that would NFS export a iso9660)7 1747(iso9660 \256lesystem. In the long run, it would be nice to have a)12 2573 2 1080 2712 t
-(image.)1080 2832 w
-(The isoinfo program is probably the program that is of the most use to the general user.)16 3615 1 1080 3000 t
-9 B f
-(AVAILABILITY)720 3168 w
-10 R f
-( primary ftp site is tsx-11.mit.edu in)6 1739(These utilities come with the mkisofs package, and the)8 2581 2 1080 3288 t
-(/pub/linux/BETA/cdrom/mkisofs and many other mirror sites. Despite the name, the software is not beta.)13 4306 1 1080 3408 t
-9 B f
-(SEE ALSO)1 460 1 720 3576 t
-10 R f
-(mkisofs\(8\))1080 3696 w
-( 2)1 1888( change: 01/04/19)2 732( Last)1 1536(Version 1.14)1 524 4 720 7680 t
-cleartomark
-showpage
-restore
-%%EndPage: 2 2
-%%Trailer
-done
-%%DocumentFonts: Times-Roman Times-Bold Times-Italic Symbol
+%!PS-Adobe-3.0
+%%Creator: groff version 1.17.2
+%%CreationDate: Tue Dec 24 17:05:27 2002
+%%DocumentNeededResources: font Times-Roman
+%%+ font Times-Bold
+%%+ font Times-Italic
+%%DocumentSuppliedResources: procset grops 1.17 2
 %%Pages: 2
+%%PageOrder: Ascend
+%%Orientation: Portrait
+%%EndComments
+%%BeginProlog
+%%BeginResource: procset grops 1.17 2
+/setpacking where{
+pop
+currentpacking
+true setpacking
+}if
+/grops 120 dict dup begin
+/SC 32 def
+/A/show load def
+/B{0 SC 3 -1 roll widthshow}bind def
+/C{0 exch ashow}bind def
+/D{0 exch 0 SC 5 2 roll awidthshow}bind def
+/E{0 rmoveto show}bind def
+/F{0 rmoveto 0 SC 3 -1 roll widthshow}bind def
+/G{0 rmoveto 0 exch ashow}bind def
+/H{0 rmoveto 0 exch 0 SC 5 2 roll awidthshow}bind def
+/I{0 exch rmoveto show}bind def
+/J{0 exch rmoveto 0 SC 3 -1 roll widthshow}bind def
+/K{0 exch rmoveto 0 exch ashow}bind def
+/L{0 exch rmoveto 0 exch 0 SC 5 2 roll awidthshow}bind def
+/M{rmoveto show}bind def
+/N{rmoveto 0 SC 3 -1 roll widthshow}bind def
+/O{rmoveto 0 exch ashow}bind def
+/P{rmoveto 0 exch 0 SC 5 2 roll awidthshow}bind def
+/Q{moveto show}bind def
+/R{moveto 0 SC 3 -1 roll widthshow}bind def
+/S{moveto 0 exch ashow}bind def
+/T{moveto 0 exch 0 SC 5 2 roll awidthshow}bind def
+/SF{
+findfont exch
+[exch dup 0 exch 0 exch neg 0 0]makefont
+dup setfont
+[exch/setfont cvx]cvx bind def
+}bind def
+/MF{
+findfont
+[5 2 roll
+0 3 1 roll
+neg 0 0]makefont
+dup setfont
+[exch/setfont cvx]cvx bind def
+}bind def
+/level0 0 def
+/RES 0 def
+/PL 0 def
+/LS 0 def
+/MANUAL{
+statusdict begin/manualfeed true store end
+}bind def
+/PLG{
+gsave newpath clippath pathbbox grestore
+exch pop add exch pop
+}bind def
+/BP{
+/level0 save def
+1 setlinecap
+1 setlinejoin
+72 RES div dup scale
+LS{
+90 rotate
+}{
+0 PL translate
+}ifelse
+1 -1 scale
+}bind def
+/EP{
+level0 restore
+showpage
+}bind def
+/DA{
+newpath arcn stroke
+}bind def
+/SN{
+transform
+.25 sub exch .25 sub exch
+round .25 add exch round .25 add exch
+itransform
+}bind def
+/DL{
+SN
+moveto
+SN
+lineto stroke
+}bind def
+/DC{
+newpath 0 360 arc closepath
+}bind def
+/TM matrix def
+/DE{
+TM currentmatrix pop
+translate scale newpath 0 0 .5 0 360 arc closepath
+TM setmatrix
+}bind def
+/RC/rcurveto load def
+/RL/rlineto load def
+/ST/stroke load def
+/MT/moveto load def
+/CL/closepath load def
+/FL{
+currentgray exch setgray fill setgray
+}bind def
+/BL/fill load def
+/LW/setlinewidth load def
+/RE{
+findfont
+dup maxlength 1 index/FontName known not{1 add}if dict begin
+{
+1 index/FID ne{def}{pop pop}ifelse
+}forall
+/Encoding exch def
+dup/FontName exch def
+currentdict end definefont pop
+}bind def
+/DEFS 0 def
+/EBEGIN{
+moveto
+DEFS begin
+}bind def
+/EEND/end load def
+/CNT 0 def
+/level1 0 def
+/PBEGIN{
+/level1 save def
+translate
+div 3 1 roll div exch scale
+neg exch neg exch translate
+0 setgray
+0 setlinecap
+1 setlinewidth
+0 setlinejoin
+10 setmiterlimit
+[]0 setdash
+/setstrokeadjust where{
+pop
+false setstrokeadjust
+}if
+/setoverprint where{
+pop
+false setoverprint
+}if
+newpath
+/CNT countdictstack def
+userdict begin
+/showpage{}def
+}bind def
+/PEND{
+clear
+countdictstack CNT sub{end}repeat
+level1 restore
+}bind def
+end def
+/setpacking where{
+pop
+setpacking
+}if
+%%EndResource
+%%IncludeResource: font Times-Roman
+%%IncludeResource: font Times-Bold
+%%IncludeResource: font Times-Italic
+grops begin/DEFS 1 dict def DEFS begin/u{.001 mul}bind def end/RES 72
+def/PL 841.89 def/LS false def/ENC0[/asciicircum/asciitilde/Scaron
+/Zcaron/scaron/zcaron/Ydieresis/trademark/quotesingle/.notdef/.notdef
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/.notdef/.notdef/.notdef/space/exclam/quotedbl/numbersign/dollar/percent
+/ampersand/quoteright/parenleft/parenright/asterisk/plus/comma/hyphen
+/period/slash/zero/one/two/three/four/five/six/seven/eight/nine/colon
+/semicolon/less/equal/greater/question/at/A/B/C/D/E/F/G/H/I/J/K/L/M/N/O
+/P/Q/R/S/T/U/V/W/X/Y/Z/bracketleft/backslash/bracketright/circumflex
+/underscore/quoteleft/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y
+/z/braceleft/bar/braceright/tilde/.notdef/quotesinglbase/guillemotleft
+/guillemotright/bullet/florin/fraction/perthousand/dagger/daggerdbl
+/endash/emdash/ff/fi/fl/ffi/ffl/dotlessi/dotlessj/grave/hungarumlaut
+/dotaccent/breve/caron/ring/ogonek/quotedblleft/quotedblright/oe/lslash
+/quotedblbase/OE/Lslash/.notdef/exclamdown/cent/sterling/currency/yen
+/brokenbar/section/dieresis/copyright/ordfeminine/guilsinglleft
+/logicalnot/minus/registered/macron/degree/plusminus/twosuperior
+/threesuperior/acute/mu/paragraph/periodcentered/cedilla/onesuperior
+/ordmasculine/guilsinglright/onequarter/onehalf/threequarters
+/questiondown/Agrave/Aacute/Acircumflex/Atilde/Adieresis/Aring/AE
+/Ccedilla/Egrave/Eacute/Ecircumflex/Edieresis/Igrave/Iacute/Icircumflex
+/Idieresis/Eth/Ntilde/Ograve/Oacute/Ocircumflex/Otilde/Odieresis
+/multiply/Oslash/Ugrave/Uacute/Ucircumflex/Udieresis/Yacute/Thorn
+/germandbls/agrave/aacute/acircumflex/atilde/adieresis/aring/ae/ccedilla
+/egrave/eacute/ecircumflex/edieresis/igrave/iacute/icircumflex/idieresis
+/eth/ntilde/ograve/oacute/ocircumflex/otilde/odieresis/divide/oslash
+/ugrave/uacute/ucircumflex/udieresis/yacute/thorn/ydieresis]def
+/Times-Italic@0 ENC0/Times-Italic RE/Times-Bold@0 ENC0/Times-Bold RE
+/Times-Roman@0 ENC0/Times-Roman RE
+%%EndProlog
+%%Page: 1 1
+%%BeginPageSetup
+BP
+%%EndPageSetup
+/F0 10/Times-Roman@0 SF 363.3(ISOINFO\(8\) ISOINFO\(8\))72 48 R/F1 10.95
+/Times-Bold@0 SF -.219(NA)72 84 S(ME).219 E F0(de)108 96 Q
+(vdump, isoinfo, iso)-.25 E(vfy)-.15 E 2.5(,i)-.65 G
+(sodump \255 Utility programs for dumping and v)-2.5 E
+(erifying iso9660 images.)-.15 E F1(SYNOPSIS)72 112.8 Q/F2 10
+/Times-Bold@0 SF(de)108 124.8 Q(vdump)-.15 E/F3 10/Times-Italic@0 SF
+(isoima)2.5 E -.1(ge)-.1 G F2(isodump)108 141.6 Q F3(isoima)2.5 E -.1
+(ge)-.1 G F2(isoinf)108 158.4 Q(o)-.25 E F0([)2.517 E F2<ad64>2.517 E F0
+2.517(][)2.517 G F2<ad68>A F0 2.517(][)2.517 G F2<ad52>A F0 2.517(][)
+2.517 G F2<ad4a>A F0 2.517(][)2.517 G F2<ad6a>A F3 -.15(ch)2.517 G(ar)
+.15 E(set)-.1 E F0 2.517(][)2.517 G F2<ad66>A F0 2.517(][)2.517 G F2
+<ad6c>A F0 2.516(][)2.517 G F2<ad70>A F0 2.516(][)2.516 G F2<ad54>A F3
+(sector)2.516 E F0 2.516(][)2.516 G F2<ad4e>A F3(sector)2.516 E F0 2.516
+(][)2.516 G F2<ad69>A F3(isoima)2.516 E -.1(ge)-.1 G F0 2.516(][)2.616 G
+F2<ad78>108 170.4 Q F3(path)2.5 E F0(])2.5 E F2(iso)108 187.2 Q(vfy)-.1
+E F3(isoima)2.5 E -.1(ge)-.1 G F1(DESCRIPTION)72 204 Q F2(de)108 216 Q
+(vdump)-.15 E F0 .488(is a crude utility to interacti)2.988 F -.15(ve)
+-.25 G .489(ly display the contents of de).15 F .489
+(vice or \214lesystem images.)-.25 F .489(The initial)5.489 F .482(scre\
+en is a display of the \214rst 256 bytes of the \214rst 2048 byte secto\
+r)108 228 R 5.481(.T)-.55 G .481(he commands are the same as with)-5.481
+F F2(isodump)108 240 Q F0(.)A F2(isodump)108 256.8 Q F0 .691
+(is a crude utility to interacti)3.191 F -.15(ve)-.25 G .691
+(ly display the contents of iso9660 images in order to v).15 F .692
+(erify direc-)-.15 F .09(tory inte)108 268.8 R(grity)-.15 E 5.09(.T)-.65
+G .09(he initial screen is a display of the \214rst part of the root di\
+rectory)-5.09 F 2.59(,a)-.65 G .09(nd the prompt sho)-2.59 F .09(ws you)
+-.25 F(the e)108 280.8 Q(xtent number and of)-.15 E(fset in the e)-.25 E
+(xtent.)-.15 E -1.1(Yo)144 297.6 S 2.691(uc)1.1 G .191
+(an use the 'a' and 'b' commands to mo)-2.691 F .491 -.15(ve b)-.15 H
+(ackw).15 E .191(ards and forw)-.1 F .192
+(ards within the image. The 'g')-.1 F .492(command allo)144 309.6 R .492
+(ws you to goto an arbitrary e)-.25 F .491(xtent, and the 'f)-.15 F
+2.991('c).55 G .491(ommand speci\214es a search string to)-2.991 F .418
+(be used. The '+' command searches forw)144 321.6 R .418(ard for the ne)
+-.1 F .418(xt instance of the search string, and the 'q')-.15 F
+(command e)144 333.6 Q(xits)-.15 E F2(de)2.5 E(vdump)-.15 E F0(or)2.5 E
+F2(isodump)2.5 E F0(.)A F2(isoinf)108 350.4 Q(o)-.25 E F0
+(is a utility to perform directory lik)2.5 E 2.5(el)-.1 G
+(istings of iso9660 images.)-2.5 E F2(iso)108 367.2 Q(vfy)-.1 E F0 .752
+(is a utility to v)3.252 F .752(erify the inte)-.15 F .752
+(grity of an iso9660 image. Most of the tests in)-.15 F F2(iso)3.252 E
+(vfy)-.1 E F0 .752(were added after)3.252 F -.2(bu)108 379.2 S .534
+(gs were disco).2 F -.15(ve)-.15 G .534(red in early v).15 F .534
+(ersions of)-.15 F F2(mkisofs.)3.034 E F0 .534(It isn')5.534 F 3.034(ta)
+-.18 G .534(ll that clear ho)-3.034 F 3.034(wu)-.25 G .535
+(seful this is an)-3.034 F .535(ymore, b)-.15 F .535(ut it)-.2 F(doesn')
+108 391.2 Q 2.5(th)-.18 G(urt to ha)-2.5 E .3 -.15(ve t)-.2 H
+(his around.).15 E F1(OPTIONS)72 420 Q F0(Only the)108 432 Q F2(isoinf)
+2.5 E(o)-.25 E F0(program has an)2.5 E 2.5(yc)-.15 G
+(ommand line options. These are:)-2.5 E F2<ad68>108 448.8 Q F0
+(print a summary of all options.)24.74 E F2<ad64>108 465.6 Q F0 .523
+(Print information from the primary v)24.74 F .522
+(olume descriptor \(PVD\) of the iso9660 image. This includes)-.2 F
+(information about Rock Ridge and Joliet e)144 477.6 Q
+(xtensions if present.)-.15 E F2<ad66>108 494.4 Q F0 .181(generate outp\
+ut as if a '\214nd . -print' command had been run on the iso9660 image.\
+ Y)26.97 F .182(ou should not)-1.1 F(use the)144 506.4 Q F2(-l)2.5 E F0
+(image with the)2.5 E F2(-f)2.5 E F0(option.)2.5 E F2(\255i iso_image)
+108 523.2 Q F0
+(Speci\214es the path of the iso9660 image that we wish to e)144 535.2 Q
+(xamine.)-.15 E F2<ad6c>108 552 Q F0 .465(generate output as if a ')
+27.52 F .464(ls -lR' command had been run on the iso9660 image.)-.1 F
+-1.1(Yo)5.464 G 2.964(us)1.1 G .464(hould not use)-2.964 F(the)144 564 Q
+F2(-f)2.5 E F0(image with the)2.5 E F2(-l)2.5 E F0(option.)2.5 E F2
+(\255N sector)108 580.8 Q F0 .527(Quick hack to help e)144 592.8 R .527
+(xamine single session disc \214les that are to be written to a multi-s\
+ession disc.)-.15 F 1.015(The sector number speci\214ed is the sector n\
+umber at which the iso9660 image should be written)144 604.8 R
+(when send to the cd-writer)144 616.8 Q 2.5(.N)-.55 G
+(ot used for the \214rst session on the disc.)-2.5 E F2<ad70>108 633.6 Q
+F0(Print path table information.)24.74 E F2<ad52>108 650.4 Q F0 .325
+(Extract information from Rock Ridge e)23.08 F .326
+(xtensions \(if present\) for permissions, \214le names and o)-.15 F
+(wn-)-.25 E(erships.)144 662.4 Q F2<ad4a>108 679.2 Q F0
+(Extract information from Joliet e)25.3 E
+(xtensions \(if present\) for \214le names.)-.15 E F2(\255j charset)108
+696 Q F0(Con)144 708 Q -.15(ve)-.4 G
+(rt Joliet \214le names \(if present\) to the supplied charset. See).15
+E F2(mkisofs)2.5 E F0(\(8\) for details.)A -1.11(Ve)72 768 S(rsion 2.0)
+1.11 E 208.72(02/12/24 1)170.67 F EP
+%%Page: 2 2
+%%BeginPageSetup
+BP
+%%EndPageSetup
+/F0 10/Times-Roman@0 SF 363.3(ISOINFO\(8\) ISOINFO\(8\))72 48 R/F1 10
+/Times-Bold@0 SF(\255T sector)108 84 Q F0 .165(Quick hack to help e)144
+96 R .165(xamine multi-session images that ha)-.15 F .465 -.15(ve a)-.2
+H .165(lready been b).15 F .165(urned to a multi-session)-.2 F .537(dis\
+c. The sector number speci\214ed is the sector number for the start of \
+the session we wish to dis-)144 108 R(play)144 120 Q(.)-.65 E F1
+(\255x pathname)108 136.8 Q F0(Extract speci\214ed \214le to stdout.)144
+148.8 Q/F2 10.95/Times-Bold@0 SF -.548(AU)72 165.6 S(THOR).548 E F0 1.35
+(Eric Y)108 177.6 R 1.349(oungdale <eric)-1.1 F 1.349(y@gnu.ai.mit.edu>\
+ or <eric@andante.jic.com> is to blame for these shoddy hacks.)-.15 F
+-.15(Pa)108 189.6 S(tches to impro).15 E .3 -.15(ve g)-.15 H
+(eneral usability w).15 E(ould be gladly accepted.)-.1 E F2 -.11(BU)72
+206.4 S(GS).11 E F0(The user interf)108 218.4 Q(ace really sucks.)-.1 E
+F2(FUTURE IMPR)72 235.2 Q -.548(OV)-.329 G(EMENTS).548 E F0 1.09
+(These utilities are really quick hacks, which are v)108 247.2 R 1.09
+(ery useful for deb)-.15 F 1.09(ugging problems in mkisofs or in an)-.2
+F .889(iso9660 \214lesystem. In the long run, it w)108 259.2 R .889
+(ould be nice to ha)-.1 F 1.189 -.15(ve a d)-.2 H .889(aemon that w).15
+F .889(ould NFS e)-.1 F .889(xport a iso9660)-.15 F(image.)108 271.2 Q(\
+The isoinfo program is probably the program that is of the most use to \
+the general user)108 288 Q(.)-.55 E F2 -1.04 -1.588(AV A)72 304.8 T
+(ILABILITY)1.588 E F0 4.926(These utilities come with the mkisofs packa\
+ge, and the primary ftp site is tsx-11.mit.edu in)108 316.8 R
+(/pub/linux/BET)108 328.8 Q(A/cdrom/mkisofs and man)-.93 E 2.5(yo)-.15 G
+(ther mirror sites. Despite the name, the softw)-2.5 E(are is not beta.)
+-.1 E F2(SEE ALSO)72 345.6 Q F0(mkisofs\(8\))108 357.6 Q -1.11(Ve)72 768
+S(rsion 2.0)1.11 E 208.72(02/12/24 2)170.67 F EP
+%%Trailer
+end
+%%EOF

@@ -1,7 +1,7 @@
-/* @(#)rock.c	1.28 01/01/23 joerg */
+/* @(#)rock.c	1.32 02/08/08 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)rock.c	1.28 01/01/23 joerg";
+	"@(#)rock.c	1.32 02/08/08 joerg";
 #endif
 /*
  * File rock.c - generate RRIP  records for iso9660 filesystems.
@@ -45,11 +45,11 @@ static	char sccsid[] =
 #define PX_SIZE 36
 #define RE_SIZE 4
 #define SL_SIZE 20
-#define ZZ_SIZE 15
+#define ZF_SIZE 16
 #ifdef APPLE_HYB
 #define AA_SIZE 14	/* size of Apple extension */
 #endif	/* APPLE_HYB */
-#ifdef __QNX__
+#if defined(__QNX__) && !defined(__QNXNTO__)	/* Not on Neutrino! never OK?*/
 #define TF_SIZE (5 + 4 * 7)
 #else
 #define TF_SIZE (5 + 3 * 7)
@@ -82,7 +82,7 @@ static	void	add_CE_entry			__PR((void));
  * Buffer to build RR attributes
  */
 static unsigned char Rock[16384];
-static unsigned char symlink_buff[256];
+static unsigned char symlink_buff[PATH_MAX+1];
 static int      ipnt = 0;
 static int      recstart = 0;
 static int      currlen = 0;
@@ -355,7 +355,7 @@ generate_rock_ridge_attributes(whole_name, name,
 
 #ifdef	HAVE_READLINK
 		nchar = readlink(whole_name, (char *)symlink_buff,
-							sizeof(symlink_buff));
+							sizeof(symlink_buff)-1);
 #else
 		nchar = -1;
 #endif	/* HAVE_READLINK */
@@ -521,13 +521,14 @@ generate_rock_ridge_attributes(whole_name, name,
 	Rock[ipnt++] = 'F';
 	Rock[ipnt++] = TF_SIZE;
 	Rock[ipnt++] = SU_VERSION;
-#ifdef __QNX__
+#if defined(__QNX__) && !defined(__QNXNTO__)	/* Not on Neutrino! never OK?*/
 	Rock[ipnt++] = 0x0f;
 #else
 	Rock[ipnt++] = 0x0e;
 #endif
 	flagval |= (1 << 7);
-#ifdef __QNX__
+
+#if defined(__QNX__) && !defined(__QNXNTO__)	/* Not on Neutrino! never OK?*/
 	iso9660_date((char *) &Rock[ipnt], lstatbuf->st_ftime);
 	ipnt += 7;
 #endif
@@ -577,17 +578,23 @@ generate_rock_ridge_attributes(whole_name, name,
 #ifndef VMS
 	/*
 	 * If transparent compression was requested, fill in the correct field
-	 * for this file
+	 * for this file, if (and only if) it is actually a compressed file!
+	 * This relies only on magic number, but it should in general not
+	 * be an issue since if you're using -z odds are most of your
+	 * files are already compressed.
+	 *
+	 * In the future it would be nice if mkisofs actually did the
+	 * compression.
 	 */
-	if (transparent_compression &&
-		S_ISREG(lstatbuf->st_mode) &&
-		strlen(name) > 3 &&
-		strcmp(name + strlen(name) - 3, ".gZ") == 0) {
-		FILE           *zipfile;
-		char           *checkname;
-		unsigned int    file_size;
-		unsigned char   header[8];
-		int             OK_flag;
+	if (transparent_compression && S_ISREG(lstatbuf->st_mode)) {
+	  	static const unsigned char zisofs_magic[8] =
+			{ 0x37, 0xE4, 0x53, 0x96, 0xC9, 0xDB, 0xD6, 0x07 };
+		FILE		*zffile;
+		unsigned int	file_size;
+		unsigned char	header[16];
+		int		OK_flag;
+		int		blocksize;
+		int		headersize;
 
 		/*
 		 * First open file and verify that the correct algorithm was
@@ -596,73 +603,44 @@ generate_rock_ridge_attributes(whole_name, name,
 		file_size = 0;
 		OK_flag = 1;
 
-		zipfile = fopen(whole_name, "rb");
-		fread(header, 1, sizeof(header), zipfile);
+		memset(header, 0, sizeof(header));
 
-		/* Check some magic numbers from gzip. */
-		if (header[0] != 0x1f || header[1] != 0x8b || header[2] != 8)
-			OK_flag = 0;
-		/* Make sure file was blocksized. */
-		if (((header[3] & 0x40) == 0))
-			OK_flag = 0;
-		/* OK, now go to the end of the file and get some more info */
-		if (OK_flag) {
-			int	status;
-
-			status = (long) lseek(fileno(zipfile), (off_t)(-8),
-								SEEK_END);
-			if (status == -1)
+		zffile = fopen(whole_name, "rb");
+		if (zffile != NULL) {
+			if (fread(header, 1, sizeof(header), zffile) != sizeof(header))
 				OK_flag = 0;
-		}
-		if (OK_flag) {
-			if (read(fileno(zipfile), (char *) header,
-					sizeof(header)) != sizeof(header)) {
+			
+			/* Check magic number */
+			if (memcmp(header, zisofs_magic, sizeof zisofs_magic))
 				OK_flag = 0;
-			} else {
-				int             blocksize;
 
-				blocksize = (header[3] << 8) | header[2];
-				file_size = ((unsigned int) header[7] << 24) |
-					((unsigned int) header[6] << 16) |
-					((unsigned int) header[5] << 8) |
-							header[4];
-#if 0
-				fprintf(stderr, "Blocksize = %d %d\n",
-						blocksize, file_size);
-#endif
-				if (blocksize != SECTOR_SIZE)
-					OK_flag = 0;
-			}
-		}
-		fclose(zipfile);
-
-		checkname = strdup(whole_name);
-		checkname[strlen(whole_name) - 3] = 0;
-		zipfile = fopen(checkname, "rb");
-		if (zipfile) {
+			/* Get the real size of the file */
+			file_size = get_731((char *)header+8);
+			
+			/* Get the header size (>> 2) */
+			headersize = header[12];
+			
+			/* Get the block size (log2) */
+			blocksize = header[13];
+			
+			fclose(zffile);
+		} else {
 			OK_flag = 0;
-#ifdef	USE_LIBSCHILY
-			errmsg(
-			"Unable to insert transparent compressed file - name conflict\n");
-#else
-			fprintf(stderr,
-			"Unable to insert transparent compressed file - name conflict\n");
-#endif
-			fclose(zipfile);
+			blocksize = headersize = 0; /* Make silly GCC quiet */
 		}
-		free(checkname);
-
+		
 		if (OK_flag) {
-			if (MAYBE_ADD_CE_ENTRY(ZZ_SIZE))
+			if (MAYBE_ADD_CE_ENTRY(ZF_SIZE))
 				add_CE_entry();
 			Rock[ipnt++] = 'Z';
-			Rock[ipnt++] = 'Z';
-			Rock[ipnt++] = ZZ_SIZE;
+			Rock[ipnt++] = 'F';
+			Rock[ipnt++] = ZF_SIZE;
 			Rock[ipnt++] = SU_VERSION;
-			Rock[ipnt++] = 'g';	/* Identify compression
-						   technique used */
+			Rock[ipnt++] = 'p'; /* Algorithm: "paged zlib" */
 			Rock[ipnt++] = 'z';
-			Rock[ipnt++] = 3;
+			/* 2 bytes for algorithm-specific information */
+			Rock[ipnt++] = headersize;
+			Rock[ipnt++] = blocksize;
 			set_733((char *) Rock + ipnt, file_size); /* Real file size */
 			ipnt += 8;
 		};

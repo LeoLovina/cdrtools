@@ -1,7 +1,7 @@
-/* @(#)scsi-hpux.c	1.29 01/03/18 Copyright 1997 J. Schilling */
+/* @(#)scsi-hpux.c	1.30 02/10/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-hpux.c	1.29 01/03/18 Copyright 1997 J. Schilling";
+	"@(#)scsi-hpux.c	1.30 02/10/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the HP-UX generic SCSI implementation.
@@ -40,7 +40,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-hpux.c-1.29";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-hpux.c-1.30";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -84,6 +84,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "SIOC", "Generic SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int

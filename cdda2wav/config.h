@@ -1,4 +1,4 @@
-/* @(#)config.h	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)config.h	1.4 01/12/19 Copyright 1998,1999 Heiko Eissfeldt */
 /*
  *	Adaption for mconfig.h from make file system.
  *
@@ -42,4 +42,6 @@
 #else
 #undef FIFO
 #endif
-#define PRETEND_TO_USE(a) if ((a) == (a)) {;} else {;}
+#if	!defined	HAVE_MEMMOVE
+#define	memmove(dst, src, size)	movebytes((src), (dst), (size))
+#endif

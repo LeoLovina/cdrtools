@@ -1,7 +1,7 @@
-/* @(#)tree.c	1.58 01/04/07 joerg */
+/* @(#)tree.c	1.69 02/12/07 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)tree.c	1.58 01/04/07 joerg";
+	"@(#)tree.c	1.69 02/12/07 joerg";
 #endif
 /*
  * File tree.c - scan directory  tree and build memory structures for iso9660
@@ -40,6 +40,10 @@ static	char sccsid[] =
 #include <device.h>
 #include <schily.h>
 
+#ifdef UDF
+#include "udf.h"
+#endif
+
 #ifdef VMS
 #include <sys/file.h>
 #include <vms/fabdef.h>
@@ -60,7 +64,7 @@ extern char	*strdup	__PR((const char *));
 
 #endif
 
-static unsigned char symlink_buff[256];
+static unsigned char symlink_buff[PATH_MAX+1];
 
 static	char	*filetype		__PR((int t));
 static	char	*rstr			__PR((char *s1, char *s2));
@@ -115,21 +119,21 @@ static char *
 filetype(t)
 	int	t;
 {
-	if ((t & S_IFMT) == 0)		/* 0 (unallocated) */
-		return ("unallocated");
+	static	char	unkn[32];
+
 	if (S_ISFIFO(t))		/* 1 */
 		return ("fifo");
 	if (S_ISCHR(t))			/* 2 */
 		return ("chr");
-	if ((t & S_IFMT) == 3)		/* 3 (multiplexed chr) */
+	if (S_ISMPC(t))			/* 3 */
 		return ("multiplexed chr");
 	if (S_ISDIR(t))			/* 4 */
 		return ("dir");
-	if ((t & S_IFMT) == 5)		/* 5 (named file) */
+	if (S_ISNAM(t))			/* 5 */
 		return ("named file");
 	if (S_ISBLK(t))			/* 6 */
 		return ("blk");
-	if ((t & S_IFMT) == 7)		/* 7 (multiplexed blk) */
+	if (S_ISMPB(t))			/* 7 */
 		return ("multiplexed blk");
 	if (S_ISREG(t))			/* 8 */
 		return ("regular file");
@@ -137,17 +141,26 @@ filetype(t)
 		return ("contiguous file");
 	if (S_ISLNK(t))			/* 10 */
 		return ("symlink");
-	if ((t & S_IFMT) == 11)		/* 11 (Solaris shadow inode) */
+	if (S_ISSHAD(t))		/* 11 */
 		return ("Solaris shadow inode");
 	if (S_ISSOCK(t))		/* 12 */
 		return ("socket");
 	if (S_ISDOOR(t))		/* 13 */
 		return ("door");
-	if ((t & S_IFMT) == 14)		/* 14 (CPIO acl) */
-		return ("CPIO acl");
-	if ((t & S_IFMT) == 15)		/* 15 (unused) */
-		return ("unused 15");
-	return ("BLETCH");
+	if (S_ISWHT(t))			/* 14 */
+		return ("whiteout");
+	if (S_ISEVC(t))			/* 15 */
+		return ("event count");
+
+	/*
+	 * Needs to be last in case somebody makes this
+	 * a supported file type.
+	 */
+	if ((t & S_IFMT) == 0)		/* 0 (unallocated) */
+		return ("unallocated");
+
+	sprintf(unkn, "octal '%o'", t & S_IFMT);
+	return (unkn);
 }
 
 /*
@@ -1091,7 +1104,7 @@ scan_directory_tree(this_dir, path, de)
 	struct directory_entry	*de;
 {
 	DIR		*current_dir;
-	char		whole_path[1024];
+	char		whole_path[PATH_MAX];
 	struct dirent	*d_entry;
 	struct directory *parent;
 	int		dflag;
@@ -1100,6 +1113,21 @@ scan_directory_tree(this_dir, path, de)
 	if (verbose > 1) {
 		fprintf(stderr, "Scanning %s\n", path);
 	}
+/*#define	check_needed*/
+#ifdef	check_needed
+	/*
+	 * Trying to use this to avoid directory loops from hard links
+	 * or followed symlinks does not work. It would prevent us from
+	 * implementing merge directories.
+	 */
+	if (this_dir->dir_flags & DIR_WAS_SCANNED) {
+		fprintf(stderr, "Already scanned directory %s\n", path);
+		return (1);	/* It's a directory */
+	}
+#endif
+	this_dir->dir_flags |= DIR_WAS_SCANNED;
+
+	errno = 0;	/* Paranoia */
 	current_dir = opendir(path);
 	d_entry = NULL;
 
@@ -1109,8 +1137,10 @@ scan_directory_tree(this_dir, path, de)
 	 */
 	old_path = path;
 
-	if (current_dir)
+	if (current_dir) {
+		errno = 0;
 		d_entry = readdir(current_dir);
+	}
 
 	if (!current_dir || !d_entry) {
 		int	ret = 1;
@@ -1131,9 +1161,17 @@ scan_directory_tree(this_dir, path, de)
 	}
 #ifdef	ABORT_DEEP_ISO_ONLY
 	if ((this_dir->depth > RR_relocation_depth) && !use_RockRidge) {
+		static	BOOL	did_hint = FALSE;
+
 		errmsgno(EX_BAD,
-			"Directories too deep for '%s' (%d) max is %d.\n",
+			"Directories too deep for '%s' (%d) max is %d; ignored - continuing.\n",
 			path, this_dir->depth, RR_relocation_depth);
+		if (!did_hint) {
+			did_hint = TRUE;
+			errmsgno(EX_BAD, "To incude the complete directory tree,\n");
+			errmsgno(EX_BAD, "use Rock Ridge extensions via -R or -r,\n");
+			errmsgno(EX_BAD, "or allow deep ISO9660 directory nesting via -D.\n");
+		}
 		closedir(current_dir);
 		return 1;
 	}
@@ -1339,9 +1377,9 @@ insert_file_entry(this_dir, whole_path, short_name)
 		 * Sometimes this is because of NFS permissions problems.
 		 */
 #ifdef	USE_LIBSCHILY
-		errmsg("Non-existant or inaccessible: %s\n", whole_path);
+		errmsg("Non-existent or inaccessible: %s\n", whole_path);
 #else
-		fprintf(stderr, "Non-existant or inaccessible: %s\n",
+		fprintf(stderr, "Non-existent or inaccessible: %s\n",
 								whole_path);
 #endif
 		return 0;
@@ -1418,7 +1456,17 @@ insert_file_entry(this_dir, whole_path, short_name)
 						return 0;
 					}
 					lstatbuf = statbuf;
-					no_scandir = 1;
+					/*
+					 * XXX when this line was active,
+					 * XXX mkisofs did not include all
+					 * XXX files if it was called with '-f'
+					 * XXX (follow symlinks).
+					 * XXX Now scan_directory_tree()
+					 * XXX checks if the directory has
+					 * XXX already been scanned via the
+					 * XXX DIR_WAS_SCANNED flag.
+					 */
+/*					no_scandir = 1;*/
 				} else {
 					lstatbuf = statbuf;
 					add_directory_hash(statbuf.st_dev,
@@ -1573,7 +1621,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 				 * non-directory
 				 */
 			}
-			if (no_scandir)
+/*			if (no_scandir)*/
+			if (0)
 				dflag = 1;
 			else
 				dflag = scan_directory_tree(child,
@@ -1602,7 +1651,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 	 * part and not excluded
 	 */
 	if (S_ISREG(lstatbuf.st_mode) && !have_rsrc && apple_both && !x_hfs) {
-		char	rsrc_path[1024];	/* rsrc fork filename */
+		char	rsrc_path[PATH_MAX];	/* rsrc fork filename */
 
 		/* construct the resource full path */
 		htype = get_hfs_rname(whole_path, short_name, rsrc_path);
@@ -1692,6 +1741,28 @@ insert_file_entry(this_dir, whole_path, short_name)
 	/* inherit any sort weight from parent directory */
 	s_entry->sort = this_dir->sort;
 
+#ifdef  DVD_VIDEO
+	/*
+	 * No use at all to do a sort if we don't make a dvd video/audio
+	 */ 
+	/*
+	 * Assign special weights to VIDEO_TS and AUDIO_TS files.
+	 * This can't be done with sort_matches for two reasons:
+	 * first, we need to match against the destination (DVD)
+	 * path rather than the source path, and second, there are
+	 * about 2400 different file names to check, each needing
+	 * a different priority, and adding that many patterns to
+	 * sort_matches would slow things to a crawl.
+	 */
+
+	if (dvd_video) {
+		s_entry->sort = assign_dvd_weights(s_entry->name, this_dir, s_entry->sort);
+		/* turn on sorting if necessary, regardless of cmd-line options */
+		if (s_entry->sort != this_dir->sort)
+			do_sort++;
+	}
+#endif
+
 	/* see if this entry should have a new weighting */
 	if (do_sort && strcmp(short_name,".") != 0 && strcmp(short_name,"..") != 0) {
 		s_entry->sort = sort_matches(whole_path, s_entry->sort);
@@ -1747,17 +1818,30 @@ insert_file_entry(this_dir, whole_path, short_name)
 
 				/* fill in the defaults */
 				memset(hfs_ent, 0, sizeof(hfsdirent));
-				hfs_ent->crdate = lstatbuf.st_ctime;
-				hfs_ent->mddate = lstatbuf.st_mtime;
 
 				s_entry->hfs_ent = hfs_ent;
 			}
-			if (have_rsrc)
+			/*
+			 * the resource fork is processed first, but the 
+			 * data fork's time info is used in preference
+			 * i.e. time info is set from the resource fork
+			 * initially, then it is set from the data fork
+			 */
+			if (have_rsrc) {
 				/* set rsrc size */
 				s_entry->hfs_ent->u.file.rsize = lstatbuf.st_size;
-			else
+				/*
+				 * this will be overwritten - but might as
+				 * well set it here ...
+				 */
+				s_entry->hfs_ent->crdate = lstatbuf.st_ctime;
+				s_entry->hfs_ent->mddate = lstatbuf.st_mtime;
+			} else {
 				/* set data size */
 				s_entry->hfs_ent->u.file.dsize = lstatbuf.st_size;
+				s_entry->hfs_ent->crdate = lstatbuf.st_ctime;
+				s_entry->hfs_ent->mddate = lstatbuf.st_mtime;
+			}
 		}
 	}
 #endif	/* APPLE_HYB */
@@ -1865,7 +1949,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 		s_entry1->filedir = reloc_dir;
 		child = find_or_create_directory(reloc_dir, whole_path,
 			s_entry1, 0);
-		if (!no_scandir)
+/*		if (!no_scandir)*/
+		if (!0)
 			scan_directory_tree(child, whole_path, s_entry1);
 		s_entry1->filedir = this_dir;
 
@@ -1882,7 +1967,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 		&& strcmp(s_entry->name, ".") != 0
 		&& strcmp(s_entry->name, "..") != 0) {
 
-		char	buffer[2048];
+		char	buffer[SECTOR_SIZE];
 		int	nchar;
 
 		switch (lstatbuf.st_mode & S_IFMT) {
@@ -1937,7 +2022,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 #ifdef	HAVE_READLINK
 			nchar = readlink(whole_path,
 				(char *) symlink_buff,
-				sizeof(symlink_buff));
+				sizeof(symlink_buff)-1);
 #else
 			nchar = -1;
 #endif
@@ -2231,7 +2316,14 @@ find_or_create_directory(parent, path, de, flag)
 		 * stat it first. Otherwise, we use the fictitious fstatbuf
 		 * which points to the time at which mkisofs was started.
 		 */
-		sts = stat_filter(parent->whole_name, &xstatbuf);
+		if (parent == NULL || parent->whole_name[0] == '\0')
+			sts = -1;
+		else
+			sts = stat_filter(parent->whole_name, &xstatbuf);
+		if (debug && parent) {
+			error("stat parent->whole_name: '%s' -> %d.\n",
+				parent->whole_name, sts);
+		}
 		if (sts == 0) {
 			attach_dot_entries(dpnt, &xstatbuf);
 		} else {
@@ -2262,6 +2354,11 @@ find_or_create_directory(parent, path, de, flag)
 		fprintf(stderr, "%s(%d) ", path, dpnt->depth);
 #endif
 		if (parent->depth > RR_relocation_depth) {
+			/*
+			 * XXX to prevent this, we would need to add
+			 * XXX support for RR directory relocation
+			 * XXX to find_or_create_directory()
+			 */
 #ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			"Directories too deep for '%s' (%d) max is %d.\n",

@@ -1,7 +1,7 @@
-/* @(#)isosize.c	1.7 01/02/21 Copyright 1996 J. Schilling */
+/* @(#)isosize.c	1.8 01/10/09 Copyright 1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isosize.c	1.7 01/02/21 Copyright 1996 J. Schilling";
+	"@(#)isosize.c	1.8 01/10/09 Copyright 1996 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1996 J. Schilling
@@ -23,8 +23,6 @@ static	char sccsid[] =
  */
 
 #include <mconfig.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <statdefs.h>
 #include <unixstd.h>
 #include <standard.h>

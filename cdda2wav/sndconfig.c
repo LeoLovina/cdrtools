@@ -1,16 +1,21 @@
-/* @(#)sndconfig.c	1.3 00/01/02 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)sndconfig.c	1.13 02/09/13 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)sndconfig.c	1.3 00/01/02 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)sndconfig.c	1.13 02/09/13 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /* os dependent functions */
 #include "config.h"
 #include <stdio.h>
 #include <strdefs.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include <fctldefs.h>
+#include <unixstd.h>
 #include <sys/ioctl.h>
+#if	!defined __CYGWIN32__
+# include <timedefs.h>
+#endif
+#include <schily.h>
+
 
 /* soundcard setup */
 #if defined (HAVE_SOUNDCARD_H) || defined (HAVE_LINUX_SOUNDCARD_H) || defined (HAVE_SYS_SOUNDCARD_H) || defined (HAVE_MACHINE_SOUNDCARD_H)
@@ -115,8 +120,7 @@ int init_soundcard(rate, bits)
   if (global.echo) {
 # if	defined(HAVE_OSS) && HAVE_OSS == 1
     if (open_snd_device() != 0) {
-	perror("");
-        fprintf(stderr, "Cannot open %s\n",snd_device);
+        errmsg("Cannot open sound device '%s'\n", snd_device);
         global.echo = 0;
     } else { 
 	/* This the sound device initialisation for 4front Open sound drivers */
@@ -124,7 +128,7 @@ int init_soundcard(rate, bits)
 	int dummy;
 	int garbled_rate = rate;
 	int stereo = (global.channels == 2);
-	int format = bits == 8 ? AFMT_U8 :
+	int myformat = bits == 8 ? AFMT_U8 :
         	(MY_LITTLE_ENDIAN ? AFMT_S16_LE : AFMT_S16_BE);
 	int mask;
 
@@ -142,14 +146,14 @@ int init_soundcard(rate, bits)
 		perror("fatal error:");
 		return -1;
 	}
-	if ((mask & format) == 0) {
+	if ((mask & myformat) == 0) {
 		fprintf(stderr, "sound format (%d bits signed) is not available\n", bits);
 		if ((mask & AFMT_U8) != 0) {
 			bits = 8;
-			format = AFMT_U8;
+			myformat = AFMT_U8;
 		}
 	}
-	if (ioctl(global.soundcard_fd, (int)SNDCTL_DSP_SETFMT, &format) == -1) {
+	if (ioctl(global.soundcard_fd, (int)SNDCTL_DSP_SETFMT, &myformat) == -1) {
 	    fprintf(stderr, "Cannot set %d bits/sample for %s\n",bits, snd_device);
 	    global.echo = 0;
 	}
@@ -255,7 +259,7 @@ int init_soundcard(rate, bits)
 	for (i=0; i < WAVEHDRS; i++) {
 	    wavehdr[i].dwBufferLength = (global.channels*(bits/ 8)*(int)rate*
 		    		global.nsectors)/75;
-	    wavehdr[i].lpData = (unsigned char *) malloc(wavehdr[i].dwBufferLength);
+	    wavehdr[i].lpData = malloc(wavehdr[i].dwBufferLength);
 	    if (wavehdr[i].lpData == NULL) {
 		    fprintf(stderr, "no memory for sound buffers available\n");
  		    waveOutReset(0);
@@ -280,7 +284,13 @@ int init_soundcard(rate, bits)
 int open_snd_device ()
 {
 #if	defined ECHO_TO_SOUNDCARD && !defined __CYGWIN32__
-	return (global.soundcard_fd = open(snd_device, O_WRONLY, 0)) < 0;
+	return (global.soundcard_fd = open(snd_device, O_WRONLY
+#ifdef	linux
+		/* Linux BUG: the sound driver open() blocks, if the device is in use. */
+		 | O_NONBLOCK
+#endif
+		, 0)) < 0;
+
 #else
 	return 0;
 #endif
@@ -299,10 +309,6 @@ int close_snd_device ()
 #endif /* ifdef ECHO_TO_SOUNDCARD */
 #endif
 }
-
-#if	!defined __CYGWIN32__
-# include <sys/time.h>
-#endif
 
 int write_snd_device (buffer, todo)
 	char *buffer;
@@ -344,7 +350,7 @@ int write_snd_device (buffer, todo)
 		int wrote;
 
 		timeout2.tv_sec = 0;
-		timeout2.tv_usec = 120000;
+		timeout2.tv_usec = 4*120000;
 
 		FD_ZERO(writefds);
 		FD_SET(global.soundcard_fd, writefds);

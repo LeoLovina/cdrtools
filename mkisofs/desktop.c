@@ -1,7 +1,7 @@
-/* @(#)desktop.c	1.3 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)desktop.c	1.5 02/10/01 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)desktop.c	1.3 00/12/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)desktop.c	1.5 02/10/01 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -73,14 +73,17 @@ make_desktop(vol, end)
 {
 	hfsfile		*hfp;			/* Mac file */
 	hfsdirent	ent;			/* Mac finderinfo */
-	unsigned short	clps;			/* clump size */
+	unsigned long	clps;			/* clump size */
 	unsigned short	blks;			/* blocks in a clump */
 	unsigned char	*blk;			/* user data */
 
 	/*
 	 * set up default directory entries - not all these fields are needed,
 	 * but we'll set them up anyway ...
+	 * First do a memset because there was a report about randomly
+	 * changing Desktop DB/DF entries...
 	 */
+	memset(&ent, 0, sizeof(hfsdirent));	/* First clear all ... */
 	ent.u.file.rsize = 0;				/* resource size == 0 */
 	strcpy(ent.u.file.creator, DBFC);		/* creator */
 	strcpy(ent.u.file.type, DBT);			/* type */
@@ -114,7 +117,7 @@ make_desktop(vol, end)
 		d_putl(blk + 36, blks);
 		d_putl(blk + 40, blks - 1);
 
-		d_putw(blk + 48, clps);
+		d_putl(blk + 46, clps);
 		d_putw(blk + 50, 0xff);
 
 		d_putw(blk + 120, 0x20a);

@@ -1,7 +1,7 @@
-/* @(#)scsi-beos.c	1.19 01/03/18 Copyright 1998 J. Schilling */
+/* @(#)scsi-beos.c	1.21 02/10/19 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-beos.c	1.19 01/03/18 Copyright 1998 J. Schilling";
+	"@(#)scsi-beos.c	1.21 02/10/19 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for the BeOS user-land raw SCSI implementation.
@@ -35,6 +35,28 @@ static	char __sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+/*
+ *	Warning: you may change this source, but if you do that
+ *	you need to change the _scg_version and _scg_auth* string below.
+ *	You may not return "schily" for an SCG_AUTHOR request anymore.
+ *	Choose your name instead of "schily" and make clear that the version
+ *	string is related to a modified source.
+ */
+LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.21";	/* The version for this transport*/
+
+/*
+ * There are also defines for:
+ *	B_BEOS_VERSION_4
+ *	B_BEOS_VERSION_4_5
+ *
+ * in BeOS 5
+ */
+#ifndef	B_BEOS_VERSION_5
+/*
+ * New BeOS seems to include <be/kernel/OS.h> from device/scsi.h
+ */
+
 /* nasty hack to avoid broken def of bool in SupportDefs.h */
 #define _SUPPORT_DEFS_H
 
@@ -48,15 +70,6 @@ typedef unsigned short			ushort;
 #include <sys/types.h>
 #include <Errors.h>
 
-
-/*
- *	Warning: you may change this source, but if you do that
- *	you need to change the _scg_version and _scg_auth* string below.
- *	You may not return "schily" for an SCG_AUTHOR request anymore.
- *	Choose your name instead of "schily" and make clear that the version
- *	string is related to a modified source.
- */
-LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.19";	/* The version for this transport*/
 
 /*-------------------------------------------------------------*/
 /*----- Shorthand type formats --------------------------------*/
@@ -95,6 +108,7 @@ typedef unsigned char			uchar;
 typedef unsigned short			unichar;
 
 
+
 /*-------------------------------------------------------------*/
 /*----- Descriptive formats -----------------------------------*/
 typedef int32					status_t;
@@ -103,6 +117,8 @@ typedef uint32					type_code;
 typedef uint32					perform_code;
 
 /* end nasty hack */
+
+#endif	/* ! B_BEOS_VERSION_5 */
 
 
 #include <stdlib.h>
@@ -154,6 +170,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "CAM", "Generic transport independent SCSI (BeOS CAM variant)",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int
@@ -340,7 +366,7 @@ scgo_send(scgp)
 
 	if (scgp->debug > 0) {
 		error("SEND(%d): cmd %02x, cdb = %d, data = %d, sense = %d\n",
-			f, rdc.command[0], rdc.command_length,
+			scgp->fd, rdc.command[0], rdc.command_length,
 			rdc.data_length, rdc.sense_data_length);
 	}
 	e = ioctl(scgp->fd, B_RAW_DEVICE_COMMAND, &rdc, sizeof(rdc));

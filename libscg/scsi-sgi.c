@@ -1,7 +1,7 @@
-/* @(#)scsi-sgi.c	1.34 01/03/18 Copyright 1997 J. Schilling */
+/* @(#)scsi-sgi.c	1.35 02/10/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sgi.c	1.34 01/03/18 Copyright 1997 J. Schilling";
+	"@(#)scsi-sgi.c	1.35 02/10/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the SGI generic SCSI implementation.
@@ -45,7 +45,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.34";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.35";	/* The version for this transport*/
 
 #ifdef	USE_DSLIB
 
@@ -99,6 +99,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "DS", "Generic SCSI",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int

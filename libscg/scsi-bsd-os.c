@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd-os.c	1.26 01/03/18 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd-os.c	1.27 02/10/19 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd-os.c	1.26 01/03/18 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd-os.c	1.27 02/10/19 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the BSD/OS user-land raw SCSI implementation.
@@ -52,7 +52,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd-os.c-1.26";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd-os.c-1.27";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -96,6 +96,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "SCSIRAWCDB", "Generic SCSI for devices known by BSDi",
+		"", "devname:@,lun", "/dev/rsr0a:@,0", FALSE, TRUE);
+	return (0);
 }
 
 LOCAL int

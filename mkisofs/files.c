@@ -1,7 +1,7 @@
-/* @(#)files.c	1.9 00/12/05 joerg */
+/* @(#)files.c	1.11 02/12/25 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)files.c	1.9 00/12/05 joerg";
+	"@(#)files.c	1.11 02/12/25 joerg";
 
 #endif
 /*
@@ -30,8 +30,8 @@ static	char sccsid[] =
 #include <mconfig.h>
 #include "mkisofs.h"
 #include <errno.h>
-#include <ctype.h>
 #include <schily.h>
+#include <ctype.h>
 
 #ifdef ADD_FILES
 
@@ -206,7 +206,7 @@ void
 add_file(filename)
 	char	*filename;
 {
-	char            buff[1024];
+	char            buff[PATH_MAX];
 	FILE           *f;
 	char           *ptr;
 	char           *p2;
@@ -225,7 +225,7 @@ add_file(filename)
 #endif
 		}
 	}
-	while (fgets(buff, 1024, f)) {
+	while (fgets(buff, sizeof(buff), f)) {
 		count++;
 		ptr = buff;
 		while (isspace(*ptr))

@@ -1,4 +1,4 @@
-/* @(#)mactypes.h	1.1 00/03/18 joerg */
+/* @(#)mactypes.h	1.2 02/07/16 joerg */
 
 #ifndef _MACTYPES_H
 #define _MACTYPES_H
@@ -18,6 +18,8 @@
 #define TYPE_SGL	9	/* AppleSingle */
 #define TYPE_DAVE	10	/* DAVE (AppleDouble type) */
 #define TYPE_SFM	11	/* NTFS Services for Macintosh */
+#define TYPE_XDBL	12	/* MacOS X AppleDouble */
+#define TYPE_XHFS	13	/* MacOS X HFS */
 
 /*
  * above encoded in a bit map
@@ -34,6 +36,8 @@
 #define DO_SGL		(1 << TYPE_SGL)
 #define DO_DAVE		(1 << TYPE_DAVE)
 #define DO_SFM		(1 << TYPE_SFM)
+#define DO_XDBL		(1 << TYPE_XDBL)
+#define DO_XHFS		(1 << TYPE_XHFS)
 
 /*
  * flags describing how the data/rsrc/info files are stored
@@ -44,5 +48,6 @@
 #define	NOPEND		0x2	/* info data in one file for all files */
 #define APPEND		0x4	/* rsrc/info appended to file name */
 #define NORSRC		0x8	/* rsrc for file may not exist */
+#define NOINFO		0x10	/* info file dosen't exist */
 
 #endif /* _MACTYPES_H */

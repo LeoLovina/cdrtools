@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.37 01/02/15 Copyright 1997,2000 J. Schilling */
+/* @(#)scsihack.c	1.41 02/10/19 Copyright 1997,2000,2001 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.37 01/02/15 Copyright 1997,2000 J. Schilling";
+	"@(#)scsihack.c	1.41 02/10/19 Copyright 1997,2000,2001 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -24,7 +24,7 @@ static	char _sccsid[] =
  *	If your version has been integrated into the main steam release,
  *	the return value will be set to "schily".
  *
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997,2000,2001 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -68,6 +68,7 @@ extern	int	errno;
 
 LOCAL	int	scgo_send	__PR((SCSI *scgp));
 LOCAL	char *	scgo_version	__PR((SCSI *scgp, int what));
+LOCAL	int	scgo_help	__PR((SCSI *scgp, FILE *f));
 LOCAL	int	scgo_open	__PR((SCSI *scgp, char *device));
 LOCAL	int	scgo_close	__PR((SCSI *scgp));
 LOCAL	long	scgo_maxdma	__PR((SCSI *scgp, long amt));
@@ -85,6 +86,7 @@ LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 EXPORT scg_ops_t scg_std_ops = {
 	scgo_send,
 	scgo_version,
+	scgo_help,
 	scgo_open,
 	scgo_close,
 	scgo_maxdma,
@@ -167,9 +169,18 @@ EXPORT scg_ops_t scg_std_ops = {
 
 #if	defined(__NeXT__) || defined(IS_MACOS_X)
 #if	defined(HAVE_BSD_DEV_SCSIREG_H)
+/*
+ *	This is the
+ */
 #define	SCSI_IMPL		/* We found a SCSI implementation for NextStep and Mac OS X */
 
 #include "scsi-next.c"
+#else
+
+#define	SCSI_IMPL		/* We found a SCSI implementation for Mac OS X (Darwin-1.4) */
+
+#include "scsi-mac-iokit.c"
+
 #endif	/* HAVE_BSD_DEV_SCSIREG_H */
 
 #endif	/* NEXT / Mac OS X */
@@ -224,6 +235,11 @@ EXPORT scg_ops_t scg_std_ops = {
 #include "scsi-apollo.c"
 #endif
 
+#ifdef	AMIGA			/* We have a SCSI implementation for AmigaOS */
+#define	SCSI_IMPL
+#include "scsi-amigaos.c"
+#endif
+
 #ifdef	__NEW_ARCHITECTURE
 #define	SCSI_IMPL		/* We have a SCSI implementation for XXX */
 /*
@@ -240,6 +256,7 @@ EXPORT scg_ops_t scg_std_ops = {
  * if other problems exist.
  */
 #define	scgo_dversion		scgo_version
+#define	scgo_dhelp		scgo_help
 #define	scgo_dopen		scgo_open
 #define	scgo_dclose		scgo_close
 #define	scgo_dmaxdma		scgo_maxdma
@@ -255,6 +272,8 @@ EXPORT scg_ops_t scg_std_ops = {
 
 LOCAL	int	scgo_dsend	__PR((SCSI *scgp));
 LOCAL	char *	scgo_dversion	__PR((SCSI *scgp, int what));
+LOCAL	int	scgo_dhelp	__PR((SCSI *scgp, FILE *f));
+LOCAL	int	scgo_nohelp	__PR((SCSI *scgp, FILE *f));
 LOCAL	int	scgo_ropen	__PR((SCSI *scgp, char *device));
 LOCAL	int	scgo_dopen	__PR((SCSI *scgp, char *device));
 LOCAL	int	scgo_dclose	__PR((SCSI *scgp));
@@ -270,6 +289,7 @@ LOCAL	int	scgo_dreset	__PR((SCSI *scgp, int what));
 EXPORT scg_ops_t scg_remote_ops = {
 	scgo_dsend,
 	scgo_dversion,
+	scgo_nohelp,
 	scgo_ropen,
 	scgo_dclose,
 	scgo_dmaxdma,
@@ -285,6 +305,7 @@ EXPORT scg_ops_t scg_remote_ops = {
 EXPORT scg_ops_t scg_dummy_ops = {
 	scgo_dsend,
 	scgo_dversion,
+	scgo_dhelp,
 	scgo_dopen,
 	scgo_dclose,
 	scgo_dmaxdma,
@@ -304,7 +325,7 @@ EXPORT scg_ops_t scg_dummy_ops = {
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_dversion[] = "scsihack.c-1.37";	/* The version for this transport*/
+LOCAL	char	_scg_trans_dversion[] = "scsihack.c-1.41";	/* The version for this transport*/
 
 /*
  * Return version information for the low level SCSI transport code.
@@ -332,6 +353,23 @@ scgo_dversion(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_dhelp(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	printf("None.\n");
+	return (0);
+}
+
+LOCAL int
+scgo_nohelp(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	return (0);
 }
 
 LOCAL int

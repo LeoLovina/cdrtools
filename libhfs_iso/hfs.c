@@ -1,7 +1,7 @@
-/* @(#)hfs.c	1.4 01/03/20 joerg */
+/* @(#)hfs.c	1.8 02/09/28 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)hfs.c	1.4 01/03/20 joerg";
+	"@(#)hfs.c	1.8 02/09/28 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -27,12 +27,11 @@ static	char sccsid[] =
 #include <mconfig.h>
 #include <stdxlib.h>
 #include <unixstd.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 #include <errno.h>
 #include <strdefs.h>
-#include <time.h>
 #include <ctype.h>
-#include <sys/stat.h>
+#include <statdefs.h>
 
 #include "internal.h"
 #include "data.h"
@@ -541,7 +540,7 @@ int hfs_format(path, pnum, vname)
   else  /* determine size of entire device */
     {
 #ifdef APPLE_HYB
-      vol.vlen = hce->hfs_vol_size/HFS_BLOCKSZ;
+      vol.vlen = hce->hfs_vol_size;
 #else
       unsigned long low, high, mid;
       block b;
@@ -1145,7 +1144,7 @@ int hfs_readdir(dir, ent)
     {
       ++dir->n.rnum;
 
-      while (dir->n.rnum >= dir->n.nd.ndNRecs)
+      while (dir->n.rnum >= (int)dir->n.nd.ndNRecs)
 	{
 	  dir->n.nnum = dir->n.nd.ndFLink;
 	  if (dir->n.nnum == 0)

@@ -1,7 +1,7 @@
-/* @(#)wav.c	1.3 00/03/26 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)wav.c	1.4 01/10/27 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)wav.c	1.3 00/03/26 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)wav.c	1.4 01/10/27 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /***
@@ -12,10 +12,7 @@ static char     sccsid[] =
  */
 #include "config.h"
 #include <stdio.h>
-#if defined (HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
-#include <sys/types.h>
-#include <unistd.h>
-#endif
+#include <unixstd.h>
 #include "byteorder.h"
 #include "sndfile.h"
 

@@ -1,4 +1,4 @@
-# !/bin/sh
+#!/bin/sh
 # Demo script for processing all audio tracks with a mp3 encoder
 # This variant creates temporary wav files. There is another
 # variant of this script (cdda2mp3), which uses a named pipe

@@ -1,6 +1,8 @@
-/* @(#)timedefs.h	1.7 01/04/12 Copyright 1996 J. Schilling */
+/* @(#)timedefs.h	1.10 02/06/16 Copyright 1996 J. Schilling */
 /*
- *	Generic header for users of gettimeofday() ...
+ *	Generic header for users of time(), gettimeofday() ...
+ *
+ *	It includes definitions for time_t, struct timeval, ...
  *
  *	Copyright (c) 1996 J. Schilling
  */
@@ -27,14 +29,31 @@
 #include <mconfig.h>
 #endif
 
+#ifndef	_INCL_SYS_TYPES_H
+#include <sys/types.h>		/* Needed for time_t		*/
+#define	_INCL_SYS_TYPES_H
+#endif
+
 #ifdef	TIME_WITH_SYS_TIME
+#	ifndef	_INCL_SYS_TIME_H
 #	include <sys/time.h>
+#	define	_INCL_SYS_TIME_H
+#	endif
+#	ifndef	_INCL_TIME_H
 #	include <time.h>
+#	define	_INCL_TIME_H
+#	endif
 #else
 #ifdef	HAVE_SYS_TIME_H
+#	ifndef	_INCL_SYS_TIME_H
 #	include <sys/time.h>
+#	define	_INCL_SYS_TIME_H
+#	endif
 #else
+#	ifndef	_INCL_TIME_H
 #	include <time.h>
+#	define	_INCL_TIME_H
+#	endif
 #endif
 #endif
 
@@ -42,19 +61,15 @@
 extern "C" {
 #endif
 
-#ifdef	__CYGWIN32__
+#if	defined(__CYGWIN32__) || defined(__EMX__) || defined(__linux__)
 /*
  * Cygnus defines struct timeval in sys/time.h but not timerclear
  * timerclear is defined in windows32/Sockets.h ???
- */
-#ifndef	timerclear
-#define	timerclear(tvp)		(tvp)->tv_sec = (tvp)->tv_usec = 0
-#endif
-#endif
-
-#ifdef	__EMX__
-/*
+ *
  * EMX for OS/2 defines struct timeval in sys/time.h but not timerclear
+ *
+ * Linux defines struct timeval in sys/time.h but if __USE_BSD is not
+ * defined, timerclear is missing.
  */
 #ifndef	timerclear
 #define	timerclear(tvp)		(tvp)->tv_sec = (tvp)->tv_usec = 0

@@ -1,7 +1,7 @@
-/* @(#)isodump.c	1.14 00/12/09 joerg */
+/* @(#)isodump.c	1.19 02/11/30 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isodump.c	1.14 00/12/09 joerg";
+	"@(#)isodump.c	1.19 02/11/30 joerg";
 #endif
 /*
  * File isodump.c - dump iso9660 directory information.
@@ -41,6 +41,19 @@ static	char sccsid[] =
 #endif
 #include <signal.h>
 #include <schily.h>
+
+/*
+ * XXX JS: Some structures have odd lengths!
+ * Some compilers (e.g. on Sun3/mc68020) padd the structures to even length.
+ * For this reason, we cannot use sizeof (struct iso_path_table) or
+ * sizeof (struct iso_directory_record) to compute on disk sizes.
+ * Instead, we use offsetof(..., name) and add the name size.
+ * See iso9660.h
+ */
+#ifndef	offsetof
+#define	offsetof(TYPE, MEMBER)	((size_t) &((TYPE *)0)->MEMBER)
+#endif
+
 
 FILE	*infile;
 off_t	file_addr;
@@ -385,12 +398,10 @@ dump_rr(idr)
 	unsigned char * pnt;
 
 	len = idr->length[0] & 0xff;
-	len -= sizeof(struct iso_directory_record);
-	len += sizeof(idr->name);
+	len -= offsetof(struct iso_directory_record, name[0]);
 	len -= idr->name_len[0];
 	pnt = (unsigned char *) idr;
-	pnt += sizeof(struct iso_directory_record);
-	pnt -= sizeof(idr->name);
+	pnt += offsetof(struct iso_directory_record, name[0]);
 	pnt += idr->name_len[0];
 	if((idr->name_len[0] & 1) == 0){
 		pnt++;
@@ -428,13 +439,13 @@ showblock(flag)
 		  else if(idr->name_len[0] == 1 && idr->name[0] == 1)
 			  printf("..            ");
 		  else {
-			  for(j=0; j<idr->name_len[0]; j++) printf("%c", idr->name[j]);
-			  for(j=0; j<14 -idr->name_len[0]; j++) printf(" ");
+			  for(j=0; j < (int)idr->name_len[0]; j++) printf("%c", idr->name[j]);
+			  for(j=0; j < (14 - (int)idr->name_len[0]); j++) printf(" ");
 		  };
 		  dump_rr(idr);
 		  printf("\n");
 		  i += buffer[i];
-		  if (i > 2048 - sizeof(struct iso_directory_record)) break;
+		  if (i > 2048 - offsetof(struct iso_directory_record, name[0])) break;
 		  line++;
 	  };
   };
@@ -469,6 +480,8 @@ usage(excode)
                 get_progname());
 
 	error("Options:\n");
+	error("\t-help,-h	Print this help\n");
+	error("\t-version	Print version info and exit\n");
 	exit(excode);
 }
 
@@ -477,6 +490,11 @@ main(argc, argv)
 	int	argc;
 	char	*argv[];
 {
+	int	cac;
+	char	* const *cav;
+	char	*opts = "help,h,version";
+	BOOL	help = FALSE;
+	BOOL	prvers = FALSE;
   char c;
   int i;
   struct iso_primary_descriptor ipd;
@@ -484,17 +502,39 @@ main(argc, argv)
 
 	save_args(argc, argv);
 
-  if(argc < 2)
-	usage(EX_BAD);
-  infile = fopen(argv[1],"rb");
-  if (infile == NULL) {
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getallargs(&cac, &cav, opts, &help, &help, &prvers) < 0) {
+		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
+		usage(EX_BAD);
+	}
+	if (help)
+		usage(0);
+	if (prvers) {
+		printf("isodump %s (%s-%s-%s)\n", "2.0",
+					HOST_CPU, HOST_VENDOR, HOST_OS);
+		exit(0);
+	}
+	cac = argc - 1;
+	cav = argv + 1;
+	if (getfiles(&cac, &cav, opts) == 0) {
+		errmsgno(EX_BAD, "Missing Argument\n");
+		usage(EX_BAD);
+	}
+	infile = fopen(cav[0],"rb");
+	if (infile == NULL) {
 #ifdef	USE_LIBSCHILY
-	comerr("Cannot open '%s'.\n", argv[1]);
+		comerr("Cannot open '%s'.\n", cav[0]);
 #else
-	printf("Cannot open '%s'.\n", argv[1]);
-	exit(1);
+		printf("Cannot open '%s'.\n", cav[0]);
+		exit(1);
 #endif
-  }
+	}
+	cac--, cav++;
+	if (getfiles(&cac, &cav, opts) != 0) {
+		errmsgno(EX_BAD, "Bad Argument: '%s'\n",cav[0]);
+		usage(EX_BAD);
+	}
 
   file_addr = (off_t) (16 << 11);
   lseek(fileno(infile), file_addr, SEEK_SET);
@@ -571,7 +611,7 @@ main(argc, argv)
 	  c = getbyte();
 	  if (c == search[0]) break;
 	};
-	for (i=1;i<strlen((char *)search);i++) 
+	for (i=1;i < (int)strlen((char *)search);i++) 
 	  if(search[i] != getbyte()) break;
 	if(i==strlen((char *)search)) break;
       };

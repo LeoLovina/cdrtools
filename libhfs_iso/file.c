@@ -1,7 +1,7 @@
-/* @(#)file.c	1.1 00/03/05 joerg */
+/* @(#)file.c	1.2 01/08/25 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)file.c	1.1 00/03/05 joerg";
+	"@(#)file.c	1.2 01/08/25 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -138,7 +138,7 @@ int f_doblock(file, number, bp, func)
 	    if this happens, then a serious problem has occured, may be
 	    a hard linked file? */
 #ifdef DEBUG
-	    fprintf(stderr,"file: %s %d\n",file->name, i); */
+	    fprintf(stderr,"fragmented file: %s %d\n",file->name, i); */
 #endif /* DEBUG */
 	    ERROR(HCE_ERROR, "Possible Catalog file overflow - please report error");
 	    return -1; 

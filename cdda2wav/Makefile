@@ -1,4 +1,4 @@
-#ident @(#)Makefile	1.2 00/12/09 
+#ident @(#)Makefile	1.6 02/04/28 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -16,11 +16,14 @@ HFILES=		cdda2wav.h interface.h semshm.h global.h resample.h \
 		mytype.h toc.h wav.h sun.h raw.h md5.h setuid.h ringbuff.h \
 		config.h saveargs.h sndfile.h aiff.h aifc.h \
 		sndconfig.h scsi_cmds.h lowlevel.h byteorder.h mycdrom.h \
-		base64.h sha.h mmsystem.h
-LIBS=		-lrscg -lscg -lschily $(SCSILIB) $(EXTRALIB) $(LIB_SOCKET)
-XMK_FILE=	Makefile.man
+		base64.h sha.h mmsystem.h cd_text.c cd_extra.c
+LIBS=		-lrscg -lscg -lparanoia -lschily $(SCSILIB) $(EXTRALIB) $(LIB_SOCKET)
+XMK_FILE=	Makefile.man cdda2ogg.mk1
 
 LCONFIG=	local.cnf
+xall:		all
+$(ARCHDIR)/local.cnf $(ARCHDIR)/lconfig.h:	../cdrecord/cdrecord.c
+
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.cmd
 ###########################################################################

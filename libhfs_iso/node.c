@@ -1,7 +1,7 @@
-/* @(#)node.c	1.1 00/03/06 joerg */
+/* @(#)node.c	1.2 02/02/10 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)node.c	1.1 00/03/06 joerg";
+	"@(#)node.c	1.2 02/02/10 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -126,7 +126,7 @@ void n_compact(np)
   ptr    = np->data + offset;
   nrecs  = 0;
 
-  for (i = 0; i < np->nd.ndNRecs; ++i)
+  for (i = 0; i < (int)np->nd.ndNRecs; ++i)
     {
       unsigned char *rec;
       int reclen;
@@ -247,7 +247,7 @@ int n_split(left, record, reclen)
 	if (right.rnum < mid)
 	{
 	    if (   mid > 0
-		&& left->roff[mid] + *reclen + 2 > HFS_BLOCKSZ - 2 * (mid + 1))
+		&& (int)left->roff[mid] + *reclen + 2 > HFS_BLOCKSZ - 2 * (mid + 1))
 	    {
 		--mid;
 		if (mid > 0)
@@ -257,7 +257,7 @@ int n_split(left, record, reclen)
 	else
 	{
 	    if (   mid < nrecs
-		&& right.roff[nrecs] - right.roff[mid] + left->roff[0] + *reclen + 2 > HFS_BLOCKSZ - 2 * (mid + 1))
+		&& (int)right.roff[nrecs] - (int)right.roff[mid] + (int)left->roff[0] + *reclen + 2 > HFS_BLOCKSZ - 2 * (mid + 1))
 	    {
 		++mid;
 		if (mid < nrecs)
@@ -381,7 +381,7 @@ int n_insert(np, record, reclen)
   /* check for free space */
 
   if (np->nd.ndNRecs >= HFS_MAXRECS ||
-      *reclen + 2 > NODESPACE(*np))
+      *reclen + 2 > (int)NODESPACE(*np))
     return n_split(np, record, reclen);
 
   n_insertx(np, record, *reclen);
@@ -409,7 +409,7 @@ int n_merge(right, left, record, flag)
 
   offset = left->roff[left->nd.ndNRecs] - right->roff[0];
 
-  for (i = 1; i <= right->nd.ndNRecs; ++i)
+  for (i = 1; i <= (int)right->nd.ndNRecs; ++i)
     left->roff[++left->nd.ndNRecs] = offset + right->roff[i];
 
   /* update link pointers */
@@ -477,9 +477,9 @@ int n_delete(np, record, flag)
       if (bt_getnode(&left) < 0)
 	return -1;
 
-      if (np->nd.ndNRecs + left.nd.ndNRecs <= HFS_MAXRECS &&
-	  np->roff[np->nd.ndNRecs] - np->roff[0] +
-	  2 * np->nd.ndNRecs <= NODESPACE(left))
+      if ((int)(np->nd.ndNRecs + left.nd.ndNRecs) <= HFS_MAXRECS &&
+	  (int)(np->roff[np->nd.ndNRecs] - np->roff[0] +
+	  2 * np->nd.ndNRecs) <= (int)NODESPACE(left))
 	return n_merge(np, &left, record, flag);
     }
 

@@ -1,4 +1,4 @@
-#ident @(#)Makefile	1.3 01/03/18 
+#ident @(#)Makefile	1.4 01/06/26 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -13,7 +13,7 @@ CFILES=		scgcheck.c sense.c dmaresid.c \
 
 HFILES=		scgcheck.h 
 #LIBS=		-lschily $(LIB_SOCKET)
-LIBS=		-lrscg -lscg -lschily $(LIB_SOCKET)
+LIBS=		-lrscg -lscg -lschily $(SCSILIB) $(LIB_SOCKET)
 XMK_FILE=	Makefile.man
 
 ###########################################################################

@@ -1,7 +1,7 @@
-/* @(#)nls_config.c	1.1 01/01/20 2000,2001 J. Schilling */
+/* @(#)nls_config.c	1.4 02/12/03 2000,2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)nls_config.c	1.1 01/01/20 2000,2001 J. Schilling";
+	"@(#)nls_config.c	1.4 02/12/03 2000,2001 J. Schilling";
 #endif
 /*
  *	Modifications to make the code portable Copyright (c) 2000 J. Schilling
@@ -23,9 +23,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -115,8 +115,17 @@ init_nls()
 #ifdef CONFIG_NLS_CODEPAGE_874
 	init_nls_cp874();
 #endif
+#ifdef CONFIG_NLS_CODEPAGE_1250
+	init_nls_cp1250();
+#endif
+#ifdef CONFIG_NLS_CODEPAGE_1251
+	init_nls_cp1251();
+#endif
 #ifdef CONFIG_NLS_KOI8_R
 	init_nls_koi8_r();
+#endif
+#ifdef CONFIG_NLS_KOI8_U
+	init_nls_koi8_u();
 #endif
 #ifdef CONFIG_NLS_CODEPAGE_10000
 	init_nls_cp10000();

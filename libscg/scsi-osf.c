@@ -1,7 +1,7 @@
-/* @(#)scsi-osf.c	1.23 01/03/18 Copyright 1998 J. Schilling */
+/* @(#)scsi-osf.c	1.25 02/11/30 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-osf.c	1.23 01/03/18 Copyright 1998 J. Schilling";
+	"@(#)scsi-osf.c	1.25 02/11/30 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for Digital UNIX (OSF/1 generic SCSI implementation (/dev/cam).
@@ -29,9 +29,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <sys/types.h>
@@ -46,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.23";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.25";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -95,6 +95,16 @@ scgo_version(scgp, what)
 		}
 	}
 	return ((char *)0);
+}
+
+LOCAL int
+scgo_help(scgp, f)
+	SCSI	*scgp;
+	FILE	*f;
+{
+	__scg_help(f, "CAM", "Generic transport independent SCSI (Common Access Method)",
+		"", "bus,target,lun", "1,2,0", TRUE, FALSE);
+	return (0);
 }
 
 LOCAL int
@@ -396,8 +406,9 @@ scgo_send(scgp)
 		return (0);
 	}
 	if (scgp->debug > 0) {
-		errmsgno(EX_BAD, "cam_status = 0x%.2X dev=%d,%d,%d\n",
+		errmsgno(EX_BAD, "cam_status = 0x%.2X scsi_status = 0x%.2X dev=%d,%d,%d\n",
 					ccb.cam_ch.cam_status,
+					ccb.cam_scsi_status,
 					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 		fflush(stderr);
 	}

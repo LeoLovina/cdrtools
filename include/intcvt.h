@@ -1,4 +1,4 @@
-/* @(#)intcvt.h	1.1 99/10/18 Copyright 1986 J. Schilling */
+/* @(#)intcvt.h	1.2 01/10/27 Copyright 1986 J. Schilling */
 /*
  *	Definitions for conversion to/from integer data types of various size.
  *
@@ -23,6 +23,9 @@
 #ifndef	_INTCVT_H
 #define	_INTCVT_H
 
+#ifndef _MCONFIG_H
+#include <mconfig.h>
+#endif
 
 #define	i_to_2_byte(a, i)	(((Uchar *)(a))[0] = ((i) >> 8) & 0xFF,\
 				 ((Uchar *)(a))[1] = (i) & 0xFF)

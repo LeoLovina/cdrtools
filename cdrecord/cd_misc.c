@@ -1,7 +1,7 @@
-/* @(#)cd_misc.c	1.8 00/07/02 Copyright 1997 J. Schilling */
+/* @(#)cd_misc.c	1.10 01/10/29 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cd_misc.c	1.8 00/07/02 Copyright 1997 J. Schilling";
+	"@(#)cd_misc.c	1.10 01/10/29 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Misc CD support routines
@@ -26,8 +26,7 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #include <standard.h>
-#include <sys/types.h>	/* for caddr_t */
-#include <utypes.h>
+#include <utypes.h>	/* Includes <sys/types.h> for caddr_t */
 #include <stdio.h>
 #include <schily.h>
 
@@ -37,6 +36,7 @@ EXPORT	int	from_bcd		__PR((int b));
 EXPORT	int	to_bcd			__PR((int i));
 EXPORT	long	msf_to_lba		__PR((int m, int s, int f, BOOL force_positive));
 EXPORT	BOOL	lba_to_msf		__PR((long lba, msf_t *mp));
+EXPORT	void	sec_to_msf		__PR((long sec, msf_t *mp));
 EXPORT	void	print_min_atip		__PR((long li, long lo));
 
 EXPORT int
@@ -108,6 +108,24 @@ lba_to_msf(lba, mp)
 	if (lba > 404849)			/* 404850 -> 404999: lead out */
 		return (FALSE);
 	return (TRUE);
+}
+
+EXPORT void
+sec_to_msf(sec, mp)
+	long	sec;
+	msf_t	*mp;
+{
+	int	m;
+	int	s;
+	int	f;
+
+	m = (sec) / 60 / 75;
+	s = (sec - m*60*75)  / 75;
+	f = (sec - m*60*75 - s*75);
+
+	mp->msf_min   = m;
+	mp->msf_sec   = s;
+	mp->msf_frame = f;
 }
 
 EXPORT void

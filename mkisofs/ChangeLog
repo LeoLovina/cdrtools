@@ -1,3 +1,496 @@
+Thu Dec 12 01:25:27 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.65
+	  Consistency check for DVD-Video Pad (<0)
+
+Thu Dec 12 01:25:01 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ifo_read.c 1.3
+	  open() with O_BINARY
+
+Sat Dec  7 21:40:44 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.69
+	  in #ifdef ABORT_DEEP_ISO_ONLY print a hint for -R/-r and -D
+
+Sat Dec  7 21:14:50 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.7
+	  write_udf_file_entries() now ignores de->de_flags & RELOCATED_DIRECTORY
+	  and does not create a broken FS if RR_MOVED exists
+
+Sat Dec  7 21:02:08 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.64
+	* mkisofs.h 1.76
+	* mkisofs.c 1.123
+	  opnt->of_start_extent new for Constistency Check
+
+Sat Dec  7 20:41:36 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.87
+	  Better Documentation for -split-output
+
+Sat Dec  7 19:37:11 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.122
+	  Cast to int forr name_end-name (parameter in %.*s)
+
+Sat Nov 30 17:10:36 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.121
+	  Version -> 2.0
+
+Sun Nov 24 12:54:45 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* TODO 1.4
+	  Open Problems for time past 2.0
+
+Sun Nov 24 01:17:25 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.6
+	  Patch from Wei DING <ding@memory-tech.co.jp> for UDF Files > 1 GB
+
+Fri Nov 22 17:32:25 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.68
+	  Another attempt to fix mkisofs -f
+
+Fri Nov 22 17:16:43 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.120
+	  Disable Joliet for -dvd-video (because of Sort in joliet.c)
+	  -s/-S Warning disabled until 2.1alpha
+
+Fri Nov 22 17:15:34 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.34
+	  Make VIDEO_TS.IFO 1st dir entry with -dvd-video
+
+Sun Nov 17 15:42:19 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.119
+	  Mark -s/-S as reserved options
+
+Sat Nov  2 21:41:25 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.118
+	  Version -> 1.15a40, Tags in ~/.mkisofsrc have '_' in HFS_*
+
+Thu Oct 24 22:12:30 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.67
+	  scan_directory_tree() with new Flag DIR_WAS_SCANNED to avoid double scan
+	  scan_directory_tree() more stable by setting errno = 0 before readdir()
+	  no_scandir = 1 commented out to make mkisofs -f not to omit dir content with symlinks to dies
+
+Thu Oct 24 22:03:25 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.75
+	  #define DIR_WAS_SCANNED new
+
+Mon Oct 21 19:29:14 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.86
+	* tree.c 1.66
+	  Typo removed
+
+Mon Oct 21 19:28:25 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.117
+	  Typo efective -> effective uid
+
+Sat Oct  5 00:38:01 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.63
+	* volume.c 1.12
+	* mkisofs.8 1.85
+	* mkisofs.c 1.116
+	* mkisofs.h 1.74
+	  Version -> 1.15a36, New Option -hfs-parms for better HFS > 4 GB Support from James Pearson
+
+Sat Oct  5 00:17:22 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.115
+	  Version -> 1.15a35, Warning for -L/-P/-H Options in POSIX.1-2001
+
+Tue Oct  1 01:13:40 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.62
+	* volume.c 1.11
+	* mkisofs.8 1.84
+	* desktop.c 1.5
+	  Patch from James for HSFS > 4 GB
+
+Sat Sep 28 16:55:52 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.83
+	* mkisofs.h 1.73
+	* write.c 1.61
+	* volume.c 1.10
+	  Fix from James for 4 GB HFS Support
+
+Tue Sep 24 15:41:27 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.60
+	* volume.c 1.9
+	  Patches from James to aboert on HFS volume size > 2 GB
+
+Sun Sep  1 23:59:52 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.5
+	  Make sure directories have execute permission in default permissions.
+
+Sat Aug 10 23:33:36 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.114
+	  UDF Filenames may be 255 chars if not using Joliet
+
+Thu Aug  8 23:48:11 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.32
+	* tree.c 1.65
+	  Symlink buffer size -> PATH_MAX to avoid Overflow
+
+Thu Aug  8 23:25:14 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ifo_read.c 1.2
+	  Comment around Tag past #endif
+
+Thu Aug  8 23:24:37 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.33
+	* mkisofs.8 1.82
+	* mkisofs.c 1.113
+	* mkisofs.h 1.72
+	  New Option -joliet-long
+
+Sun Jul 28 01:29:19 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.71
+	  Tag past #endif now as comment
+
+Sun Jul 28 01:28:29 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.59
+	  Defect Debug printf() with newline in String fixed
+
+Sun Jul 21 17:36:20 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.81
+	  -dvd-video Option new
+
+Sun Jul 21 17:00:26 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.32
+	* write.c 1.58
+	* mkisofs.h 1.70
+	  Pathtable now works wth more than 65535 Dires if all Parent indices are <= 65535 
+
+Sun Jul 21 16:42:36 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dvd_reader.c 1.1
+	  date and time created 02/07/21 15:42:36 by joerg
+
+Sun Jul 21 16:40:43 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ifo_read.c 1.1
+	  date and time created 02/07/21 15:40:43 by joerg
+
+Sun Jul 21 16:23:35 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.c 1.18
+	* multi.c 1.53
+	  malloc() -> e_malloc()
+
+Sun Jul 21 15:51:54 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dvd_file.c 1.1
+	  date and time created 02/07/21 14:51:54 by joerg
+
+Sun Jul 21 15:18:47 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dvd_file.h 1.1
+	  date and time created 02/07/21 14:18:47 by joerg
+
+Sun Jul 21 15:16:26 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.57
+	  Support for DVD-Video -dvd-video
+
+Sun Jul 21 14:59:31 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.112
+	* multi.c 1.52
+	* tree.c 1.64
+	* files.c 1.10
+	  1024 -> PATH_MAX
+
+Sun Jul 21 14:21:02 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.31
+	  Hack against wrong GCC warning
+
+Sat Jul 20 17:57:49 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.c 1.17
+	  Function perr() now uses comerr()
+
+Sat Jul 20 17:54:57 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ifo_types.h 1.1
+	* dvd_reader.h 1.1
+	  date and time created 02/07/20 16:54:57 by joerg
+
+Sat Jul 20 17:54:56 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ifo_read.h 1.1
+	  date and time created 02/07/20 16:54:56 by joerg
+
+Sat Jul 20 17:37:32 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.69
+	  Enhancements for DVD-Video -dvd-video
+
+Sat Jul 20 17:28:10 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* bswap.h 1.1
+	  date and time created 02/07/20 16:28:10 by joerg
+
+Sat Jul 20 01:17:52 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.4
+	  DVD-Video comment new
+
+Sat Jul 20 01:15:19 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.111
+	  Version -> 1.15a27, Option -dvd-video new
+
+Sat Jul 20 01:13:31 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.63
+	  Sort Video Files only with -dvd-video
+
+Tue Jul 16 21:32:42 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.62
+	* mkisofs.c 1.110
+	* mactypes.h 1.2
+	* mkisofs.8 1.80
+	* apple.h 1.6
+	* apple.c 1.16
+	  Support for Apple files on MacOS X
+
+Thu Jul  4 12:31:42 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.109
+	  Version -> 1.15a25, verbose > 1 writes debug info for output fragments.
+
+Thu May 30 01:48:28 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.3
+	* write.c 1.56
+	* joliet.c 1.31
+	* eltorito.c 1.24
+	* boot.c 1.9
+	* mkisofs.h 1.68
+	  of_name in struct output_fragment new
+
+Mon May 20 13:58:11 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mac_label.c 1.6
+	  ISO_ROUND_UP(mac_boot->size) / SECTOR_SIZE -> ISO_BLOCKS(mac_boot->size)
+
+Mon May 20 13:55:53 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.55
+	  Unused Var in graftcp() removed
+
+Mon May 20 13:51:28 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.67
+	  HFS_BLOCKS() new
+
+Tue May 14 21:13:04 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.54
+	  graftcp() Bug fixed (simple Filenames as Arg not shortened)
+
+Mon May 13 00:45:28 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.2
+	  Now using ISO_ROUND_UP()/ISO_BLOCKS()/SEC_SIZE
+
+Mon May 13 00:40:04 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.53
+	* joliet.c 1.30
+	  Now using ISO_ROUND_UP()/ISO_BLOCKS()
+
+Mon May 13 00:24:43 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.51
+	  Now using ISO_ROUND_UP()
+
+Mon May 13 00:22:40 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.108
+	  Version -> 1.15a23, Now using ISO_ROUND_UP()/ISO_BLOCKS()
+
+Mon May 13 00:08:55 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.23
+	  Now using ISO_BLOCKS()
+
+Sun May 12 14:42:18 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.66
+	  Comment for ISO_ROUND_UP(X)/ISO_BLOCKS(X)
+
+Sun May 12 14:10:20 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.61
+	  Function filetype() better
+
+Sun May 12 00:32:18 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.65
+	  ISO_BLOCKS() new
+
+Sat May  4 15:31:00 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.50
+	  file_addr now based on sectors not on bytes to avoid overflow with DVDs
+
+Fri May  3 01:17:51 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* name.c 1.24
+	* mkisofs.c 1.107
+	  -no-iso-translate now also using '-'
+
+Sun Apr 28 14:50:15 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.79
+	  Remove outdated hint that at least one "pathspec" is needed
+	  (even for File from list List)
+
+Sun Apr 28 14:48:46 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.106
+	  Version -> 1.15a22, susage() Bugfix (program_name missing)
+
+Tue Apr 16 19:19:41 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.22
+	  make boot.catalog sortable via -sort
+
+Sun Apr 14 22:53:26 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.52
+	* mkisofs.h 1.64
+	* mkisofs.c 1.105
+	  Avoid to put unwanted information into the version info
+
+Thu Apr 11 23:53:41 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.104
+	  Support for xxx/../yyy in graft-points
+
+Thu Apr 11 19:27:13 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.60
+	* mkisofs.c 1.103
+	  Fix -graft-points /a/b//.///=some_dir bug (doubled / Dir), Version -> 1.15a21
+
+Thu Apr 11 18:55:48 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.78
+	  UTF comment corrected
+
+Thu Apr 11 18:55:23 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.63
+	  debug new
+
+Wed Apr  3 19:47:46 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.102
+	  Version -> 1.15a20
+
+Wed Apr  3 19:42:41 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.101
+	  Corrected file type recognition for graft points
+
+Wed Apr  3 19:00:32 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.30
+	* mkisofs.c 1.100
+	* mkisofs.8 1.77
+	  Transparent compression (-z) from H.P. Anvin integrated
+
+Wed Apr  3 18:12:07 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.99
+	  escstrcpy() corrected for multiple '//', new option -debug
+
+Tue Apr  2 00:57:38 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.98
+	  short usage added
+
+Fri Mar  8 16:44:37 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.76
+	  Hint for multisession on MAC -> -part
+
+Fri Mar  8 16:43:46 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mac_label.c 1.5
+	  Mac Label mpm[mpc].start = session_start + ... -> mpm[mpc].start = hce->hfs_map_size ...
+
+Tue Feb 26 22:39:16 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* boot.c 1.8
+	  Support generic boot for CD-extra (session_start != 0 Dreamcast)
+
+Sun Feb 10 20:18:32 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* hash.c 1.15
+	  use Prototyped function definition if we have dev_t arg because it may be < int
+
+Sun Feb 10 16:13:16 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fnmatch.c 1.4
+	  Now using utypes.h, >=/<= compare with Uchar cast
+
+Sun Feb 10 15:56:51 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.c 1.15
+	  cast info->nlen to int for comparison
+
+Sat Feb  9 22:21:33 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.c 1.14
+	  strcmp() -> memcmp() for sfm_magic/sfm_version
+
+Fri Jan 18 12:48:35 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.75
+	   Write correct size info (1440 kB instead of 1.44 meg) for boot floppy sizes, correct .R typo (used instead of .B) at -magic
+
+Fri Jan 18 12:47:51 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.21
+	  Write correct size info (1440 kB instead of 1.44 meg) for boot floppy sizes
+
+Mon Dec 10 01:05:06 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.74
+	  -udf option documented
+
+Mon Dec 10 01:04:38 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* getopt.c 1.5
+	  prototype for my_index()
+
+Sun Nov 25 12:53:17 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.73
+	  long unreadable option list removed from sysnopsis line
+
+Thu Nov 22 22:34:18 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.97
+	  Version -> 1.15a12
+
+Thu Nov 22 22:24:38 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf_fs.h 1.1
+	* udf.c 1.1
+	* udf.h 1.1
+	  date and time created 01/11/22 22:24:38 by joerg
+
+Thu Nov 22 16:42:30 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* Makefile 1.10
+	* Makefile 1.10
+	* mkisofs.c 1.96
+	* mkisofs.h 1.62
+	  Enhancements for UDF support
+
+Thu Nov 22 16:41:13 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.59
+	  add sort criteria for UDF VIDEO_TS and AUDIO_TS files.
+
+Thu Nov 22 16:40:47 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.29
+	  make convert_to_unicode()/joliet_strlen() global if UDF support is compiled in
+
+Thu Nov 22 15:24:44 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.72
+	  better documentation for README.sort/README.hide from James Pearson
+
+Thu Nov 22 00:42:31 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.51
+	  compare_sort() now behaves correctly if the parameters are exchanged so qsort() may sort correctly
+
+Tue Nov 20 00:55:44 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.71
+	  better documentation for -print-size, use \& if '.' is at beginning of line
+
+Tue Nov 20 00:54:35 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.50
+	  avoid #if defined(sun) || defined(_AUX_SOURCE), better error messages
+
+Fri Nov 16 18:15:42 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* desktop.c 1.4
+	  nitialize the whole struct hfsdirent in make_desktop()
+
+Sun Nov 11 20:38:20 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.h 1.5
+	  d_dtoutime() Prototype new
+
+Sun Nov 11 20:28:56 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple.h 1.4
+	* apple.c 1.13
+	  Preserves HFS file dates for AppleDouble, AppleSingle and NetaTalk files
+
+Sun Nov 11 13:38:45 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.29
+	  QNX Neutrino has no st_ftime
+
+Sun Oct 21 01:01:23 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* getopt.c 1.4
+	  Try to compensate FSF rubish code and supress warnings by always including standard include files
+
+Sun Oct 21 01:00:30 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.95
+	  Always use local getopt.h, version -> 1.15a09
+
+Tue Oct  9 01:27:16 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.61
+	  sys/types.h & sys/stat.h -> statdefs.h
+
+Thu May 31 10:56:32 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.70
+	  -split-output description new, -hard-disk-boot/-no-emul-boot/-no-boot hint added to -b
+
+Sun Apr 22 11:34:46 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.94
+	  Comment for memset() in e_malloc()
+
+Fri Apr 20 23:53:40 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ChangeLog 1.21
+	  Late changes for 1.14
+
 Fri Apr 20 18:46:36 2001 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* multi.c 1.49
 	  Initalize more data from struct directory_record
