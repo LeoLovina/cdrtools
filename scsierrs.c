@@ -1,7 +1,7 @@
-/* @(#)scsierrs.c	2.9 96/06/16 Copyright 1987-1996 J. Schilling */
+/* @(#)scsierrs.c	2.11 96/12/18 Copyright 1987-1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsierrs.c	2.9 96/06/16 Copyright 1987-1996 J. Schilling";
+	"@(#)scsierrs.c	2.11 96/12/18 Copyright 1987-1996 J. Schilling";
 #endif
 /*
  *	Error printing for scsitransp.c
@@ -23,12 +23,7 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
-#include <sys/param.h>
 #include <standard.h>
-
-#include <sys/buf.h>
-#include <sun/dklabel.h>
-#include <sun/dkio.h>
 
 #include "scsireg.h"
 #include "scsidefs.h"
@@ -91,8 +86,8 @@ static char *sd_ccs_error_str[] = {
 	"\024record not found",			/* 0x14 */
 	"\025seek error",			/* 0x15 */
 	"\026data sync mark error",		/* 0x16 */
-	"\027soft data error",			/* 0x17 */
-	"\030recoverable error",		/* 0x18 */
+	"\027soft data error (retries)",	/* 0x17 */
+	"\030recoverable read error (ECC)",	/* 0x18 */
 	"\031defect list error",		/* 0x19 */
 	"\032parameter overrun",		/* 0x1a */
 	"\033synchronous xfer error",		/* 0x1b */
@@ -107,14 +102,14 @@ static char *sd_ccs_error_str[] = {
 	"\046invalid param list",		/* 0x26 */
 	"\047write protected",			/* 0x27 */
 	"\050media changed",			/* 0x28 */
-	"\051reset",				/* 0x29 */
+	"\051power on / reset",			/* 0x29 */
 	"\052mode select param changed",	/* 0x2a */
 	"\053host cannot disconnect",		/* 0x2b */
 	"\054command sequence error",		/* 0x2c */
 	"\060incompatible cartridge",		/* 0x30 */
 	"\061medium format corrupted",		/* 0x31 */
 	"\062No defect spare loc available",	/* 0x32 */
-	"\100RAM failure",			/* 0x40 */
+	"\100diagnostic/RAM failure",		/* 0x40 */
 	"\101data path diag failure",		/* 0x41 */
 	"\102power on failure",			/* 0x42 */
 	"\103message reject error",		/* 0x43 */
@@ -205,12 +200,18 @@ static char *Osd_smo_c501_error_str[] = {
 #ifdef CDD_521
 static char *sd_cdd_521_error_str[] = {
 	"\003tray out",				/* 0x03 */
+	"\062write data error with CU",		/* 0x32 */	/* Yamaha */
+	"\063monitor atip error",		/* 0x33 */
 	"\064absorbtion control error",		/* 0x34 */
 	"\072medium not present",		/* 0x3a */
 	"\075invalid bits in identify message",	/* 0x3d */
 	"\120write append error",		/* 0x50 */
+#ifdef	YAMAHA_CDR_100
+	/* Is this the same ??? */
+	"\120write operation in progress",	/* 0x50 */
+#endif
 	"\123medium load or eject failure",	/* 0x53 */
-	"\127unable to read table of contents",	/* 0x57 */
+	"\127unable to read TOC/PMA/Subcode/ATIP",	/* 0x57 */
 	"\132operator medium removal request",	/* 0x5a */
 	"\143end of user area encountered on this track",/* 0x63 */
 	"\144illegal mode for this track",	/* 0x64 */
@@ -218,7 +219,8 @@ static char *sd_cdd_521_error_str[] = {
 	"\201illegal track number",		/* 0x81 */
 	"\202command now not valid",		/* 0x82 */
 	"\203medium removal is prevented",	/* 0x83 */
-	"\204tray out",				/* 0x84 */	/* HP */
+	"\204tray out",				/* 0x84 */
+	"\205track at one not in PMA",		/* 0x85 */
 	"\240stopped on non data block",	/* 0xa0 */
 	"\241invalid start adress",		/* 0xa1 */
 	"\242attampt to cross track-boundary",	/* 0xa2 */
@@ -230,8 +232,9 @@ static char *sd_cdd_521_error_str[] = {
 	"\250illegal transfer length",		/* 0xa8 */
 	"\251request for fixation failed",	/* 0xa9 */
 	"\252end of medium reached",		/* 0xaa */
+#ifdef	REAL_CDD_521
 	"\253non reserved reserved track",	/* 0xab */
-#ifdef	HP
+#else
 	"\253illegal track number",		/* 0xab */
 #endif
 	"\254data track length error",		/* 0xac */
@@ -244,10 +247,15 @@ static char *sd_cdd_521_error_str[] = {
 	"\263link area encountered",		/* 0xb3 */
 	"\264calibration area full",		/* 0xb4 */
 	"\265dummy data blocks added",		/* 0xb5 */
-	"\266block size form conflict",		/* 0xb6 */
-	"\267current command aborted",		/* 0xb7 */	/* HP */
-	"\270program area not empty",		/* 0xb8 */	/* HP */
-	"\271parameter list too large",		/* 0xb9 */	/* HP */
+	"\266block size format conflict",	/* 0xb6 */
+	"\267current command aborted",		/* 0xb7 */
+	"\270program area not empty",		/* 0xb8 */
+#ifdef	YAMAHA_CDR_100
+	/* Used while writing lead in in DAO */
+	"\270write leadin in progress",		/* 0xb8 */
+#endif
+	"\271parameter list too large",		/* 0xb9 */
+	"\277buffer overflow",			/* 0xbf */	/* Yamaha */
 	"\300no barcode available",		/* 0xc0 */
 	"\301barcode reading error",		/* 0xc1 */
 	"\320recovery needed",			/* 0xd0 */
@@ -257,6 +265,8 @@ static char *sd_cdd_521_error_str[] = {
 	"\324cannot recover leadout",		/* 0xd4 */
 	"\325cannot recover opc",		/* 0xd5 */
 	"\326eeprom failure",			/* 0xd6 */
+	"\340laser current over",		/* 0xe0 */	/* Yamaha */
+	"\341servo adjustment over",		/* 0xe0 */	/* Yamaha */
 	NULL
 };
 #endif
@@ -332,6 +342,7 @@ char	*scsisensemsg(ctype, class, code)
 
 #ifdef	CDD_521
 	case DEV_CDD_521:
+	case DEV_YAMAHA_CDR_100:
 		vec = sd_cdd_521_error_str;
 		break;
 #endif

@@ -1,10 +1,40 @@
- # @(#)README	1.5 96/12/19 Copyright 1996 J. Schilling
+Newsgroups: comp.unix.solaris,comp.sys.sun.misc,comp.sys.sun.admin,alt.sys.sun,bln.comp.sun,comp.publish.cdrom.software,de.comp.periph.cdrom,de.alt.cdrom,alt.cd-rom
+Subject: cdrecord 1.2 & SCSI general library have been released
 
-This is Version 1.2 of cdrecord for Solaris
+
+Cdrecord 1.2 has been released.
 
 Cdrecord allows you to create CD's on a CD-Recorder.
 Cdrecord runs on sparc and x86 on Solaris 2.3 or later.
-Cdrecord runs without problems on a loded system.
+
+NEW features of cdrecord-1.2:
+
+	- Added -swab option to support Yamaha audio
+	  Thanks to (Fred) ecoven@montefiore.ulg.ac.be
+	  for the hint.
+	- Added counter for quit time (9 seconds)
+	- Flush cache & Fixation with separate bigger timeout,
+	   other timeout reduced to 20sec.
+	- Set sector size on all drive types before writing,
+	- Ommit the write_track_info Mode Select before write_track
+	  even for Philips drives (this is currently not needed because
+	  we don't support ISRC codes at this time).
+	- New error codes for CDD-2000 & error code support for Yamaha CDR-100
+	- scsireset() aded to scsitransport.[hc]
+	- Timings for Track and Fixation
+
+Comming soon:
+	Sformat (see below)
+	Support for multi-session including a new multi-session filesystem
+	SUPSPENDED: prototype program (to replace mkisofs).
+	currently waiting for mkisofs-1.06 with multi-session support
+
+I am interested to hear if someone is interested in a kernel based
+filesystem for Solaris that uses packet writing on the CD-Recorder.
+The filesystem will create a single session CD that may be finally converted
+to a hybride filesystem that alllows to be read as 
+ISO-9660 with Rock Ridge extensions too.
+Please mail suggestions to: wofs@schily.isdn.cs.tu-berlin.de
 
 The cdrecord distribution contains a SCSI user level transport library.
 The SCSI library is suitable to talk to any SCSI device without having
@@ -12,19 +42,19 @@ a special driver for it.
 Cdrecord may be easily ported to any system that has a 
 SCSI device driver similar to the scg driver.
 
+The SCSI transport library has been taken from the sformat program.
+Sformat is the first SCSI disk formatting/analyzing/repairing that runs on
+SunOS/Solaris. The first release of sformat has been made for SunOS 3.0
+(two years before Sun introduced their format utility). Sformat will be 
+available in source within the next few months.
 
 You *need* the SCSI general driver 'scg' in order to run cdrecord.
-
-The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
-it is supplied binary in pkgadd(1m) format and is tested 
+It is supplied binary in pkgadd(1m) format and is tested 
 on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
-
 
 It is _nice to have_ the 'fbk' driver to mount files that contain 
 images of file systems. Fbk means File simulates Block Device.
-
-The 'fbk' driver is Copyright 1988-1995 Jörg Schilling,
-it is supplied binary in pkgadd(1m) format and is tested
+It is supplied binary in pkgadd(1m) format and is tested
 on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
 
 cdrecord compiles and runs on Solaris x86, thanks to 
@@ -42,8 +72,8 @@ be neded on Linux anyway.
 cdrecord should compile on SunOS, but you will need the scg driver for
 SunOS in this case.
 
-
-Cdrecord has been implemented with a Philips CDD 521.
+Cdrecord has been implemented with a Philips CDD 521
+and the last release tested with a CDD 2000.
 It should run also on:
 
 	Philips CDD 522
@@ -52,7 +82,7 @@ It should run also on:
 	HP C4324/C4325	 (HP SureStore 4020i/6020i)
 	Plasmon CDR 4220 (not tested)
 	Grundig CDR-100  (not tested)
-	Mitsumi	CR-2401-TS (not tested)
+	Mitsumi CR-2401-TS (not tested)
 	Yamaha CDR-100
 	Yamaha CDR-102
 
@@ -62,7 +92,6 @@ SCSI interface board.
 I am interested to hear if cdrecord-1.2 runs on the Plasmon RF-41000.
 NOTE: you have to switch off the warning and exit in the source 
 if you want test this.
-
 
 I currently have SCSI command reference manuals for:
 	
@@ -76,6 +105,7 @@ I currently have SCSI command reference manuals for:
 
 *1	Will get support if there is someone willing to test form me
 *2	Will get support within the next weeks.
+	A Tester for Sony has been found.
 
 All companies that support me with SCSI command reference manuals and drives
 will get (continued) support in the following releases.
@@ -97,6 +127,10 @@ ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/ ...
 ftp://ftp.fokus.gmd.de/pub/unix/kernel/scg/ ...
 ftp://ftp.fokus.gmd.de/pub/unix/kernel/fbk/ ...
 
+The cdrecord distribution contains a SCSI user level transport library.
+The SCSI library is suitable to talk to any SCSI device without having
+a special driver for it.
+
 If you need mkisofs, it is located on:
 
 ftp://tsx-11.mit.edu/BETA/cdrom/mkisofs-1.05.tar.gz
@@ -105,58 +139,4 @@ ftp://ftp.fokus.gmd.de/pub/Linux/misc/cd/mkisofs-1.05.tar.gz
 or on:
 ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/mkisofs-1.05.tar.gz
 
-
-Installation Process:
-
-	1) scg driver
-			untar SCHILYscg.tar:
-			su
-			Password: xxxxx
-			cd /tmp
-			zcat SCHILYscg.tar | tar -xvf -
-			pkgadd -d .
-			reboot -- -r 
-
-	2) fbk driver
-			similar to scg driver (see above)
-
-	3) Switch the CD-Writer to an unused target id (2 should do it)
-		
-
-NOTE:
-	Be very carefull. pkgadd does not check for the right target 
-	architecture. Do not indstall drivers for intel on sparc
-	and vice versa. You will get a corrupt system.
-
-	You need to be root because you need access to /dev/scg? and to be
-	able to put cdrecord into the realtime scheduling class.
-
-
-The SCSI transport library has been taken from the sformat program.
-Sformat is the first SCSI disk formatting/analyzing/repairing that runs on
-SunOS/Solaris. The first release of sformat has been made for SunOS 3.0
-(two years before Sun introduced their format utility). Sformat source
-including 10 years of competence in SCSI disk handling will be 
-available within the next few months.
-
-I am interested to hear if someone is interested in a kernel based
-filesystem for Solaris that uses packet writing on the CD-Recorder.
-The filesystem will create a single session CD that may be finally converted
-to a hybride filesystem that alllows to be read as 
-ISO-9660 with Rock Ridge extensions too.
-Please mail suggestions to: wofs@schily.isdn.cs.tu-berlin.de
-
-If you want to use the CD-recorder as CD-ROM device, have a look at 
-
-ftp://ftp.fokus.gmd.de/pub/unix/kernel/sd
-
-
-	Joerg Schilling
-
-	(really Jörg Schilling if you have ISO-8859-1)
-
-If you have questions mail to:
-
-	HOME: 		joerg@schily.isdn.cs.tu-berlin.de
-	UNIVERSITY:	js@cs.tu-berlin.de
-	WORK:		schilling@fokus.gmd.de
+Joerg

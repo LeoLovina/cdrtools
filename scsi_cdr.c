@@ -1,7 +1,7 @@
-/* @(#)scsi_cdr.c	1.5 96/10/03 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.7 96/12/19 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.5 96/10/03 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.7 96/12/19 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -74,7 +74,8 @@ open_scsi(scsidev, timeout)
 	target = 6;
 	lun = 0;
 
-	deftimeout = timeout;
+	if (timeout >= 0)
+		deftimeout = timeout;
 
 	n = sscanf(scsidev, "%d,%d,%d", &x1, &x2, &x3);
 	if (n == 3) {
@@ -327,6 +328,7 @@ scsi_flush_cache()
 	scmd.cdb_len = SC_G1_CDBLEN;
 	scmd.sense_len = CCS_SENSE_LEN;
 	scmd.target = target;
+	scmd.timeout = 2 * 60;		/* Max: sizeof(CDR-cache)/150KB/s */
 	scmd.cdb.g1_cdb.cmd = 0x35;
 	scmd.cdb.g1_cdb.lun = lun;
 	
@@ -345,6 +347,7 @@ fixation(onp, type)
 	scmd.cdb_len = SC_G1_CDBLEN;
 	scmd.sense_len = CCS_SENSE_LEN;
 	scmd.target = target;
+	scmd.timeout = 8 * 60;		/* Needs up to 4 minutes */
 	scmd.cdb.g1_cdb.cmd = 0xE9;
 	scmd.cdb.g1_cdb.lun = lun;
 	scmd.cdb.g1_cdb.count[1] = (onp ? 8 : 0) | type;
@@ -769,6 +772,7 @@ getdev(print)
 				strindex("IMS", inq.info) ||
 				strindex("KODAK", inq.info) ||
 				strindex("PLASMON", inq.info) ||
+				strindex("MITSUMI", inq.info) ||
 				strindex("HP", inq.info))
 			dev = DEV_CDD_521;
 		if (strindex("YAMAHA", inq.info))

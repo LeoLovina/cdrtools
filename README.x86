@@ -1,0 +1,7 @@
+There may be some performance problems on Solaris x86.
+A possible solution is to reduce BUF_SIZE to 32 kBytes.
+It may be that the real reason is that the PC-architecture
+has no IO-MMU and therefore is not able to do DVMA.
+If this points out to be the reason, I have to
+change the scg driver & cdrecord, but this would 
+be neded on Linux anyway.

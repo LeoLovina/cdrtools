@@ -1,7 +1,7 @@
-/* @(#)cdrecord.c	1.4 96/10/03 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.c	1.5 96/12/18 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdrecord.c	1.4 96/10/03 Copyright 1995 J. Schilling";
+	"@(#)cdrecord.c	1.5 96/12/18 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Record data on a CD-Recorder
@@ -56,10 +56,12 @@ typedef struct track {
 #define	TI_AUDIO	0x01	/* File is an audio track		*/
 #define	TI_PREEMP	0x02	/* Audio track recorded w/preemphasis	*/
 #define	TI_PAD		0x04	/* Pad data track			*/
+#define	TI_SWAB		0x08	/* Swab audio data			*/
 
 #define	is_audio(tp)	((tp)->flags & TI_AUDIO)
 #define	is_preemp(tp)	((tp)->flags & TI_PREEMP)
 #define	is_pad(tp)	((tp)->flags & TI_PAD)
+#define	is_swab(tp)	((tp)->flags & TI_SWAB)
 
 /*
  * Usefull definitions for audio tracks
@@ -95,27 +97,32 @@ char	buf[BUF_SIZE];		/* The transfer buffer (should be allocated) */
 int	data_secs_per_tr;	/* # of data secs per transfer */
 int	audio_secs_per_tr;	/* # of audio secs per transfer */
 
+struct timeval	starttime;
+struct timeval	stoptime;
+struct timeval	fixtime;
+
 extern	int	silent;
 
-int 	main		__PR((int ac, char **av));
-void	usage		__PR((int));
-int	scsi_write	__PR((char *, int, int));
-int	read_buf	__PR((int f, char *bp, int size));
-int	write_track_data __PR((int , track_t *));
-void	printdata	__PR((int, track_t *));
-void	printaudio	__PR((int, track_t *));
-void	checkfile	__PR((int, track_t *));
-int	checkfiles	__PR((int, track_t *));
-void	checksize	__PR((track_t *));
-void	raise_fdlim	__PR((void));
-void	gargs		__PR((int , char **, int *, track_t *, char **,
+EXPORT	int 	main		__PR((int ac, char **av));
+LOCAL	void	usage		__PR((int));
+	int	scsi_write	__PR((char *, int, int));
+LOCAL	int	read_buf	__PR((int f, char *bp, int size));
+LOCAL	int	write_track_data __PR((int , track_t *));
+LOCAL	void	printdata	__PR((int, track_t *));
+LOCAL	void	printaudio	__PR((int, track_t *));
+LOCAL	void	checkfile	__PR((int, track_t *));
+LOCAL	int	checkfiles	__PR((int, track_t *));
+LOCAL	void	checksize	__PR((track_t *));
+LOCAL	void	raise_fdlim	__PR((void));
+LOCAL	void	gargs		__PR((int , char **, int *, track_t *, char **,
 					int *, int *, int *, int *));
-void	unload_media	__PR((void));
-void	check_recovery	__PR((void));
-void	audioread	__PR((void));
-void	raisepri	__PR((void));
+LOCAL	void	unload_media	__PR((void));
+LOCAL	void	check_recovery	__PR((void));
+	void	audioread	__PR((void));
+LOCAL	void	prtimediff __PR((const char *fmt, struct timeval *start, struct timeval *stop));
+LOCAL	void	raisepri	__PR((void));
 
-int 
+EXPORT int 
 main(ac, av)
 	int	ac;
 	char	*av[];
@@ -125,7 +132,6 @@ main(ac, av)
 	int	dummy = 0;
 	int	multi = 0;
 	int	fix = 0;
-	int	timeout = 4 * 60; /* def=20s but need 4 minutes for fixation*/
 	int	i;
 	int	tracks = 0;
 	track_t	track[MAX_TRACK+1];
@@ -156,7 +162,7 @@ main(ac, av)
 
 	raisepri();
 
-	open_scsi(dev, timeout);
+	open_scsi(dev, -1);
 
 	/*
 	 * First try to check which type of SCSI device we
@@ -194,6 +200,9 @@ main(ac, av)
 	rezero_unit();
 	test_unit_ready();
 	scsi_start_stop_unit(1);
+/*audioread();*/
+/*unload_media();*/
+/*return 0;*/
 
 	/*
 	 * Last chance to quit!
@@ -205,7 +214,17 @@ main(ac, av)
 	}
 	printf("Starting to write CD at speed %d in %s mode for %s session.\n",
 		speed, dummy ? "dummy" : "write", multi ? "multi" : "single");
-	sleep(5);
+	printf("Last chance to quit, starting %s write in 9 seconds.",
+		dummy?"dummy":"real");
+	flush();
+	for (i=9; --i > 0;) {
+		sleep(1);
+		printf("\b\b\b\b\b\b\b\b\b\b%d seconds.", i);
+		flush();
+	}
+	printf("\n");
+	if (gettimeofday(&starttime, (struct timezone *)0) < 0)
+		errmsg("Cannot get start time\n");
 	if (fix)
 		goto fix_it;
 
@@ -213,19 +232,20 @@ main(ac, av)
 	 * Now we actually start writing to the CD.
 	 */
 	for (i = 1; i <= tracks; i++) {
-		if (is_yamaha()) {
-			if (select_secsize(is_audio(&track[i]) ?
+		if (select_secsize(is_audio(&track[i]) ?
 					AUDIO_SEC_SIZE : DATA_SEC_SIZE) < 0) {
-				scsi_flush_cache();
-				break;
-			}
-		} else {
+			scsi_flush_cache();
+			break;
+		}
+#ifdef	notneeded
+		if (!is_yamaha()) {
 			if (write_track_info(is_audio(&track[i]),
 					is_preemp(&track[i])) < 0) {
 				scsi_flush_cache();
 				break;
 			}
 		}
+#endif
 		if (write_track(0, is_audio(&track[i]),
 						is_preemp(&track[i])) < 0) {
 			scsi_flush_cache();
@@ -241,15 +261,25 @@ main(ac, av)
 		scsi_flush_cache();
 	}
 fix_it:
+	if (gettimeofday(&stoptime, (struct timezone *)0) < 0)
+		errmsg("Cannot get stop time\n");
+	if (lverbose)
+		prtimediff("Writing  time: ", &starttime, &stoptime);
+
 	if (lverbose)
 		printf("Fixating...\n");
 	fixation(multi, isaudio ? 0 : 1);
+
+	if (gettimeofday(&fixtime, (struct timezone *)0) < 0)
+		errmsg("Cannot get fix time\n");
+	if (lverbose)
+		prtimediff("Fixating time: ", &stoptime, &fixtime);
 
 	unload_media();
 	return 0;
 }
 
-void 
+LOCAL void 
 usage(excode)
 	int excode;
 {
@@ -270,7 +300,9 @@ usage(excode)
 	error("\t-preemp		Audio tracks are mastered with 50/15 µs preemphasis\n");
 	error("\t-nopreemp	Audio tracks are mastered with no preemphasis (default)\n");
 	error("\t-pad		Pad data tracks with %d zeroed sectors\n", PAD_SECS);
+	error("\t		Pad audio tracks to a multiple of %d bytes\n", AUDIO_SEC_SIZE);
 	error("\t-nopad		Do not pad data tracks (default)\n");
+	error("\t-swab		Swab audio data (needed on some writers e.g. Yamaha)\n");
 	exit(excode);
 }
 
@@ -289,7 +321,7 @@ scsi_write(bufp, size, blocks)
 #	define	scsi_write(bp,size,blocks)	write_xg0(bp, 0, size, blocks)
 #endif
 
-int
+LOCAL int
 read_buf(f, bp, size)
 	int	f;
 	char	*bp;
@@ -312,7 +344,7 @@ read_buf(f, bp, size)
 	return (amount);
 }
 
-int
+LOCAL int
 write_track_data(track, trackp)
 	int	track;
 	track_t	*trackp;
@@ -329,6 +361,7 @@ write_track_data(track, trackp)
 	int		bytespt;
 	int		amount;
 	int             pad;
+	int		swab;
 
 	f = trackp->f;
 	isaudio = is_audio(trackp);
@@ -339,6 +372,7 @@ write_track_data(track, trackp)
 	bytespt = secsize * secspt;
 	
 	pad = !isaudio && is_pad(trackp);	/* Pad only data tracks */
+	swab = isaudio && is_swab(trackp);	/* Swab only audio tracks */
 
 	if (ldebug) {
 		printf("secsize:%d secspt:%d bytespt:%d audio:%d pad:%d\n",
@@ -361,6 +395,9 @@ write_track_data(track, trackp)
 		if (count == 0)
 			break;
 		bytes_read += count;
+
+		if (swab)
+			swabbytes(buf, count);
 
 		if (count < bytespt) {
 			if (ldebug)
@@ -408,49 +445,58 @@ write_track_data(track, trackp)
 	return 0;
 }
 
-void
+LOCAL void
 printdata(track, trackp)
 	int	track;
 	track_t	*trackp;
 {
 	if (trackp->tracksize >= 0) {
-		printf("Track %02d: data  %3d Mb         %s\n",
+		printf("Track %02d: data  %3d Mb         %s %s\n",
 					track, trackp->tracksize >> 20,
-					is_pad(trackp) ? "pad" : "");
+					is_pad(trackp) ? "pad" : "",
+					is_swab(trackp) ? "swab" : "");
 	} else {
-		printf("Track %02d: data  unknown length %s\n",
-					track, is_pad(trackp) ? "pad" : "");
+		printf("Track %02d: data  unknown length %s %s\n",
+					track,
+					is_pad(trackp) ? "pad" : "",
+					is_swab(trackp) ? "swab" : "");
 	}
 }
 
-void
+LOCAL void
 printaudio(track, trackp)
 	int	track;
 	track_t	*trackp;
 {
 	if (trackp->tracksize >= 0) {
-		printf("Track %02d: audio %3d Mb (%02d:%02d.%02d) %spreemp\n",
-					track, trackp->tracksize >> 20,
-					minutes(trackp->tracksize),
-					seconds(trackp->tracksize),
-					hseconds(trackp->tracksize),
-					is_preemp(trackp) ? "" : "no ");
+		printf("Track %02d: audio %3d Mb (%02d:%02d.%02d) %spreemp%s%s\n",
+			track, trackp->tracksize >> 20,
+			minutes(trackp->tracksize),
+			seconds(trackp->tracksize),
+			hseconds(trackp->tracksize),
+			is_preemp(trackp) ? "" : "no ",
+			(trackp->tracksize % trackp->secsize) && is_pad(trackp) ? " pad" : "",
+			is_swab(trackp) ? " swab":"");
 	} else {
-		printf("Track %02d: audio unknown length    %spreemp\n",
-					track, is_preemp(trackp) ? "" : "no ");
+		printf("Track %02d: audio unknown length    %spreemp%s%s\n",
+			track, is_preemp(trackp) ? "" : "no ",
+			(trackp->tracksize % trackp->secsize) && is_pad(trackp) ? " pad" : "",
+			is_swab(trackp) ? " swab":"");
 	}
 }
 
-void
+LOCAL void
 checkfile(track, trackp)
 	int	track;
 	track_t	*trackp;
 {
 	if (trackp->tracksize > 0 &&
 			is_audio(trackp) &&
-			(trackp->tracksize % trackp->secsize))
-		comerrno(BAD, "Bad audio track size %d for track %02d. Must ba a multiple of %d\n",
+			(trackp->tracksize % trackp->secsize) &&
+						!is_pad(trackp)) {
+		comerrno(BAD, "Bad audio track size %d for track %02d. Must be a multiple of %d Bytes\n",
 				trackp->tracksize, track, trackp->secsize);
+	}
 	
 	if (!lverbose)
 		return;
@@ -461,7 +507,7 @@ checkfile(track, trackp)
 		printdata(track, trackp);
 }
 
-int
+LOCAL int
 checkfiles(tracks, trackp)
 	int	tracks;
 	track_t	*trackp;
@@ -477,7 +523,7 @@ checkfiles(tracks, trackp)
 	return (isaudio);
 }
 
-void
+LOCAL void
 checksize(trackp)
 	track_t	*trackp;
 {
@@ -494,7 +540,7 @@ checksize(trackp)
 	}
 }
 
-void
+LOCAL void
 raise_fdlim()
 {
 	struct rlimit	rlim;
@@ -511,9 +557,9 @@ raise_fdlim()
 	setrlimit(RLIMIT_NOFILE, &rlim);
 }
 
-char	*opts = "help,dev*,bytes#,speed#,dummy,multi,fix,debug,v,V,audio,data,nopreemp,preemp,nopad,pad";
+char	*opts = "help,dev*,bytes#,speed#,dummy,multi,fix,debug,v,V,audio,data,nopreemp,preemp,nopad,pad,swab";
 
-void
+LOCAL void
 gargs(ac, av, tracksp, trackp, devp, speedp, dummyp, multip, fixp)
 	int	ac;
 	char	**av;
@@ -534,6 +580,7 @@ gargs(ac, av, tracksp, trackp, devp, speedp, dummyp, multip, fixp)
 	int	preemp = 0;
 	int	nopreemp;
 	int	pad = 0;
+	int	swab = 0;
 	int	nopad;
 	int	flags;
 	int	tracks = *tracksp;
@@ -553,7 +600,7 @@ gargs(ac, av, tracksp, trackp, devp, speedp, dummyp, multip, fixp)
 				&ldebug, &lverbose, &verbose,
 				&audio, &data,
 				&nopreemp, &preemp,
-				&nopad, &pad) < 0) {
+				&nopad, &pad, &swab) < 0) {
 			errmsgno(BAD, "Bad Option: %s.\n", cav[0]);
 			usage(BAD);
 		}
@@ -581,6 +628,8 @@ gargs(ac, av, tracksp, trackp, devp, speedp, dummyp, multip, fixp)
 			flags |= TI_PREEMP;
 		if (pad)
 			flags |= TI_PAD;
+		if (swab)
+			flags |= TI_SWAB;
 
 		if (strcmp("-", cav[0]) == 0) {
 			trackp[tracks].f = STDIN_FILENO;
@@ -614,7 +663,7 @@ gargs(ac, av, tracksp, trackp, devp, speedp, dummyp, multip, fixp)
 	*tracksp = tracks;
 }
 
-void
+LOCAL void
 unload_media()
 {
 	scsi_start_stop_unit(0);
@@ -626,7 +675,7 @@ unload_media()
 	scsi_load_unload(0);
 }
 
-void
+LOCAL void
 check_recovery()
 {
 	if (recovery_needed()) {
@@ -635,7 +684,7 @@ check_recovery()
 	}
 }
 
-/*#define	DEBUG*/
+#define	DEBUG
 void audioread()
 {
 #ifdef	DEBUG
@@ -645,11 +694,33 @@ void audioread()
 	speed_select(speed, dummy);
 	select_secsize(2352);
 
-	read_scsi(buf, 0, 1);
+	read_scsi(buf, 1000, 1);
 	printf("XXX:\n");
 	write(1, buf, 512);
+	unload_media();
 	exit(0);
 #endif
+}
+
+LOCAL void
+prtimediff(fmt, start, stop)
+	const	char	*fmt;
+	struct timeval	*start;
+	struct timeval	*stop;
+{
+	struct timeval tv;
+
+	tv.tv_sec = stop->tv_sec - start->tv_sec;
+	tv.tv_usec = stop->tv_usec - start->tv_usec;
+	while (tv.tv_usec > 1000000) {
+		tv.tv_usec -= 1000000;
+		tv.tv_sec += 1;
+	}
+	while (tv.tv_usec < 0) {
+		tv.tv_usec += 1000000;
+		tv.tv_sec -= 1;
+	}
+	printf("%s%4d.%03.3ds\n", fmt, tv.tv_sec, tv.tv_usec/1000);
 }
 
 #ifdef	SVR4
@@ -657,7 +728,8 @@ void audioread()
 #include <sys/priocntl.h>
 #include <sys/rtpriocntl.h>
 
-void raisepri()
+LOCAL void
+raisepri()
 {
 	int		pid;
 	int		classes;
@@ -690,7 +762,8 @@ void raisepri()
 
 #else
 
-void raisepri()
+LOCAL void
+raisepri()
 {
 	if (setpriority(PRIO_PROCESS, getpid(), -20) < 0)
 		comerr("Cannot set priority\n");

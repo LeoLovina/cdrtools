@@ -1,0 +1,19 @@
+PROGS=	cdrecord
+CFLAGS=	-O -Iinclude -I.
+LDFLAGS= -s
+LIBS=lib/libschily.a
+
+all:	$(LIBS) $(PROGS)
+
+lib/libschily.a:
+	cd lib; $(MAKE) -f Makefile_linux
+
+cdrecord:	cdrecord.o scsi_cdr.o scsitransp.o scsierrs.o
+		cc -o $@ cdrecord.o scsi_cdr.o scsitransp.o scsierrs.o $(LIBS)
+
+tags: cdrecord.c scsi_cdr.c scsicmds.c scsierrs.c
+		vctags -t cdrecord.c scsi_cdr.c scsicmds.c scsierrs.c *.h
+
+clean:
+	-rm -f $(PROGS) *.o *~
+	-cd lib; $(MAKE) clean

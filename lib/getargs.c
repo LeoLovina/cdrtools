@@ -1,7 +1,7 @@
-/* @(#)getargs.c	2.17 96/05/09 Copyright 1985, 1988, 1995 J. Schilling */
+/* @(#)getargs.c	2.18 96/11/30 Copyright 1985, 1988, 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getargs.c	2.17 96/05/09 Copyright 1985, 1988, 1995 J. Schilling";
+	"@(#)getargs.c	2.18 96/11/30 Copyright 1985, 1988, 1995 J. Schilling";
 #endif
 #define	NEW
 /*
@@ -53,6 +53,7 @@ extern	char	*strchr __PR((const char *, int));
 #define BADFLAG		(-1)	/* Not a valid flag argument	*/
 #define BADFMT		(-2)	/* Error in format string	*/
 #define NOTAFILE	(-3)	/* Seems to be a flag type arg	*/
+
 
 	int	_getargs __PR((int *, char *const **, const char *,
 							BOOL, va_list));
@@ -172,10 +173,14 @@ int getfiles(pac, pav, fmt)
 	for(; *pac > 0; (*pac)--, (*pav)++) {
 		argp = **pav;
 
-		if ((ret = dofile(pac, pav, &argp)) != NOTAFILE)
+		ret = dofile(pac, pav, &argp);
+
+		if (ret != NOTAFILE)
 			return (ret);
-		if ((ret = doflag(pac, pav, argp, fmt, setargs, args)) !=
-								NOTAFLAG)
+
+		ret = doflag(pac, pav, argp, fmt, setargs, args);
+
+		if (ret != NOTAFLAG)
 			return (ret);
 	}
 	return (NOARGS);
@@ -259,6 +264,7 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 	long	val;
 	int	singlecharflag	= 0;
 	BOOL	isspec;
+	BOOL	haseql		= checkeql(argp);
 	const char	*sargp	= argp;
 	const char	*sfmt	= fmt;
 	va_list	sargs		= args;
@@ -283,13 +289,17 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 				/*
 				 * Allow "#?*&+" to appear inside a flag.
 				 * NOTE: they must be escaped by '\\' only
-				 *	 int the the format string.
+				 *	 inside the the format string.
 				 */
 				fmt++;
 				isspec = FALSE;
 			} else {
 				isspec = isfmtspec(*fmt);
 			}
+			/*
+			 * If isspec is TRUE, the arg beeing checked starts
+			 * like a valid flag. Argp now points to the rest.
+			 */
 			if (isspec) {
 				/*
 				 * If *argp is '+' and we are on the
@@ -301,8 +311,50 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 				/*
 				 * skip over to arg of flag
 				 */
-				if (*argp == '=')
+				if (*argp == '=') {
 					argp++;
+				} else if (*argp != '\0' && haseql) {
+					/*
+					 * Flag and arg are not separated by a
+					 * space.
+					 * Check here for:
+					 * xxxxx=yyyyy	match on '&'
+					 * Checked before:
+					 * abc=yyyyy	match on 'abc&'
+					 * 		or	 'abc*' 
+					 * 		or	 'abc#' 
+					 * We come here if 'argp' starts with
+					 * the same sequence as a valid flag
+					 * and contains an equal sign.
+					 * We have tested before if the text
+					 * before 'argp' matches exactly.
+					 * At this point we have no exact match
+					 * and we only allow to match
+					 * the special pattern '&'.
+					 * We need this e.g. for 'make'.
+					 * Here allow any flag type argument to
+					 * match the format string "&" to set
+					 * up a function that handles all odd
+					 * stuff that getargs will not grok.
+					 */
+					if (argp != sargp || *fmt != '&')
+						goto nextarg;
+				}
+				/*
+				 * *arpp == '\0' || !haseql
+				 * We come here if 'argp' starts with
+				 * the same sequence as a valid flag.
+				 * This will match on the following args:
+				 * -farg	match on 'f*'
+				 * -f12		match on 'f#'
+				 * +12		match on '+#'
+				 * -12		match on '#'
+				 * and all args that are separated from
+				 * their flags.
+				 * In the switch statement below, we check
+				 * if the text after 'argp' (if *argp != 0) or
+				 * the next arg is a valid arg for this flag.
+ 				 */
 				break;
 			} else if (*fmt == *argp) {
 				if (argp[1] == '\0' &&
@@ -319,6 +371,7 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 				 * skip over to next format identifier
 				 * & reset arg pointer
 				 */
+			nextarg:
 				while (*fmt != ',' && *fmt != '\0') {
 					/* function has extra arg on stack */
 					if (*fmt == '&' && setargs)
@@ -332,6 +385,9 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 		switch(*fmt) {
 
 		case '\0':
+			/*
+			 * Boolean type has been tested before.
+			 */
 			if (singlecharflag && 
 			   (val = dosflags(sargp, sfmt, setargs, sargs)) !=
 								BADFLAG)
@@ -365,6 +421,12 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 			return (checkfmt(fmt));
 
 		case '?':
+			/*
+			 * If more than one char arg, it
+			 * cannot be a character argument.
+			 */
+			if (argp[1] != '\0')
+				goto nextchance;
 			if (setargs)
 				*((char *)curarg) = *argp;
 
@@ -451,8 +513,10 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 					return (BADFLAG);
 				}
 			}
+
 			if ((val = checkfmt(fmt)) != NOTAFLAG)
 				return (val);
+
 			if (setargs) {
 				int	ret;
 				void	*funarg = va_arg(args, void *);
@@ -464,6 +528,9 @@ LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 			} else {
 				return (val);
 			}
+			/*
+			 * Called function returns NOTAFILE: try next format.
+			 */
 		}
 	}
 }
@@ -581,6 +648,8 @@ LOCAL int checkfmt(fmt)
 	const char	*fmt;
 {
 	char c = *(++fmt);
+
+
 	if (c == ',' || c == '\0') {
 		return (NOTAFLAG);
 	} else {
@@ -593,7 +662,7 @@ LOCAL int checkfmt(fmt)
 |
 |	Parse the string as long as valid characters can be found.
 |	Valid flag identifiers are chosen from the set of
-|	alphanumeric characters and '_'.
+|	alphanumeric characters, '-' and '_'.
 |	If the next character is an equal sign the string
 |	contains a valid flag identifier.
 |
@@ -603,7 +672,7 @@ static int checkeql(str)
 {
 	register char c;
 
-	for (c = *str; isalnum(c) || c == '_'; c = *str++)
+	for (c = *str; isalnum(c) || c == '_' || c == '-'; c = *str++)
 		;
 	return (c == '=');
 }

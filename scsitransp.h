@@ -1,4 +1,4 @@
-/* @(#)scsitransp.h	1.4 96/06/16 Copyright 1995 J. Schilling */
+/* @(#)scsitransp.h	1.5 96/11/03 Copyright 1995 J. Schilling */
 /*
  *	Definitions for commands that use functions from scsitransp.c
  *
@@ -24,6 +24,7 @@
  */
 extern	int	scsi_open	__PR((void));
 extern	int	scsi_fileno	__PR((int));
+extern	int	scsireset	__PR((void));
 extern	int	scsicmd		__PR((char *));
 extern	int	scsigetresid	__PR((void));
 extern	void	scsiprinterr	__PR((char *));

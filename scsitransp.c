@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.5 96/06/16 Copyright 1988 J. Schilling */
+/* @(#)scsitransp.c	1.7 96/11/03 Copyright 1988 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.5 96/06/16 Copyright 1988 J. Schilling";
+	"@(#)scsitransp.c	1.7 96/11/03 Copyright 1988 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -38,7 +38,7 @@ static	char sccsid[] =
 #include "scsireg.h"
 #include "scsitransp.h"
 
-#define	MAX_SCG		8	/* Max # of SCSI controlers */
+#define	MAX_SCG		8	/* Max # of SCSI controllers */
 #define	DEFTIMEOUT	20	/* Default timeout for SCSI command transport */
 
 #define	BAD		(-1)
@@ -66,6 +66,7 @@ EXPORT	int	scsi_open	__PR((void));
 EXPORT	int	scsi_fileno	__PR((int));
 LOCAL	BOOL	scsi_yes	__PR((char *));
 LOCAL	void	scsi_sighandler	__PR((int));
+EXPORT	int	scsireset	__PR((void));
 EXPORT	int	scsicmd		__PR((char *));
 EXPORT	int	scsigetresid	__PR((void));
 LOCAL	void	scsitimes	__PR((void));
@@ -139,6 +140,14 @@ scsi_sighandler(sig)
 	}
 	if (scsi_yes("EXIT ? "))
 		exit(sig);
+}
+
+EXPORT
+int scsireset()
+{
+	int	f = scsi_fileno(scsibus);
+
+	return (ioctl(f, SCGIORESET, 0));
 }
 
 EXPORT

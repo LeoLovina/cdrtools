@@ -9,7 +9,7 @@ DEFS=		-DNO_FLOATINGPOINT -DNO_SCANSTACK
 #
 INCLUDE=	-I. -I../include
 #CFLAGS=		-O $(INCLUDE) -DBSD4_2
-CFLAGS=		-O $(INCLUDE) $(DEFS) -DSVR4
+CFLAGS=		-O $(INCLUDE) $(DEFS)
 RANLIB=		echo
 #
 #
@@ -64,7 +64,7 @@ clean:
 	cd stdio; $(MAKE) clean
 
 $(STDIO):
-	cd stdio; $(MAKE)
+	cd stdio; $(MAKE) -f Makefile_linux
 
 getav0.o:	comerr.h
 fillbytes.o:	align.h
@@ -83,5 +83,5 @@ align_test:	align_test.o
 		$(CC) -o $@ align_test.o
 
 libschily.a:	$(STDIO) $(OBJ)
-		ar r $@ `lorder $(STDIO) $(OBJ) | tsort`
+		ar r $@ $(STDIO) $(OBJ)
 		$(RANLIB) $@

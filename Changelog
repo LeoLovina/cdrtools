@@ -1,3 +1,31 @@
+Mon Dec 16 16:19:54 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* Added -swab option to support Yamaha audio
+	  Thanks to (Fred) ecoven@montefiore.ulg.ac.be
+	  for the hint.
+	* Added counter for quit time (9 seconds)
+
+Wed Dec 12 21:09:24 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* Flush cache & Fixation with separate bigger timeout,
+	   other timeout reduced to 20sec.
+
+Mo Dec 3 13:03:30 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* Set sector size on all drive types before writing,
+	* Ommit the write_track_info Mode Select before write_track
+	  even for Philips drives (this is currently not needed because
+	  we don't support ISRC codes at this time).
+
+Tue Nov 26 10:54:18 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* New error codes for CDD-2000 & error code support for Yamaha CDR-100
+
+Sun Nov 3 22:58:21 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* scsireset() aded to scsitransport.[hc]
+	* Timings for Track and Fixation
+
 Fri Oct 4 11:45:13 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
 
 	* Version 1.1 released.

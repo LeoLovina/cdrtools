@@ -1,0 +1,11 @@
+Cdrecord compiles on Linux, but will not run because
+there is currently no scg driver for Linux.
+
+To compile, use: make -f Makefile_linux
+
+If someone is willing to make a port, there is only
+two files that have to be changed: 
+
+scsitransport.c & the open part in scsi_cdr.c
+
+Joerg

@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.5 96/08/21 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.6 96/12/18 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -613,7 +613,7 @@ extern "C" {
 /*
  * Linux
  */
-#if defined(__linux__) || defined(__linux)
+#if defined(O__linux__) || defined(O__linux)
 #	define	PROTOTYPES
 #	ifdef	__ELF__
 #		define	HAVE_ELF
@@ -636,6 +636,63 @@ extern "C" {
 #	define	F_TLOCK	2	/* Test and lock a region for exclusive use */
 #	define	F_TEST	3	/* Test a region for other processes locks */
 #endif
+
+/*
+ * Linux
+ */
+#if defined(__linux__) || defined(__linux)
+#	define	PROTOTYPES
+#	ifdef	__ELF__
+#		define	HAVE_ELF
+#	else
+#		define	HAVE_AOUT
+#	endif
+#	define	HAVE_STDARG_H
+#	define	HAVE_STDLIB_H
+#	define	HAVE_STRING_H
+#	define	STDC_HEADERS
+#	define	HAVE_LONGLONG
+#	define	HAVE_UNISTD_H
+#	define	HAVE_FCNTL_H
+#	define	HAVE_TERMIOS_H
+#	define	HAVE_TERMIO_H
+#	define	HAVE_UTIMES
+#	define	HAVE_UTIME_H
+/*#	define	HAVE_WAIT_H*/
+#	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_MTIO_H
+#	define	HAVE_MTGET_DSREG
+#	define	HAVE_MTGET_RESID
+#	define	HAVE_MTGET_FILENO
+#	define	HAVE_MTGET_BLKNO
+#	define	MAJOR_IN_SYSMACROS
+#	define	HAVE_MMAP
+/*#	define	HAVE_SMMAP*/
+#	define	HAVE_USGSHM
+#	define	HAVE_USGSEM
+#	define	HAVE_FLOCK
+#	define	HAVE_FCHDIR
+#	define	HAVE_STATVFS
+#	define	HAVE_QUOTA
+#	define	HAVE_YP
+#	define	HAVE_SETREUID	/* >= Linux 1.1.37 */
+#	define	HAVE_SETEUID
+/*#	define	HAVE_PROCFS*/	/* ??? */
+/*#	define	HAVE_PROCFS2*/
+#	define	HAVE_WAIT3
+#	define	HAVE_WAITPID
+#	define	HAVE_GETHOSTNAME
+#	define	HAVE_SELECT
+
+#	define	GID_T		gid_t
+#	define	USLEEPRETURN_T	void
+#	define	USLEEPISVOID
+
+/*#	define	HAVE_GETAV0*/
+#	define	HAVE_SCANSTACK
+#endif
+
 
 #if defined(__bsdi__)
 #	define	PROTOTYPES

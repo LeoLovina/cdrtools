@@ -1,7 +1,7 @@
-/* @(#)align_test.c	1.5 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)align_test.c	1.6 96/11/29 Copyright 1995 J. Schilling */
 #ifndef	lint
 static	char sccsid[] =
-	"@(#)align_test.c	1.5 96/02/04 Copyright 1995 J. Schilling";
+	"@(#)align_test.c	1.6 96/11/29 Copyright 1995 J. Schilling";
 #endif
 /* generate machine dependant align.h */
 /* This program is free software; you can redistribute it and/or modify
@@ -55,8 +55,8 @@ void sig(signo)
 
 #define	min_align(i)	(((i) < MIN_ALIGN) ? MIN_ALIGN : (i))
 
-char	al[] = "alignement value for ";
-char	ms[] = "alignement mask  for ";
+char	al[] = "alignment value for ";
+char	ms[] = "alignment mask  for ";
 char	sh[] = "short";
 char	in[] = "int";
 char	lo[] = "long";
