@@ -1,4 +1,4 @@
-/* @(#)raisecond.c	1.7 96/02/04 Copyright 1985 J. Schilling */
+/* @(#)raisecond.c	1.8 96/06/16 Copyright 1985 J. Schilling */
 /*
  *	raise a condition (software signal)
  */
@@ -27,7 +27,6 @@
 #include <mconfig.h>
 #include <stdio.h>
 #include <standard.h>
-#include "frame.h"
 #include <sigblk.h>
 #ifdef	HAVE_UNISTD_H
 #include <unistd.h>
@@ -37,6 +36,12 @@
 #endif
 #ifdef	HAVE_STRING_H
 #include <string.h>
+#endif
+
+#ifdef	NO_SCANSTACK
+#	ifdef	HAVE_SCANSTACK
+#	undef	HAVE_SCANSTACK
+#	endif
 #endif
 
 /*
@@ -58,6 +63,8 @@
 LOCAL	void raiseabort  __PR((const char *));
 
 #ifdef	HAVE_SCANSTACK
+
+#include "frame.h"
 
 LOCAL	BOOL framehandle __PR((SIGBLK *, const char *, const char *, long));
 
@@ -122,7 +129,7 @@ LOCAL BOOL framehandle(sp, handlename, signame, arg2)
 	return (FALSE);
 }
 
-#else
+#else	/* HAVE_SCANSTACK */
 
 void raisecond(signame, arg2)
 	const char	*signame;

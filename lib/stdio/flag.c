@@ -1,4 +1,4 @@
-/* @(#)flag.c	2.2 96/02/04 Copyright 1986 J. Schilling */
+/* @(#)flag.c	2.3 96/05/09 Copyright 1986 J. Schilling */
 /*
  *	Copyright (c) 1986 J. Schilling
  */
@@ -34,6 +34,8 @@ int	_fl_inc = 10;		/* increment for expanding flag struct */
 int	_fl_max = FL_INIT;	/* max fd currently in _io_myfl */
 _io_fl	_io_smyfl[FL_INIT];	/* initial static space */
 _io_fl	*_io_myfl = _io_smyfl;	/* init to static space */
+
+LOCAL int _more_flags	__PR((FILE * ));
 
 LOCAL int _more_flags(fp)
 	FILE	*fp;
@@ -99,18 +101,19 @@ void _io_set_my_flag(fp, flag)
 
 	fl = &_io_myfl[f];
 
-	if (fl->fl_io == (FILE *)0) {
-		fl->fl_io = fp;
-	} else {
+	if (fl->fl_io != (FILE *)0) {
 		fl2 = fl;
 
 		while (fl && fl->fl_io != fp)
 			fl = fl->fl_next;
-		if (fl == 0 && (fl = (_io_fl *) malloc(sizeof(*fl))) == 0)
-			return;
-		fl->fl_next = fl2->fl_next;
-		fl2->fl_next = fl;
+		if (fl == 0) {
+			if ((fl = (_io_fl *) malloc(sizeof(*fl))) == 0)
+				return;
+			fl->fl_next = fl2->fl_next;
+			fl2->fl_next = fl;
+		}
 	}
+	fl->fl_io = fp;
 	fl->fl_flags = flag;
 }
 

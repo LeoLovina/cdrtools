@@ -1,0 +1,26 @@
+Fri Oct 4 11:45:13 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* Version 1.1 released.
+
+Mon Aug 19 22:25:18 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* Read access test to allow cdrecord to run savely suid root
+
+Sun Aug 18 12:11:20 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* bit ordering problems solved
+	  Thanks to Gert Poletiek <gert@fwi.uva.nl> for testing
+
+Tue Jun 18 21:38:51 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* several changes in scgio.h
+
+Sun Jun 16 15:56:35 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* Ansu C Protytypes
+	* priocntl added for Solaris
+	  Thanks to Anders Lundgren <al@irfu.se>
+
+Sun Feb 4 19:14:46 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
+
+	* Initial release 1.0

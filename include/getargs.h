@@ -1,8 +1,8 @@
-/* @(#)getfp.c	1.7 96/06/16 Copyright 1988 J. Schilling */
+/* @(#)getargs.h	1.5 96/05/09 Copyright 1985 J. Schilling */
 /*
- *	Get frame pointer
+ *	Definitions for getargs()/getallargs()/getfiles()
  *
- *	Copyright (c) 1988 J. Schilling
+ *	Copyright (c) 1985 J. Schilling
  */
 /* This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,40 +19,15 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
-#include <mconfig.h>
-#include <standard.h>
+#ifndef	_GETARGS_H
+#define	_GETARGS_H
 
-#ifdef	NO_SCANSTACK
-#	ifdef	HAVE_SCANSTACK
-#	undef	HAVE_SCANSTACK
-#	endif
-#endif
+#define	NOARGS		  0	/* No more args			*/
+#define	NOTAFLAG	  1	/* Not a flag type argument	*/
+#define BADFLAG		(-1)	/* Not a valid flag argument	*/
+#define BADFMT		(-2)	/* Error in format string	*/
+#define	NOTAFILE	(-3)	/* Seems to be a flag type	*/
 
-#ifdef	HAVE_SCANSTACK
-#include "frame.h"
+typedef	int	(*getargfun)	__PR((const void *, void *));
 
-#define	MAXWINDOWS	32
-#define	NWINDOWS	7
-
-void **getfp()
-{
-		long	**dummy[1];
-	static	int	idx = 1;	/* fool optimizer in c compiler */
-
-#ifdef	sparc
-	flush_reg_windows(MAXWINDOWS-2);
-#endif
-	return ((void **)((struct frame *)&dummy[idx])->fr_savfp);
-}
-
-#ifdef	sparc
-int flush_reg_windows(n)
-	int	n;
-{
-	if (--n > 0)
-		flush_reg_windows(n);
-	return (0);
-}
-#endif
-
-#endif	/* HAVE_SCANSTACK */
+#endif	/* _GETARGS_H */

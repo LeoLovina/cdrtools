@@ -1,8 +1,8 @@
-/* @(#)scsitransp.c	1.4 96/02/04 Copyr 1988 J. Schilling */
+/* @(#)scsitransp.c	1.5 96/06/16 Copyright 1988 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.4 96/02/04 Copyr 1988 J. Schilling";
-#endif  lint
+	"@(#)scsitransp.c	1.5 96/06/16 Copyright 1988 J. Schilling";
+#endif
 /*
  *	SCSI user level command transport routines for
  *	the SCSI general driver 'scg'.
@@ -27,9 +27,12 @@ static	char sccsid[] =
 #include <sys/param.h>	/* XXX nonportable to use u_char */
 #include <stdio.h>
 #include <standard.h>
+#include <stdxlib.h>
+#include <unixstd.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
+#include <fcntl.h>
 
 #include "scgio.h"
 #include "scsireg.h"
@@ -49,6 +52,7 @@ int	silent;
 int	verbose;
 int	disre_disable = 0;
 int	deftimeout = DEFTIMEOUT;
+int	noparity;
 
 struct	scg_cmd scmd;
 
@@ -58,11 +62,20 @@ LOCAL	char	*scsi_command;
 LOCAL	struct timeval	cmdstart;
 LOCAL	struct timeval	cmdstop;
 
-LOCAL	BOOL	scsi_yes __PR((char *));
-LOCAL	BOOL	scsi_sighandler __PR((int));
-LOCAL	void	scsitimes __PR((void));
-LOCAL	BOOL	scsierr __PR((void));
-LOCAL	int	scsicheckerr __PR((char *));
+EXPORT	int	scsi_open	__PR((void));
+EXPORT	int	scsi_fileno	__PR((int));
+LOCAL	BOOL	scsi_yes	__PR((char *));
+LOCAL	void	scsi_sighandler	__PR((int));
+EXPORT	int	scsicmd		__PR((char *));
+EXPORT	int	scsigetresid	__PR((void));
+LOCAL	void	scsitimes	__PR((void));
+LOCAL	BOOL	scsierr		__PR((void));
+LOCAL	int	scsicheckerr	__PR((char *));
+EXPORT	void	scsiprinterr	__PR((char *));
+EXPORT	void	scsiprintstatus	__PR((void));
+EXPORT	void	scsiprbytes	__PR((char *, unsigned char *, int));
+EXPORT	void	scsiprsense	__PR((unsigned char *, int));
+EXPORT	void	scsiprintdev	__PR((struct scsi_inquiry *));
 
 EXPORT
 int scsi_open()
@@ -109,8 +122,8 @@ BOOL scsi_yes(msg)
 		return(FALSE);
 }
 
-LOCAL
-BOOL scsi_sighandler(sig)
+LOCAL void
+scsi_sighandler(sig)
 	int	sig;
 {
 	int	f;
@@ -141,6 +154,8 @@ int scsicmd(name)
 		scmd.timeout = deftimeout;
 	if (disre_disable)
 		scmd.flags &= ~SCG_DISRE_ENA;
+	if (noparity)
+		scmd.flags |= SCG_NOPARITY;
 
 	if (verbose) {
 		printf("\nExecuting '%s' command on Bus %d Target %d, Lun %d timeout %ds\n",
@@ -222,7 +237,7 @@ void scsiprinterr(cmd)
 	case SCG_RETRYABLE:	err = "retryable error"; break;
 	case SCG_FATAL    :	err = "fatal error"; break;
 	case SCG_TIMEOUT  :	sprintf(errbuf,
-					"cmd timeout after %d.%03d (%d) s",
+					"cmd timeout after %ld.%03ld (%d) s",
 					cmdstop.tv_sec, cmdstop.tv_usec/1000,
 								cp->timeout);
 				err = errbuf;

@@ -1,4 +1,4 @@
-/* @(#)format.c	1.18 96/02/04 Copyright 1985 J. Schilling */
+/* @(#)format.c	1.22 96/08/21 Copyright 1985 J. Schilling */
 /*
  *	format
  *	common code for printf fprintf & sprintf
@@ -23,10 +23,7 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
-#define	format	__nothing__	/* prototype in standard.h may be wrong */
-#include <standard.h>
-#undef format
-
+#include <mconfig.h>
 #ifdef	HAVE_STDARG_H
 #	include <stdarg.h>
 #else
@@ -40,6 +37,7 @@
 #else
 extern	char	*gcvt __PR((double, int, char *));
 #endif
+#include <standard.h>
 
 #ifdef	DO_MASK
 #define	CHARMASK	(0xFFL)
@@ -65,12 +63,12 @@ extern	long	modlbys();
 #define	to_cap(c)	(is_cap(c) ? c : c - 'a' + 'A')
 #define	cap_ty(c)	(is_cap(c) ? 'L' : 'I')
 
-typedef unsigned int	uint;
-typedef unsigned short	ushort;
-typedef unsigned long	ulong;
+typedef unsigned int	Uint;
+typedef unsigned short	Ushort;
+typedef unsigned long	Ulong;
 
 typedef struct f_args {
-	int	(*outf) __PR((char, long));
+	void	(*outf) __PR((char, long));
 	long	farg;
 	int	minusflag;
 	int	fldwidth;
@@ -82,24 +80,24 @@ typedef struct f_args {
 	int	prefixlen;
 } f_args;
 
-LOCAL	void	prmod  __PR((ulong, unsigned, f_args *));
-LOCAL	void	prdmod __PR((ulong, f_args *));
-LOCAL	void	promod __PR((ulong, f_args *));
-LOCAL	void	prxmod __PR((ulong, f_args *));
-LOCAL	void	prXmod __PR((ulong, f_args *));
+LOCAL	void	prmod  __PR((Ulong, unsigned, f_args *));
+LOCAL	void	prdmod __PR((Ulong, f_args *));
+LOCAL	void	promod __PR((Ulong, f_args *));
+LOCAL	void	prxmod __PR((Ulong, f_args *));
+LOCAL	void	prXmod __PR((Ulong, f_args *));
 LOCAL	int	prbuf  __PR((const char *, f_args *));
 LOCAL	int	prc    __PR((char, f_args *));
 LOCAL	int	prstring __PR((const char *, f_args *));
 
 
 #ifdef	PROTOTYPES
-EXPORT int format(	int (*fun)(char, long),
+EXPORT int format(	void (*fun)(char, long),
 			long farg,
 			const char *fmt,
 			va_list args)
 #else
 EXPORT int format(fun, farg, fmt, args)
-	register int	(*fun)();
+	register void	(*fun)();
 	register long	farg;
 	register char	*fmt;
 	va_list		args;
@@ -117,7 +115,7 @@ EXPORT int format(fun, farg, fmt, args)
 	short sh;
 	const char *str;
 	double dval;
-	ulong res;
+	Ulong res;
 	char *rfmt;
 	va_list rargs;
 	f_args	fa;
@@ -227,12 +225,18 @@ EXPORT int format(fun, farg, fmt, args)
 			}
 		} else switch(*fmt) {
 
+		case 'h':
+			type = 'S';		/* convert to type */
+			goto getmode;
+
 		case 'l':
-			if (fa.signific == -1)
-				fa.signific = 0;
 			type = 'L';		/* convert to type */
 
-			if (!strchr("udiox", *(++fmt))) {
+		getmode:
+			if (fa.signific == -1)
+				fa.signific = 0;
+
+			if (!strchr("udioxX", *(++fmt))) {
 				fmt--;
 				mode = 'D';
 			} else {
@@ -247,6 +251,7 @@ EXPORT int format(fun, farg, fmt, args)
 		case 'o': case 'O':
 		case 'd': case 'D':
 		case 'i': case 'I':
+		case 'p':
 		case 'x': case 'X':
 		case 'z': case 'Z':
 			if (fa.signific == -1)
@@ -314,7 +319,15 @@ EXPORT int format(fun, farg, fmt, args)
 		case 'r':			/* recursive printf */
 			rfmt  = va_arg(args, char *);
 			rargs = va_arg(args, va_list);
-			format(fun, farg, rfmt, rargs);
+			count += format(fun, farg, rfmt, rargs);
+			continue;
+
+		case 'n':
+			{
+				int	*ip = va_arg(args, int *);
+
+				*ip = count;
+			}
 			continue;
 
 		default:
@@ -357,6 +370,7 @@ EXPORT int format(fun, farg, fmt, args)
 #endif
 			break;
 		case 'I':
+		default:
 			i = va_arg(args, int);
 			val = i;		/* extend sign here */
 			if (unsflag || mode != 'D')
@@ -366,6 +380,7 @@ EXPORT int format(fun, farg, fmt, args)
 				val = (unsigned int)val;
 #endif
 			break;
+		case 'P':
 		case 'L':
 			val = va_arg(args, long);
 			break;
@@ -390,32 +405,34 @@ EXPORT int format(fun, farg, fmt, args)
 			}
 
 			/* output a long unsigned decimal number */
-			if (res = divlbys(((ulong)val)>>1, (uint)5))
+			if ((res = divlbys(((Ulong)val)>>1, (Uint)5)) != 0)
 				prdmod(res, &fa);
-			val = modlbys(val, (uint)10);
+			val = modlbys(val, (Uint)10);
 			prdmod(val < 0 ?-val:val, &fa);
 			break;
 		case 'O':
 			/* output a long octal number */
-			if (res = (val>>3) & 0x1FFFFFFFL)
+			if ((res = (val>>3) & 0x1FFFFFFFL) != 0)
 				promod(res, &fa);
 			promod(val & 07, &fa);
 			break;
+		case 'p':
 		case 'x':
 			/* output a hex long */
-			if (res = (val>>4) & 0xFFFFFFFL)
+			if ((res = (val>>4) & 0xFFFFFFFL) != 0)
 				prxmod(res, &fa);
 			prxmod(val & 0xF, &fa);
 			break ;
+		case 'P':
 		case 'X':
 			/* output a hex long */
-			if (res = (val>>4) & 0xFFFFFFFL)
+			if ((res = (val>>4) & 0xFFFFFFFL) != 0)
 				prXmod(res, &fa);
 			prXmod(val & 0xF, &fa);
 			break ;
 		case 'Z':
 			/* output a binary long */
-			if (res = (val>>1) & 0x7FFFFFFFL)
+			if ((res = (val>>1) & 0x7FFFFFFFL) != 0)
 				prmod(res, 2, &fa);
 			prmod(val & 0x1, 2, &fa);
 		}
@@ -432,7 +449,7 @@ LOCAL	unsigned char	dtab[]  = "0123456789abcdef";
 LOCAL	unsigned char	udtab[] = "0123456789ABCDEF";
 
 LOCAL void prmod(val, base, fa)
-	ulong val;
+	Ulong val;
 	unsigned base;
 	f_args *fa;
 {
@@ -442,7 +459,7 @@ LOCAL void prmod(val, base, fa)
 }
 
 LOCAL void prdmod(val, fa)
-	ulong val;
+	Ulong val;
 	f_args *fa;
 {
 	if (val >= (unsigned)10)
@@ -451,7 +468,7 @@ LOCAL void prdmod(val, fa)
 }
 
 LOCAL void promod(val, fa)
-	ulong val;
+	Ulong val;
 	f_args *fa;
 {
 	if (val >= (unsigned)8)
@@ -460,7 +477,7 @@ LOCAL void promod(val, fa)
 }
 
 LOCAL void prxmod(val, fa)
-	ulong val;
+	Ulong val;
 	f_args *fa;
 {
 	if (val >= (unsigned)16)
@@ -469,7 +486,7 @@ LOCAL void prxmod(val, fa)
 }
 
 LOCAL void prXmod(val, fa)
-	ulong val;
+	Ulong val;
 	f_args *fa;
 {
 	if (val >= (unsigned)16)
@@ -487,7 +504,7 @@ LOCAL int prbuf(s, fa)
 	register int diff;
 	register int rfillc;
 	register long arg			= fa->farg;
-	register int (*fun) __PR((char, long))	= fa->outf;
+	register void (*fun) __PR((char, long))	= fa->outf;
 	register int count;
 
 	count = strlen(s);
@@ -535,7 +552,7 @@ LOCAL int prc(c, fa)
 	register int diff;
 	register int rfillc;
 	register long arg			= fa->farg;
-	register int (*fun) __PR((char, long))	= fa->outf;
+	register void (*fun) __PR((char, long))	= fa->outf;
 	register int count;
 
 	count = 1;

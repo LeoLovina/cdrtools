@@ -1,4 +1,4 @@
-/* @(#)scgio.h	2.1 90/01/19 Copyr 1986 J. Schilling */
+/* @(#)scgio.h	2.3 96/08/18 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI general driver 'scg'
  *
@@ -19,10 +19,45 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
+#include <btorder.h>
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+#elif	defined(_BIT_FIELDS_HTOL)	/* Motorola byteorder */
+#else 
+#error  One of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL must be defined
+#endif
+
 /*
  * SCSI status completion block.
  */
 #define	SCSI_EXTENDED_STATUS
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct	scsi_status {
+	u_char	vu_00	: 1;	/* vendor unique */
+	u_char	chk	: 1;	/* check condition: sense data available */
+	u_char	cm	: 1;	/* condition met */
+	u_char	busy	: 1;	/* device busy or reserved */
+	u_char	is	: 1;	/* intermediate status sent */
+	u_char	vu_05	: 1;	/* vendor unique */
+#define st_scsi2	vu_05	/* SCSI-2 modifier bit */
+	u_char	vu_06	: 1;	/* vendor unique */
+	u_char	st_rsvd	: 1;	/* reserved */
+
+#ifdef	SCSI_EXTENDED_STATUS
+#define	ext_st1	st_rsvd		/* extended status (next byte valid) */
+	/* byte 1 */
+	u_char	ha_er	: 1;	/* host adapter detected error */
+	u_char	reserved: 6;	/* reserved */
+	u_char	ext_st2	: 1;	/* extended status (next byte valid) */
+	/* byte 2 */
+	u_char	byte2;		/* third byte */
+#endif	/* SCSI_EXTENDED_STATUS */
+};
+
+#else	/* Motorola byteorder */
+
 struct	scsi_status {
 	u_char	st_rsvd	: 1;	/* reserved */
 	u_char	vu_06	: 1;	/* vendor unique */
@@ -43,12 +78,30 @@ struct	scsi_status {
 	u_char	byte2;		/* third byte */
 #endif	/* SCSI_EXTENDED_STATUS */
 };
+#endif
 
 /*
  * OLD Standard (Non Extended) SCSI Sense. Used mainly by the
  * Adaptec ACB 4000 which is the only controller that
  * does not support the Extended sense format.
  */
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct	scsi_sense {		/* scsi sense for error classes 0-6 */
+	u_char	code	: 7;	/* error class/code */
+	u_char	adr_val	: 1;	/* sense data is valid */
+#ifdef	comment
+	u_char	high_addr:5;	/* high byte of block addr */
+	u_char	rsvd	: 3;
+#else
+	u_char	high_addr;	/* high byte of block addr */
+#endif
+	u_char	mid_addr;	/* middle byte of block addr */
+	u_char	low_addr;	/* low byte of block addr */
+};
+
+#else	/* Motorola byteorder */
+
 struct	scsi_sense {		/* scsi sense for error classes 0-6 */
 	u_char	adr_val	: 1;	/* sense data is valid */
 	u_char	code	: 7;	/* error class/code */
@@ -61,6 +114,7 @@ struct	scsi_sense {		/* scsi sense for error classes 0-6 */
 	u_char	mid_addr;	/* middle byte of block addr */
 	u_char	low_addr;	/* low byte of block addr */
 };
+#endif
 
 /*
  * SCSI extended sense parameter block.
@@ -68,6 +122,37 @@ struct	scsi_sense {		/* scsi sense for error classes 0-6 */
 #ifdef	comment
 #define SC_CLASS_EXTENDED_SENSE 0x7     /* indicates extended sense */
 #endif
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
+	/* byte 0 */
+	u_char	type	: 7;	/* fixed at 0x70 */
+	u_char	adr_val	: 1;	/* sense data is valid */
+	/* byte 1 */
+	u_char	seg_num;	/* segment number, applies to copy cmd only */
+	/* byte 2 */
+	u_char	key	: 4;	/* sense key, see below */
+	u_char		: 1;	/* reserved */
+	u_char	ili	: 1;	/* incorrect length indicator */
+	u_char	eom	: 1;	/* end of media */
+	u_char	fil_mk	: 1;	/* file mark on device */
+	/* bytes 3 through 7 */
+	u_char	info_1;		/* information byte 1 */
+	u_char	info_2;		/* information byte 2 */
+	u_char	info_3;		/* information byte 3 */
+	u_char	info_4;		/* information byte 4 */
+	u_char	add_len;	/* number of additional bytes */
+	/* bytes 8 through 13, CCS additions */
+	u_char	optional_8;	/* CCS search and copy only */
+	u_char	optional_9;	/* CCS search and copy only */
+	u_char	optional_10;	/* CCS search and copy only */
+	u_char	optional_11;	/* CCS search and copy only */
+	u_char 	error_code;	/* error class & code */
+	u_char	:8;		/* reserved */
+};
+
+#else	/* Motorola byteorder */
 
 struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	/* byte 0 */
@@ -95,7 +180,7 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	u_char 	error_code;	/* error class & code */
 	u_char	:8;		/* reserved */
 };
-
+#endif
 /*
  * SCSI Operation codes. 
  */
@@ -148,6 +233,25 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
  * Standard SCSI control blocks.
  * These go in or out over the SCSI bus.
  */
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct	scsi_g0cdb {		/* scsi group 0 command description block */
+	u_char	cmd;		/* command code */
+	u_char	high_addr : 5;	/* high part of block address */
+	u_char	lun	  : 3;	/* logical unit number */
+	u_char	mid_addr;	/* middle part of block address */
+	u_char	low_addr;	/* low part of block address */
+	u_char	count;		/* transfer length */
+	u_char	link	  : 1;	/* link (another command follows) */
+	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
+	u_char	rsvd	  : 4;	/* reserved */
+	u_char	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
+	u_char	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
+};
+
+#else	/* Motorola byteorder */
+
 struct	scsi_g0cdb {		/* scsi group 0 command description block */
 	u_char	cmd;		/* command code */
 	u_char	lun	  : 3;	/* logical unit number */
@@ -161,6 +265,26 @@ struct	scsi_g0cdb {		/* scsi group 0 command description block */
 	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
 	u_char	link	  : 1;	/* link (another command follows) */
 };
+#endif
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct	scsi_g1cdb {		/* scsi group 1 command description block */
+	u_char	cmd;		/* command code */
+	u_char	reladr	  : 1;	/* address is relative */
+	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
+	u_char	lun	  : 3;	/* logical unit number */
+	u_char	addr[4];	/* logical block address */
+	u_char	res6;		/* reserved byte 6 */
+	u_char	count[2];	/* transfer length */
+	u_char	link	  : 1;	/* link (another command follows) */
+	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
+	u_char	rsvd	  : 4;	/* reserved */
+	u_char	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
+	u_char	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
+};
+
+#else	/* Motorola byteorder */
 
 struct	scsi_g1cdb {		/* scsi group 1 command description block */
 	u_char	cmd;		/* command code */
@@ -176,6 +300,28 @@ struct	scsi_g1cdb {		/* scsi group 1 command description block */
 	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
 	u_char	link	  : 1;	/* link (another command follows) */
 };
+#endif
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct	scsi_g5cdb {		/* scsi group 5 command description block */
+	u_char	cmd;		/* command code */
+	u_char	reladr	  : 1;	/* address is relative */
+	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
+	u_char	lun	  : 3;	/* logical unit number */
+	u_char	addr[4];	/* logical block address */
+	u_char	res6;		/* reserved byte 6 */
+	u_char	res7;		/* reserved byte 7 */
+	u_char	res8;		/* reserved byte 8 */
+	u_char	count[2];	/* transfer length */
+	u_char	link	  : 1;	/* link (another command follows) */
+	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
+	u_char	rsvd	  : 4;	/* reserved */
+	u_char	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
+	u_char	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
+};
+
+#else	/* Motorola byteorder */
 
 struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	u_char	cmd;		/* command code */
@@ -193,6 +339,7 @@ struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
 	u_char	link	  : 1;	/* link (another command follows) */
 };
+#endif
 
 #define	SC_G0_CDBLEN	6	/* Len of Group 0 commands */
 #define	SC_G1_CDBLEN	10	/* Len of Group 1 commands */
@@ -255,6 +402,7 @@ XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
 #define	SCG_DISRE_ENA	0x0002		/* enable disconnect/reconnect */
 #define	SCG_SILENT	0x0004		/* be silent on errors */
 #define	SCG_CMD_RETRY	0x0008		/* enable retries */
+#define	SCG_NOPARITY	0x0010		/* disable parity for this command */
 
 /*
  * definition for error field in scg_cmd struct
@@ -323,10 +471,10 @@ XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
 #define	SC_COMM			0x09
 #define	SC_NOTPR		0x7F
 
-#if	defined(SOL2)
+#if	defined(SVR4)
 #include <sys/ioccom.h>
 #endif
-#if	defined(__STDC__) || defined(SOL2)
+#if	defined(__STDC__) || defined(SVR4)
 #define	SCGIOCMD	_IOWR('G', 1, struct scg_cmd)	/* do a SCSI cmd   */
 #define	SCGIORESET	_IO('G', 2)			/* reset SCSI bus  */
 #define	SCGIOGDISRE	_IOR('G', 4, int)		/* get sc disre Val*/

@@ -1,4 +1,4 @@
-/* @(#)frame.h	1.2 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)frame.h	1.4 96/06/16 Copyright 1995 J. Schilling */
 /*
  * Common definitions for routines that parse the stack frame.
  *
@@ -21,7 +21,7 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
-#ifdef	SVR4
+#if defined (sun) && (defined(SVR4) || defined(__SVR4) || defined(__SVR4__))
 #	ifdef	i386
 		/*
 		 * On Solaris 2.1 x86 sys/frame.h is not useful at all

@@ -1,4 +1,4 @@
-/* @(#)saveargs.c	1.4 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)saveargs.c	1.5 96/06/16 Copyright 1995 J. Schilling */
 /* save argc, argv for command error printing routines */
 /* This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,14 @@
 
 #include <mconfig.h>
 #include <standard.h>
-#ifdef	HAVE_STRING_H
-#include <string.h>
-#endif
-#ifdef	HAVE_STDLIB_H
-#include <stdlib.h>
-#else
-extern	char	*malloc();
-#endif
+#include <strdefs.h>
+#include <stdxlib.h>
 
+#ifndef	HAVE_GETAV0
+#	ifdef	HAVE_SCANSTACK
+#	undef	HAVE_SCANSTACK
+#	endif
+#endif
 #ifdef	NO_SCANSTACK
 #	ifdef	HAVE_SCANSTACK
 #	undef	HAVE_SCANSTACK

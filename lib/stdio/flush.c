@@ -1,4 +1,4 @@
-/* @(#)flush.c	1.3 96/02/04 Copyright 1986 J. Schilling */
+/* @(#)flush.c	1.4 96/05/09 Copyright 1986 J. Schilling */
 /*
  *	Copyright (c) 1986 J. Schilling
  */
@@ -18,9 +18,9 @@
  */
 
 #include <stdio.h>
+#include "io.h"
 
 int flush()
 {
-	return (fflush (stdout));
+	return (fflush(stdout));
 }
-

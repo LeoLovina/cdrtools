@@ -1,8 +1,8 @@
-/* @(#)scsi_cdr.c	1.1 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.5 96/10/03 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.1 96/02/04 Copyright 1995 J. Schilling";
-#endif  lint
+	"@(#)scsi_cdr.c	1.5 96/10/03 Copyright 1995 J. Schilling";
+#endif
 /*
  *	SCSI command functions for cdrecord
  *
@@ -33,11 +33,12 @@ static	char sccsid[] =
  */
 #include <stdio.h>
 #include <standard.h>
-#include <stdarg.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/file.h>
 
+#include <btorder.h>
 #include <scgio.h>
 #include <scsidefs.h>
 #include <scsireg.h>
@@ -57,9 +58,13 @@ extern	int	lun;
 extern	int	silent;
 extern	int	verbose;
 
+EXPORT	int	open_scsi	__PR((char *scsidev, int timeout));
+EXPORT	void	scsi_settimeout	__PR((int timeout));
 
-int
-open_scsi(char *scsidev, int timeout)
+EXPORT int
+open_scsi(scsidev, timeout)
+	char	*scsidev;
+	int	timeout;
 {
 	int	x1, x2, x3;
 	int	n;
@@ -88,15 +93,17 @@ open_scsi(char *scsidev, int timeout)
 	return (scsi_open());
 }
 
-void
-scsi_settimeout(int timeout)
+EXPORT void
+scsi_settimeout(timeout)
+	int	timeout;
 {
 	extern	int	deftimeout;
 
 	deftimeout = timeout / 100;
 }
 
-BOOL unit_ready()
+EXPORT BOOL
+unit_ready()
 {
 	if (test_unit_ready() >= 0)		/* alles OK */
 		return (TRUE);
@@ -113,7 +120,7 @@ BOOL unit_ready()
 	return (((struct scsi_ext_sense *)&scmd.sense)->key != SC_NOT_READY);
 }
 
-int
+EXPORT int
 test_unit_ready()
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -129,7 +136,7 @@ test_unit_ready()
 	return (scsicmd("test unit ready"));
 }
 
-int
+EXPORT int
 rezero_unit()
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -145,7 +152,7 @@ rezero_unit()
 	return (scsicmd("rezero unit"));
 }
 
-int
+EXPORT int
 request_sense()
 {
 	char	sensebuf[CCS_SENSE_LEN];
@@ -167,7 +174,7 @@ request_sense()
 	return (0);
 }
 
-int
+EXPORT int
 inquiry(bp, cnt)
 	caddr_t	bp;
 	int	cnt;
@@ -193,7 +200,7 @@ inquiry(bp, cnt)
 	return (0);
 }
 
-int
+EXPORT int
 scsi_load_unload(load)
 	int	load;
 {
@@ -212,7 +219,7 @@ scsi_load_unload(load)
 }
 
 
-int
+EXPORT int
 scsi_prevent_removal(prevent)
 	int	prevent;
 {
@@ -231,7 +238,7 @@ scsi_prevent_removal(prevent)
 }
 
 
-int
+EXPORT int
 scsi_start_stop_unit(flg)
 	int	flg;
 {
@@ -247,7 +254,7 @@ scsi_start_stop_unit(flg)
 	return (scsicmd("start/stop unit"));
 }
 
-int
+EXPORT int
 qic02(cmd)
 	int	cmd;
 {
@@ -265,7 +272,7 @@ qic02(cmd)
 	return (scsicmd("qic 02"));
 }
 
-int
+EXPORT int
 write_xg0(bp, addr, size, cnt)
 	caddr_t	bp;		/* address of buffer */
 	long	addr;		/* disk address (sector) to put */
@@ -290,7 +297,7 @@ write_xg0(bp, addr, size, cnt)
 	return (size - scmd.resid);
 }
 
-int
+EXPORT int
 write_track(track, isaudio, preemp)
 	long	track;		/* track number 0 == new track */
 	int	isaudio;
@@ -312,7 +319,7 @@ write_track(track, isaudio, preemp)
 	return (0);
 }
 
-int
+EXPORT int
 scsi_flush_cache()
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -328,7 +335,7 @@ scsi_flush_cache()
 	return (0);
 }
 
-int
+EXPORT int
 fixation(onp, type)
 	int	onp;	/* open next program area */
 	int	type;	/* TOC type 0: CD-DA, 1: CD-ROM, 2: CD-ROM/XA1, 3: CD-ROM/XA2, 4: CDI */
@@ -347,7 +354,7 @@ fixation(onp, type)
 	return (0);
 }
 
-int
+EXPORT int
 recover()
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -363,7 +370,25 @@ recover()
 	return (0);
 }
 
-int
+EXPORT int
+XXXfirst_writeable_addr(len)
+	unsigned long len;
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.flags = SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G1_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.cdb.g1_cdb.cmd = 0xE2;
+	scmd.cdb.g1_cdb.lun = lun;
+	i_to_long(&scmd.cdb.g1_cdb.addr[3], len);
+	
+	if (scsicmd("first writeable address") < 0)
+		return (-1);
+	return (0);
+}
+
+EXPORT int
 reserve_track(len)
 	unsigned long len;
 {
@@ -381,7 +406,7 @@ reserve_track(len)
 	return (0);
 }
 
-int
+EXPORT int
 mode_select(dp, cnt, smp, pf)
 	u_char	*dp;
 	int	cnt;
@@ -407,22 +432,17 @@ mode_select(dp, cnt, smp, pf)
 }
 
 struct cdd_52x_mode_page_21 {	/* write track information */
-	u_char	parsave		: 1;
-	u_char			: 1;
-	u_char	p_code		: 6;
+	u_char	MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x0E = 14 Bytes */
 	u_char	res_2;
 	u_char	sectype;
 	u_char	track;
 	u_char	ISRC[9];
 	u_char	res[2];
-
 };
 
 struct cdd_52x_mode_page_23 {	/* speed selection */
-	u_char	parsave		: 1;
-	u_char			: 1;
-	u_char	p_code		: 6;
+	u_char	MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x06 = 6 Bytes */
 	u_char	speed;
 	u_char	dummy;
@@ -430,16 +450,26 @@ struct cdd_52x_mode_page_23 {	/* speed selection */
 
 };
 
+#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
 struct yamaha_mode_page_31 {	/* drive configuration */
-	u_char	parsave		: 1;
-	u_char			: 1;
-	u_char	p_code		: 6;
+	u_char	MP_P_CODE;		/* parsave & pagecode */
+	u_char	p_len;			/* 0x02 = 2 Bytes */
+	u_char	res;
+	u_char	dummy		: 4;
+	u_char	speed		: 4;
+};
+
+#else				/* Motorola byteorder */
+
+struct yamaha_mode_page_31 {	/* drive configuration */
+	u_char	MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x02 = 2 Bytes */
 	u_char	res;
 	u_char	speed		: 4;
 	u_char	dummy		: 4;
-
 };
+#endif
 
 struct cdd_52x_mode_data {
 	struct scsi_mode_header	header;
@@ -450,7 +480,7 @@ struct cdd_52x_mode_data {
 	} pagex;
 };
 
-int
+EXPORT int
 speed_select(speed, dummy)
 	int	speed;
 	int	dummy;
@@ -482,7 +512,7 @@ speed_select(speed, dummy)
 	return (mode_select((u_char *)&md, count, 0, 1));
 }
 
-int
+EXPORT int
 write_track_info(isaudio, preemp)
 	int	isaudio;
 	int	preemp;
@@ -501,7 +531,7 @@ write_track_info(isaudio, preemp)
 	return (mode_select((u_char *)&md, count, 0, 1));
 }
 
-int
+EXPORT int
 select_secsize(secsize)
 	int	secsize;
 {
@@ -518,17 +548,23 @@ select_secsize(secsize)
 
 int	dev = DEV_CDD_521;
 
-BOOL
+EXPORT BOOL
 is_cdrecorder()
 {
 	return (dev == DEV_CDD_521 ||
 		dev == DEV_YAMAHA_CDR_100);
 }
 
-BOOL
+EXPORT BOOL
 is_yamaha()
 {
 	return (dev == DEV_YAMAHA_CDR_100);
+}
+
+EXPORT BOOL
+is_unsupported()
+{
+	return (dev == DEV_PLASMON_RF_4100);
 }
 
 
@@ -539,7 +575,7 @@ is_yamaha()
 /*struct scsi_capacity cap = { 0, 2048 };*/
 struct scsi_capacity cap = { 0, 2352 };
 
-int
+EXPORT int
 read_scsi(bp, addr, cnt)
 	caddr_t	bp;
 	long	addr;
@@ -551,7 +587,7 @@ read_scsi(bp, addr, cnt)
 		return(read_g1(bp, addr, cnt));
 }
 
-int
+EXPORT int
 read_g0(bp, addr, cnt)
 	caddr_t	bp;
 	long	addr;
@@ -576,7 +612,7 @@ read_g0(bp, addr, cnt)
 	return (scsicmd("read_g0"));
 }
 
-int
+EXPORT int
 read_g1(bp, addr, cnt)
 	caddr_t	bp;
 	long	addr;
@@ -601,7 +637,8 @@ read_g1(bp, addr, cnt)
 }
 #endif	/* DEBUG */
 
-BOOL getdev(print)
+EXPORT BOOL
+getdev(print)
 	BOOL	print;
 {
 	BOOL	got_inquiry = TRUE;
@@ -723,14 +760,19 @@ BOOL getdev(print)
 	case INQ_WORM:
 		if (strindex("RXT-800S", inq.ident))
 			dev = DEV_RXT800S;
+
+		if (strindex("PLASMON", inq.info)) {
+			if (strindex("RF4100", inq.ident))
+				dev = DEV_PLASMON_RF_4100;
+		}
 		if (strindex("PHILIPS", inq.info) ||
 				strindex("IMS", inq.info) ||
 				strindex("KODAK", inq.info) ||
+				strindex("PLASMON", inq.info) ||
 				strindex("HP", inq.info))
 			dev = DEV_CDD_521;
 		if (strindex("YAMAHA", inq.info))
 			dev = DEV_YAMAHA_CDR_100;
-		break;
 
 	case INQ_PROCD:
 		if (strindex("BERTHOLD", inq.info)) {
@@ -786,7 +828,8 @@ BOOL getdev(print)
 	return (TRUE);
 }
 
-void printdev()
+EXPORT void
+printdev()
 {
 	printf("Device seems to be: ");
 
@@ -813,6 +856,7 @@ void printdev()
 
 	case DEV_CDD_521:	printf("Philips CDD521");	break;
 	case DEV_YAMAHA_CDR_100:printf("Yamaha CDR-100");	break;
+	case DEV_PLASMON_RF_4100:printf("Plasmon RF-4100");	break;
 
 	default:		printf("Missing Entry");	break;
 
@@ -821,7 +865,7 @@ void printdev()
 
 }
 
-BOOL
+EXPORT BOOL
 do_inquiry(print)
 	int	print;
 {
@@ -833,7 +877,7 @@ do_inquiry(print)
 	}
 }
 
-BOOL
+EXPORT BOOL
 recovery_needed()
 {
 	int err;

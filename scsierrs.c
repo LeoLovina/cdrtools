@@ -1,8 +1,8 @@
-/* @(#)scsierrs.c	2.8 96/02/04 Copyr 1987-1996 J. Schilling */
+/* @(#)scsierrs.c	2.9 96/06/16 Copyright 1987-1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsierrs.c	2.8 96/02/04 Copyr 1987-1996 J. Schilling";
-#endif  lint
+	"@(#)scsierrs.c	2.9 96/06/16 Copyright 1987-1996 J. Schilling";
+#endif
 /*
  *	Error printing for scsitransp.c
  *
@@ -45,6 +45,9 @@ static	char sccsid[] =
 #define	SMO_C501
 #define	CDD_521
 
+EXPORT	char	*scsisensemsg	__PR((int, int, int));
+EXPORT	void	scsierrmsg	__PR((struct scsi_sense *,
+						struct scsi_status *, int));
 static u_char sd_adaptec_keys[] = {
 	0, 4, 4, 4,  2, 2, 4, 4,		/* 0x00-0x07 */
 	4, 4, 4, 4,  4, 4, 4, 4,		/* 0x08-0x0f */
@@ -352,7 +355,7 @@ char	*scsisensemsg(ctype, class, code)
 }
 
 #undef	sense	/*XXX JS Hack, solange scgio.h noch nicht fertig ist */
-EXPORT
+EXPORT void
 scsierrmsg(sense, status, error_code)
 	register struct scsi_sense *sense;
 	register struct scsi_status *status;
@@ -360,13 +363,13 @@ scsierrmsg(sense, status, error_code)
 {
 	char *sensemsg, *cmdname, *sensekey;
 #define	ext_sense	((struct scsi_ext_sense* ) sense)
-	register int blkno;
+	register int blkno = 0;
 	register int class;
 	register int code;
-	int key;
-	int blkvalid;
-	int fm;
-	int eom;
+	int key = 0;
+	int blkvalid = 0;
+	int fm = 0;
+	int eom = 0;
 	extern int dev;
 
 	sensekey = sensemsg = "[]";

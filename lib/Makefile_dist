@@ -57,7 +57,8 @@ STDIO=		stdio/flag.o stdio/flush.o stdio/fgetline.o stdio/filewrite.o
 all:	stdio libschily.a
 
 clean:	
-	rm -f av_offset av_offset.o align_test align_test.o comerr.h $(OBJ)
+	rm -f av_offset av_offset.o align_test align_test.o align.h comerr.h \
+	$(OBJ) libschily.a
 	cd stdio; $(MAKE) clean
 
 $(STDIO):

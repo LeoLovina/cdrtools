@@ -1,4 +1,4 @@
-/* @(#)cdrecord.h	1.1 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.h	1.4 96/10/03 Copyright 1995 J. Schilling */
 /*
  *	Definitions for cdrecord
  *
@@ -40,33 +40,34 @@
 #define PAD_SECS	15	/* NOTE: pad must be less than BUF_SIZE */
 #define	PAD_SIZE	(PAD_SECS * DATA_SEC_SIZE)
 
-int	open_scsi	__PR((char *, int));
-void	scsi_set_timeout __PR((int));
-BOOL	unit_ready	__PR((void));
-int	test_unit_ready	__PR((void));
-int	rezero_unit	__PR((void));
-int	request_sense	__PR((void));
-int	inquiry		__PR((caddr_t, int));
-int	scsi_load_unload __PR((int));
-int	scsi_prevent_removal __PR((int));
-int	scsi_start_stop_unit __PR((int));
-int	qic02		__PR((int));
-int	write_xg0	__PR((caddr_t, long, int, int));
-int	write_track	__PR((long, int, int));
-int	scsi_flush_cache __PR((void));
-int	fixation	__PR((int, int));
-int	recover		__PR((void));
-int	reserve_track	__PR((unsigned long));
-int	mode_select	__PR((unsigned char *, int, int, int));
-int	speed_select	__PR((int, int));
-int	write_track_info __PR((int, int));
-int	select_secsize	__PR((int));
-BOOL	is_cdrecorder	__PR((void));
-BOOL	is_yamaha	__PR((void));
-int	read_scsi	__PR((caddr_t, long, int));
-int	read_g0		__PR((caddr_t, long, int));
-int	read_g1		__PR((caddr_t, long, int));
-BOOL	getdev		__PR((BOOL));
-void	printdev	__PR((void));
-BOOL	do_inquiry	__PR((BOOL));
-BOOL	recovery_needed	__PR((void));
+extern	int	open_scsi	__PR((char *, int));
+extern	void	scsi_settimeout	__PR((int));
+extern	BOOL	unit_ready	__PR((void));
+extern	int	test_unit_ready	__PR((void));
+extern	int	rezero_unit	__PR((void));
+extern	int	request_sense	__PR((void));
+extern	int	inquiry		__PR((caddr_t, int));
+extern	int	scsi_load_unload __PR((int));
+extern	int	scsi_prevent_removal __PR((int));
+extern	int	scsi_start_stop_unit __PR((int));
+extern	int	qic02		__PR((int));
+extern	int	write_xg0	__PR((caddr_t, long, int, int));
+extern	int	write_track	__PR((long, int, int));
+extern	int	scsi_flush_cache __PR((void));
+extern	int	fixation	__PR((int, int));
+extern	int	recover		__PR((void));
+extern	int	reserve_track	__PR((unsigned long));
+extern	int	mode_select	__PR((unsigned char *, int, int, int));
+extern	int	speed_select	__PR((int, int));
+extern	int	write_track_info __PR((int, int));
+extern	int	select_secsize	__PR((int));
+extern	BOOL	is_cdrecorder	__PR((void));
+extern	BOOL	is_yamaha	__PR((void));
+extern	BOOL	is_unsupported	__PR((void));
+extern	int	read_scsi	__PR((caddr_t, long, int));
+extern	int	read_g0		__PR((caddr_t, long, int));
+extern	int	read_g1		__PR((caddr_t, long, int));
+extern	BOOL	getdev		__PR((BOOL));
+extern	void	printdev	__PR((void));
+extern	BOOL	do_inquiry	__PR((BOOL));
+extern	BOOL	recovery_needed	__PR((void));

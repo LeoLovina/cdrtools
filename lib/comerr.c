@@ -1,4 +1,4 @@
-/* @(#)comerr.c	1.15 96/02/04 Copyright 1985 J. Schilling */
+/* @(#)comerr.c	1.16 96/08/21 Copyright 1985 J. Schilling */
 /*
  *	Routines for printing command errors
  *
@@ -136,11 +136,10 @@ local int _comerr(exflg, err, msg, args)
 	if (err < 0) {
 		error("%s: %r", prognam, msg, args);
 	} else {
-		if (err >= sys_nerr) {
+		errnam = errmsgstr(err);
+		if (errnam == NULL) {
 			(void)sprintf(errbuf, "Error %d", err);
 			errnam = errbuf;
-		} else {
-			errnam = sys_errlist[err];
 		}
 		error("%s: %s. %r", prognam, errnam, msg, args);
 	}
@@ -149,4 +148,15 @@ local int _comerr(exflg, err, msg, args)
 		/* NOTREACHED */
 	}
 	return(err);
+}
+
+char *
+errmsgstr(err)
+	int	err;
+{
+	if (err < 0 || err >= sys_nerr) {
+		return (NULL);
+	} else {
+		return (sys_errlist[err]);
+	}
 }

@@ -1,62 +1,86 @@
-This Version 1.0 of cdrecord for Solaris
+# @(#)README	1.3 96/10/04 Copyright 1996 J. Schilling
+
+This is Version 1.1 of cdrecord for Solaris
 
 Cdrecord allows you to create CD's on a CD-Recorder.
-Cdrecord runs on Solaris 2.3 or later.
+Cdrecord runs on sparc and x86 on Solaris 2.3 or later.
+Cdrecord runs without problems on a loded system.
 
 The cdrecord distribution contains a SCSI user level transport library.
 The SCSI library is suitable to talk to any SCSI device without having
 a special driver for it.
+Cdrecord may be easily ported to any system that has a 
+SCSI device driver similar to the scg driver.
 
 
-You need the SCSI generic driver 'scg' in order to run cdrecord.
+You *need* the SCSI general driver 'scg' in order to run cdrecord.
 
 The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
 it is supplied binary in pkgadd(1m) format and is tested 
-on Solaris 2.3 & Solaris 2.4.
+on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
 
 
-It is nice to have the 'fbk' driver to mount files that contain
+It is _nice to have_ the 'fbk' driver to mount files that contain 
 images of file systems. Fbk means File simulates Block Device.
 
 The 'fbk' driver is Copyright 1988-1995 Jörg Schilling,
 it is supplied binary in pkgadd(1m) format and is tested
-on Solaris 2.3 & Solaris 2.4.
+on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
 
-If scg & fbk compile on Solarix x86, they will be released within the next
-days.
+cdrecord compiles and runs on Solaris x86, thanks to 
+gert@fwi.uva.nl (Gert Poletiek) who did the tests.
+The bitorder problems have been eliminated.
+
 cdrecord should compile on SunOS, but you will need the scg driver for
 SunOS in this case.
 
 
-Cdrecord for Solaris is tested on a Philips CDD 521.
+Cdrecord has been implemented with a Philips CDD 521.
 It should run also on:
 
 	Philips CDD 522
 	Philips CDD 2000
-	HP C4324/C4325
-	HP SureStore 4020i
-	Plasmon CDR 4220
-	Grundig CDR-100
-(not tested)
-
-Implemented but not tested at all:
+	HP C4324/C4325	 (HP SureStore 4020i)
+	Plasmon CDR 4220 (not tested)
+	Grundig CDR-100  (not tested)
 	Yamaha CDR-100
 	Yamaha CDR-102
+
+It definitely does (currently) not run on a Plasmon RF-41000
+which has the same drive mechanism as the Philips CDD-522 but a different
+SCSI interface board.
+
+I currently have SCSI command reference manuals for:
+	
+	Philips CDD-522
+	Philips CDD-2000
+	HP C4324/C4325	 (HP SureStore 4020i)
+	Plasmon	RF-41000			*1
+	Sony	CDU-924				*2
+	Yamaha	CDR-100/102
+
+*1	Will get support if there is someone willing to test form me
+*2	Will get support within the next weeks.
+
+All companies that support me with SCSI command reference manuals and drives
+will get (continued) support in the following releases.
 
 To install get:
 
 	SCHILYscg.sparc.tar.Z	The scg driver in pkgadd format (sparc).
 	SCHILYfbk.sparc.tar.Z	The fbk driver in pkgadd format (sparc).
-	cdrecord.tar.Z		The cdrecord for Solaris distribution.
+	SCHILYscg.i386.tar.Z	The scg driver in pkgadd format (x86).
+	SCHILYfbk.i386.tar.Z	The fbk driver in pkgadd format (x86).
+	cdrecord-1.1.tar.Z	The cdrecord for Solaris distribution.
 
 NOTE:	These tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
 	tar may get some minor trouble.
 
 The files are located on:
 
-ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/...
-ftp://ftp.fokus.gmd.de/pub/unix/kernel/scg/...
-ftp://ftp.fokus.gmd.de/pub/unix/kernel/fbk/...
+ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/ ...
+ftp://ftp.fokus.gmd.de/pub/unix/kernel/scg/ ...
+ftp://ftp.fokus.gmd.de/pub/unix/kernel/fbk/ ...
 
 Installation Process:
 
@@ -66,7 +90,6 @@ Installation Process:
 			Password: xxxxx
 			cd /tmp
 			zcat SCHILYscg.tar | tar -xvf -
-			cd SCHILYscg
 			pkgadd -d .
 			reboot -- -r 
 
@@ -77,13 +100,39 @@ Installation Process:
 		
 
 NOTE:
+	Be very carefull. pkgadd does not check for the right target 
+	architecture. Do not indstall drivers for intel on sparc
+	and vice versa. You will get a corrupt system.
+
 	You need to be root because you need access to /dev/scg? and to be
 	able to put cdrecord into the realtime scheduling class.
 
 
 The SCSI transport library has been taken from the sformat program.
+Sformat is the first SCSI disk formatting/analyzing/repairing that runs on
+SunOS/Solaris. The first release of sformat has been made for SunOS 3.0
+(two years before Sun introduced their format utility). Sformat source
+including 10 years of competence in SCSI disk handling will be 
+available within the next few months.
+
+I am interested to hear if someone is interested in a kernel based
+filesystem for Solaris that uses packet writing on the CD-Recorder.
+The filesystem will create a single session CD that may be finally converted
+to a hybride filesystem that alllows to be read as 
+ISO-9660 with Rock Ridge extensions too.
+Please mail suggestions to: wofs@schily.isdn.cs.tu-berlin.de
+
+If you want to use the CD-recorder as CD-ROM device, have a look at 
+
+ftp://ftp.fokus.gmd.de/pub/unix/kernel/sd
+
+
+	Joerg Schilling
+
+	(really Jörg Schilling if you have ISO-8859-1)
 
 If you have questions mail to:
 
-schilling@fokus.gmd.de
-
+	HOME: 		joerg@schily.isdn.cs.tu-berlin.de
+	UNIVERSITY:	js@cs.tu-berlin.de
+	WORK:		schilling@fokus.gmd.de

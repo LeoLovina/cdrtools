@@ -1,4 +1,4 @@
-/* @(#)scsidefs.h	1.9 96/02/04 Copyr 1988 J. Schilling */
+/* @(#)scsidefs.h	1.11 96/10/03 Copyright 1988 J. Schilling */
 /*
  *	Definitions for SCSI devices i.e. for error strings in scsierrs.c
  *
@@ -41,6 +41,7 @@
 #define	DEV_CDD_521		210
 #define	DEV_CDD_522		211
 #define	DEV_YAMAHA_CDR_100	220
+#define	DEV_PLASMON_RF_4100	230
 
 #define DEV_SONY_SMO	400
 

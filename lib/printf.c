@@ -1,4 +1,4 @@
-/* @(#)printf.c	1.7 96/02/04 Copyright 1985 J. Schilling */
+/* @(#)printf.c	1.10 96/06/26 Copyright 1985 J. Schilling */
 /*
  *	Copyright (c) 1985 J. Schilling
  */
@@ -17,13 +17,15 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
+#include <mconfig.h>
 #include <stdio.h>
-#include <standard.h>
 #ifdef	HAVE_STDARG_H
 #	include <stdarg.h>
 #else
 #	include <varargs.h>
 #endif
+#include <standard.h>
+
 #define BFSIZ	256
 
 typedef struct {
@@ -33,6 +35,9 @@ typedef struct {
 	int	count;
 	FILE	*f;
 } *BUF, _BUF;
+
+LOCAL void _bflush	__PR((BUF));
+LOCAL void _bput	__PR((char, long));
 
 LOCAL void _bflush (bp)
 	register BUF	bp;
@@ -45,9 +50,9 @@ LOCAL void _bflush (bp)
 }
 
 #ifdef	PROTOTYPES
-LOCAL /*void*/ _bput (char c, long l)
+LOCAL void _bput (char c, long l)
 #else
-LOCAL /*void*/ _bput (c, l)
+LOCAL void _bput (c, l)
 		char	c;
 		long	l;
 #endif

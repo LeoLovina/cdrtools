@@ -1,4 +1,4 @@
-/* @(#)astoi.c	1.4 96/02/04 Copyright 1985 J. Schilling */
+/* @(#)astoi.c	1.5 96/05/09 Copyright 1985 J. Schilling */
 /*
  *	astoi() converts a string to int
  *	astol() converts a string to long
@@ -36,8 +36,6 @@
 			 ((c) >= 'A' && (c) <= 'F'))
 
 #define to_lower(c)	(((c) >= 'A' && (c) <= 'Z') ? (c) - 'A'+'a' : (c))
-
-char	*astol();
 
 #ifdef	notdef
 int atoi(s)
@@ -99,7 +97,7 @@ char *astol(s, l)
 			base = 16;
 		}
 	}
-	for (;c = *s; s++) {
+	for (;(c = *s) != 0; s++) {
 
 		if (is_digit(c)) {
 			digit = c - '0';

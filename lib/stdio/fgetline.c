@@ -1,4 +1,4 @@
-/* @(#)fgetline.c	1.2 96/02/04 Copyright 1986 J. Schilling */
+/* @(#)fgetline.c	1.3 96/05/09 Copyright 1986 J. Schilling */
 /*
  *	Copyright (c) 1986 J. Schilling
  */
@@ -34,7 +34,7 @@ int fgetline(f, buf, len)
 	register char	*bp	= buf;
 	register int	nl	= '\n';
 
-	(void) down2(f, _IOREAD, _IORW);
+	down2(f, _IOREAD, _IORW);
 
 	for(;;) {
 		if((c = getc(f)) < 0)

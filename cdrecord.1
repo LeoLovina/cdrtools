@@ -1,4 +1,4 @@
-.\" @(#)cdrecord.1	1.1 96/02/04 Copyright 1996 J. Schilling
+.\" @(#)cdrecord.1	1.3 96/10/03 Copyright 1996 J. Schilling
 .\" 
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -32,7 +32,7 @@
 .if n .ds o oe
 .if n .ds u ue
 .if n .ds s sz
-.TH CDRECORD 1 "Version 1.0" "J\*org Schilling" "Schily\'s USER COMMANDS"
+.TH CDRECORD 1 "Version 1.1" "J\*org Schilling" "Schily\'s USER COMMANDS"
 .SH NAME
 cdrecord \- record audio or data Compact Discs from a master
 .SH SYNOPSIS
@@ -136,7 +136,8 @@ The file with data for this tracks should
 contain stereo, 16-bit digital audio with 44100 samples/s.
 The byte order should be the following: MSB left, LSB left, 
 MSB right, LSB right, MSB left and so on. The track should be a multiple of 
-2352 bytes. It is not possible to put audio data on a raw disk because 
+2352 bytes. It is not possible to put the master image of an audio track 
+on a raw disk because 
 data will be read in multiple of 2352 bytes during the recording process.
 .TP
 .B \-data
@@ -176,7 +177,8 @@ will indicate that the audio data has been mastered with linear data \-
 this is the default.
 .TP
 .B bytes=#
-If the image for the next track has been stored on a raw disk, use this option
+If the master image for the next track has been stored on a raw disk, 
+use this option
 to specify the valid amount of data on this disk. If the image of the next 
 track is stored in a regular file, the size of that file is taken to determine
 the length of this track.
@@ -196,7 +198,7 @@ set to 2.
 To record a pure CD-ROM at double speed, using data from the file
 .IR cdimage.raw :
 .PP
-    priocntl \-e \-c RT \-p 59 cdrecord \-v speed=2 dev=2,0 cdimage.raw
+    cdrecord \-v speed=2 dev=2,0 cdimage.raw
 .PP
 To create an image for a ISO 9660 filesystem with Rock Ridge extensions:
 .PP
@@ -208,7 +210,7 @@ To check the resulting file before writing to CD:
 .br
     ls \-lR /mnt
 .br
-    mount /mnt
+    umount /mnt
 .PP
 To record a pure CD-DA (audio) at single speed, with each track contained
 in a file named
@@ -216,12 +218,12 @@ in a file named
 .IR track02.cdaudio ,
 etc:
 .PP
-    priocntl \-e \-c RT \-p 59 cdrecord \-v speed=1 dev=2,0 -audio track*.cdaudio
+    cdrecord \-v speed=1 dev=2,0 -audio track*.cdaudio
 .PP
 To check if it will be ok to use double speed for the example above. 
 Use the dummy write option:
 .PP
-    priocntl \-e \-c RT \-p 59 cdrecord \-v \-dummy speed=2 dev=2,0 \-audio track*.cdaudio
+    cdrecord \-v \-dummy speed=2 dev=2,0 \-audio track*.cdaudio
 .PP
 To record a mixed-mode CD with an ISO 9660 filesystem from
 .I cdimage.raw
@@ -230,7 +232,7 @@ on the first track, the other tracks being audio tracks from the files
 .IR track02.cdaudio ,
 etc:
 .PP
-    priocntl \-e \-c RT \-p 59 cdrecord \-v \-dummy dev=2,0 cdimage.raw \-audio track*.cdaudio
+    cdrecord \-v \-dummy dev=2,0 cdimage.raw \-audio track*.cdaudio
 
 .SH SEE ALSO
 .BR mkisofs (1),
@@ -266,9 +268,12 @@ to do this according the Kodak Photo-CD spec.
 .PP
 .B Cdrecord
 has been tested on a Philips CDD-521 recorder at single and double speed
-on a SparcStation 20/502 with no problems, slower models should work also. 
+on a SparcStation 20/502 with no problems, slower computer systems 
+should work also. 
 The newer Philips/HP/Plasmon/Grundig
-drives should work also, Yamaha may work (test it).
+drives as well as Yamaha CDR-100 and CDR-102 work also. The Plasmon RF-4100
+does not work. Although it uses the same drive mechanism as the Philips CDD-522,
+it has a different SCSI-processor and a different command set.
 .PP
 You should run several tests in single and double speed with the
 .B \-dummy
@@ -282,6 +287,34 @@ as lightly loaded as possible while writing a CD.
 needs to run as root to get access to the 
 .B /dev/scg?
 device nodes and to be able to lock itself into memory.
+.PP
+.B Cdrecord
+may safely be installed suid root to allow all users or a group of
+users with no root privileges to use 
+.B cdrecord.
+.B Cdrecord 
+in this case checks, if the real user would have been able to read 
+the specified files.
+To give all user access to use 
+.B cdrecord, 
+enter:
+.PP
+	chmod 4711 /usr/local/bin/cdrecord
+.PP
+To give a restricted group of users access to cdrecord enter:
+.PP
+	chmod 4710 /usr/local/bin/cdrecord
+.br
+	chgrp cdburners /usr/local/bin/cdrecord
+.PP
+and add a group 
+.I cdburners
+on your system.
+.PP
+Never give write permissions for non root users to the 
+.I /dev/scg?
+devices unless you would allow anybody to read/write/format
+all your disks.
 .PP
 You should not connect old drives that do not support
 disconnect/reconnect to either the SCSI bus that is connected to the
@@ -297,13 +330,14 @@ need special software to do so.
 .PP
 More information on the SCSI command set of a HP CD-Recorder can be found at:
 .PP
-	http://hpcc80.external.hp.com/Publish/isg/cdr/commandset/Index.html
+	http://www.hp.com:80/isgsupport/cdr/index.html
 .PP
 If you have more information or SCSI command manuals for other CD-Recorders
 than Philips CDD 522 or the HP drive mentioned above please contact the author.
 .PP
 The Philips CDD 521 CD-Recorder has several firmware bugs. Some of them will
 force you to power cycle the device or to reboot the machine.
+.PP
 
 .SH DIAGNOSTICS
 .PP

@@ -1,8 +1,8 @@
-/* @(#)getfp.c	1.7 96/06/16 Copyright 1988 J. Schilling */
+/* @(#)unixstd.h	1.1 96/06/26 Copyright 1996 J. Schilling */
 /*
- *	Get frame pointer
+ *	Definitions for unix system interface
  *
- *	Copyright (c) 1988 J. Schilling
+ *	Copyright (c) 1996 J. Schilling
  */
 /* This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,40 +19,24 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
+#ifndef _UNIXSTD_H
+#define	_UNIXSTD_H
+
+#ifndef	_MCONFIG_H
 #include <mconfig.h>
-#include <standard.h>
-
-#ifdef	NO_SCANSTACK
-#	ifdef	HAVE_SCANSTACK
-#	undef	HAVE_SCANSTACK
-#	endif
 #endif
 
-#ifdef	HAVE_SCANSTACK
-#include "frame.h"
+#ifdef	HAVE_UNISTD_H
+#include <unistd.h>
 
-#define	MAXWINDOWS	32
-#define	NWINDOWS	7
-
-void **getfp()
-{
-		long	**dummy[1];
-	static	int	idx = 1;	/* fool optimizer in c compiler */
-
-#ifdef	sparc
-	flush_reg_windows(MAXWINDOWS-2);
+#ifndef	_SC_PAGESIZE
+#ifdef	_SC_PAGE_SIZE	/* HP/UX & OSF */
+#define	_SC_PAGESIZE	_SC_PAGE_SIZE
 #endif
-	return ((void **)((struct frame *)&dummy[idx])->fr_savfp);
-}
-
-#ifdef	sparc
-int flush_reg_windows(n)
-	int	n;
-{
-	if (--n > 0)
-		flush_reg_windows(n);
-	return (0);
-}
 #endif
 
-#endif	/* HAVE_SCANSTACK */
+#else	/* HAVE_UNISTD_H */
+
+#endif	/* HAVE_UNISTD_H */
+
+#endif	/* _UNIXSTD_H */

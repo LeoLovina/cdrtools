@@ -1,4 +1,4 @@
-/* @(#)io.h	2.3 96/02/04 Copyright 1986, 1995 J. Schilling */
+/* @(#)io.h	2.5 96/05/09 Copyright 1986, 1995 J. Schilling */
 /*
  *	Copyright (c) 1986, 1995 J. Schilling
  */
@@ -100,10 +100,16 @@ extern	void	_io_add_my_flag __PR((FILE *, int));
 
 #endif	/* DO_MYFLAG */
 
+#ifdef	HAVE_USG_STDIO
+/*
+ * Define prototypes to verify if our interface is right
+ */
+extern	int	_filbuf	__PR((FILE *));
+extern	int	_flsbuf	__PR((int, FILE *));
+#else
 /*
  * If we are on a non USG system we cannot down file pointers
  */
-#ifndef	HAVE_USG_STDIO
 #undef	DO_DOWN
 #endif
 
@@ -111,9 +117,9 @@ extern	void	_io_add_my_flag __PR((FILE *, int));
 /*
  *	No stream checking
  */
-#define	down(f)			(f)
-#define	down1(f,fl1)		(f)
-#define	down2(f,fl1,fl2)	(f)
+#define	down(f)
+#define	down1(f,fl1)
+#define	down2(f,fl1,fl2)
 #else
 /*
  *	Do stream checking (works only on USG stdio)

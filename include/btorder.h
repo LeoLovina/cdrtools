@@ -1,8 +1,8 @@
-/* @(#)getfp.c	1.7 96/06/16 Copyright 1988 J. Schilling */
+/* @(#)btorder.h	1.1 96/08/19 Copyright 1996 J. Schilling */
 /*
- *	Get frame pointer
+ *	Definitions for Bitordering
  *
- *	Copyright (c) 1988 J. Schilling
+ *	Copyright (c) 1996 J. Schilling
  */
 /* This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,40 +19,23 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 
-#include <mconfig.h>
-#include <standard.h>
 
-#ifdef	NO_SCANSTACK
-#	ifdef	HAVE_SCANSTACK
-#	undef	HAVE_SCANSTACK
+#ifndef	_BTORDER_H
+#define	_BTORDER_H
+
+#include <sys/types.h>			/* try to load isa_defs.h on Solaris */
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+#elif	defined(_BIT_FIELDS_HTOL)	/* Motorola byteorder */
+#else
+#	if defined(sun3) || defined(mc68000) || \
+	   defined(sun4) || defined(sparc)
+#		define _BIT_FIELDS_HTOL
 #	endif
+
+#	if defined(__i386_) || defined(i386)
+#		define _BIT_FIELDS_LTOH
+#endif
 #endif
 
-#ifdef	HAVE_SCANSTACK
-#include "frame.h"
-
-#define	MAXWINDOWS	32
-#define	NWINDOWS	7
-
-void **getfp()
-{
-		long	**dummy[1];
-	static	int	idx = 1;	/* fool optimizer in c compiler */
-
-#ifdef	sparc
-	flush_reg_windows(MAXWINDOWS-2);
-#endif
-	return ((void **)((struct frame *)&dummy[idx])->fr_savfp);
-}
-
-#ifdef	sparc
-int flush_reg_windows(n)
-	int	n;
-{
-	if (--n > 0)
-		flush_reg_windows(n);
-	return (0);
-}
-#endif
-
-#endif	/* HAVE_SCANSTACK */
+#endif	/* _BTORDER_H */

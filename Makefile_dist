@@ -1,5 +1,5 @@
 PROGS=	cdrecord
-CFLAGS=	-O2 -Iinclude -I. -DSOL2
+CFLAGS=	-O -Iinclude -I. -DSVR4
 LDFLAGS= -s
 LIBS=lib/libschily.a
 

@@ -1,6 +1,13 @@
-/* @(#)getargs.c	2.2 96/02/04 Copyright 1985, 1995 J. Schilling */
+/* @(#)getargs.c	2.17 96/05/09 Copyright 1985, 1988, 1995 J. Schilling */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)getargs.c	2.17 96/05/09 Copyright 1985, 1988, 1995 J. Schilling";
+#endif
+#define	NEW
 /*
- *	Copyright (c) 1985, 1995 J. Schilling
+ *	Copyright (c) 1985, 1988, 1995 J. Schilling
+ *
+ *	1.3.88	 Start implementation of release 2
  */
 /*
  *	Parse arguments on a command line.
@@ -27,42 +34,39 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
  */
 /* LINTLIBRARY */
-#ifdef DEBUG
-#	include <stdio.h>
-#	undef	DEBUG
-#	define	DEBUG(a)	printf a
-#else
-#	undef	DEBUG
-#	define	DEBUG(a)
-#endif
 #include <standard.h>
+#include <getargs.h>
 #include <ctype.h>
 #ifdef	HAVE_STDARG_H
 #	include <stdarg.h>
 #else
 #	include <varargs.h>
 #endif
+#ifdef	HAVE_STRING_H
+#include <string.h>
+#else
+extern	char	*strchr __PR((const char *, int));
+#endif
 
 #define	NOARGS		  0	/* No more args			*/
 #define	NOTAFLAG	  1	/* Not a flag type argument	*/
 #define BADFLAG		(-1)	/* Not a valid flag argument	*/
 #define BADFMT		(-2)	/* Error in format string	*/
-#define NOTAFILE	(-3)	/* Internal code XXX??		*/
+#define NOTAFILE	(-3)	/* Seems to be a flag type arg	*/
 
-	int	_getargs __PR((int *, char *const **, const char *, va_list));
+	int	_getargs __PR((int *, char *const **, const char *,
+							BOOL, va_list));
 LOCAL	int	dofile __PR((int *, char *const **, const char **));
 LOCAL	int	doflag __PR((int *, char *const **, const char *,
-						const char *, va_list));
-LOCAL	int	dosflags __PR((const char *, const char *, va_list));
+						const char *, BOOL, va_list));
+LOCAL	int	dosflags __PR((const char *, const char *, BOOL, va_list));
 LOCAL	int	checkfmt __PR((const char *));
 LOCAL	int	checkeql __PR((const char *));
 
-extern	char	*astol();
-extern	char	*strchr();
-
+LOCAL	va_list	va_dummy;
 LOCAL	char	fmtspecs[] = "#?*&+"; 
 
-#define	isfmtspec(c)		strchr(fmtspecs, c)
+#define	isfmtspec(c)		(strchr(fmtspecs, c) != NULL)
 
 /*---------------------------------------------------------------------------
 |
@@ -88,7 +92,7 @@ int getargs(pac, pav, fmt, va_alist)
 #else
 	va_start(args);
 #endif
-	ret = _getargs(pac, pav, fmt, args);
+	ret = _getargs(pac, pav, fmt, TRUE, args);
 	va_end(args);
 	return (ret);
 }
@@ -119,7 +123,7 @@ int getallargs(pac, pav, fmt, va_alist)
 	va_start(args);
 #endif
 	for (;; (*pac)--, (*pav)++)
-		if ((ret = _getargs(pac, pav, fmt, args)) != NOTAFLAG)
+		if ((ret = _getargs(pac, pav, fmt, TRUE, args)) != NOTAFLAG)
 			break;
 	va_end(args);
 	return (ret);
@@ -136,7 +140,7 @@ int getfiles(pac, pav, fmt)
 	char *const	*pav[];
 	const char	*fmt;
 {
-	return (_getargs(pac, pav, fmt, (va_list)0));
+	return (_getargs(pac, pav, fmt, FALSE, va_dummy));
 }
 
 
@@ -154,21 +158,24 @@ int getfiles(pac, pav, fmt)
 |
 |
 +---------------------------------------------------------------------------*/
-/*LOCAL*/ int _getargs(pac, pav, fmt, args)
+/*LOCAL*/ int _getargs(pac, pav, fmt, setargs, args)
 	register int		*pac;
 	register char	*const	**pav;
 		 const char	*fmt;
+		BOOL		setargs;
 		va_list		args;
 {
 	const	 char	*argp;
 		 int	ret;
+
 
 	for(; *pac > 0; (*pac)--, (*pav)++) {
 		argp = **pav;
 
 		if ((ret = dofile(pac, pav, &argp)) != NOTAFILE)
 			return (ret);
-		if ((ret = doflag(pac, pav, argp, fmt, args)) != NOTAFLAG)
+		if ((ret = doflag(pac, pav, argp, fmt, setargs, args)) !=
+								NOTAFLAG)
 			return (ret);
 	}
 	return (NOARGS);
@@ -186,6 +193,7 @@ LOCAL int dofile(pac, pav, pargp)
 		 const char	**pargp;
 {
 	register const char	*argp = *pargp;
+
 
 	if (argp[0] == '-') {
 		/*
@@ -240,15 +248,17 @@ LOCAL int dofile(pac, pav, pargp)
 |	if the va_list is a NULL pointer only check arguments for getfiles()
 |
 +---------------------------------------------------------------------------*/
-LOCAL int doflag(pac, pav, argp, fmt, args)
+LOCAL int doflag(pac, pav, argp, fmt, setargs, args)
 		int		*pac;
 		char	*const	**pav;
 	register const char	*argp;
 	register const char	*fmt;
+		BOOL		setargs;
 		va_list		args;
 {
-	long	value;
+	long	val;
 	int	singlecharflag	= 0;
+	BOOL	isspec;
 	const char	*sargp	= argp;
 	const char	*sfmt	= fmt;
 	va_list	sargs		= args;
@@ -256,11 +266,11 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 	int		spac	= *pac;
 	void		*curarg	= (void *)0;
 
-	if (args)
+	if (setargs)
 		curarg = va_arg(args, void *);
 
 	/*
-	 * check if the first flag in format string is a sinlgechar flag
+	 * check if the first flag in format string is a singlechar flag
 	 */
 	if (fmt[1] == ',' || fmt[1] == '+' || fmt[1] == '\0')
 		singlecharflag++;
@@ -269,7 +279,25 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 	 */
 	for(;;) {
 		for(;*fmt; fmt++,argp++) {
-			if (isfmtspec(*fmt)) {
+			if (*fmt == '\\') {
+				/*
+				 * Allow "#?*&+" to appear inside a flag.
+				 * NOTE: they must be escaped by '\\' only
+				 *	 int the the format string.
+				 */
+				fmt++;
+				isspec = FALSE;
+			} else {
+				isspec = isfmtspec(*fmt);
+			}
+			if (isspec) {
+				/*
+				 * If *argp is '+' and we are on the
+				 * beginning of the arg that is currently
+				 * checked, this cannot be an inc type flag.
+				 */
+				if (*argp == '+' && argp == sargp)
+					continue;
 				/*
 				 * skip over to arg of flag
 				 */
@@ -280,8 +308,9 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 				if (argp[1] == '\0' &&
 				    (fmt[1] == '\0' || fmt[1] == ',')) {
 
-					if (args)
+					if (setargs)
 						*((int *)curarg) = TRUE;
+
 
 					return (checkfmt(fmt));/* XXX */
 				}
@@ -291,8 +320,8 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 				 * & reset arg pointer
 				 */
 				while (*fmt != ',' && *fmt != '\0') {
-					/* function has extra arg */
-					if (*fmt == '&' && args)
+					/* function has extra arg on stack */
+					if (*fmt == '&' && setargs)
 						curarg = va_arg(args, void *);
 					fmt++;
 				}
@@ -304,8 +333,10 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 
 		case '\0':
 			if (singlecharflag && 
-			   (value = dosflags(sargp, sfmt, sargs)) != BADFLAG)
-				return (value);
+			   (val = dosflags(sargp, sfmt, setargs, sargs)) !=
+								BADFLAG)
+				return (val);
+
 
 			return (BADFLAG);
 
@@ -313,7 +344,7 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 			fmt++;
 			if (fmt[1] == ',' || fmt[1] == '+' || fmt[1] == '\0')
 				singlecharflag++;
-			if (args)
+			if (setargs)
 				curarg = va_arg(args, void *);
 			continue;
 
@@ -327,37 +358,41 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 					return (BADFLAG);
 				}
 			}
-			if (args)
+			if (setargs)
 				*((const char **)curarg) = argp;
+
 
 			return (checkfmt(fmt));
 
 		case '?':
-			if (args)
+			if (setargs)
 				*((char *)curarg) = *argp;
+
 
 			return (checkfmt(fmt));
 
 		case '+':
 			/*
-			 * inc type has no arg !
+			 * inc type is similar to boolean,
+			 * there is no arg in argp to convert.
 			 */
 			if (*argp != '\0')
 				goto nextchance;
 			if (fmt[1] == 'l' || fmt[1] == 'L') {
-				if (args)
+				if (setargs)
 					*((long *)curarg) += 1;
 				fmt++;
 			} else if (fmt[1] == 's' || fmt[1] == 'S') {
-				if (args)
+				if (setargs)
 					*((short *)curarg) += 1;
 				fmt++;
 			} else {
 				if (fmt[1] == 'i' || fmt[1] == 'I')
 					fmt++;
-				if (args)
+				if (setargs)
 					*((int *)curarg) += 1;
 			}
+
 
 			return (checkfmt(fmt));
 
@@ -371,7 +406,7 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 					return (BADFLAG);
 				}
 			}
-			if (*astol(argp, &value) != '\0') {
+			if (*astol(argp, &val) != '\0') {
 				/*
 				 * arg is not a valid number!
 				 * go to next format in the format string
@@ -380,7 +415,7 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 				 */
 			nextchance:
 				while(*fmt != ',' && *fmt != '\0') {
-					if (*fmt == '&' && args)
+					if (*fmt == '&' && setargs)
 						curarg = va_arg(args, void *);
 					fmt++;
 				}
@@ -390,19 +425,20 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 				continue;
 			}
 			if (fmt[1] == 'l' || fmt[1] == 'L') {
-				if (args)
-					*((long *)curarg) = value;
+				if (setargs)
+					*((long *)curarg) = val;
 				fmt++;
 			} else if (fmt[1] == 's' || fmt[1] == 'S') {
-				if (args)
-					*((short *)curarg) = value;
+				if (setargs)
+					*((short *)curarg) = val;
 				fmt++;
 			} else {
 				if (fmt[1] == 'i' || fmt[1] == 'I')
 					fmt++;
-				if (args)
-					*((int *)curarg) = value;
+				if (setargs)
+					*((int *)curarg) = val;
 			}
+
 			return (checkfmt(fmt));
 
 		case '&':
@@ -415,12 +451,18 @@ LOCAL int doflag(pac, pav, argp, fmt, args)
 					return (BADFLAG);
 				}
 			}
-			if (args == (va_list)0) {
-				return (checkfmt(fmt));
-			} else {
-				void *funarg = va_arg(args, void *);
+			if ((val = checkfmt(fmt)) != NOTAFLAG)
+				return (val);
+			if (setargs) {
+				int	ret;
+				void	*funarg = va_arg(args, void *);
 
-				return ((*((int (*)())curarg)) (argp, funarg));
+				ret = ((*(getargfun)curarg) (argp, funarg));
+				if (ret != NOTAFILE)
+					return (ret);
+				fmt++;
+			} else {
+				return (val);
 			}
 		}
 	}
@@ -439,9 +481,10 @@ typedef struct {
 	char	type;
 } sflags;
 
-LOCAL int dosflags(argp, fmt, args)
+LOCAL int dosflags(argp, fmt, setargs, args)
 	register const char	*argp;
 	register const char	*fmt;
+		BOOL		setargs;
 		va_list		args;
 {
 #define	MAXSF	32
@@ -452,7 +495,7 @@ LOCAL int dosflags(argp, fmt, args)
 	register int	i;
 	register void	*curarg = (void *)0;
 
-	if (args)
+	if (setargs)
 		curarg = va_arg(args, void *);
 
 	while (*p) {
@@ -496,15 +539,15 @@ LOCAL int dosflags(argp, fmt, args)
 			}
 		}
 		while (*fmt != ',' && *fmt != '\0') {
-			/* function has extra arg */
-			if (*fmt == '&' && args)
+			/* function has extra arg on stack */
+			if (*fmt == '&' && setargs)
 				curarg = va_arg(args, void *);
 			fmt++;
 		}
 		if (*fmt != '\0')
 			fmt++;
 
-		if (args)
+		if (setargs)
 			curarg = va_arg(args, void *);
 	}
 	for (i=0; i < nsf; i++) {

@@ -1,4 +1,4 @@
-/* @(#)standard.h	1.12 96/02/04 Copyright 1985 J. Schilling */
+/* @(#)standard.h	1.16 96/08/21 Copyright 1985 J. Schilling */
 /*
  *	standard definitions
  *
@@ -101,6 +101,7 @@ extern	int	fexecv __PR((const char *, FILE *, FILE *, FILE *, int,
 extern	int	fexecve __PR((const char *, FILE *, FILE *, FILE *,
 					char * const *, char * const *));
 extern	int	fgetline __PR((FILE *, char *, int));
+extern	int	fgetstr __PR((FILE *, char *, int));
 extern	void	file_raise __PR((FILE *, int));
 extern	int	fileclose __PR((FILE *));
 extern	FILE	*fileluopen __PR((int, const char *));
@@ -111,6 +112,9 @@ extern	int	ffileread __PR((FILE *, void *, int));
 extern	FILE	*filereopen __PR((const char *, const char *, FILE *));
 extern	long	fileseek __PR((FILE *, long));
 extern	long	filesize __PR((FILE *));
+#ifdef	S_IFMT
+extern	int	filestat __PR((FILE *, struct stat *));
+#endif
 extern	int	filewrite __PR((FILE *, void *, int));
 extern	int	ffilewrite __PR((FILE *, void *, int));
 extern	int	flush __PR((void));
@@ -134,11 +138,13 @@ extern	void	comerr __PR((const char *, ...));
 extern	void	comerrno __PR((int, const char *, ...));
 extern	int	errmsg __PR((const char *, ...));
 extern	int	errmsgno __PR((int, const char *, ...));
+extern	char	*errmsgstr __PR((int));
 extern	int	error __PR((const char *, ...));
 extern	char	*fillbytes __PR((void *, int, char));
 extern	int	findline __PR((const char *, char, const char *,
 							int, char **, int));
 extern	int	getline __PR((char *, int));
+extern	int	getstr __PR((char *, int));
 extern	int	breakline __PR((char *, char, char **, int));
 extern	int	getallargs __PR((int *, char * const**, const char *, ...));
 extern	int	getargs __PR((int *, char * const**, const char *, ...));
@@ -160,6 +166,9 @@ extern	void	save_args __PR((int, char**));
 extern	int	saved_ac __PR((void));
 extern	char	**saved_av __PR((void));
 extern	char	*saved_av0 __PR((void));
+#ifndef	seterrno
+extern	int	seterrno __PR((int));
+#endif
 extern	void	set_progname __PR((const char *));
 extern	char	*get_progname __PR((void));
 
@@ -167,16 +176,22 @@ extern	void	setfp __PR((void * const *));
 extern	int	wait_chld __PR((int));
 extern	int	geterrno __PR((void));
 extern	void	raisecond __PR((const char *, long));
+extern	int	snprintf __PR((char *, unsigned, const char *, ...));
 /*extern	int	sprintf __PR((char *, const char *, ...)); ist woanders falsch deklariert !!!*/
 extern	char	*strcatl __PR((char *, ...));
 extern	int	streql __PR((const char *, const char *));
-extern	int	format __PR((int (*)(char, long), long, const char *, void *));
+#ifdef	va_arg
+extern	int	format __PR((void (*)(char, long), long, const char *, va_list));
+#else
+extern	int	format __PR((void (*)(char, long), long, const char *, void *));
+#endif
 
 extern	int	ftoes __PR((char *, double, int, int));
 extern	int	ftofs __PR((char *, double, int, int));
 
 extern	void	swabbytes __PR((void *, int));
 extern	char	*getav0 __PR((void));
+extern	char	**getavp __PR((void));
 extern	void	**getfp __PR((void));
 extern	int	flush_reg_windows __PR((int));
 extern	int	cmpbytes __PR((const void *, const void *, int));

@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.3 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.5 96/08/21 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -49,6 +49,10 @@ extern "C" {
 #	define	IS_MAC
 #endif
 
+#if defined(sun) || defined(__sun) || defined(__sun__)
+#	define	IS_SUN
+#endif
+
 /*
  * 1) Compiler and language related headers
  *
@@ -88,7 +92,7 @@ extern "C" {
  *			Else use BSD style sgttyb and setpgrp (ioctl.h)
  *			XXX session control should be another define XXX
  *
- * define HAVE_UTIMES_H	to use BSD utimes() and sys/time.h
+ * define HAVE_UTIMES	to use BSD utimes() and sys/time.h
  * define HAVE_UTIME_H	to use utime.h for the utimbuf structure declaration
  *			Else declare struct utimbuf yourself.
  *
@@ -96,10 +100,32 @@ extern "C" {
  * define HAVE_SYS_WAIT_H else use sys/wait.h
  *			Else declare it by yourself.
  *
+ * define HAVE_SYS_SYSTEMINFO_H to use sysinfo()
+ * define HAVE_SYS_UTSNAME_H to use uname()
+ *
+ * define HAVE_SYS_MTIO_H to use mtio definitions from sys/mtio.h
+ * define HAVE_MTGET_DSREG if struct mtget contains mt_dsreg (drive status)
+ * define HAVE_MTGET_RESID if struct mtget contains mt_resid (residual count)
+ * define HAVE_MTGET_FILENO if struct mtget contains mt_fileno (file #)
+ * define HAVE_MTGET_BLKNO if struct mtget contains mt_blkno (block #0
+ *
+ * define MAJOR_IN_MKDEV if we should include sys/mkdev.h to get 
+ *			major(), minor() and makedev()
+ *
+ * define MAJOR_IN_SYSMACROS if we should include sys/sysmacros.h to get 
+ *			major(), minor() and makedev()
  *
  * 3) Miscellaneous operating system/library/processor related things
  *
  * define HAVE_USG_STDIO to enable the use USG stdio.h internals
+ *			To to this we need:
+ *			f->_flag & _IONBF	... Unbuffered
+ *			f->_flag & _IOERR	... I/O error
+ *			f->_flag & _IOEOF	... End of File
+ *			f->_cnt			... r/w count in buf
+ *			f->_ptr			... pointer into buf
+ *			_filbuf(FILE * f)	... fill buffer, return 1st ch
+ *			_flsbuf(unsigned char *, FILE * f) ... flush buffer
  *
  * define HAVE_MMAP	may map memory (sys/types.h + sys/mman.h)
  * define HAVE_SMMAP	may map anonymous memory to get shared mem
@@ -138,12 +164,13 @@ extern "C" {
  *
  * define HAVE_YP	To use yellow pages.
  *
- * define HAVE_SHADOW	To use shodow password file.
+ * define HAVE_SHADOW	To use shadow password file.
  *
  * define HAVE_SETREUID	have BSD setreuid()
+ * define HAVE_SETRESUID have HPUX only ??? setresuid()
  * define HAVE_SETEUID	have SVr4 seteuid()
  *
- * define HAVE_LCHOWN	need to use lchown on symlinks
+ * define HAVE_LCHOWN	Need to use lchown() instead of chown() on symlinks.
  *
  * define HAVE_PROCFS	SVr4 style procfs is available.
  *
@@ -153,9 +180,13 @@ extern "C" {
  *			for child processes.
  *			Else use wait3 and union wait.
  *
+ * define HAVE_WAIT3	Have wait3.
+ *
  * define HAVE_WAITPID	Use waitpid and no resource usage instead of wait3.
  *
  * define HAVE_UNION_WAIT Have union wait in wait.h
+ *
+ * define HAVE_GETHOSTNAME to use gethostname()
  *
  * define HAVE_STREAMS	Use streams networking calls. Else use sockets.
  *
@@ -163,6 +194,8 @@ extern "C" {
  *
  * define HAVE_POLL	Use the poll system call to wait for I/O.
  *			Else use select.
+ *
+ * define HAVE_SELECT	Use the select system call to wait for I/O.
  *
  * define HAVE_TIRPC	The remote procedure call library is of the
  *			transport independent flavour.
@@ -174,25 +207,39 @@ extern "C" {
  *
  * 4) Specials for libschily
  *
- * define HAVE_GETAV0	Scanning of stack is implemented for this architecture
  * define HAVE_SCANSTACK Scanning of the stack is implemented for this
  *			architecture:
- *				getfp(), getav0(), handlecond(), raisecond()
+ *				getfp()
+ *			and the derived functions:
+ *				handlecond(), raisecond()
  *			are working.
+ *
+ * define HAVE_GETAV0	Scanning of stack and locating the arg vector
+ *			is implemented for this architecture:
+ *				getav0()
+ *			is working.
+ *			get_progname() in saveargs.c will work in the main
+ *			thread without a prior call to save_args().
  *
  */
 
-#ifdef	SOL2
-#define	SVR4
+#if	defined(SOL2) || defined(SOL2) || defined(S5R4) || defined(__S5R4) \
+							|| defined(SVR4)
+#	ifndef	__SVR4
+#		define	__SVR4
+#	endif
 #endif
-#ifdef	S5R4
-#define	SVR4
+
+#ifdef	__SVR4
+#	ifndef	SVR4
+#		define	SVR4
+#	endif
 #endif
 
 /*
  * SunOS 4.x
  */
-#if defined(sun) && !defined(SVR4)
+#if defined(IS_SUN) && !defined(__SVR4)
 	/*
 	 * Sun C defines __STDC__ as zero. 
 	 */
@@ -209,14 +256,23 @@ extern "C" {
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
 #	define	HAVE_TERMIOS_H
-#	define	HAVE_UTIMES_H
+#	define	HAVE_TERMIO_H
+#	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_MTIO_H
+#	define	HAVE_MTGET_DSREG
+#	define	HAVE_MTGET_RESID
+#	define	HAVE_MTGET_FILENO
+#	define	HAVE_MTGET_BLKNO
+#	define	MAJOR_IN_SYSMACROS
 #	define	HAVE_UNION_WAIT
 #	define	HAVE_USG_STDIO
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
+#	define	HAVE_USGSEM
 #	ifdef sparc
 #		define	HAVE_LDSTUB
 #	endif
@@ -225,6 +281,9 @@ extern "C" {
 #	define	HAVE_QUOTA
 #	define	HAVE_YP
 #	define	HAVE_SETREUID
+#	define	HAVE_WAIT3
+#	define	HAVE_GETHOSTNAME
+#	define	HAVE_SELECT
 #	define	GID_T		int
 #	define	USLEEPRETURN_T	unsigned int
 #	define	HAVE_GETAV0	/* SunOS < 5 only runs on sparc/mc680xx */
@@ -234,13 +293,13 @@ extern "C" {
 /*
  * SysVr4
  */
-#if defined(SVR4)
+#if defined(__SVR4)
 #	define	PROTOTYPES
 #	define	HAVE_ELF
 #	define	HAVE_STDARG_H
-#	if defined(sun)
+#	if defined(IS_SUN)
 #		define	HAVE_LONGLONG
-#		define	HAVE_UTIMES_H
+#		define	HAVE_UTIMES
 #		define	HAVE_QUOTA
 #		define	HAVE_GETAV0	/* XXX what about PPC ??? */
 #		define	HAVE_SCANSTACK	/* XXX what about PPC ??? */
@@ -248,12 +307,22 @@ extern "C" {
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
 #	define	HAVE_TERMIOS_H
+#	define	HAVE_TERMIO_H
 #	define	HAVE_UTIME_H
 #	define	HAVE_WAIT_H
 #	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_SYSTEMINFO_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_MTIO_H
+#	define	HAVE_MTGET_DSREG
+#	define	HAVE_MTGET_RESID
+#	define	HAVE_MTGET_FILENO
+#	define	HAVE_MTGET_BLKNO
+#	define	MAJOR_IN_MKDEV
 #	define	HAVE_USG_STDIO
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
+#	define	HAVE_USGSHM
 #	define	HAVE_USGSEM
 #	ifdef sparc
 #		define	HAVE_LDSTUB
@@ -268,14 +337,16 @@ extern "C" {
 #	define	HAVE_SETEUID
 #	define	HAVE_LCHOWN
 #	define	HAVE_PROCFS
-#	if (defined(i386) && !defined(sun))
+#	if (defined(i386) && !defined(IS_SUN))
 #		define	HAVE_PROCFS2
 #		define	HAVE_QUOTA
 #	endif
 #	define	HAVE_SIGINFO
+#	define	HAVE_WAITPID
 #	define	HAVE_STREAMS
 #	define	HAVE_STRPTYS
 #	define	HAVE_POLL
+#	define	HAVE_SELECT
 #	define	HAVE_TIRPC
 #	define	GID_T		gid_t
 #	define	USLEEPRETURN_T	unsigned int
@@ -284,18 +355,41 @@ extern "C" {
 /*
  * AIX
  */
-#if	defined(_IBMR2)
+#if	defined(_IBMR2) || defined(_AIX)
+#	define	IS_UNIX		/* ??? really ??? */
+#ifndef	PROTOTYPES
 #	define	PROTOTYPES
+#endif
 #	define	HAVE_COFF
 #	define	HAVE_STDARG_H
+#	define	HAVE_STDLIB_H
+#	define	HAVE_STRING_H
+#	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
+#	define	HAVE_FCNTL_H
 #	define	HAVE_TERMIOS_H
+#	define	HAVE_TERMIO_H
+#	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
+#	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	MAJOR_IN_SYSMACROS
+/*#	define	HAVE_USG_STDIO*/
+#	define	HAVE_MMAP
+#	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
+#	define	HAVE_USGSEM
 #	define	HAVE_MSEM
 #	define	HAVE_FLOCK
 #	define	HAVE_QUOTA
 #	define	HAVE_YP
+#	define	HAVE_WAIT3
+#	define	HAVE_WAITPID
+#	define	HAVE_GETHOSTNAME
+#	define	HAVE_STREAMS
+#	define	HAVE_POLL
+#	define	HAVE_SELECT
+
 #	define	GID_T		gid_t
 #	define	USLEEPRETURN_T	int
 #endif
@@ -303,15 +397,34 @@ extern "C" {
 /*
  * Silicon Graphics
  */
-#if defined(__sgi)
+#if defined(sgi) || defined(__sgi)
 #	define	PROTOTYPES
 #	define	HAVE_ELF
 #	define	HAVE_COFF
 #	define	HAVE_STDARG_H
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
+#	define	HAVE_FCNTL_H
 #	define	HAVE_TERMIOS_H
+#	define	HAVE_TERMIO_H
+#	define	HAVE_SYS_TIME_H
+#	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
+#	define	HAVE_WAIT_H
+#	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_SYSTEMINFO_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_MTIO_H
+#	define	HAVE_MTGET_DSREG
+#	define	HAVE_MTGET_RESID
+#	define	HAVE_MTGET_FILENO
+#	define	HAVE_MTGET_BLKNO
+#	define	MAJOR_IN_MKDEV
+#	define	HAVE_USG_STDIO
+#	define	HAVE_MMAP
+#	define	HAVE_SMMAP
+#	define	HAVE_USGSHM
+#	define	HAVE_USGSEM
 #	define	HAVE_FLOCK
 #	define	HAVE_FCHDIR
 #	define	HAVE_STATVFS
@@ -319,9 +432,17 @@ extern "C" {
 #	define	HAVE_YP
 #	define	HAVE_SHADOW
 #	define	HAVE_PROCFS
+#	define	HAVE_SIGINFO
+#	define	HAVE_WAIT3
+#	define	HAVE_WAITPID
+#	define	HAVE_GETHOSTNAME
+#	define	HAVE_STREAMS
+#	define	HAVE_STRPTYS
+#	define	HAVE_POLL
+#	define	HAVE_SELECT
 #	define	HAVE_STRPTYS
 #	define	GID_T		gid_t
-#	define	USLEEPRETURN_T	unsigned int
+/*#	define	USLEEPRETURN_T	unsigned int*/
 #	define	vfork		fork
 #endif
 
@@ -398,12 +519,18 @@ extern "C" {
  * HP/UX
  */
 #if defined(__hpux) || defined(hpux)
-#	define	PROTOTYPES
+/*#	define	PROTOTYPES*/
 #	define	HAVE_AOUT
 #	define	HAVE_STDARG_H
 #	define	HAVE_UNISTD_H
+#	define	HAVE_FCNTL_H
 #	define	HAVE_TERMIOS_H
+#	define	HAVE_TERMIO_H
 #	define	HAVE_UTIME_H
+#	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_MTIO_H
+#	define	MAJOR_IN_SYSMACROS
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -414,9 +541,16 @@ extern "C" {
 #	define	HAVE_FCHDIR
 #	define	HAVE_QUOTA
 #	define	HAVE_YP
+#	define	HAVE_SETRESUID
+#	define	HAVE_WAIT3
 #	define	HAVE_WAITPID
+#	define	HAVE_GETHOSTNAME
+#	define	HAVE_STREAMS
+#	define	HAVE_STRPTYS
+#	define	HAVE_POLL
+#	define	HAVE_SELECT
 #	define	GID_T		gid_t
-#	define	USLEEPRETURN_T	unsigned int
+/*#	define	USLEEPRETURN_T	unsigned int*/
 #endif
 
 /*
@@ -428,8 +562,20 @@ extern "C" {
 #	define	HAVE_STDARG_H
 #	define	HAVE_UNISTD_H
 #	define	HAVE_TERMIOS_H
+#	define	HAVE_SYS_TIME_H
+#	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
+#	undef	HAVE_MTGET_DSREG
+#	undef	HAVE_MTGET_RESID
+#	undef	HAVE_MTGET_FILENO
+#	undef	HAVE_MTGET_BLKNO
+#	define	mt_type		mt_model
+#	define	mt_dsreg	mt_status1
+#	define	mt_erreg	mt_status2
 #	define	HAVE_USGSEM
+#	if defined(__i386_) || defined(i386)
+#		define	HAVE_XCHG
+#	endif
 	/*
 	 * DGUX hides its flock as dg_flock.
 	 */
@@ -437,11 +583,19 @@ extern "C" {
 #	define	flock	dg_flock
 #	define	HAVE_FCHDIR
 #	define	HAVE_STATVFS
+#	undef	HAVE_QUOTA
 #	define	HAVE_YP
 #	define	HAVE_SHADOW
+#	undef	HAVE_PROCFS
+#	undef	HAVE_PROCFS2
+#	define	HAVE_WAIT3
+#	define	HAVE_UNION_WAIT
+/*#	define	HAVE_GETHOSTNAME*/
 #	define	HAVE_STREAMS
 #	define	HAVE_STRPTYS
 #	define	HAVE_POLL
+#	define	HAVE_SELECT
+#	undef	HAVE_TIRPC
 #	define	GID_T		gid_t
 #	define	USLEEPRETURN_T	unsigned int
 	/*
@@ -449,6 +603,11 @@ extern "C" {
 	 * processes.
 	 */
 #	define	_BSD_WAIT_FLAVOR
+
+/*#	define	HAVE_GETAV0*/
+#	ifdef	i386
+#		define	HAVE_SCANSTACK
+#	endif
 #endif
 
 /*
@@ -464,8 +623,9 @@ extern "C" {
 #	define	HAVE_STDARG_H
 #	define	HAVE_UNISTD_H
 #	define	HAVE_TERMIOS_H
-#	define	HAVE_UTIMES_H
+#	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
+#	define	HAVE_SYS_UTSNAME_H
 #	define	HAVE_USGSHM
 #	define	HAVE_USGSEM
 #	define	GID_T		gid_t
@@ -484,7 +644,7 @@ extern "C" {
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_TERMIOS_H
-#	define	HAVE_UTIMES_H
+#	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_MSEM
 #	define	HAVE_FLOCK
@@ -516,10 +676,19 @@ extern "C" {
 #	define	HAVE_FCNTL_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
-#	define	HAVE_UTIMES_H
+#	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_WAIT_H
 #	define	HAVE_SYS_WAIT_H
+#	define	HAVE_SYS_SYSTEMINFO_H
+#	define	HAVE_SYS_UTSNAME_H
+#	define	HAVE_SYS_MTIO_H
+#	define	HAVE_MTGET_DSREG
+#	define	HAVE_MTGET_RESID
+#	define	HAVE_MTGET_FILENO
+#	define	HAVE_MTGET_BLKNO
+#	define	MAJOR_IN_MKDEV
+#	define	MAJOR_IN_SYSMACROS
 #	define	HAVE_USG_STDIO
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
@@ -534,14 +703,21 @@ extern "C" {
 #	define	HAVE_QUOTA
 #	define	HAVE_YP
 #	define	HAVE_SHADOW
+#	define	HAVE_SETREUID
+#	define	HAVE_SETRESUID
+#	define	HAVE_SETEUID
+#	define	HAVE_LCHOWN
 #	define	HAVE_PROCFS
 #	define	HAVE_PROCFS2
 #	define	HAVE_SIGINFO
+#	define	HAVE_WAIT3
 #	define	HAVE_WAITPID
 #	define	HAVE_UNION_WAIT
+#	define	HAVE_GETHOSTNAME
 #	define	HAVE_STREAMS
 #	define	HAVE_STRPTYS
 #	define	HAVE_POLL
+#	define	HAVE_SELECT
 #	define	HAVE_TIRPC
 
 #	define	GID_T		gid_t

@@ -1,8 +1,8 @@
-/* @(#)cdrecord.c	1.1 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.c	1.4 96/10/03 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdrecord.c	1.1 96/02/04 Copyright 1995 J. Schilling";
-#endif  lint
+	"@(#)cdrecord.c	1.4 96/10/03 Copyright 1995 J. Schilling";
+#endif
 /*
  *	Record data on a CD-Recorder
  *
@@ -97,8 +97,10 @@ int	audio_secs_per_tr;	/* # of audio secs per transfer */
 
 extern	int	silent;
 
+int 	main		__PR((int ac, char **av));
 void	usage		__PR((int));
 int	scsi_write	__PR((char *, int, int));
+int	read_buf	__PR((int f, char *bp, int size));
 int	write_track_data __PR((int , track_t *));
 void	printdata	__PR((int, track_t *));
 void	printaudio	__PR((int, track_t *));
@@ -110,6 +112,8 @@ void	gargs		__PR((int , char **, int *, track_t *, char **,
 					int *, int *, int *, int *));
 void	unload_media	__PR((void));
 void	check_recovery	__PR((void));
+void	audioread	__PR((void));
+void	raisepri	__PR((void));
 
 int 
 main(ac, av)
@@ -150,6 +154,8 @@ main(ac, av)
 	if (mlockall(MCL_CURRENT|MCL_FUTURE) < 0)
 		comerr("Cannot do mlockall(2).\n");
 
+	raisepri();
+
 	open_scsi(dev, timeout);
 
 	/*
@@ -161,6 +167,8 @@ main(ac, av)
 	silent--;
 	if (!do_inquiry(1))
 		comerrno(BAD, "Cannot do inquiry for CD-Recorder.\n");
+	if (is_unsupported())
+		comerrno(BAD, "Sorry, unsupported CD-Recorder found on this target.\n");
 	if (!is_cdrecorder())
 		comerrno(BAD, "Sorry, no CD-Recorder found on this target.\n");
 
@@ -282,12 +290,12 @@ scsi_write(bufp, size, blocks)
 #endif
 
 int
-read_buf(f, buf, size)
+read_buf(f, bp, size)
 	int	f;
-	char	*buf;
+	char	*bp;
 	int	size;
 {
-	char	*p = buf;
+	char	*p = bp;
 	int	amount = 0;
 	int	n;
 
@@ -574,11 +582,15 @@ gargs(ac, av, tracksp, trackp, devp, speedp, dummyp, multip, fixp)
 		if (pad)
 			flags |= TI_PAD;
 
-		if (strcmp("-", cav[0]) == 0)
+		if (strcmp("-", cav[0]) == 0) {
 			trackp[tracks].f = STDIN_FILENO;
-		else
+		} else {
+			if (access(cav[0], R_OK) < 0)
+				comerr("No read access for '%s'.\n", cav[0]);
+
 			if ((trackp[tracks].f = open(cav[0], O_RDONLY)) < 0)
 				comerr("Cannot open '%s'.\n", cav[0]);
+		}
 		trackp[tracks].tracksize = tracksize;
 		trackp[tracks].secsize = data ? DATA_SEC_SIZE : AUDIO_SEC_SIZE;
 		trackp[tracks].secspt = data ? data_secs_per_tr : audio_secs_per_tr;
@@ -639,3 +651,49 @@ void audioread()
 	exit(0);
 #endif
 }
+
+#ifdef	SVR4
+
+#include <sys/priocntl.h>
+#include <sys/rtpriocntl.h>
+
+void raisepri()
+{
+	int		pid;
+	int		classes;
+	int		ret;
+	pcinfo_t	info;
+	pcparms_t	param;
+	rtinfo_t	rtinfo;
+	rtparms_t	rtparam;
+
+	pid = getpid();
+
+	/* get info */
+	strcpy(info.pc_clname, "RT");
+	classes = priocntl(P_PID, pid, PC_GETCID, (void *)&info);
+	if (classes == -1)
+		comerr("Cannot get priority class id priocntl(PC_GETCID)\n");
+
+	movebytes(info.pc_clinfo, &rtinfo, sizeof(rtinfo_t));
+ 
+	/* set priority to max */
+	rtparam.rt_pri = rtinfo.rt_maxpri;
+	rtparam.rt_tqsecs = 0;
+	rtparam.rt_tqnsecs = RT_TQDEF;
+	param.pc_cid = info.pc_cid;
+	movebytes(&rtparam, param.pc_clparms, sizeof(rtparms_t));
+	ret = priocntl(P_PID, pid, PC_SETPARMS, (void *)&param);
+	if (ret == -1)
+		comerr("Cannot set priority class parameters priocntl(PC_SETPARMS)\n");
+}
+
+#else
+
+void raisepri()
+{
+	if (setpriority(PRIO_PROCESS, getpid(), -20) < 0)
+		comerr("Cannot set priority\n");
+}
+
+#endif

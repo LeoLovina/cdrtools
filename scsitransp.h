@@ -1,4 +1,4 @@
-/* @(#)scsitransp.h	1.3 96/02/04 Copyright 1995 J. Schilling */
+/* @(#)scsitransp.h	1.4 96/06/16 Copyright 1995 J. Schilling */
 /*
  *	Definitions for commands that use functions from scsitransp.c
  *
@@ -36,5 +36,5 @@ extern	void	scsiprintdev	__PR((struct scsi_inquiry *));
  * From scsierrmsg.c:
  */
 extern	char	*scsisensemsg	__PR((int, int, int));
-extern	void	scsiserrmsg	__PR((struct scsi_sense *,
+extern	void	scsierrmsg	__PR((struct scsi_sense *,
 						struct scsi_status *, int));
