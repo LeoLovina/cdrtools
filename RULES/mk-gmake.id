@@ -1,4 +1,4 @@
-#ident "@(#)mk-gmake.id	1.5 97/06/22 "
+#ident "@(#)mk-gmake.id	1.8 98/09/30 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -37,8 +37,8 @@ MAKEPROG=	gmake
 
 ifndef		ARCH_DONE
 
-_MACHCMD=	(mach || uname -p || true) 2> /dev/null
-_ARCHCMD=	(arch || true)             2> /dev/null
+_MACHCMD=	(mach || uname -p || true)	2> /dev/null
+_ARCHCMD=	(arch || /usr/ucb/arch || true)	2> /dev/null
 
 XP_ARCH:=	$(shell $(_MACHCMD) | tr '[A-Z]' '[a-z]' | tr ', /\\' ',---')
 XK_ARCH:=	$(shell uname -m    | tr '[A-Z]' '[a-z]' | tr ', /\\' ',---')
@@ -48,7 +48,9 @@ P_ARCH=		$(XP_ARCH)
 K_ARCH=		$(XK_ARCH)
 M_ARCH=		$(XM_ARCH)
 
-_P_ARCH=	$(_UNIQ)$(XP_ARCH)
+_XP_ARCH=	$(XP_ARCH:unknown=$(K_ARCH))
+
+_P_ARCH=	$(_UNIQ)$(_XP_ARCH)
 __P_ARCH=	$(_P_ARCH:$(_UNIQ)=$(K_ARCH))
 P_ARCH=		$(__P_ARCH:$(_UNIQ)%=%)
 

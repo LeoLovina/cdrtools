@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.24 98/04/12 Copyright 1988,1995 J. Schilling */
+/* @(#)scsitransp.c	1.29 98/09/05 Copyright 1988,1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.24 98/04/12 Copyright 1988,1995 J. Schilling";
+	"@(#)scsitransp.c	1.29 98/09/05 Copyright 1988,1995 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -33,9 +33,9 @@ static	char sccsid[] =
 #include <stdxlib.h>
 #include <unixstd.h>
 #include <errno.h>
-#include <sys/time.h>
+#include <timedefs.h>
 #include <sys/ioctl.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 
 #include "scgio.h"
 #include "scsireg.h"
@@ -90,10 +90,11 @@ LOCAL	const	char	**scsi_nonstderrs;
 LOCAL	struct timeval	cmdstart;
 LOCAL	struct timeval	cmdstop;
 
-EXPORT	int	scsi_open	__PR((void));
+EXPORT	int	scsi_open	__PR((char *device, int busno, int tgt, int tlun));
 LOCAL	long	scsi_maxdma	__PR((void));
 EXPORT	BOOL	scsi_havebus	__PR((int));
 EXPORT	int	scsi_fileno	__PR((int, int, int));
+EXPORT	int	scsi_isatapi	__PR((void));
 EXPORT	int	scsireset	__PR((void));
 EXPORT	void	*scsi_getbuf	__PR((long));
 EXPORT	long	scsi_bufsize	__PR((long));
@@ -109,6 +110,7 @@ EXPORT	void	scsiprinterr	__PR((char *));
 EXPORT	void	scsiprintcdb	__PR((void));
 EXPORT	void	scsiprintwdata	__PR((void));
 EXPORT	void	scsiprintrdata	__PR((void));
+EXPORT	void	scsiprintresult	__PR((void));
 EXPORT	void	scsiprintstatus	__PR((void));
 EXPORT	void	scsiprbytes	__PR((char *, unsigned char *, int));
 EXPORT	void	scsiprsense	__PR((unsigned char *, int));
@@ -137,7 +139,11 @@ LOCAL	int	scgfiles[MAX_SCG];
 
 #ifdef	HAVE_SCG
 EXPORT
-int scsi_open()
+int scsi_open(device, busno, tgt, tlun)
+	char	*device;
+	int	busno;
+	int	tgt;
+	int	tlun;
 {
 	register int	f;
 	register int	i;
@@ -209,6 +215,12 @@ int scsi_fileno(busno, tgt, tlun)
 }
 
 EXPORT
+int scsi_isatapi()
+{
+	return (FALSE);
+}
+
+EXPORT
 int scsireset()
 {
 	int	f = scsi_fileno(scsibus, target, lun);
@@ -225,7 +237,7 @@ scsi_getbuf(amt)
 
 	if (amt <= 0 || amt > scg_maxdma)
 		return ((void *)0);
-	return (valloc((size_t)amt));
+	return ((void *)valloc((size_t)amt));
 }
 
 #endif	/* HAVE_SCG */
@@ -323,13 +335,8 @@ int scsicmd(name)
 	if (ret < 0)
 		comerr("Cannot send SCSI cmd via ioctl\n");
 	ret = scsicheckerr(name);
-	if (verbose || (ret && silent == 0)) {
-		printf("cmd finished after %ld.%03lds timeout %ds\n",
-			(long)cmdstop.tv_sec, (long)cmdstop.tv_usec/1000,
-			scmd.timeout);
-		if (verbose > 1)
-			scsiprintrdata();
-		flush();
+	if (verbose || (ret && silent <= 0)) {
+		scsiprintresult();
 	}
 	return (ret);
 }
@@ -452,6 +459,17 @@ scsiprintrdata()
 			(scmd.size-scmd.resid) > 100 ?
 			100 : (scmd.size-scmd.resid));
 	}
+}
+
+EXPORT void
+scsiprintresult()
+{
+	printf("cmd finished after %ld.%03lds timeout %ds\n",
+		(long)cmdstop.tv_sec, (long)cmdstop.tv_usec/1000,
+		scmd.timeout);
+	if (verbose > 1)
+		scsiprintrdata();
+	flush();
 }
 
 EXPORT

@@ -1,7 +1,7 @@
-/* @(#)scsi-sgi.c	1.7 97/09/23 Copyright 1997 J. Schilling */
+/* @(#)scsi-sgi.c	1.9 98/08/16 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sgi.c	1.7 97/09/23 Copyright 1997 J. Schilling";
+	"@(#)scsi-sgi.c	1.9 98/08/16 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the SGI generic SCSI implementation.
@@ -60,7 +60,11 @@ extern int target;
 extern int lun;
 
 EXPORT
-int scsi_open()
+int scsi_open(device, busno, tgt, tlun)
+	char	*device;
+	int	busno;
+	int	tgt;
+	int	tlun;
 {
 	register int	f;
 	register int	b;
@@ -173,6 +177,12 @@ int scsi_fileno(busno, tgt, tlun)
 
 	return ((int)scgfiles[busno][tgt][tlun]);
 #endif
+}
+
+EXPORT
+int scsi_isatapi()
+{
+	return (FALSE);
 }
 
 EXPORT

@@ -1,4 +1,4 @@
 #ident %W% %E% %Q%
 ###########################################################################
-DIRS=		patches inc lib cdrecord mkisofs-1.11 man
+DIRS=		patches conf inc lib cdrecord mkisofs-1.12b4 man
 ###########################################################################

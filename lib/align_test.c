@@ -1,7 +1,7 @@
-/* @(#)align_test.c	1.8 98/02/17 Copyright 1995 J. Schilling */
+/* @(#)align_test.c	1.9 98/09/05 Copyright 1995 J. Schilling */
 #ifndef	lint
 static	char sccsid[] =
-	"@(#)align_test.c	1.8 98/02/17 Copyright 1995 J. Schilling";
+	"@(#)align_test.c	1.9 98/09/05 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Generate machine dependant align.h
@@ -63,6 +63,7 @@ char	*buf_aligned;
 #define	ALIGN_longlong	sizeof (long long)
 #define	ALIGN_float	sizeof (float)
 #define	ALIGN_double	sizeof (double)
+#define	ALIGN_ptr	sizeof (char *)
 
 #endif
 
@@ -79,6 +80,7 @@ LOCAL	int	check_long	__PR((char *, int));
 LOCAL	int	check_longlong	__PR((char *, int));
 LOCAL	int	check_float	__PR((char *, int));
 LOCAL	int	check_double	__PR((char *, int));
+LOCAL	int	check_ptr	__PR((char *, int));
 
 LOCAL	int	speed_check	__PR((char *, void (*)(char*, int), int));
 LOCAL	void	speed_short	__PR((char *, int));
@@ -87,6 +89,7 @@ LOCAL	void	speed_long	__PR((char *, int));
 LOCAL	void	speed_longlong	__PR((char *, int));
 LOCAL	void	speed_float	__PR((char *, int));
 LOCAL	void	speed_double	__PR((char *, int));
+LOCAL	void	speed_ptr	__PR((char *, int));
 
 #define	ALIGN_short	check_align(check_short, speed_short, sizeof (short))
 #define	ALIGN_int	check_align(check_int, speed_int, sizeof (int))
@@ -94,6 +97,7 @@ LOCAL	void	speed_double	__PR((char *, int));
 #define	ALIGN_longlong	check_align(check_longlong, speed_longlong, sizeof (long long))
 #define	ALIGN_float	check_align(check_float, speed_float, sizeof (float))
 #define	ALIGN_double	check_align(check_double, speed_double, sizeof (double))
+#define	ALIGN_ptr	check_align(check_ptr, speed_ptr, sizeof (char *))
 
 #endif
 
@@ -107,6 +111,7 @@ LOCAL	int	off_long	__PR((void));
 LOCAL	int	off_longlong	__PR((void));
 LOCAL	int	off_float	__PR((void));
 LOCAL	int	off_double	__PR((void));
+LOCAL	int	off_ptr		__PR((void));
 
 #define	ALIGN_short	off_short()
 #define	ALIGN_int	off_int()
@@ -114,6 +119,7 @@ LOCAL	int	off_double	__PR((void));
 #define	ALIGN_longlong	off_longlong()
 #define	ALIGN_float	off_float()
 #define	ALIGN_double	off_double()
+#define	ALIGN_ptr	off_ptr()
 
 #endif
 
@@ -149,6 +155,7 @@ char	lo[] = "long";
 char	ll[] = "long long";
 char	fl[] = "float";
 char	db[] = "double";
+char	pt[] = "pointer";
 
 #define	xalign(x, a, m)		( ((char *)(x)) + ( (a) - (((int)(x))&(m))) )
 
@@ -229,6 +236,14 @@ main()
 	printf("#define	ALIGN_DMASK	%d\t/* %s(%s *)\t*/\n", i-1, ms, db);
 	printf("#define	SIZE_DOUBLE	%d\t/* %s(%s)\t\t\t*/\n", s, so, db);
 
+	s = sizeof(char *);
+	i  = ALIGN_ptr;
+	i = min_align(i);
+	printf("\n");
+	printf("#define	ALIGN_PTR	%d\t/* %s(%s *)\t*/\n", i, al, pt);
+	printf("#define	ALIGN_PMASK	%d\t/* %s(%s *)\t*/\n", i-1, ms, pt);
+	printf("#define	SIZE_PTR	%d\t/* %s(%s)\t\t\t*/\n", s, so, pt);
+
 	printmacs();
 	return (0);
 }
@@ -257,6 +272,9 @@ printf("#define	f2aligned(a, b)		x2aligned(a, b, ALIGN_FMASK)\n");
 printf("\n");
 printf("#define	daligned(a)		xaligned(a, ALIGN_DMASK)\n");
 printf("#define	d2aligned(a, b)		x2aligned(a, b, ALIGN_DMASK)\n");
+printf("\n");
+printf("#define	paligned(a)		xaligned(a, ALIGN_PMASK)\n");
+printf("#define	p2aligned(a, b)		x2aligned(a, b, ALIGN_PMASK)\n");
 
 printf("\n\n");
 printf("/*\n * I know excatly what I am doing here!\n * The warning message from GCC is wrong.\n");
@@ -269,6 +287,7 @@ printf("#define	lalign(x)		xalign((x), ALIGN_LONG, ALIGN_LMASK)\n");
 printf("#define	llalign(x)		xalign((x), ALIGN_LLONG, ALIGN_LLMASK)\n");
 printf("#define	falign(x)		xalign((x), ALIGN_FLOAT, ALIGN_FMASK)\n");
 printf("#define	dalign(x)		xalign((x), ALIGN_DOUBLE, ALIGN_DMASK)\n");
+printf("#define	palign(x)		xalign((x), ALIGN_PTR, ALIGN_PMASK)\n");
 }
 
 #ifdef	CHECK_ALIGN
@@ -401,6 +420,18 @@ check_double(p, i)
 	return (0);
 }
 
+LOCAL int
+check_ptr(p, i)
+	char	*p;
+	int	i;
+{
+	char	**pp;
+
+	pp = (char  **)&p[i];
+	*pp = (char *)1;
+	return (0);
+}
+
 /*
  * Routines to compute the alignement by checking the speed of the
  * assignement.
@@ -492,6 +523,20 @@ speed_double(p, n)
 
 	for (i = 1000000; --i >= 0;)
 		*dp = i;
+}
+
+LOCAL void
+speed_ptr(p, n)
+	char	*p;
+	int	n;
+{
+	char	**pp;
+	int	i;
+
+	pp = (char **)&p[n];
+
+	for (i = 1000000; --i >= 0;)
+		*pp = (char *)i;
 }
 
 #include <sys/times.h>
@@ -592,4 +637,16 @@ off_double()
 
 	return (sm_off(struct sd *, d));
 }
+
+LOCAL int
+off_ptr()
+{
+	struct sp {
+		char	c;
+		char	*p;
+	} sp;
+
+	return (sm_off(struct sp *, p));
+}
+
 #endif	/* OFF_ALIGN */

@@ -1,7 +1,7 @@
-/** @(#)drv_jvc.c	1.29 98/04/15 Copyright 1997 J. Schilling */
+/** @(#)drv_jvc.c	1.31 98/09/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_jvc.c	1.29 98/04/15 Copyright 1997 J. Schilling";
+	"@(#)drv_jvc.c	1.31 98/09/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -29,10 +29,9 @@ static	char sccsid[] =
 
 #include <stdio.h>
 #include <standard.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 #include <errno.h>
-#include <string.h>
-#include <sys/file.h>
+#include <strdefs.h>
 #include <unixstd.h>
 
 #include <utypes.h>
@@ -211,7 +210,7 @@ struct isrc_subcode {		/* subcode for ISRC code */
 #endif
 
 
-LOCAL	int	teac_attach	__PR((void));
+LOCAL	int	teac_attach	__PR((cdr_t *dp));
 LOCAL	int	teac_getdisktype __PR((cdr_t *dp, dstat_t *dsp));
 LOCAL	int	speed_select_teac __PR((int speed, int dummy));
 LOCAL	int	select_secsize_teac __PR((track_t *trackp));
@@ -232,6 +231,7 @@ LOCAL	int	teac_freeze	__PR((int bp_flag));
 LOCAL	int	teac_wr_pma	__PR((void));
 LOCAL	int	teac_rd_pma	__PR((void));
 LOCAL	int	next_wr_addr_teac __PR((long start_lba, long last_lba));
+LOCAL	int	blank_jvc	__PR((long addr, int blanktype));
 
 cdr_t	cdr_teac_cdr50 = {
 	0,
@@ -257,7 +257,8 @@ cdr_t	cdr_teac_cdr50 = {
 	cmd_dummy,
 	read_session_offset_philips,
 	teac_fixation,
-	blank_dummy,
+/*	blank_dummy,*/
+	blank_jvc,
 };
 
 LOCAL int
@@ -641,7 +642,8 @@ static const char *sd_teac50_error_str[] = {
 };
 
 LOCAL int
-teac_attach()
+teac_attach(dp)
+	cdr_t	*dp;
 {
 	scsi_setnonstderrs(sd_teac50_error_str);
 	return (0);
@@ -1071,4 +1073,17 @@ next_wr_addr_teac(start_lba, last_lba)
 		printf("NWA: %ld\n", a_to_u_long(xx));
 	}
 	return (0);
+}
+
+LOCAL int
+blank_jvc(addr, blanktype)
+	long	addr;
+	int	blanktype;
+{
+	extern	char	*blank_types[];
+
+	if (lverbose)
+		printf("Blanking %s\n", blank_types[blanktype & 0x07]);
+
+	return (scsi_blank(addr, blanktype));
 }

@@ -1,4 +1,4 @@
-/* @(#)prototyp.h	1.6 96/12/30 Copyright 1995 J. Schilling */
+/* @(#)prototyp.h	1.7 98/10/08 Copyright 1995 J. Schilling */
 /*
  *	Definitions for dealing with ANSI / KR C-Compilers
  *
@@ -14,7 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -43,12 +43,22 @@
  */
 #ifdef	PROTOTYPES
 #if	!(defined(SABER) && defined(sun))
-#	define	HAVE_STDARG_H
+#	ifndef	HAVE_STDARG_H
+#		define	HAVE_STDARG_H
+#	endif
 #endif
-#	define	HAVE_STDLIB_H
-#	define	HAVE_STRING_H
-#	define	HAVE_STDC_HEADERS
-#	define	STDC_HEADERS	/* GNU name */
+#	ifndef	HAVE_STDLIB_H
+#		define	HAVE_STDLIB_H
+#	endif
+#	ifndef	HAVE_STRING_H
+#		define	HAVE_STRING_H
+#	endif
+#	ifndef	HAVE_STDC_HEADERS
+#		define	HAVE_STDC_HEADERS
+#	endif
+#	ifndef	STDC_HEADERS
+#		define	STDC_HEADERS	/* GNU name */
+#	endif
 #endif
 
 #ifdef	NO_PROTOTYPES		/* Force not to use prototypes */

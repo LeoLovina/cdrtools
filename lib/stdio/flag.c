@@ -1,4 +1,4 @@
-/* @(#)flag.c	2.4 97/05/29 Copyright 1986 J. Schilling */
+/* @(#)flag.c	2.5 98/09/05 Copyright 1986 J. Schilling */
 /*
  *	Copyright (c) 1986 J. Schilling
  */
@@ -20,12 +20,7 @@
 
 #include <stdio.h>
 #include "io.h"
-#ifdef	HAVE_STDLIB_H
-#include <stdlib.h>
-#else
-extern	char	*malloc();
-extern	char	*realloc();
-#endif
+#include <stdxlib.h>
 
 #ifdef	DO_MYFLAG
 

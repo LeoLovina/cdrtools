@@ -1,14 +1,12 @@
-/* @(#)drv_mmc.c	1.24 98/04/15 Copyright 1997 J. Schilling */
+/* @(#)drv_mmc.c	1.28 98/10/07 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_mmc.c	1.24 98/04/15 Copyright 1997 J. Schilling";
+	"@(#)drv_mmc.c	1.28 98/10/07 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
  *	SCSI-3/mmc conforming drives
  *	e.g. Yamaha CDR-400, Ricoh MP6200
- *
- *	Currently using close_track_philips() XXX FIXME
  *
  *	Copyright (c) 1997 J. Schilling
  */
@@ -34,16 +32,18 @@ static	char sccsid[] =
 
 #include <stdio.h>
 #include <standard.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 #include <errno.h>
-#include <string.h>
-#include <sys/file.h>
+#include <strdefs.h>
+#include <unixstd.h>
+#include <timedefs.h>
 
 #include <utypes.h>
 #include <btorder.h>
 #include <scgio.h>
 #include <scsidefs.h>
 #include <scsireg.h>
+#include <scsimmc.h>
 
 #include "cdrecord.h"
 #include "scsitransp.h"
@@ -61,70 +61,12 @@ extern	int	silent;
 extern	int	verbose;
 extern	int	lverbose;
 
-typedef struct opc {
-	u_char	opc_speed[2];
-	u_char	opc_val[6];
-} opc_t;
-
-#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
-
-struct disk_info {
-	u_char	data_len[2];		/* Data len without this info	*/
-	Ucbit	disk_status	: 2;	/* Status of the disk		*/
-	Ucbit	sess_status	: 2;	/* Status of last session	*/
-	Ucbit	erasable	: 1;	/* Disk is erasable		*/
-	Ucbit	res2		: 3;	/* Reserved			*/
-	u_char	first_track;		/* # of first track on disk	*/
-	u_char	numsess;		/* # of sessions		*/
-	u_char	first_track_ls;		/* First track in last sessaion	*/
-	u_char	last_track_ls;		/* Last track in last sessaion	*/
-	Ucbit	res7_04		: 5;	/* Reserved			*/
-	Ucbit	uru		: 1;	/* This is an unrestricted disk	*/
-	Ucbit	dbc_v		: 1;	/* Disk bar code valid		*/
-	Ucbit	did_v		: 1;	/* Disk id valid		*/
-	u_char	disk_type;		/* Disk type			*/
-	u_char	res9[3];		/* Reserved			*/
-	u_char	disk_id[4];		/* Disk identification		*/
-	u_char	last_lead_in[4];	/* Last session lead in time	*/
-	u_char	last_lead_out[4];	/* Last session lead out time	*/
-	u_char	disk_barcode[8];	/* Disk bar code		*/
-	u_char	res32;			/* Reserved			*/
-	u_char	num_opc_entries;	/* # of OPC table entries	*/
-	opc_t	opc_table[1];		/* OPC table 			*/
-};
-
-#else				/* Motorola byteorder */
-
-struct disk_info {
-	u_char	data_len[2];		/* Data len without this info	*/
-	Ucbit	res2		: 3;	/* Reserved			*/
-	Ucbit	erasable	: 1;	/* Disk is erasable		*/
-	Ucbit	sess_status	: 2;	/* Status of last session	*/
-	Ucbit	disk_status	: 2;	/* Status of the disk		*/
-	u_char	first_track;		/* # of first track on disk	*/
-	u_char	numsess;		/* # of sessions		*/
-	u_char	first_track_ls;		/* First track in last sessaion	*/
-	u_char	last_track_ls;		/* Last track in last sessaion	*/
-	Ucbit	did_v		: 1;	/* Disk id valid		*/
-	Ucbit	dbc_v		: 1;	/* Disk bar code valid		*/
-	Ucbit	uru		: 1;	/* This is an unrestricted disk	*/
-	Ucbit	res7_04		: 5;	/* Reserved			*/
-	u_char	disk_type;		/* Disk type			*/
-	u_char	res9[3];		/* Reserved			*/
-	u_char	disk_id[4];		/* Disk identification		*/
-	u_char	last_lead_in[4];	/* Last session lead in time	*/
-	u_char	last_lead_out[4];	/* Last session lead out time	*/
-	u_char	disk_barcode[8];	/* Disk bar code		*/
-	u_char	res32;			/* Reserved			*/
-	u_char	num_opc_entries;	/* # of OPC table entries	*/
-	opc_t	opc_table[1];		/* OPC table 			*/
-};
-
-#endif
+LOCAL	int	curspeed = 1;
 
 LOCAL	int	mmc_load		__PR((void));
 LOCAL	int	mmc_unload		__PR((void));
 LOCAL	cdr_t	*identify_mmc		__PR((cdr_t *, struct scsi_inquiry *));
+LOCAL	int	attach_mmc		__PR((cdr_t *));
 LOCAL	int	get_diskinfo		__PR((struct disk_info *dip));
 LOCAL	void	di_to_dstat		__PR((struct disk_info *dip, dstat_t *dsp));
 #ifdef	PRINT_ATIP
@@ -136,8 +78,10 @@ LOCAL	int	next_wr_addr_mmc	__PR((int track, track_t *trackp, long *ap));
 LOCAL	int	open_track_mmc		__PR((cdr_t *dp, int track, track_t *trackp));
 LOCAL	int	close_track_mmc		__PR((int track, track_t *trackp));
 LOCAL	int	open_session_mmc	__PR((int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	waitfix_mmc		__PR((int secs));
 LOCAL	int	fixate_mmc		__PR((int onp, int dummy, int toctype, int tracks, track_t *trackp));
 LOCAL	int	blank_mmc		__PR((long addr, int blanktype));
+LOCAL	int	scsi_sony_write		__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
 
 LOCAL int
 mmc_load()
@@ -158,7 +102,7 @@ cdr_t	cdr_mmc = {
 	"generic SCSI-3/mmc CD-R driver",
 	0,
 	identify_mmc,
-	drive_attach,
+	attach_mmc,
 	getdisktype_mmc,
 	scsi_load,
 /*	mmc_load,*/
@@ -179,6 +123,34 @@ cdr_t	cdr_mmc = {
 	blank_mmc,
 };
 
+cdr_t	cdr_mmc_sony = {
+	0,
+	CDR_TAO|CDR_DAO|CDR_PACKET|CDR_SWABAUDIO,
+	"mmc_cdr_sony",
+	"generic SCSI-3/mmc CD-R driver (Sony 928 variant)",
+	0,
+	identify_mmc,
+	attach_mmc,
+	getdisktype_mmc,
+	scsi_load,
+/*	mmc_load,*/
+	scsi_unload,
+	recovery_needed,
+	recover,
+	speed_select_mmc,
+	select_secsize,
+	next_wr_addr_mmc,
+	reserve_track,
+	scsi_sony_write,
+	open_track_mmc,
+	close_track_mmc,
+	open_session_mmc,
+	cmd_dummy,
+	read_session_offset,
+	fixate_mmc,
+	blank_mmc,
+};
+
 /*
  * SCSI-3/mmc conformant CD drive
  */
@@ -189,7 +161,7 @@ cdr_t	cdr_cd = {
 	"generic SCSI-3/mmc CD driver",
 	0,
 	identify_mmc,
-	drive_attach,
+	attach_mmc,
 	drive_getdisktype,
 	scsi_load,
 	scsi_unload,
@@ -239,14 +211,6 @@ cdr_t	cdr_oldcd = {
 	blank_dummy,
 };
 
-struct cd__mode_data {
-	struct scsi_mode_header	header;
-	union cd_pagex	{
-		struct cd_mode_page_05	page05;
-		struct cd_mode_page_2A	page2A;
-	} pagex;
-};
-
 LOCAL cdr_t *
 identify_mmc(dp, ip)
 	cdr_t			*dp;
@@ -256,6 +220,7 @@ identify_mmc(dp, ip)
 	BOOL	cdwr	 = FALSE;	/* Write CD-R	*/
 	BOOL	cdrrw	 = FALSE;	/* Read CD-RW	*/
 	BOOL	cdwrw	 = FALSE;	/* Write CD-RW	*/
+	Uchar	mode[0x100];
 	struct	cd_mode_page_2A *mp;
 
 	if (ip->type != INQ_WORM && ip->type != INQ_ROMD)
@@ -264,7 +229,7 @@ identify_mmc(dp, ip)
 	allow_atapi(TRUE);	/* Try to switch to 10 byte mode cmds */
 
 	silent++;
-	mp = mmc_cap(NULL);	/* Get MMC capabilities in allocated mp */
+	mp = mmc_cap(mode);	/* Get MMC capabilities */
 	silent--;
 	if (mp == NULL)
 		return (&cdr_oldcd);	/* Pre SCSI-3/mmc drive	 	*/
@@ -277,110 +242,48 @@ identify_mmc(dp, ip)
 	 * a response data format of '1' which from the SCSI spec would
 	 * tell us not to use the "PF" bit in mode select. As ATAPI drives
 	 * require the "PF" bit to be set, we 'correct' the inquiry data.
+	 *
+	 * XXX xxx_identify() should not have any side_effects ??
 	 */
 	if (ip->data_format < 2)
 		ip->data_format = 2;
 
+	if (strncmp(ip->vendor_info, "SONY", 4) == 0 &&
+	    strncmp(ip->prod_ident, "CD-R   CDU928E", 14) == 0) {
+		dp = &cdr_mmc_sony;
+	}
 	if (!cdwr)			/* SCSI-3/mmc CD drive		*/
 		dp = &cdr_cd;
 
-	dp->cdr_cdcap = mp;		/* Store MMC cap pointer	*/
+	return (dp);
+}
+
+LOCAL int
+attach_mmc(dp)
+	cdr_t			*dp;
+{
+	struct	cd_mode_page_2A *mp;
+
+
+	allow_atapi(TRUE);	/* Try to switch to 10 byte mode cmds */
+
+	silent++;
+	mp = mmc_cap(NULL);	/* Get MMC capabilities in allocated mp */
+	silent--;
+	if (mp == NULL)
+		return (-1);	/* Pre SCSI-3/mmc drive	 	*/
+
+	dp->cdr_cdcap = mp;	/* Store MMC cap pointer	*/
 
 	if (mp->loading_type == LT_TRAY)
 		dp->cdr_flags |= CDR_TRAYLOAD;
 	else if (mp->loading_type == LT_CADDY)
 		dp->cdr_flags |= CDR_CADDYLOAD;
 
-	return (dp);
+	return (0);
 }
 
 #ifdef	PRINT_ATIP
-
-struct tocheader {
-	char	len[2];
-	char	first;
-	char	last;
-};
-
-#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
-
-struct atipdesc {
-	Ucbit	ref_speed	: 3;	/* Reference speed		*/
-	Ucbit	res4_3		: 1;	/* Reserved			*/
-	Ucbit	ind_wr_power	: 3;	/* Indicative tgt writing power	*/
-	Ucbit	res4_7		: 1;	/* Reserved (must be "1")	*/
-	Ucbit	res5_05		: 6;	/* Reserved			*/
-	Ucbit	uru		: 1;	/* Disk is for unrestricted use	*/
-	Ucbit	res5_7		: 1;	/* Reserved (must be "0")	*/
-	Ucbit	a3_v		: 1;	/* A 3 Values valid		*/
-	Ucbit	a2_v		: 1;	/* A 2 Values valid		*/
-	Ucbit	a1_v		: 1;	/* A 1 Values valid		*/
-	Ucbit	sub_type	: 3;	/* Disc sub type		*/
-	Ucbit	erasable	: 1;	/* Disk is erasable		*/
-	Ucbit	res6_7		: 1;	/* Reserved (must be "1")	*/
-	u_char	lead_in[4];		/* Lead in time			*/
-	u_char	lead_out[4];		/* Lead out time		*/
-	u_char	res15;			/* Reserved			*/
-	Ucbit	clv_high	: 4;	/* Highes usable CLV recording speed */
-	Ucbit	clv_low		: 3;	/* Lowest usable CLV recording speed */
-	Ucbit	res16_7		: 1;	/* Reserved (must be "0")	*/
-	Ucbit	res17_0		: 1;	/* Reserved			*/
-	Ucbit	tgt_y_pow	: 3;	/* Tgt y val of the power mod fun */
-	Ucbit	power_mult	: 3;	/* Power multiplication factor	*/
-	Ucbit	res17_7		: 1;	/* Reserved (must be "0")	*/
-	Ucbit	res_18_30	: 4;	/* Reserved			*/
-	Ucbit	rerase_pwr_ratio: 3;	/* Recommended erase/write power*/
-	Ucbit	res18_7		: 1;	/* Reserved (must be "1")	*/
-	u_char	res19;			/* Reserved			*/
-	u_char	a2[3];			/* A 2 Values			*/
-	u_char	res23;			/* Reserved			*/
-	u_char	a3[3];			/* A 3 Vaules			*/
-	u_char	res27;			/* Reserved			*/
-};
-
-#else				/* Motorola byteorder */
-
-struct atipdesc {
-	Ucbit	res4_7		: 1;	/* Reserved (must be "1")	*/
-	Ucbit	ind_wr_power	: 3;	/* Indicative tgt writing power	*/
-	Ucbit	res4_3		: 1;	/* Reserved			*/
-	Ucbit	ref_speed	: 3;	/* Reference speed		*/
-	Ucbit	res5_7		: 1;	/* Reserved (must be "0")	*/
-	Ucbit	uru		: 1;	/* Disk is for unrestricted use	*/
-	Ucbit	res5_05		: 6;	/* Reserved			*/
-	Ucbit	res6_7		: 1;	/* Reserved (must be "1")	*/
-	Ucbit	erasable	: 1;	/* Disk is erasable		*/
-	Ucbit	sub_type	: 3;	/* Disc sub type		*/
-	Ucbit	a1_v		: 1;	/* A 1 Values valid		*/
-	Ucbit	a2_v		: 1;	/* A 2 Values valid		*/
-	Ucbit	a3_v		: 1;	/* A 3 Values valid		*/
-	u_char	lead_in[4];		/* Lead in time			*/
-	u_char	lead_out[4];		/* Lead out time		*/
-	u_char	res15;			/* Reserved			*/
-	Ucbit	res16_7		: 1;	/* Reserved (must be "0")	*/
-	Ucbit	clv_low		: 3;	/* Lowest usable CLV recording speed */
-	Ucbit	clv_high	: 4;	/* Highes usable CLV recording speed */
-	Ucbit	res17_7		: 1;	/* Reserved (must be "0")	*/
-	Ucbit	power_mult	: 3;	/* Power multiplication factor	*/
-	Ucbit	tgt_y_pow	: 3;	/* Tgt y val of the power mod fun */
-	Ucbit	res17_0		: 1;	/* Reserved			*/
-	Ucbit	res18_7		: 1;	/* Reserved (must be "1")	*/
-	Ucbit	rerase_pwr_ratio: 3;	/* Recommended erase/write power*/
-	Ucbit	res_18_30	: 4;	/* Reserved			*/
-	u_char	res19;			/* Reserved			*/
-	u_char	a2[3];			/* A 2 Values			*/
-	u_char	res23;			/* Reserved			*/
-	u_char	a3[3];			/* A 3 Vaules			*/
-	u_char	res27;			/* Reserved			*/
-};
-
-#endif
-
-struct atipinfo {
-	struct tocheader	hd;
-	struct atipdesc		desc;
-};
-
 LOCAL	int	get_atip		__PR((struct atipinfo *atp));
 	void	print_di		__PR((struct disk_info *dip));
 	void	print_atip		__PR((struct atipinfo *atp));
@@ -427,6 +330,17 @@ di_to_dstat(dip, dsp)
 	 */
 	if (dsp->ds_maxblocks == 716730)
 		dsp->ds_maxblocks = -1L;
+
+	if (dsp->ds_first_leadin == 0) {
+		dsp->ds_first_leadin = msf_to_lba(dip->last_lead_in[1],
+						dip->last_lead_in[2],
+						dip->last_lead_in[3]);
+		if (dsp->ds_first_leadin > 0)
+			dsp->ds_first_leadin = 0;
+	}
+
+	if (dsp->ds_last_leadout == 0 && dsp->ds_maxblocks >= 0)
+		dsp->ds_last_leadout = dsp->ds_maxblocks;
 }
 
 #ifdef	PRINT_ATIP
@@ -509,6 +423,7 @@ extern	char	*buf;
 	u_char	mode[0x100];
 	char	ans[2];
 	msf_t	msf;
+	BOOL	did_atip = FALSE;
 
 	msf.msf_min = msf.msf_sec = msf.msf_frame = 0;
 #ifdef	PRINT_ATIP
@@ -523,6 +438,7 @@ extern	char	*buf;
 		msf.msf_min =		mode[8];
 		msf.msf_sec =		mode[9];
 		msf.msf_frame =		mode[10];
+		did_atip = TRUE;
 		if (lverbose) {
 			print_atip((struct atipinfo *)mode);
 			pr_manufacturer(&msf);
@@ -553,6 +469,15 @@ extern	char	*buf;
 	if (get_diskinfo(dip) < 0)
 		return (-1);
 	di_to_dstat(dip, dsp);
+	if (!did_atip && dsp->ds_first_leadin < 0)
+		lba_to_msf(dsp->ds_first_leadin, &msf);
+
+	if (lverbose && !did_atip) {
+		print_min_atip(dsp->ds_first_leadin, dsp->ds_last_leadout);
+		if (dsp->ds_first_leadin < 0)
+	                pr_manufacturer(&msf);
+	}
+	dsp->ds_maxrblocks = disk_rcap(&msf, dsp->ds_maxblocks);
 
 
 #ifdef	PRINT_ATIP
@@ -701,6 +626,8 @@ speed_select_mmc(speed, dummy)
 	int	len;
 	struct	cd_mode_page_05 *mp;
 
+	curspeed = speed;
+
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	if (!get_mode_params(0x05, "CD write parameter",
@@ -723,7 +650,7 @@ speed_select_mmc(speed, dummy)
 	 * Write type = 01 (track at once)
 	 * Track mode = 04 (CD-ROM)
 	 * Data block type = 08 (CD-ROM)
-	 * Session type = 00 (CD-ROM)
+	 * Session format = 00 (CD-ROM)
 	 */
 	mp->write_type = WT_TAO;
 	mp->track_mode = TM_DATA; 
@@ -754,58 +681,6 @@ speed_select_mmc(speed, dummy)
 		return (-1);
 	return (0);
 }
-
-#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
-
-struct track_info {
-	u_char	data_len[2];		/* Data len without this info	*/
-	u_char	track_number;		/* Track number for this info	*/
-	u_char	session_number;		/* Session number for this info	*/
-	u_char	res4;			/* Reserved			*/
-	Ucbit	track_mode	: 4;	/* Track mode (Q-sub control)	*/
-	Ucbit	copy		: 1;	/* This track is a higher copy	*/
-	Ucbit	damage		: 1;	/* if 1 & nwa_valid 0: inc track*/
-	Ucbit	res5_67		: 2;	/* Reserved			*/
-	Ucbit	data_mode	: 4;	/* Data mode of this track	*/
-	Ucbit	fp		: 1;	/* This is a fixed packet track	*/
-	Ucbit	packet		: 1;	/* This track is in packet mode	*/
-	Ucbit	blank		: 1;	/* This is an invisible track	*/
-	Ucbit	rt		: 1;	/* This is a reserved track	*/
-	Ucbit	nwa_valid	: 1;	/* Next writable addr valid	*/
-	Ucbit	res7_17		: 7;	/* Reserved			*/
-	u_char	track_start[4];		/* Track start address		*/
-	u_char	next_writable_addr[4];	/* Next writable address	*/
-	u_char	free_blocks[4];		/* Free usr blocks in this track*/
-	u_char	packet_size[4];		/* Packet size if in fixed mode	*/
-	u_char	track_size[4];		/* # of user data blocks in trk	*/
-};
-
-#else				/* Motorola byteorder */
-
-struct track_info {
-	u_char	data_len[2];		/* Data len without this info	*/
-	u_char	track_number;		/* Track number for this info	*/
-	u_char	session_number;		/* Session number for this info	*/
-	u_char	res4;			/* Reserved			*/
-	Ucbit	res5_67		: 2;	/* Reserved			*/
-	Ucbit	damage		: 1;	/* if 1 & nwa_valid 0: inc track*/
-	Ucbit	copy		: 1;	/* This track is a higher copy	*/
-	Ucbit	track_mode	: 4;	/* Track mode (Q-sub control)	*/
-	Ucbit	rt		: 1;	/* This is a reserved track	*/
-	Ucbit	blank		: 1;	/* This is an invisible track	*/
-	Ucbit	packet		: 1;	/* This track is in packet mode	*/
-	Ucbit	fp		: 1;	/* This is a fixed packet track	*/
-	Ucbit	data_mode	: 4;	/* Data mode of this track	*/
-	Ucbit	res7_17		: 7;	/* Reserved			*/
-	Ucbit	nwa_valid	: 1;	/* Next writable addr valid	*/
-	u_char	track_start[4];		/* Track start address		*/
-	u_char	next_writable_addr[4];	/* Next writable address	*/
-	u_char	free_blocks[4];		/* Free usr blocks in this track*/
-	u_char	packet_size[4];		/* Packet size if in fixed mode	*/
-	u_char	track_size[4];		/* # of user data blocks in trk	*/
-};
-
-#endif
 
 LOCAL int
 next_wr_addr_mmc(track, trackp, ap)
@@ -977,6 +852,31 @@ open_session_mmc(tracks, trackp, toctype, multi)
 }
 
 LOCAL int
+waitfix_mmc(secs)
+	int	secs;
+{
+	char	dibuf[16];
+	int	i;
+	int	key;
+#define	W_SLEEP	2
+
+	silent++;
+	for (i = 0; i < secs/W_SLEEP; i++) {
+		if (read_disk_info(dibuf, sizeof(dibuf)) >= 0) {
+			silent--;
+			return (0);
+		}
+		key = scsi_sense_key();
+		if (key != SC_UNIT_ATTENTION && key != SC_NOT_READY)
+			break;
+		sleep(W_SLEEP);
+	}
+	silent--;
+	return (-1);
+#undef	W_SLEEP
+}
+
+LOCAL int
 fixate_mmc(onp, dummy, toctype, tracks, trackp)
 	int	onp;
 	int	dummy;
@@ -985,11 +885,75 @@ fixate_mmc(onp, dummy, toctype, tracks, trackp)
 	track_t	*trackp;
 {
 	int	ret;
+	int	key;
+	int	code;
+	struct timeval starttime;
+	struct timeval stoptime;
+
+	starttime.tv_sec = 0;
+	starttime.tv_usec = 0;
+	stoptime = starttime;
+	gettimeofday(&starttime, (struct timezone *)0);
 
 	if (dummy && lverbose)
 		printf("WARNING: Some drives don't like fixation in dummy mode.\n");
+	silent++;
 	ret = scsi_close_tr_session(2, 0);
-	wait_unit_ready(300);		/* XXX Wait for ATAPI */
+	silent--;
+	key = scsi_sense_key();
+	code = scsi_sense_code();
+	if (ret >= 0) {
+		wait_unit_ready(420/curspeed);		/* XXX Wait for ATAPI */
+		waitfix_mmc(420/curspeed);		/* XXX Wait for ATAPI */
+		return (ret);
+	}
+
+	if ((dummy != 0 && (key != SC_ILLEGAL_REQUEST)) ||
+		/*
+		 * Try to suppress messages from drives that don't like fixation
+		 * in -dummy mode.
+		 */
+	    ((dummy == 0) &&
+	     ((key != SC_UNIT_ATTENTION) || (code != 0x2E) ||
+				(strncmp(inq.vendor_info, "MITSUMI", 7) != 0)))) {
+		/*
+		 * UNIT ATTENTION/2E seems to be a magic for Mitsumi ATAPI drives
+		 * when returning early from fixating.
+		 * Try to supress the error message in this case to make
+		 * simple minded users less confused.
+		 */
+		scsiprinterr("close track/session");
+		scsiprintresult();	/* XXX restore key/code in future */
+	}
+
+	wait_unit_ready(420);		/* XXX Wait for ATAPI */
+	waitfix_mmc(420/curspeed);	/* XXX Wait for ATAPI */
+
+	if (!dummy &&
+		(ret >= 0 || (key == SC_UNIT_ATTENTION && code == 0x2E))) {
+		/*
+		 * Some ATAPI drives (e.g. Mitsumi) imply the
+		 * IMMED bit in the SCSI cdb. As there seems to be no
+		 * way to properly check for the real end of the
+		 * fixating process we wait for the expected time.
+		 */
+		gettimeofday(&stoptime, (struct timezone *)0);
+		timevaldiff(&starttime, &stoptime);
+		if (stoptime.tv_sec < (220 / curspeed)) {
+			unsigned secs;
+
+			if (lverbose) {
+				printf("Actual fixating time: %ld seconds\n",
+							(long)stoptime.tv_sec);
+			}
+			secs = (280 / curspeed) - stoptime.tv_sec;
+			if (lverbose) {
+				printf("ATAPI early return: sleeping %d seconds.\n",
+								secs);
+			}
+			sleep(secs);
+		}
+	}
 	return (ret);
 }
 
@@ -1022,4 +986,15 @@ blank_mmc(addr, blanktype)
 		printf("Blanking %s\n", blank_types[blanktype & 0x07]);
 
 	return (scsi_blank(addr, blanktype));
+}
+
+LOCAL int
+scsi_sony_write(bp, sectaddr, size, blocks, islast)
+	caddr_t	bp;		/* address of buffer */
+	long	sectaddr;	/* disk address (sector) to put */
+	long	size;		/* number of bytes to transfer */
+	int	blocks;		/* sector count */
+	BOOL	islast;		/* last write for track */
+{
+	return (write_xg5(bp, sectaddr, size, blocks));
 }

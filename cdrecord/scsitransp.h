@@ -1,4 +1,4 @@
-/* @(#)scsitransp.h	1.11 98/03/05 Copyright 1995 J. Schilling */
+/* @(#)scsitransp.h	1.14 98/08/30 Copyright 1995 J. Schilling */
 /*
  *	Definitions for commands that use functions from scsitransp.c
  *
@@ -23,9 +23,10 @@
 /*
  * From scsitransp.c:
  */
-extern	int	scsi_open	__PR((void));
+extern	int	scsi_open	__PR((char *device, int busno, int tgt, int tlun));
 extern	BOOL	scsi_havebus	__PR((int));
 extern	int	scsi_fileno	__PR((int, int, int));
+extern	int	scsi_isatapi	__PR((void));
 extern	int	scsireset	__PR((void));
 extern	void	*scsi_getbuf	__PR((long));
 extern	long	scsi_bufsize	__PR((long));
@@ -33,6 +34,10 @@ extern	void	scsi_setnonstderrs __PR((const char **));
 extern	int	scsicmd		__PR((char *));
 extern	int	scsigetresid	__PR((void));
 extern	void	scsiprinterr	__PR((char *));
+extern	void	scsiprintcdb	__PR((void));
+extern	void	scsiprintwdata	__PR((void));
+extern	void	scsiprintrdata	__PR((void));
+extern	void	scsiprintresult	__PR((void));
 extern	void	scsiprintstatus	__PR((void));
 extern	void	scsiprbytes	__PR((char *, unsigned char *, int));
 extern	void	scsiprsense	__PR((unsigned char *, int));

@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.7 97/11/06 Copyright 1997 J. Schilling */
+/* @(#)scsihack.c	1.15 98/09/08 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.7 97/11/06 Copyright 1997 J. Schilling";
+	"@(#)scsihack.c	1.15 98/09/08 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -36,7 +36,16 @@ static	char _sccsid[] =
 #ifdef	linux
 #define	SCSI_IMPL		/* We have a SCSI implementation for Linux */
 
+#ifndef	HAVE_LINUX_PG_H		/* If we are compiling on an old version */
+#	undef	USE_PG_ONLY	/* there is no 'pg' driver and we cannot */
+#	undef	USE_PG		/* include <linux/pg.h> which is needed  */
+#endif				/* by the pg transport code.		 */
+
+#ifdef	USE_PG_ONLY
+#include "scsi-linux-pg.c"
+#else
 #include "scsi-linux-sg.c"
+#endif
 
 #endif	/* linux */
 
@@ -46,6 +55,16 @@ static	char _sccsid[] =
 #include "scsi-bsd.c"
 
 #endif	/* *BSD */
+
+#if	defined(__bsdi__)	/* We have a SCSI implementation for BSD/OS 3.x (and later?) */
+# include <sys/param.h>
+# if (_BSDI_VERSION >= 199701)
+#  define	SCSI_IMPL
+
+#  include "scsi-bsd-os.c"
+
+# endif	/* BSD/OS >= 3.0 */
+#endif /* BSD/OS */
 
 #ifdef	__sgi
 #define	SCSI_IMPL		/* We have a SCSI implementation for SGI */
@@ -68,6 +87,27 @@ static	char _sccsid[] =
 
 #endif	/* AIX */
 
+#if	defined(__NeXT__)
+#define	SCSI_IMPL		/* We have a SCSI implementation for NextStep */
+
+#include "scsi-next.c"
+
+#endif	/* NEXT */
+
+#if	defined(__osf__)
+#define	SCSI_IMPL		/* We have a SCSI implementation for OSF/1 */
+
+#include "scsi-osf.c"
+
+#endif	/* OSF/1 */
+
+#ifdef	VMS
+#define	SCSI_IMPL		/* We have a SCSI implementation for VMS */
+
+#include "scsi-vms.c"
+
+#endif	/* VMS */
+
 #ifdef	__NEW_ARCHITECTURE
 #define	SCSI_IMPL		/* We have a SCSI implementation for XXX */
 /*
@@ -86,7 +126,11 @@ static	char _sccsid[] =
 LOCAL	int	scsi_send	__PR((int f, struct scg_cmd *sp));
 
 EXPORT
-int scsi_open()
+int scsi_open(device, busno, tgt, tlun)
+	char	*device;
+	int	busno;
+	int	tgt;
+	int	tlun;
 {
 	comerrno(EX_BAD, "No SCSI transport implementation for this architecture.\n");
 }
@@ -111,6 +155,12 @@ int scsi_fileno(busno, tgt, tlun)
 	int	tlun;
 {
 	return (-1);
+}
+
+EXPORT
+int scsi_isatapi()
+{
+	return (FALSE);
 }
 
 EXPORT

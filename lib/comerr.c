@@ -1,4 +1,4 @@
-/* @(#)comerr.c	1.18 98/02/15 Copyright 1985 J. Schilling */
+/* @(#)comerr.c	1.19 98/09/05 Copyright 1985 J. Schilling */
 /*
  *	Routines for printing command errors
  *
@@ -23,17 +23,10 @@
 #include <mconfig.h>
 #include <stdio.h>
 #include <standard.h>
-#ifdef	HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-#ifdef	HAVE_STDARG_H
-#include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
-#ifdef	HAVE_STRERROR
-#include <string.h>
-#else
+#include <stdxlib.h>
+#include <vadefs.h>
+#include <strdefs.h>
+#ifndef	HAVE_STRERROR
 extern	char	*sys_errlist[];
 extern	int	sys_nerr;
 #endif

@@ -1,7 +1,7 @@
-/* @(#)scsi-hpux.c	1.4 97/09/01 Copyright 1997 J. Schilling */
+/* @(#)scsi-hpux.c	1.6 98/08/16 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-hpux.c	1.4 97/09/01 Copyright 1997 J. Schilling";
+	"@(#)scsi-hpux.c	1.6 98/08/16 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the HP-UX generic SCSI implementation.
@@ -47,7 +47,11 @@ extern int target;
 extern int lun;
 
 EXPORT
-int scsi_open()
+int scsi_open(device, busno, tgt, tlun)
+	char	*device;
+	int	busno;
+	int	tgt;
+	int	tlun;
 {
 	register int	f;
 	register int	b;
@@ -147,6 +151,12 @@ int scsi_fileno(busno, tgt, tlun)
 		return (-1);
 
 	return ((int)scgfiles[busno][tgt][tlun]);
+}
+
+EXPORT
+int scsi_isatapi()
+{
+	return (FALSE);
 }
 
 EXPORT

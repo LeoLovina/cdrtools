@@ -7,17 +7,18 @@ include		$(SRCROOT)/$(RULESDIR)/rules.top
 
 INSDIR=		bin
 TARGET=		cdrecord
-CPPOPTS +=	-DFIFO
+CPPOPTS +=	-DFIFO -DUSE_PG
 CFILES=		cdrecord.c cd_misc.c fifo.c isosize.c audiosize.c diskid.c \
 		wm_session.c wm_track.c wm_packet.c \
 		cdr_drv.c \
 		drv_philips.c drv_sony.c drv_jvc.c drv_mmc.c \
+		drv_simul.c \
 		scsi_scan.c scsi_cdr.c scsitransp.c scsierrs.c \
-		modes.c port.c
-HFILES=		cdrecord.h iso9660.h auheader.h scgio.h scsidefs.h \
-		scsireg.h scsitransp.h
+		modes.c misc.c port.c
+HFILES=		cdrecord.h iso9660.h auheader.h scgio.h scsi_scan.h \
+		scsidefs.h scsireg.h scsimmc.h scsitransp.h
 #LIBS=		-lschily $(LIB_SOCKET)
-LIBS=		-lschily
+LIBS=		-lschily $(SCSILIB)
 XMK_FILE=	Makefile.man
 
 ###########################################################################

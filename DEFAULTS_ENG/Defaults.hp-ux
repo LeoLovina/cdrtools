@@ -27,6 +27,8 @@ RUNPATH=	-R $(INS_BASE)/lib -R /opt/schily/lib -R $(OLIBSDIR)
 # Installation config stuff
 #
 ###########################################################################
+#INS_BASE=	/opt/schily
+#INS_KBASE=	/
 INS_BASE=	/tmp/schily
 INS_KBASE=	/tmp/schily/root
 #

@@ -1,7 +1,7 @@
-/* @(#)drv_sony.c	1.18 98/03/27 Copyright 1997 J. Schilling */
+/* @(#)drv_sony.c	1.20 98/09/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_sony.c	1.18 98/03/27 Copyright 1997 J. Schilling";
+	"@(#)drv_sony.c	1.20 98/09/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -31,10 +31,9 @@ static	char sccsid[] =
 
 #include <stdio.h>
 #include <standard.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 #include <errno.h>
-#include <string.h>
-#include <sys/file.h>
+#include <strdefs.h>
 
 #include <utypes.h>
 #include <btorder.h>
@@ -169,7 +168,7 @@ LOCAL	int	next_writable_address_sony __PR((long *ap, int track, int sectype, int
 LOCAL	int	new_track_sony		__PR((int track, int sectype, int tracktype));
 LOCAL	int	open_track_sony		__PR((cdr_t *dp, int track, track_t *track_info));
 LOCAL	int	open_session_sony	__PR((int tracks, track_t *trackp, int toctype, int multi));
-LOCAL	int	sony_attach		__PR((void));
+LOCAL	int	sony_attach		__PR((cdr_t *dp));
 #ifdef	SONY_DEBUG
 LOCAL	void	print_sony_mp22		__PR((struct sony_924_mode_page_22 *xp, int len));
 LOCAL	void	print_sony_mp23		__PR((struct sony_924_mode_page_23 *xp, int len));
@@ -624,7 +623,8 @@ static const char *sd_cdu_924_error_str[] = {
 };
 
 LOCAL int
-sony_attach()
+sony_attach(dp)
+	cdr_t	*dp;
 {
 	scsi_setnonstderrs(sd_cdu_924_error_str);
 	return (0);

@@ -1,0 +1,9 @@
+  {"ABST", &abstract},	Abstract filename
+  {"APPI", &appid},	Produktions Programm namen
+  {"BIBL", &biblio},	Biliographic filename
+  {"COPY", &copyright}, Copyright filename
+  {"PREP", &preparer},	Wer setzt zusammen
+  {"PUBL", &publisher},	Wer bestimmt was
+  {"SYSI", &system_id},	Wer vesteht es
+  {"VOLI", &volume_id},	Volume name (automounter)
+  {"VOLS", &volset_id}, Name der ganzen Vol Gruppe

@@ -12,20 +12,23 @@ Hints for installing/testing:
 Read the README.xxxBSD file in the disribution.
 
 If /dev/su0-0-0 ... do not work on your system, you may try
-to symlink /dev/scgx to the real driver entry for your device.
-If e.g. the CD-Recorder is on /dev/cd0a, you can do:
+use dev=/dev/rcd0a:@,0 od dev=/dev/rcd0a:@
+If the CD-Recorder is on /dev/cd0a
 
-cd /dev
-ln -s cd0a scgx
+Read the man page for more information.
 
-You may also try to link /dev/scgx to /dev/cd0c  /dev/cd0d or /dev/cd0.ctl
+You may also try to use /dev/cd0c:@  /dev/cd0d or /dev/cd0.ctl:@
 *BSD seems not to be well tested with user level SCSI commands.
+
+This changes with FreeBSD/cam
 
 You then will be able to access the CD-Recorder as on other
 systems. If your CD-Recorder is on SCSI Bus 0, Target 2, lun 0
 type:
 
 cdrecord dev=0,2,0 .....
+
+cdrecord -scanbus also works on FreeBSD/cam
 
 I hope to get cdrecord work better with your help soon.
 

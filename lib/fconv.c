@@ -1,6 +1,7 @@
-/* @(#)fconv.c	1.10 97/04/28 Copyright 1985 J. Schilling */
+/* @(#)fconv.c	1.16 98/10/07 Copyright 1985 J. Schilling */
 /*
  *	Convert floating point numbers to strings for format.c
+ *	Should rather use the MT-safe routines [efg]convert()
  *
  *	Copyright (c) 1985 J. Schilling
  */
@@ -20,37 +21,52 @@
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
-#include <standard.h>
+#include <mconfig.h>	/* <- may define NO_FLOATINGPOINT */
 #ifndef	NO_FLOATINGPOINT
 
-#ifdef	HAVE_STDLIB_H
-#include <stdlib.h>
-#else
-extern	char	*ecvt __PR((double, int. int *, int *));
+#include <stdxlib.h>
+#include <standard.h>
+#include <strdefs.h>
+
+#if	!defined(HAVE_STDLIB_H) || defined(HAVE_DTOA)
+extern	char	*ecvt __PR((double, int, int *, int *));
 extern	char	*fcvt __PR((double, int, int *, int *));
 #endif
-#ifdef	HAVE_STRING_H
-#include <string.h>
-#endif
+
+#include <math.h>
+
 #ifdef	hpux
-#undef	BSD4_2
+#define	isnan(val)	(0)
+#define	isinf(val)	(0)
 #endif
 #ifdef	SVR4
 #include <ieeefp.h>
 #define	isnan	isnand
 #define	isinf	!finite
 #endif
-#include <math.h>
+#if	defined(__osf__) || defined(_IBMR2) || defined(_AIX)
+#include <fp.h> 
+#define	isinf	!FINITE
+/*#define	isinf	IS_INF*/
+#define	isnan	IS_NAN
+#endif 
+
+#ifdef	HAVE_DTOA	/* 4.4BSD floating point implementation */
+#include "cvt.c"
+#endif	/* HAVE_DTOA */
 
 static	char	_nan[] = "(NaN)";
 static	char	_inf[] = "(Infinity)";
 
 static	int	_ferr __PR((char *, double));
 
+#ifdef	abs
+#	undef	abs
+#endif
 #define	abs(i)	((i) < 0 ? -(i) : (i))
 
-int ftoes (s, val, fieldwidth, ndigits)
+EXPORT int
+ftoes(s, val, fieldwidth, ndigits)
 	register	char 	*s;
 			double	val;
 	register	int	fieldwidth;
@@ -63,11 +79,16 @@ int ftoes (s, val, fieldwidth, ndigits)
 			int 	decpt;
 			int	sign;
 
-	if ((len = _ferr (s, val)) > 0)
+	if ((len = _ferr(s, val)) > 0)
 		return len;
 	rs = s;
-	b = ecvt (val, ndigits, &decpt, &sign);
+#ifdef	V7_FLOATSTYLE
+	b = ecvt(val, ndigits, &decpt, &sign);
 	rdecpt = decpt;
+#else
+	b = ecvt(val, ndigits+1, &decpt, &sign);
+	rdecpt = decpt-1;
+#endif
 	len = ndigits + 6;			/* Punkt e +/- nnn */
 	if (sign)
 		len++;
@@ -76,21 +97,31 @@ int ftoes (s, val, fieldwidth, ndigits)
 			*rs++ = ' ';
 	if (sign)
 		*rs++ = '-';
+#ifndef	V7_FLOATSTYLE
+	if (*b)
+		*rs++ = *b++;
+#endif
 	*rs++ = '.';
-	  while (*b && ndigits-- > 0)
+	while (*b && ndigits-- > 0)
 		*rs++ = *b++;
 	*rs++ = 'e';
 	*rs++ = rdecpt >= 0 ? '+' : '-';
 	rdecpt = abs(rdecpt);
-	*rs++ = rdecpt / 100 + '0';
-	rdecpt %= 100;
+#ifndef	V7_FLOATSTYLE
+	if (rdecpt >= 100)
+#endif
+	{
+		*rs++ = rdecpt / 100 + '0';
+		rdecpt %= 100;
+	}
 	*rs++ = rdecpt / 10 + '0';
 	*rs++ = rdecpt % 10 + '0';
 	*rs = '\0';
 	return rs - s;
 }
 
-int ftofs (s, val, fieldwidth, ndigits)
+EXPORT int
+ftofs(s, val, fieldwidth, ndigits)
 	register	char 	*s;
 			double	val;
 	register	int	fieldwidth;
@@ -103,10 +134,10 @@ int ftofs (s, val, fieldwidth, ndigits)
 			int 	decpt;
 			int	sign;
 
-	if ((len = _ferr (s, val)) > 0)
+	if ((len = _ferr(s, val)) > 0)
 		return len;
 	rs = s;
-	b = fcvt (val, ndigits, &decpt, &sign);
+	b = fcvt(val, ndigits, &decpt, &sign);
 	rdecpt = decpt;
 	len = rdecpt + ndigits + 1;
 	if (rdecpt < 0)
@@ -123,6 +154,11 @@ int ftofs (s, val, fieldwidth, ndigits)
 		while (*b && len-- > 0)
 			*rs++ = *b++;
 	}
+#ifndef	V7_FLOATSTYLE
+	else {
+		*rs++ = '0';
+	}
+#endif
 	*rs++ = '.';
 	if (rdecpt < 0) {
 		len = rdecpt;
@@ -135,23 +171,23 @@ int ftofs (s, val, fieldwidth, ndigits)
 	return rs - s;
 }
 
-static int _ferr (s, val)
+LOCAL int
+_ferr(s, val)
 	char	*s;
 	double	val;
 {
-#if	defined(BSD4_2) || defined(SVR4)
-	if (isnan (val)){
-		strcpy (s, _nan);
-		return sizeof (_nan) - 1;
+	if (isnan(val)){
+		strcpy(s, _nan);
+		return (sizeof (_nan) - 1);
 	}
+
 	/*
 	 * Check first for NaN because finite() will return 1 on Nan too.
 	 */
-	if (isinf (val)){
-		strcpy (s, _inf);
-		return sizeof (_inf) - 1;
+	if (isinf(val)){
+		strcpy(s, _inf);
+		return (sizeof (_inf) - 1);
 	}
-#endif
 	return 0;
 }
 #endif	/* NO_FLOATINGPOINT */

@@ -1,7 +1,7 @@
-/* @(#)modes.c	1.4 97/11/09 Copyright 1988 J. Schilling */
+/* @(#)modes.c	1.6 98/10/07 Copyright 1988 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)modes.c	1.4 97/11/09 Copyright 1988 J. Schilling";
+	"@(#)modes.c	1.6 98/10/07 Copyright 1988 J. Schilling";
 #endif
 /*
  *	SCSI mode page handling
@@ -24,6 +24,7 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
 #include <sys/types.h>
 #include <standard.h>
 #include <scsireg.h>
@@ -56,6 +57,7 @@ BOOL has_mode_page(page, pagename, lenp)
 	int	*lenp;
 {
 	u_char	mode[0x100];
+	int	hdlen;
 	int	len = 1;				/* Nach SCSI Norm */
 	int	try = 0;
 	struct	scsi_mode_page_header *mp;
@@ -87,16 +89,15 @@ again:
 
 	if (verbose)
 		scsiprbytes("Mode Sense Data", mode, len - scsigetresid());
-	mp = (struct scsi_mode_page_header *)
-		(mode + sizeof(struct scsi_mode_header) +
-		((struct scsi_mode_header *)mode)->blockdesc_len);
+	hdlen = sizeof(struct scsi_mode_header) +
+			((struct scsi_mode_header *)mode)->blockdesc_len;
+	mp = (struct scsi_mode_page_header *)(mode + hdlen);
 	if (verbose)
-		scsiprbytes("Mode Sense Data", (u_char *)mp, mp->p_len+2);
+		scsiprbytes("Mode Page  Data", (u_char *)mp, mp->p_len+2);
 
 	if (mp->p_len == 0) {
 		if (!scsi_compliant && try == 0) {
-			len = sizeof(struct scsi_mode_header) +
-			((struct scsi_mode_header *)mode)->blockdesc_len;
+			len = hdlen;
 			/*
 			 * add sizeof page header (page # + len byte)
 			 * (should normaly result in len == 14)
@@ -108,8 +109,18 @@ again:
 			try++;
 			goto again;
 		}
+		/* XXX if (!nowarn) */
 		errmsgno(EX_BAD,
 			"Warning: controller returns zero sized %s page.\n",
+								pagename);
+	}
+	if (!scsi_compliant &&
+	    (len < (mp->p_len + hdlen + 2))) {
+		len = mp->p_len + hdlen + 2;
+
+		/* XXX if (!nowarn) */
+		errmsgno(EX_BAD,
+			"Warning: controller returns wrong size for %s page.\n",
 								pagename);
 	}
 

@@ -1,4 +1,4 @@
-/* @(#)scgio.h	2.12 98/01/23 Copyright 1986 J. Schilling */
+/* @(#)scgio.h	2.13 98/08/30 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI general driver 'scg'
  *
@@ -449,8 +449,17 @@ XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
 				 (cdb)->addr[2] = ((a) >> 8) & 0xFF,\
 				 (cdb)->addr[3] = (a) & 0xFF)
 
+#define g5_cdbaddr(cdb, a)	g1_cdbaddr(cdb, a)
+
+#define	g0_cdblen(cdb, len)	((cdb)->count = (len))
+
 #define	g1_cdblen(cdb, len)	((cdb)->count[0] = ((len) >> 8) & 0xFF,\
 				 (cdb)->count[1] = (len) & 0xFF)
+
+#define g5_cdblen(cdb, len)	((cdb)->count[0] = (len) >> 24L,\
+				 (cdb)->count[1] = ((len) >> 16L)& 0xFF,\
+				 (cdb)->count[2] = ((len) >> 8L) & 0xFF,\
+				 (cdb)->count[3] = (len) & 0xFF)
 
 #define	i_to_long(a, i)		(((u_char *)(a))[0] = ((i) >> 24)& 0xFF,\
 				 ((u_char *)(a))[1] = ((i) >> 16)& 0xFF,\

@@ -76,10 +76,10 @@ If you want to check, whether mkisofs make evething right, you should create
 another image by using the following command line.
 
 On Linux:
-mkisofs -o isoimage_3.raw -R  -C 0,0 -M /dev/cdwriter_blk_dev  first_dir
+mkisofs -o isoimage_3.raw -R  -C xx,0 -M /dev/cdwriter_blk_dev  first_dir
 
 On SunOS:
-mkisofs -o isoimage_2.raw -R  -C xx,yy -M target,lun first_dir
+mkisofs -o isoimage_2.raw -R  -C xx,0 -M target,lun first_dir
 
 You may check ***this** image by mounting it with my "fbk" on Solaris 
 or the loopback driver on Linux.

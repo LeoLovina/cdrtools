@@ -2,13 +2,8 @@ Cdrecord has not been tested on OpenBSD jet.
 It should run anyhow because the differences between the *BSD 
 systems should not be that big.
 
-As *BSD does not have the standard UNIX functions ecvt() fvct() and gcvt()
-printing of ploating point numbers has been disabled. However
-the floatingpoint arguments are skiped so the programs will not dump core.
-This problem currently only applies to the verbose output of mkisofs.
-
-The current *BSD port will not yet be able to access
-the CD-Recorder as it is on other architectures.
+The current *BSD port will not yet be able to scan the SCSI bus
+for a CD-Recorder as it is on other architectures.
 
 User level SCSI seems not be be well tested on *BSD
 
@@ -26,33 +21,31 @@ This would cause the following canges:
 			REQUEST_SENSE
 		to be able to scan the SCSI bus for drives.
 
+NOTE: This changed with FreeBSD/cam cdrecord -scanbus works on FreeBSD/cam
+
 Workaround:
 
 If /dev/su0-0-0 ... does not exist on your systen, you may try
 to create the devices with the MAKEDEV.su script below.
-You may try to symlink /dev/scgx to the real driver entry for your device.
-If e.g. the CD-Recorder is on /dev/cd0a, you can do:
 
-cd /dev
-ln -s cd0a scgx
+There is no way to get the device node entry from the numerical target
+specification on *BSD. You must specify the apropriate device node name:
+e.g. dev=/dev/cd0.ctl:6,0 together with the numerical target specification.
+A short form is:
 
-or
+	dev=/dev/cd0.ctl:@
 
-cd /dev
-ln -s cd0c scgx
+But this syntax may not work on all *BSD flavours as not all *BSD flavours
+support mapping back the target/lun numbers from a device.
 
-or
+In any case: read the cdrecord man page and try to find the /dev/* entry for
+your CD-recorder that allows to be used with ioctl's.
 
-cd /dev
-ln -s cd0.ctl scgx
-
-You then will be able to access the CD-Recorder as on other
+On FreeBSD/cam, you will be able to access the CD-Recorder as on other
 systems. If your CD-Recorder is on SCSI Bus 0, Target 2, lun 0
 type:
 
 cdrecord dev=0,2,0 .....
-
-I hope to get cdrecord work better with your help soon.
 
 Jörg
 

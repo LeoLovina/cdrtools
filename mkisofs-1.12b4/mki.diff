@@ -1,0 +1,143 @@
+*** mkisofs.c.orig	Tue Jun  2 05:43:45 1998
+--- mkisofs.c	Sat Jun  6 16:26:56 1998
+***************
+*** 62,67 ****
+--- 62,68 ----
+  
+  static char version_string[] = "mkisofs 1.12b4";
+  
++ char * outfile;
+  FILE * discimage;
+  unsigned int next_extent = 0;
+  unsigned int last_extent = 0;
+***************
+*** 166,178 ****
+--- 167,190 ----
+  #define OPTION_NOSPLIT_SL_FIELD		153
+  #define OPTION_PRINT_SIZE		154
+  #define OPTION_SPLIT_OUTPUT		155
++ #define OPTION_ABSTRACT			156
++ #define OPTION_BIBLIO			157
++ #define OPTION_COPYRIGHT		158
++ #define OPTION_SYSID			159
++ #define OPTION_VOLSET			160
+  
+  static const struct ld_option ld_options[] =
+  {
+    { {"all-files", no_argument, NULL, 'a'},
+        'a', NULL, "Process all files (don't skip backup files)", ONE_DASH },
++   { {"abstract", required_argument, NULL, OPTION_ABSTRACT},
++       '\0', "FILE", "Set Abstract filename" , ONE_DASH },
+    { {"appid", required_argument, NULL, 'A'},
+        'A', "ID", "Set Application ID" , ONE_DASH },
++   { {"biblio", required_argument, NULL, OPTION_BIBLIO},
++       '\0', "FILE", "Set Bibliographic filename" , ONE_DASH },
++   { {"copyright", required_argument, NULL, OPTION_COPYRIGHT},
++       '\0', "FILE", "Set Copyright filename" , ONE_DASH },
+    { {"eltorito-boot", required_argument, NULL, 'b'},
+        'b', "FILE", "Set El Torito boot image name" , ONE_DASH },
+    { {"eltorito-catalog", required_argument, NULL, 'c'},
+***************
+*** 221,226 ****
+--- 233,240 ----
+        'R', NULL, "Generate Rock Ridge directory information", ONE_DASH },
+    { {"split-output", no_argument, NULL, OPTION_SPLIT_OUTPUT},
+        '\0', NULL, "Split output into files of approx. 1GB size", ONE_DASH },
++   { {"sysid", required_argument, NULL, OPTION_SYSID},
++       '\0', "ID", "Set System ID" , ONE_DASH },
+    { {"translation-table", no_argument, NULL, 'T'},
+        'T', NULL, "Generate translation tables for systems that don't understand long filenames", ONE_DASH },
+    { {"verbose", no_argument, NULL, 'v'},
+***************
+*** 227,232 ****
+--- 241,248 ----
+        'v', NULL, "Verbose", ONE_DASH },
+    { {"volid", required_argument, NULL, 'V'},
+        'V', "ID", "Set Volume ID" , ONE_DASH },
++   { {"volset", required_argument, NULL, OPTION_VOLSET},
++       '\0', "ID", "Set Volume set ID" , ONE_DASH },
+    { {"old-exclude", required_argument, NULL, 'x'},
+        'x', "FILE", "Exclude file name(depreciated)" , ONE_DASH }
+  #ifdef ERIC_neverdef
+***************
+*** 538,544 ****
+  extern char * cdwrite_data;
+  
+  int FDECL2(main, int, argc, char **, argv){
+-   char * outfile;
+    struct directory_entry de;
+  #ifdef HAVE_SBRK
+    unsigned long mem_start;
+--- 554,559 ----
+***************
+*** 643,648 ****
+--- 658,670 ----
+  		exit(1);
+  	}
+  	break;
++       case OPTION_ABSTRACT:
++ 	abstract = optarg;
++ 	if(strlen(abstract) > 37) {
++ 		fprintf(stderr,"Abstract filename string too long\n");
++ 		exit(1);
++ 	};
++ 	break;
+        case 'A':
+  	appid = optarg;
+  	if(strlen(appid) > 128) {
+***************
+*** 650,655 ****
+--- 672,691 ----
+  		exit(1);
+  	};
+  	break;
++       case OPTION_BIBLIO:
++ 	biblio = optarg;
++ 	if(strlen(biblio) > 37) {
++ 		fprintf(stderr,"Bibliographic filename string too long\n");
++ 		exit(1);
++ 	};
++ 	break;
++       case OPTION_COPYRIGHT:
++ 	copyright = optarg;
++ 	if(strlen(copyright) > 37) {
++ 		fprintf(stderr,"Copyright filename string too long\n");
++ 		exit(1);
++ 	};
++ 	break;
+        case 'd':
+  	omit_period++;
+  	break;
+***************
+*** 704,715 ****
+--- 740,769 ----
+        case OPTION_SPLIT_OUTPUT:
+  	split_output++;
+  	break;
++       case OPTION_SYSID:
++ 	system_id = optarg;
++ 	if(strlen(system_id) > 32) {
++ 		fprintf(stderr,"System ID string too long\n");
++ 		exit(1);
++ 	};
++ 	break;
+        case 'T':
+  	generate_tables++;
+  	break;
+        case 'V':
+  	volume_id = optarg;
++ 	if(strlen(volume_id) > 32) {
++ 		fprintf(stderr,"Volume ID string too long\n");
++ 		exit(1);
++ 	};
+  	break;
++       case OPTION_VOLSET:
++ 	volset_id = optarg;
++ 	if(strlen(volset_id) > 128) {
++ 		fprintf(stderr,"Volume set ID string too long\n");
++ 		exit(1);
++ 	};
++ 	break;
+        case 'v':
+  	verbose++;
+  	break;

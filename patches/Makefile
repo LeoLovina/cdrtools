@@ -14,5 +14,5 @@ all:
 	done
 
 
-clean clobber distclean install ibins depend TAGS tags rmtarget relink:
+clean clobber distclean install ibins depend rmdep TAGS tags rmtarget relink:
 	@echo "$@: nothing to make"

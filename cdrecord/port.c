@@ -1,7 +1,7 @@
-/* @(#)port.c	1.6 97/03/02 Copyright 1995 J. Schilling */
+/* @(#)port.c	1.8 98/10/07 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)port.c	1.6 97/03/02 Copyright 1995 J. Schilling";
+	"@(#)port.c	1.8 98/10/07 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1995 J. Schilling
@@ -16,15 +16,16 @@ static	char sccsid[] =
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
 #include <standard.h>
 #include <stdxlib.h>
-#include <time.h>
+#include <timedefs.h>
 #ifdef	NANOSEC
 #include <poll.h>
 #include <sys/systeminfo.h>

@@ -1,1 +1,0 @@
-../cdrecord/scsi-sgi.c

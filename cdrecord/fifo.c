@@ -1,7 +1,7 @@
-/* @(#)fifo.c	1.10 98/02/22 Copyright 1989,1997 J. Schilling */
+/* @(#)fifo.c	1.12 98/10/17 Copyright 1989,1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)fifo.c	1.10 98/02/22 Copyright 1989,1997 J. Schilling";
+	"@(#)fifo.c	1.12 98/10/17 Copyright 1989,1997 J. Schilling";
 #endif
 /*
  *	A "fifo" that uses shared memory between two processes
@@ -53,6 +53,7 @@ static	char sccsid[] =
 #include <stdio.h>
 #include <stdxlib.h>
 #include <unixstd.h>
+#include <utypes.h>
 #include <standard.h>
 #include <errno.h>
 #include <signal.h>
@@ -241,8 +242,14 @@ mkshm(size)
 	if (shmctl(id, IPC_RMID, 0) < 0)
 		comerr("shmctl failed to detach shared memory segment\n");
 
+#ifdef	SHM_LOCK
+	/*
+	 * Although SHM_LOCK is standard, it seems that all versions of AIX
+	 * ommit this definition.
+	 */
 	if (shmctl(id, SHM_LOCK, 0) < 0)
 		comerr("shmctl failed to lock shared memory segment\n");
+#endif
 
 	return (addr);
 }
@@ -600,6 +607,7 @@ fifo_percent(addone)
 
 #include <standard.h>
 #include <sys/types.h>
+#include <utypes.h>
 
 #include "cdrecord.h"
 

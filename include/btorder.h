@@ -1,4 +1,4 @@
-/* @(#)btorder.h	1.6 98/03/02 Copyright 1996 J. Schilling */
+/* @(#)btorder.h	1.7 98/07/20 Copyright 1996 J. Schilling */
 /*
  *	Definitions for Bitordering
  *
@@ -26,9 +26,15 @@
 
 #include <sys/types.h>			/* try to load isa_defs.h on Solaris */
 
-#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
-#elif	defined(_BIT_FIELDS_HTOL)	/* Motorola byteorder */
+
+#if	defined(_BIT_FIELDS_LTOH) || defined(_BIT_FIELDS_HTOL)
+/*
+ * Bitorder is known.
+ */
 #else
+/*
+ * Bitorder not known.
+ */
 #	if defined(sun3) || defined(mc68000) || \
 	   defined(sun4) || defined(__sparc) || defined(sparc) || \
 	   defined(__hppa) || defined(_ARCH_PPC) || defined(_IBMR2)

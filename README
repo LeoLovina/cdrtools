@@ -1,17 +1,20 @@
-# @(#)README	1.12 98/04/18 Copyright 1996 J. Schilling
+# @(#)README	1.14 98/10/18 Copyright 1996 J. Schilling
 
-This is Version 1.6 of cdrecord
+This is Version 1.6.1 of cdrecord
 
 Cdrecord allows you to create CD's on a CD-Recorder.
 Cdrecord runs on:
 
 SunOS 4.1.3 or later:	sparc.
 Solaris 2.3 or later:	sparc and x86.
-Linux:			x86 sparc and alpha.
+Linux:			x86 sparc ppc and alpha.
 NetBSD/FreeBSD/OpenBSD:	x86 sparc
 SGI IRIX:		mips
 HP-UX:			hppa
 AIX:			rs6000
+OSF1:			alpha
+
+To learn how to compile and install cdrecord, read README.compile
 
 For multi session please read README.multi
 
@@ -94,6 +97,8 @@ It should run also on:
 	HP C4324/C4325 (HP SureStore 4020i/6020i)
 	HP 7100
 	HP 7110
+	HP 7200
+	HP 8100
 	Hi-Val CD-R (see Pinnacle RCD-4x4)
 	JVC XR-W2001 (uses TEAC code - see below - audio not working)
 	JVC XR-W2010 (uses TEAC code - see below - audio not working)
@@ -112,6 +117,8 @@ It should run also on:
 	MicroNet MasterCD Plus 4x6
 	Mitsumi CR-2401-TS (not tested)
 	Mitsumi CR-2600-TE
+	Mitsumi CR-2801
+	Mitsumi CR-4801
 	Olympus CDS615E
 	Olympus CDS620E (use cdrecord driver=sony_cdu924   and report inquiry)
 	Olympus CD-R2x6 (use cdrecord driver=sony_cdu924   and report inquiry)
@@ -156,6 +163,7 @@ It should run also on:
 	Sony CDU920S
 	Sony CDU924S
 	Sony CDU926S
+	Sony CDU928
 	Sony CDU940S
 	TEAC CD-R50S
 	TEAC CD-R55S
@@ -198,7 +206,6 @@ The following dries are curently not supported because I don't get specs:
 	Pinnacle Micro RCD-5040
 	Plasmon CDR-4240
 	Ricoh RS-1060C
-	Sony CDU-928E does not work, it violates the ATAPI specs
 	Sony CDW-900E
 	
 
@@ -213,13 +220,18 @@ Solaris only:
 Note that the fbk driver packet is for Solaris 2.4 and not system independant.
 
 All Systems:
-	cdrecord-1.6.tar.gz	The cdrecord for source distribution.
+	cdrecord-1.6.1.tar.gz	The cdrecord for source distribution.
 
 NOTE:	All these tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
 	tar may get some minor trouble.
 
 WARNING: Do not use 'mc' to extract the tar file!
 	All mc versions before 4.0.14 cannot extract symbolic links correctly.
+
+To unpack the archive use:
+
+	gzip -d < cdrecord.tar.gz | tar -xpf -
+
 
 The files are located on:
 
@@ -231,7 +243,7 @@ If you need mkisofs, it is located on:
 
 ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/mkisofs-1.12.1.tar.gz
 
-but it is also contained in cdrecord-1.6
+but it is also contained in cdrecord-1.6.1
 
 
 

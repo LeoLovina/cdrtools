@@ -1,4 +1,4 @@
-.\" @(#)cdrecord.1	1.28 98/04/16 Copyright 1996 J. Schilling
+.\" @(#)cdrecord.1	1.34 98/10/06 Copyright 1996 J. Schilling
 .\" 
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -68,16 +68,42 @@ or
 .IR target , lun .
 In the latter case, the CD-Recorder has to be connected to the default 
 SCSI bus of the machine.
-.PP
 .IR Scsibus ,
 .I target 
 and 
 .I lun
 are integer numbers. 
+Some operating systems or SCSI transport implementations may require to
+specify a filename in addition.
+In this case the corect syntax for the device is:
+.B dev=
+.IR devicename : scsibus , target , lun
+or
+.B dev=
+.IR devicename : target , lun .
+If the name of the device node that has been specified on such a system
+referres to exactly one SCSI device, a shorthand in the form
+.B dev=
+.IR devicename : @
+or
+.B dev=
+.IR devicename : @ , lun
+may be used instead of
+.B dev=
+.IR devicename : scsibus , target , lun .
+
+.PP
 To make 
 .B cdrecord
-portable to all \s-2UNIX\s0 platforms, there is no way to specify a real
-device file name.
+portable to all \s-2UNIX\s0 platforms, the syntax
+.B dev=
+.IR devicename : scsibus , target , lun
+is preferred as is hides OS specific knowledge about device names from the user.
+A specific OS must not necessarily support a way to specify a real device file name nor a
+way to specify 
+.IR scsibus , target , lun .
+
+.PP
 .I Scsibus 
 0 is the default SCSI bus on the machine. Watch the boot messages for more 
 information or look into 
@@ -310,6 +336,27 @@ you have hardware problems. The fifo size in this case is sufficient.
 .TP
 .BI dev= target
 Sets the SCSI target for the CD-Recorder, see notes above.
+A typical device specification is
+.BI dev= 6,0
+\&.
+If a filename must be provided together with the numerical target 
+specification, the filename is implementation specific.
+The correct filename in this case can be found in the system specific
+manuals of the target operating system.
+On a 
+.I FreeBSD
+system without 
+.I CAM
+support, you need to use the control device (e.g.
+.IR /dev/cd0.ctl ).
+A correct device specification in this case may be
+.BI dev= /dev/cd0.ctl:@
+\&.
+.sp
+On Linux, drives connected to a parallel port adapter are mapped
+to a virtual SCSI bus. Different adapters are mapped to different
+targets on this virtual SCSI bus.
+.sp
 If no 
 .I dev
 option is present, 
@@ -348,6 +395,24 @@ The minimum problem related to a wrong driver is that the
 or 
 .B \-dummy
 will not work.
+.sp
+There are two special driver entries in the list:
+.B cdr_simul
+and
+.BR dvd_simul .
+These driver entries are designed to make timing tests at any speed
+or timing tests for drives that do not support the 
+.B \-dummy
+option.
+The simulation drivers implement a drive with a buffer size of 1MB
+that can be changed via the 
+.B CDR_SIMUL_BUFSIZE
+environment variable.
+The simultaion driver correctly simulates even a buffer underrun condition.
+If the 
+.B \-dummy 
+option is present, the simultaion is not aborted in case of a buffer underrun.
+
 .TP
 .B \-checkdrive
 Checks if a driver for the current drive is present and exit.
@@ -371,7 +436,7 @@ Scan all SCSI devices on all SCSI busses and print the inquiry
 strings. This option may be used to find SCSI address of the 
 CD-Recorder on a system.
 The numbers printed out as labels are computed by: 
-.B "bus * 100 + target * 10 + lun
+.B "bus * 100 + target
 .TP
 .B \-reset
 Try to reset the SCSI bus where the CD recorder is located. This works not
@@ -420,7 +485,7 @@ data will be read in multiple of 2352 bytes during the recording process.
 If a filename ends in 
 .I .au
 or
-.I .waw
+.I .wav
 the file is considered to be a structured audio data file.
 .B Cdrecord
 assumes that the file in this case is a Sun audio file or a
@@ -588,10 +653,6 @@ This option has no effect on data tracks.
 If this flag is present, all TOC entries for subsequent audio tracks 
 will indicate that the audio data has been mastered with linear data \- 
 this is the default.
-.TP
-.B bytes=#
-Obsolete option to specify the size of the next track. Don't use this
-option, it will go away in cdrecord-1.7.
 .TP
 .B tsize=#
 If the master image for the next track has been stored on a raw disk, 
@@ -1002,6 +1063,32 @@ For creating the experimental packet writing support,
 the first implementation of CD-RW blanking support,
 the first .wav file decoder 
 and many nice discussions on cdrecord.
+.TP
+Chris P. Ross" (cross@eng.us.uu.net)
+.br
+For the first implementation os a BSDI SCSI rtansport.
+.TP
+Grant R. Guenther   (grant@torque.net)
+.br
+For creating the first parallel port transport implementation
+for Linux.
+
+.SH "MAILING LISTS
+If you want to actively take part on the development of cdrecord,
+you may join the cdwriting mailing list by sending mail to:
+.nf
+.sp
+	cdwrite-request@lists.debian.org
+.sp
+.fi
+and include the word 
+.I subscribe
+in the body.
+The mail address of the list is:
+.nf
+.sp
+	cdwrite@lists.debian.org
+.fi
 
 .SH AUTHOR
 .nf

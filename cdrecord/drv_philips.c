@@ -1,7 +1,7 @@
-/* @(#)drv_philips.c	1.16 98/04/12 Copyright 1997 J. Schilling */
+/* @(#)drv_philips.c	1.17 98/09/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_philips.c	1.16 98/04/12 Copyright 1997 J. Schilling";
+	"@(#)drv_philips.c	1.17 98/09/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -35,6 +35,7 @@ static	char sccsid[] =
 
 #include "cdrecord.h"
 
+extern	int	debug;
 extern	int	silent;
 extern	int	verbose;
 extern	int	lverbose;
@@ -47,15 +48,16 @@ LOCAL	int	speed_select_oldphilips		__PR((int speed, int dummy));
 LOCAL	int	speed_select_dumbphilips	__PR((int speed, int dummy));
 LOCAL	int	speed_select_pioneer	__PR((int speed, int dummy));
 LOCAL	int	philips_getdisktype __PR((cdr_t *dp, dstat_t *dsp));
+LOCAL	BOOL	capacity_philips	__PR((long *lp));
 LOCAL	int	next_wr_addr_philips __PR((int track, track_t *trackp, long *ap));
 LOCAL	int	scsi_cdr_write_philips __PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
 LOCAL	int	open_track_philips __PR((cdr_t *dp, int track, track_t *track_info));
 LOCAL	int	open_track_oldphilips __PR((cdr_t *dp, int track, track_t *track_info));
 LOCAL	int	open_track_yamaha __PR((cdr_t *dp, int track, track_t *track_info));
 
-LOCAL	int	philips_attach	__PR((void));
-LOCAL	int	plasmon_attach	__PR((void));
-LOCAL	int	ricoh_attach	__PR((void));
+LOCAL	int	philips_attach	__PR((cdr_t *));
+LOCAL	int	plasmon_attach	__PR((cdr_t *));
+LOCAL	int	ricoh_attach	__PR((cdr_t *));
 LOCAL	int	philips_getlilo	__PR((long *lilenp, long *lolenp));
 
 
@@ -167,6 +169,33 @@ cdr_t	cdr_philips_cdd522 = {
 	blank_dummy,
 };
 
+cdr_t	cdr_kodak_pcd600 = {
+	0,
+	CDR_TAO|CDR_TRAYLOAD,
+	"kodak_pcd_600",
+	"driver for Kodak PCD-600",
+	0,
+	drive_identify,
+	philips_attach,
+	philips_getdisktype,
+	philips_load,
+	philips_unload,
+	recovery_needed,
+	recover,
+	speed_select_philips,
+	select_secsize,
+	next_wr_addr_philips,
+	reserve_track,
+	scsi_cdr_write_philips,
+	open_track_oldphilips,
+	close_track_philips,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
+	cmd_dummy,
+	read_session_offset_philips,
+	fixation,
+	blank_dummy,
+};
+
 cdr_t	cdr_plasmon_rf4100 = {
 	0,
 	CDR_TAO|CDR_TRAYLOAD,
@@ -212,7 +241,8 @@ cdr_t	cdr_pioneer_dw_s114x = {
 	next_wr_addr_philips,
 	reserve_track,
 	scsi_cdr_write_philips,
-	open_track_yamaha,
+/*	open_track_yamaha,*/
+/*???*/	open_track_oldphilips,
 	close_track_philips,
 	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
@@ -364,31 +394,6 @@ philips_getdisktype(dp, dsp)
 	dummy = (*dp->cdr_next_wr_address)(0, (track_t *)0, &lilen);
 	silent--;
 
-	if (lverbose && dummy >= 0 && lilen == 0) {
-		silent++;
-		dummy = philips_getlilo(&lilen, &lolen);
-		silent--;
-
-		if (dummy >= 0) {
-/*			printf("lead-in len: %d lead-out len: %d\n", lilen, lolen);*/
-			lba_to_msf(-150 - lilen, &msf);
-
-			printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
-				-150 - lilen, msf.msf_min, msf.msf_sec, msf.msf_frame);
-
-			if (read_trackinfo(0xAA, &lolen,
-						NULL, NULL, NULL, NULL) >= 0) {
-
-				lba_to_msf(lolen, &msf);
-				printf(
-				"  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
-				lolen, msf.msf_min, msf.msf_sec, msf.msf_frame);
-			}
-			lba_to_msf(-150 - lilen, &msf);
-			pr_manufacturer(&msf);
-		}
-	}
-
 	/*
 	 * Check for "Command sequence error" first.
 	 */
@@ -401,17 +406,63 @@ philips_getdisktype(dp, dsp)
 		unload_media(dp, F_EJECT);
 		load_media(dp);
 	}
-	silent++;
-	if (read_B0(FALSE, NULL, &lolen) >= 0) {
-/*		printf("lead out B0: %ld\n", lolen);*/
-		dsp->ds_maxblocks = lolen;
-	} else if (read_trackinfo(0xAA, &lolen, NULL, NULL, NULL, NULL) >= 0) {
-/*		printf("lead out AA: %ld\n", lolen);*/
+
+	if (lverbose && dummy >= 0 && lilen == 0) {
+		silent++;
+		dummy = philips_getlilo(&lilen, &lolen);
+		silent--;
+
+		if (dummy >= 0) {
+/*			printf("lead-in len: %d lead-out len: %d\n", lilen, lolen);*/
+			lba_to_msf(-150 - lilen, &msf);
+
+			printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
+				-150 - lilen, msf.msf_min, msf.msf_sec, msf.msf_frame);
+
+			if (capacity_philips(&lolen)) {
+				lba_to_msf(lolen, &msf);
+				printf(
+				"  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
+				lolen, msf.msf_min, msf.msf_sec, msf.msf_frame);
+			}
+			lba_to_msf(-150 - lilen, &msf);
+			pr_manufacturer(&msf);
+		}
+	}
+
+	if (capacity_philips(&lolen)) {
 		dsp->ds_maxblocks = lolen;
 	}
-	silent--;
-
 	return (drive_getdisktype(dp, dsp));
+}
+
+LOCAL BOOL
+capacity_philips(lp)
+	long	*lp;
+{
+	long	l = 0L;
+	BOOL	succeed = TRUE;
+
+	silent++;
+	if (read_B0(FALSE, NULL, &l) >= 0) {
+		if (debug)
+			printf("lead out B0: %ld\n", l);
+		*lp = l;
+	} else if (read_trackinfo(0xAA, &l, NULL, NULL, NULL, NULL) >= 0) {
+		if (debug)
+			printf("lead out AA: %ld\n", l);
+		*lp = l;
+	} if (read_capacity() >= 0) {
+		extern struct scsi_capacity cap;
+		l = cap.c_baddr + 1;
+		if (debug)
+			printf("lead out capacity: %ld\n", l);
+	} else {
+		succeed = FALSE;
+	}
+	*lp = l;
+	silent--;
+	return (succeed);
 }
 
 LOCAL int
@@ -637,14 +688,16 @@ static const char *sd_ro1420_error_str[] = {
 };
 
 LOCAL int
-philips_attach()
+philips_attach(dp)
+	cdr_t	*dp;
 {
 	scsi_setnonstderrs(sd_cdd_521_error_str);
 	return (0);
 }
 
 LOCAL int
-plasmon_attach()
+plasmon_attach(dp)
+	cdr_t	*dp;
 {
 	extern struct scsi_inquiry	inq;
 
@@ -655,7 +708,8 @@ plasmon_attach()
 }
 
 LOCAL int
-ricoh_attach()
+ricoh_attach(dp)
+	cdr_t	*dp;
 {
 	scsi_setnonstderrs(sd_ro1420_error_str);
 	return (0);

@@ -1,7 +1,7 @@
-/* @(#)scsi_cdr.c	1.45 98/04/17 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.56 98/10/18 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.45 98/04/17 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.56 98/10/18 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -38,10 +38,9 @@ static	char sccsid[] =
 #include <standard.h>
 #include <stdxlib.h>
 #include <unixstd.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 #include <errno.h>
-#include <string.h>
-#include <sys/file.h>
+#include <strdefs.h>
 
 #include <utypes.h>
 #include <btorder.h>
@@ -52,7 +51,7 @@ static	char sccsid[] =
 #include "cdrecord.h"
 #include "scsitransp.h"
 
-#define	strindex(s1,s2)	strstr((s2), (s1))
+#define	strbeg(s1,s2)	(strstr((s2), (s1)) == (s2))
 
 struct	scg_cmd		scmd;
 struct	scsi_inquiry	inq;
@@ -64,11 +63,13 @@ extern	int	target;
 extern	int	lun;
 
 extern	int	silent;
+extern	int	debug;
 extern	int	verbose;
 extern	int	lverbose;
 
 EXPORT	int	open_scsi	__PR((char *scsidev, int timeout,
 								int be_verbose));
+LOCAL	int	scsi_scandev	__PR((char *devp, int *xp1, int *xp2, int *xp3));
 EXPORT	void	scsi_settimeout	__PR((int timeout));
 
 EXPORT	BOOL	unit_ready	__PR((void));
@@ -86,6 +87,7 @@ EXPORT	int	scsi_set_speed	__PR((int readspeed, int writespeed));
 EXPORT	int	qic02		__PR((int));
 EXPORT	int	write_xg0	__PR((caddr_t, long, long, int));
 EXPORT	int	write_xg1	__PR((caddr_t, long, long, int));
+EXPORT	int	write_xg5	__PR((caddr_t, long, long, int));
 EXPORT	int	write_track	__PR((long, int));
 EXPORT	int	scsi_flush_cache __PR((void));
 EXPORT	int	read_toc	__PR((caddr_t, int, int, int, int));
@@ -118,6 +120,7 @@ EXPORT	int	read_trackinfo	__PR((int, long *, struct msf *, int *, int *, int *))
 EXPORT	int	read_B0		__PR((BOOL isbcd, long *b0p, long *lop));
 EXPORT	int	read_session_offset __PR((long *));
 EXPORT	int	read_session_offset_philips __PR((long *));
+EXPORT	int	sense_secsize	__PR((int current));
 EXPORT	int	select_secsize	__PR((int));
 EXPORT	BOOL	is_cddrive	__PR((void));
 EXPORT	BOOL	is_unknown_dev	__PR((void));
@@ -136,19 +139,39 @@ EXPORT	void	mmc_getval	__PR((struct cd_mode_page_2A *mp,
 					BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
 					BOOL *dvdp));
-EXPORT	BOOL	is_mmc		__PR((void));
+EXPORT	BOOL	is_mmc		__PR((BOOL *dvdp));
 EXPORT	BOOL	mmc_check	__PR((BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
 					BOOL *dvdp));
 EXPORT	void	print_capabilities __PR((void));
 
-
+/*
+ * Open a SCSI device.
+ *
+ * Possible syntax is:
+ *
+ * Preferred:
+ *	dev=target,lun / dev=scsibus,target,lun
+ *
+ * Needed on some systems:
+ *	dev=devicename:target,lun / dev=devicename:scsibus,target,lun
+ *
+ * On systems that don't support SCSI Bus scanning this syntax helps:
+ *	dev=devicename:@ / dev=devicename:@,lun
+ * or	dev=devicename (undocumented)
+ *
+ * NOTE: As the 'lun' is part of the SCSI command descriptor block, it
+ * 	 must always be known. If the OS cannot map it, it must be
+ *	 specified on command line.
+ */
 EXPORT int
 open_scsi(scsidev, timeout, be_verbose)
 	char	*scsidev;
 	int	timeout;
 	int	be_verbose;
 {
+	char	devname[256];
+	char	*devp = NULL;
 	int	x1, x2, x3;
 	int	n = 0;
 	extern	int	deftimeout;
@@ -156,17 +179,59 @@ open_scsi(scsidev, timeout, be_verbose)
 	if (timeout >= 0)
 		deftimeout = timeout;
 
-	if (scsidev != NULL)
-		n = sscanf(scsidev, "%d,%d,%d", &x1, &x2, &x3);
-	if (n == 3) {
+	devname[0] = '\0';
+	if (scsidev != NULL) {
+		if ((devp = strchr(scsidev, ':')) == NULL) {
+			if (strchr(scsidev, ',') == NULL) {
+				/* Notation form: 'devname' (undocumented)   */
+				/* Fetch bus/tgt/lun values from OS	     */
+				n = -1;
+				lun = -2;	/* Lun must be known	     */
+				strncpy(devname, scsidev, sizeof(devname)-1);
+				devname[sizeof(devname)-1] = '\0';
+			} else {
+				/* Basic notation form: 'bus,tgt,lun'	     */
+				devp = scsidev;
+			}
+		} else {
+			/* Notation form: 'devname:bus,tgt,lun'/'devname:@'  */
+			x1 = devp - scsidev;
+			if (x1 >= sizeof(devname))
+				x1 = sizeof(devname)-1;
+			strncpy(devname, scsidev, x1);
+			devname[x1] = '\0';
+			devp++;
+			/* Check for a notation in the form 'devname:@'	     */
+			if (devp[0] == '@') {
+				if (devp[1] == '\0') {
+					lun = -2;
+				} else if (devp[1] == ',') {
+					if (*astoi(&devp[2], &lun) != '\0')
+						return (-1);
+				}
+				n = -1;
+				devp = NULL;
+			}
+		}
+	}
+	if (devp != NULL) {
+		n = scsi_scandev(devp, &x1, &x2, &x3);
+		if (n < 0) {
+			errno = EINVAL;
+			return (-1);
+		}
+	}
+	if (n == 3) {		/* Got bus,target,lun			*/
 		scsibus = x1;
 		target = x2;
 		lun = x3;
-	} else if (n == 2) {
+	} else if (n == 2) {	/* Got target,lun			*/
 		scsibus = 0;
 		target = x1;
 		lun = x2;
-	} else if (scsidev != NULL) {
+	} else if (n == -1) {	/* Got device:@, fetch bus/lun from OS	*/
+		scsibus = target = -2;
+	} else if (devp != NULL) {
 		printf("WARNING: device not valid, trying to use default target...\n");
 		scsibus = 0;
 		target = 6;
@@ -174,10 +239,60 @@ open_scsi(scsidev, timeout, be_verbose)
 	}
 	if (be_verbose && scsidev != NULL) {
 		printf("scsidev: '%s'\n", scsidev);
+		if (devname[0] != '\0')
+			printf("devname: '%s'\n", devname);
 		printf("scsibus: %d target: %d lun: %d\n",
 						scsibus, target, lun);
 	}
-	return (scsi_open());
+	return (scsi_open(devname, scsibus, target, lun));
+}
+
+/*
+ * Convert target,lun or scsibus,target,lun syntax.
+ * Check for bad syntax and invalid values.
+ * This is definitely better than using scanf() as it checks for syntax errors.
+ */
+LOCAL int
+scsi_scandev(devp, xp1, xp2, xp3)
+	char	*devp;
+	int	*xp1;
+	int	*xp2;
+	int	*xp3;
+{
+	int	n = 0;
+
+	*xp1 = *xp2 = *xp3 = 0;
+
+	if (*devp != '\0') {
+		devp = astoi(devp, xp1);
+		if (*devp == ',') {
+			devp++;
+			n++;
+		} else {
+			return (-1);
+		}
+	}
+	if (*devp != '\0') {
+		devp = astoi(devp, xp2);
+		if (*devp == ',' || *devp == '\0') {
+			if (*devp != '\0')
+				devp++;
+			n++;
+		} else {
+			return (-1);
+		}
+	}
+	if (*devp != '\0') {
+		devp = astoi(devp, xp3);
+		if (*devp == '\0') {
+			n++;
+		} else {
+			return (-1);
+		}
+	}
+	if (*xp1 < 0 || *xp2 < 0 || *xp3 < 0)
+		return (-1);
+	return (n);
 }
 
 EXPORT void
@@ -531,6 +646,31 @@ write_xg1(bp, addr, size, cnt)
 }
 
 EXPORT int
+write_xg5(bp, addr, size, cnt)
+	caddr_t	bp;		/* address of buffer */
+	long	addr;		/* disk address (sector) to put */
+	long	size;		/* number of bytes to transfer */
+	int	cnt;		/* sectorcount */
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = bp;
+	scmd.size = size;
+	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
+/*	scmd.flags = SCG_DISRE_ENA;*/
+	scmd.cdb_len = SC_G5_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.cdb.g5_cdb.cmd = 0xAA;
+	scmd.cdb.g5_cdb.lun = lun;
+	g5_cdbaddr(&scmd.cdb.g5_cdb, addr);
+	g5_cdblen(&scmd.cdb.g5_cdb, cnt);
+	
+	if (scsicmd("write_g5") < 0)
+		return (-1);
+	return (size - scmd.resid);
+}
+
+EXPORT int
 write_track(track, sectype)
 	long	track;		/* track number 0 == new track */
 	int	sectype;
@@ -696,7 +836,7 @@ read_track_info(bp, track, cnt)
 	scmd.timeout = 4 * 60;		/* Needs up to 2 minutes */
 	scmd.cdb.g1_cdb.cmd = 0x52;
 	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.reladr = 1;
+	scmd.cdb.g1_cdb.reladr = 1;	/* Track */
 	g1_cdbaddr(&scmd.cdb.g1_cdb, track);
 	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
 
@@ -778,6 +918,10 @@ scsi_close_tr_session(type, track)
 	scmd.cdb.g1_cdb.lun = lun;
 	scmd.cdb.g1_cdb.addr[0] = type;
 	scmd.cdb.g1_cdb.addr[3] = track;
+
+#ifdef	nono
+	scmd.cdb.g1_cdb.reladr = 1;	/* IMM hack to test Mitsumi behaviour*/
+#endif
 	
 	if (scsicmd("close track/session") < 0)
 		return (-1);
@@ -942,11 +1086,16 @@ mode_select_sg0(dp, cnt, smp, pf)
 	u_char	xmode[256+4];
 	int	amt = cnt;
 
-	movebytes(&dp[4], &xmode[8], cnt-4);
+	if (amt < 1 || amt > 255) {
+		/* XXX clear SCSI error codes ??? */
+		return (-1);
+	}
+
 	if (amt < 4) {		/* Data length. medium type & VU */
 		amt += 1;
 	} else {
 		amt += 4;
+		movebytes(&dp[4], &xmode[8], cnt-4);
 	}
 	xmode[0] = 0;
 	xmode[1] = 0;
@@ -975,6 +1124,11 @@ mode_sense_sg0(dp, cnt, page, pcf)
 	int	amt = cnt;
 	int	len;
 
+	if (amt < 1 || amt > 255) {
+		/* XXX clear SCSI error codes ??? */
+		return (-1);
+	}
+
 	fillbytes((caddr_t)xmode, sizeof(scmd), '\0');
 	if (amt < 4) {		/* Data length. medium type & VU */
 		amt += 1;
@@ -984,7 +1138,7 @@ mode_sense_sg0(dp, cnt, page, pcf)
 	if (mode_sense_g1(xmode, amt, page, pcf) < 0)
 		return (-1);
 
-	amt -= scsigetresid();
+	amt = cnt - scsigetresid();
 	if (amt > 4)
 		movebytes(&xmode[8], &dp[4], amt-4);
 	len = a_to_u_short(xmode);
@@ -1002,7 +1156,7 @@ mode_sense_sg0(dp, cnt, page, pcf)
 	len = a_to_u_short(&xmode[6]);
 	dp[3] = len;
 
-	if (verbose) scsiprbytes("Mode Sense Data (converted)", dp, cnt - scmd.resid);
+	if (verbose) scsiprbytes("Mode Sense Data (converted)", dp, amt);
 	return (0);
 }
 
@@ -1357,7 +1511,8 @@ read_trackinfo(track, offp, msfp, adrp, controlp, modep)
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
 	if (read_toc(xb, track, sizeof(struct diskinfo), 0, FMT_TOC) < 0) {
-		errmsgno(EX_BAD, "Cannot read TOC\n");
+		if (silent <= 0)
+			errmsgno(EX_BAD, "Cannot read TOC\n");
 		return (-1);
 	}
 	len = a_to_u_short(dp->hd.len) + sizeof(struct tocheader)-2;
@@ -1567,6 +1722,55 @@ read_session_offset_philips(offp)
 }
 
 EXPORT int
+sense_secsize(current)
+	int	current;
+{
+	u_char	mode[0x100];
+	u_char	*p;
+	u_char	*ep;
+	int	secsize = -1;
+
+	silent++;
+	(void)unit_ready();
+	silent--;
+
+	/* XXX Quick and dirty, musz verallgemeinert werden !!! */
+
+	fillbytes(mode, sizeof(mode), '\0');
+	silent++;
+	if (mode_sense(mode, 0xFF, 0x3F, current?0:2) < 0) {	/* All Pages */
+		fillbytes(mode, sizeof(mode), '\0');
+		if (mode_sense(mode, 0xFF, 0, current?0:2) < 0)	{/* VU (block desc) */
+			silent--;
+			return (-1);
+		}
+	}
+	silent--;
+
+	ep = mode+mode[0];	/* Points to last byte of data */
+	p = &mode[4];
+	p += mode[3];
+	if (debug) {
+		printf("Pages: ");
+		while (p < ep) {
+			printf("0x%x ", *p&0x3F);
+			p += p[1]+2;
+		}
+		printf("\n");
+	}
+
+	if (mode[3] == 8) {
+		if (debug) {
+			printf("Density: 0x%x\n", mode[4]);
+			printf("Blocks:  %ld\n", a_to_3_byte(&mode[5]));
+			printf("Blocklen:%ld\n", a_to_3_byte(&mode[9]));
+		}
+		secsize = a_to_3_byte(&mode[9]);
+	}
+	return (secsize);
+}
+
+EXPORT int
 select_secsize(secsize)
 	int	secsize;
 {
@@ -1668,6 +1872,9 @@ getdev(print)
 	BOOL	print;
 {
 	BOOL	got_inquiry = TRUE;
+	char	vendor_info[8+1];
+	char	prod_ident[16+1];
+	char	prod_revision[4+1];
 
 	fillbytes((caddr_t)&inq, sizeof(inq), '\0');
 	dev = DEV_UNKNOWN;
@@ -1738,6 +1945,14 @@ getdev(print)
 		printf("\n");
 	}
 
+	strncpy(vendor_info, inq.vendor_info, sizeof(inq.vendor_info));
+	strncpy(prod_ident, inq.prod_ident, sizeof(inq.prod_ident));
+	strncpy(prod_revision, inq.prod_revision, sizeof(inq.prod_revision));
+
+	vendor_info[sizeof(inq.vendor_info)] = '\0';
+	prod_ident[sizeof(inq.prod_ident)] = '\0';
+	prod_revision[sizeof(inq.prod_revision)] = '\0';
+
 	switch (inq.type) {
 
 	case INQ_DASD:
@@ -1769,22 +1984,22 @@ getdev(print)
 		} else if (inq.add_len < 31) {
 			dev = DEV_NON_CCS_DSK;
 
-		} else if (strindex("EMULEX", inq.info)) {
-			if (strindex("MD21", inq.ident))
+		} else if (strbeg("EMULEX", vendor_info)) {
+			if (strbeg("MD21", prod_ident))
 				dev = DEV_MD21;
-			if (strindex("MD23", inq.ident))
+			if (strbeg("MD23", prod_ident))
 				dev = DEV_MD23;
 			else
 				dev = DEV_CCS_GENDISK;
-		} else if (strindex("ADAPTEC", inq.info)) {
-			if (strindex("ACB-4520", inq.ident))
+		} else if (strbeg("ADAPTEC", vendor_info)) {
+			if (strbeg("ACB-4520", prod_ident))
 				dev = DEV_ACB4520A;
-			if (strindex("ACB-4525", inq.ident))
+			if (strbeg("ACB-4525", prod_ident))
 				dev = DEV_ACB4525;
 			else
 				dev = DEV_CCS_GENDISK;
-		} else if (strindex("SONY", inq.info) &&
-					strindex("SMO-C501", inq.ident)) {
+		} else if (strbeg("SONY", vendor_info) &&
+					strbeg("SMO-C501", prod_ident)) {
 			dev = DEV_SONY_SMO;
 		} else {
 			dev = DEV_CCS_GENDISK;
@@ -1807,141 +2022,141 @@ getdev(print)
 /*	case INQ_OPTD:*/
 	case INQ_ROMD:
 	case INQ_WORM:
-		if (strindex("RXT-800S", inq.ident))
+		if (strbeg("RXT-800S", prod_ident))
 			dev = DEV_RXT800S;
 
 		/*
 		 * Start of CD-Recorders:
 		 */
-		if (strindex("GRUNDIG", inq.info)) {
-			if (strindex("CDR100IPW", inq.ident))
+		if (strbeg("GRUNDIG", vendor_info)) {
+			if (strbeg("CDR100IPW", prod_ident))
 				dev = DEV_CDD_2000;
 
-		} else if (strindex("JVC", inq.info)) {
-			if (strindex("XR-W2001", inq.ident))
+		} else if (strbeg("JVC", vendor_info)) {
+			if (strbeg("XR-W2001", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
-			else if (strindex("XR-W2010", inq.ident))
+			else if (strbeg("XR-W2010", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
-			else if (strindex("R2626", inq.ident))
+			else if (strbeg("R2626", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
 
-		} else if (strindex("MITSBISH", inq.info)) {
+		} else if (strbeg("MITSBISH", vendor_info)) {
 
 #ifdef	XXXX_REALLY
 			/* It's MMC compliant */
-			if (strindex("CDRW226", inq.ident))
+			if (strbeg("CDRW226", prod_ident))
 				dev = DEV_MMC_CDRW;
 #endif
 
-		} else if (strindex("MITSUMI", inq.info)) {
+		} else if (strbeg("MITSUMI", vendor_info)) {
 			/* Don't know any product string */
 			dev = DEV_CDD_522;
 
-		} else if (strindex("PHILIPS", inq.info) ||
-				strindex("IMS", inq.info) ||
-				strindex("KODAK", inq.info) ||
-				strindex("HP", inq.info)) {
+		} else if (strbeg("PHILIPS", vendor_info) ||
+				strbeg("IMS", vendor_info) ||
+				strbeg("KODAK", vendor_info) ||
+				strbeg("HP", vendor_info)) {
 
-			if (strindex("CDD521/00", inq.ident))
+			if (strbeg("CDD521/00", prod_ident))
 				dev = DEV_CDD_521_OLD;
-			else if (strindex("CDD521", inq.ident))
+			else if (strbeg("CDD521", prod_ident))
 				dev = DEV_CDD_521;
 
-			if (strindex("CDD522", inq.ident))
+			if (strbeg("CDD522", prod_ident))
 				dev = DEV_CDD_522;
-			if (strindex("PCD225", inq.ident))
+			if (strbeg("PCD225", prod_ident))
 				dev = DEV_CDD_522;
-			if (strindex("KHSW/OB", inq.ident))	/* PCD600 */
-				dev = DEV_CDD_522;
-			if (strindex("CDR-240", inq.ident))
+			if (strbeg("KHSW/OB", prod_ident))	/* PCD600 */
+				dev = DEV_PCD_600;
+			if (strbeg("CDR-240", prod_ident))
 				dev = DEV_CDD_2000;
 
-			if (strindex("CDD20", inq.ident))
+			if (strbeg("CDD20", prod_ident))
 				dev = DEV_CDD_2000;
-			if (strindex("CDD26", inq.ident))
+			if (strbeg("CDD26", prod_ident))
 				dev = DEV_CDD_2600;
 
-			if (strindex("C4324/C4325", inq.ident))
+			if (strbeg("C4324/C4325", prod_ident))
 				dev = DEV_CDD_2000;
-			if (strindex("CD-Writer 6020", inq.ident))
+			if (strbeg("CD-Writer 6020", prod_ident))
 				dev = DEV_CDD_2600;
 
-		} else if (strindex("PINNACLE", inq.info)) {
-			if (strindex("RCD-1000", inq.ident))
+		} else if (strbeg("PINNACLE", vendor_info)) {
+			if (strbeg("RCD-1000", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
-			if (strindex("RCD5020", inq.ident))
+			if (strbeg("RCD5020", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
-			if (strindex("RCD5040", inq.ident))
+			if (strbeg("RCD5040", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
-			if (strindex("RCD 4X4", inq.ident))
+			if (strbeg("RCD 4X4", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
 
-		} else if (strindex("PIONEER", inq.info)) {
-			if (strindex("CD-WO DW-S114X", inq.ident))
+		} else if (strbeg("PIONEER", vendor_info)) {
+			if (strbeg("CD-WO DW-S114X", prod_ident))
 				dev = DEV_PIONEER_DW_S114X;
-			else if (strindex("DVD-R DVR-S101", inq.ident))
+			else if (strbeg("DVD-R DVR-S101", prod_ident))
 				dev = DEV_PIONEER_DVDR_S101;
 
-		} else if (strindex("PLASMON", inq.info)) {
-			if (strindex("RF4100", inq.ident))
+		} else if (strbeg("PLASMON", vendor_info)) {
+			if (strbeg("RF4100", prod_ident))
 				dev = DEV_PLASMON_RF_4100;
-			else if (strindex("CDR4220", inq.ident))
+			else if (strbeg("CDR4220", prod_ident))
 				dev = DEV_CDD_2000;
 
-		} else if (strindex("PLEXTOR", inq.info)) {
-			if (strindex("CD-R   PX-R24CS", inq.ident))
+		} else if (strbeg("PLEXTOR", vendor_info)) {
+			if (strbeg("CD-R   PX-R24CS", prod_ident))
 				dev = DEV_RICOH_RO_1420C;
 
-		} else if (strindex("RICOH", inq.info)) {
-			if (strindex("RO-1420C", inq.ident))
+		} else if (strbeg("RICOH", vendor_info)) {
+			if (strbeg("RO-1420C", prod_ident))
 				dev = DEV_RICOH_RO_1420C;
 
-		} else if (strindex("SAF", inq.info)) {	/* Smart & Friendly */
-			if (strindex("CD-R2004", inq.ident) ||
-			    strindex("CD-R2006 ", inq.ident))
+		} else if (strbeg("SAF", vendor_info)) {	/* Smart & Friendly */
+			if (strbeg("CD-R2004", prod_ident) ||
+			    strbeg("CD-R2006 ", prod_ident))
 				dev = DEV_SONY_CDU_924;
-			else if (strindex("CD-R2006PLUS", inq.ident))
+			else if (strbeg("CD-R2006PLUS", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
-			else if (strindex("CD-RW226", inq.ident))
+			else if (strbeg("CD-RW226", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
-			else if (strindex("CD-R4012", inq.ident))
+			else if (strbeg("CD-R4012", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
 
-		} else if (strindex("SONY", inq.info)) {
-			if (strindex("CD-R   CDU92", inq.ident) ||
-			    strindex("CD-R   CDU94", inq.ident))
+		} else if (strbeg("SONY", vendor_info)) {
+			if (strbeg("CD-R   CDU92", prod_ident) ||
+			    strbeg("CD-R   CDU94", prod_ident))
 				dev = DEV_SONY_CDU_924;
 
-		} else if (strindex("TEAC", inq.info)) {
-			if (strindex("CD-R50S", inq.ident) ||
-			    strindex("CD-R55S", inq.ident))
+		} else if (strbeg("TEAC", vendor_info)) {
+			if (strbeg("CD-R50S", prod_ident) ||
+			    strbeg("CD-R55S", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
 
-		} else if (strindex("TRAXDATA", inq.info) ||
-				strindex("Traxdata", inq.info)) {
-			if (strindex("CDR4120", inq.ident))
+		} else if (strbeg("TRAXDATA", vendor_info) ||
+				strbeg("Traxdata", vendor_info)) {
+			if (strbeg("CDR4120", prod_ident))
 				dev = DEV_TEAC_CD_R50S;
 
-		} else if (strindex("T.YUDEN", inq.info)) {
-			if (strindex("CD-WO EW-50", inq.ident))
+		} else if (strbeg("T.YUDEN", vendor_info)) {
+			if (strbeg("CD-WO EW-50", prod_ident))
 				dev = DEV_CDD_521;
 
-		} else if (strindex("WPI", inq.info)) {	/* Wearnes */
-			if (strindex("CDR-632P", inq.ident))
+		} else if (strbeg("WPI", vendor_info)) {	/* Wearnes */
+			if (strbeg("CDR-632P", prod_ident))
 				dev = DEV_CDD_2600;
 
-		} else if (strindex("YAMAHA", inq.info)) {
-			if (strindex("CDR10", inq.ident))
+		} else if (strbeg("YAMAHA", vendor_info)) {
+			if (strbeg("CDR10", prod_ident))
 				dev = DEV_YAMAHA_CDR_100;
-			if (strindex("CDR200", inq.ident))
+			if (strbeg("CDR200", prod_ident))
 				dev = DEV_YAMAHA_CDR_400;
-			if (strindex("CDR400", inq.ident))
+			if (strbeg("CDR400", prod_ident))
 				dev = DEV_YAMAHA_CDR_400;
 
-		} else if (strindex("MATSHITA", inq.info)) {
-			if (strindex("CD-R   CW-7501", inq.ident))
+		} else if (strbeg("MATSHITA", vendor_info)) {
+			if (strbeg("CD-R   CW-7501", prod_ident))
 				dev = DEV_MATSUSHITA_7501;
-			if (strindex("CD-R   CW-7502", inq.ident))
+			if (strbeg("CD-R   CW-7502", prod_ident))
 				dev = DEV_MATSUSHITA_7502;
 		}
 		if (dev == DEV_UNKNOWN) {
@@ -1949,7 +2164,7 @@ getdev(print)
 			 * We do not have Manufacturer strings for
 			 * the following drives.
 			 */
-			if (strindex("CDS615E", inq.ident))	/* Olympus */
+			if (strbeg("CDS615E", prod_ident))	/* Olympus */
 				dev = DEV_SONY_CDU_924;
 		}
 		if (dev == DEV_UNKNOWN && inq.type == INQ_ROMD) {
@@ -1972,8 +2187,8 @@ getdev(print)
 		}
 
 	case INQ_PROCD:
-		if (strindex("BERTHOLD", inq.info)) {
-			if (strindex("", inq.ident))
+		if (strbeg("BERTHOLD", vendor_info)) {
+			if (strbeg("", prod_ident))
 				dev = DEV_HRSCAN;
 		}
 		break;
@@ -2056,9 +2271,10 @@ printdev()
 	case DEV_MMC_CDR:	printf("Generic mmc CD-R");	break;
 	case DEV_MMC_CDRW:	printf("Generic mmc CD-RW");	break;
 	case DEV_MMC_DVD:	printf("Generic mmc2 DVD");	break;
-	case DEV_CDD_521:	printf("Philips CDD-521");	break;
 	case DEV_CDD_521_OLD:	printf("Philips old CDD-521");	break;
+	case DEV_CDD_521:	printf("Philips CDD-521");	break;
 	case DEV_CDD_522:	printf("Philips CDD-522");	break;
+	case DEV_PCD_600:	printf("Kodak PCD-600");	break;
 	case DEV_CDD_2000:	printf("Philips CDD-2000");	break;
 	case DEV_CDD_2600:	printf("Philips CDD-2600");	break;
 	case DEV_YAMAHA_CDR_100:printf("Yamaha CDR-100");	break;
@@ -2161,8 +2377,10 @@ mmc_cap(modep)
 
 	/*
 	 * Do some heuristics against pre SCSI-3/mmc VU page 2A
+	 * We should test for a minimum p_len of 0x14, but some
+	 * buggy CD-ROM readers ommit the write speed values.
 	 */
-	if (mp->p_len < 0x14)
+	if (mp->p_len < 0x10)
 		return (NULL);
 
 	val = a_to_u_short(mp->max_read_speed);
@@ -2178,7 +2396,7 @@ mmc_cap(modep)
 	if (modep)
 		mp2 = (struct cd_mode_page_2A *)modep;
 	else
-		mp2 = malloc(len);
+		mp2 = (struct cd_mode_page_2A *)malloc(len);
 	if (mp2)
 		movebytes(mp, mp2, len);
 
@@ -2211,9 +2429,10 @@ mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
 }
 
 EXPORT BOOL
-is_mmc()
+is_mmc(dvdp)
+	BOOL	*dvdp;
 {
-	return (mmc_check(NULL, NULL, NULL, NULL, NULL));
+	return (mmc_check(NULL, NULL, NULL, NULL, dvdp));
 }
 
 EXPORT BOOL

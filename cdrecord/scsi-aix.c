@@ -1,7 +1,7 @@
-/* @(#)scsi-aix.c	1.4 98/01/26 Copyright 1997 J. Schilling */
+/* @(#)scsi-aix.c	1.7 98/08/20 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-aix.c	1.4 98/01/26 Copyright 1997 J. Schilling";
+	"@(#)scsi-aix.c	1.7 98/08/20 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the AIX generic SCSI implementation.
@@ -42,7 +42,11 @@ LOCAL	int	do_scsi_sense	__PR((int f, struct scg_cmd *sp));
 LOCAL	int	scsi_send	__PR((int f, struct scg_cmd *sp));
 
 EXPORT
-int scsi_open()
+int scsi_open(device, busno, tgt, tlun)
+	char	*device;
+	int	busno;
+	int	tgt;
+	int	tlun;
 {
 	register int	f;
 	register int	b;
@@ -148,6 +152,12 @@ int scsi_fileno(busno, tgt, tlun)
 }
 
 EXPORT
+int scsi_isatapi()
+{
+	return (FALSE);
+}
+
+EXPORT
 int scsireset()
 {
 	int	f = scsi_fileno(scsibus, target, lun);
@@ -200,9 +210,10 @@ do_scsi_cmd(f, sp)
 		/*
 		 * Check if SCSI command cound not be send at all.
 		 */
-		if (errno == ENOTTY || errno == ENXIO ||
-				errno == EINVAL || errno == EACCES)
+		if (sp->ux_errno == ENOTTY || sp->ux_errno == ENXIO ||
+		    sp->ux_errno == EINVAL || sp->ux_errno == EACCES) {
 			return (-1);
+		}
 	} else {
 		sp->ux_errno = 0;
 	}

@@ -8,7 +8,7 @@ and allows you to read a filesystem from a CD-R device with 2048 bytes
 if AIX does not support 2048 Bytes/sector (I don' know). This is done 
 with the SCSI user level library.
 
-The current implementation status is alpha. It currenly only handles
+The current implementation status is alpha. It currently only handles
 /dev/rcd* devices. No real generic SCSI support.
 I got a donation from 
 	Michael Staats <michael@thp.Uni-Duisburg.DE>
@@ -17,7 +17,7 @@ I got a donation from
 that I hope to integrate in the near future.
 
 To make a decent release, I need access to a recent AIX
-system. I currenly only have non-root access to an old system without man
+system. I currently only have non-root access to an old system without man
 pages, so I cannot test. To include error handling, I need to know some things
 abount what is happening on special error situations.
 
@@ -32,11 +32,15 @@ NOTE:	AIX seems to have a kernel bug in the mmap() part
 
 If you observe this kernel panic, try to add a line:
 
-COPTS += -DUSE_SHM
+COPTS += -DUSE_USGSHM
 
 to the file cdrecord/Makefile
 
-It seems that SVrx style shared memory does not have this bug
+or compile the package using:
+
+make COPTX=-DUSE_USGSHM
+
+It seems that SVrx style shared memory does not have this kernel bug
 
 I would be happy to get test reports ...
 

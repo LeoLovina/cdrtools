@@ -1,6 +1,6 @@
-/* @(#)utypes.h	1.2 98/01/23 Copyright 1997 J. Schilling */
+/* @(#)utypes.h	1.3 98/06/20 Copyright 1997 J. Schilling */
 /*
- *	Definitions for some unsigned types
+ *	Definitions for some user defined types
  *
  *	Copyright (c) 1997 J. Schilling
  */
@@ -23,11 +23,47 @@
 #ifndef	_UTYPES_H
 #define	_UTYPES_H
 
+#ifndef	_MCONFIG_H
+#include <mconfig.h>
+#endif
+
+/*
+ * Several unsigned cardinal types
+ */
 typedef	unsigned long	Ulong;
 typedef	unsigned int	Uint;
 typedef	unsigned short	Ushort;
 typedef	unsigned char	Uchar;
 
+/*
+ * This is a definition for a compiler dependant 64 bit type.
+ * It currently is silently a long if the compiler does not
+ * support it. Check if this is the right way.
+ */
+#ifndef	NO_LONGLONG
+#	if	defined(HAVE_LONGLONG)
+#		define	USE_LONGLONG
+#	endif
+#endif
+
+#ifdef	USE_LONGLONG
+
+typedef	long long		Llong;
+typedef	unsigned long long	Ullong;
+
+#else
+
+typedef	long			Llong;
+typedef	unsigned long		Ullong;
+
+#endif
+
+/*
+ * The IBM AIX C-compiler seems to be the only compiler on the world
+ * which does not allow to use unsigned char bit fields as a hint
+ * for packed bit fields. Define a pesical type to avoid warnings.
+ * The packed attribute is honored wit unsigned int in this case too.
+ */
 #ifdef	_AIX
 
 typedef unsigned int	Ucbit;

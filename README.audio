@@ -7,7 +7,7 @@ regardless of the byte order of the CD-Recorder. If Cdrecord
 encounters a .vaw file, byte order is corrected to match the byte order
 of the .wav file.
 
-Cdrecord crently only supports Track at once. This gives 2 seconds
+Cdrecord currently only supports Track at once. This gives 2 seconds
 pause between two audio tracks.
 
 The 2 seconds pause between two audio tracks is the CD ***standard***

@@ -13,7 +13,8 @@ Mini-Howto for verifying a selfmade CD
 
 	sformat can be found on ftp://ftp.fokus.gmd.de/pub/unix/sformat
 
-
+	NOTE: Not all CD-ROm drives support verifying
+	NOTE: All TAO tracks end in 2 unreadable run-out sectors
 
 2) verifying the filesystem layer
 

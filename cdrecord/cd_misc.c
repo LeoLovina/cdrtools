@@ -1,7 +1,7 @@
-/* @(#)cd_misc.c	1.2 98/03/12 Copyright 1997 J. Schilling */
+/* @(#)cd_misc.c	1.6 98/10/09 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cd_misc.c	1.2 98/03/12 Copyright 1997 J. Schilling";
+	"@(#)cd_misc.c	1.6 98/10/09 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Misc CD support routines
@@ -24,8 +24,10 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
 #include <standard.h>
-#include <sys/types.h>
+#include <sys/types.h>	/* for caddr_t */
+#include <utypes.h>
 
 #include "cdrecord.h"
 
@@ -33,6 +35,7 @@ EXPORT	int	from_bcd		__PR((int b));
 EXPORT	int	to_bcd			__PR((int i));
 EXPORT	long	msf_to_lba		__PR((int m, int s, int f));
 EXPORT	BOOL	lba_to_msf		__PR((long lba, msf_t *mp));
+EXPORT	void	print_min_atip		__PR((long li, long lo));
 
 EXPORT int
 from_bcd(b)
@@ -98,4 +101,24 @@ lba_to_msf(lba, mp)
 	if (lba > 404849)			/* 404850 -> 404999: lead out */
 		return (FALSE);
 	return (TRUE);
+}
+
+EXPORT void
+print_min_atip(li, lo)
+	long	li;
+	long	lo;
+{
+	msf_t	msf;
+
+	if (li < 0) {
+		lba_to_msf(li, &msf);
+
+		printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
+			li, msf.msf_min, msf.msf_sec, msf.msf_frame);
+	}
+	if (lo > 0) {
+		lba_to_msf(lo, &msf);
+		printf("  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
+			lo, msf.msf_min, msf.msf_sec, msf.msf_frame);
+	}
 }

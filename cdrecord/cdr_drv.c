@@ -1,7 +1,7 @@
-/* @(#)cdr_drv.c	1.6 98/03/26 Copyright 1997 J. Schilling */
+/* @(#)cdr_drv.c	1.9 98/09/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdr_drv.c	1.6 98/03/26 Copyright 1997 J. Schilling";
+	"@(#)cdr_drv.c	1.9 98/09/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device abstraction layer
@@ -34,19 +34,26 @@ static	char sccsid[] =
 extern	cdr_t	cdr_oldcd;
 extern	cdr_t	cdr_cd;
 extern	cdr_t	cdr_mmc;
+extern	cdr_t	cdr_mmc_sony;
+#ifdef	DRV_DVD
+extern	cdr_t	cdr_dvd;
+#endif
 extern	cdr_t	cdr_philips_cdd521O;
 extern	cdr_t	cdr_philips_dumb;
 extern	cdr_t	cdr_philips_cdd521;
 extern	cdr_t	cdr_philips_cdd522;
+extern	cdr_t	cdr_kodak_pcd600;
 extern	cdr_t	cdr_pioneer_dw_s114x;
 extern	cdr_t	cdr_plasmon_rf4100;
 extern	cdr_t	cdr_yamaha_cdr100;
 extern	cdr_t	cdr_sony_cdu924;
 extern	cdr_t	cdr_ricoh_ro1420;
 extern	cdr_t	cdr_teac_cdr50;
+extern	cdr_t	cdr_cdr_simul;
+extern	cdr_t	cdr_dvd_simul;
 
 EXPORT	cdr_t 	*drive_identify		__PR((cdr_t *, struct scsi_inquiry *ip));
-EXPORT	int	drive_attach		__PR((void));
+EXPORT	int	drive_attach		__PR((cdr_t *));
 EXPORT	int	attach_unknown		__PR((void));
 EXPORT	int	blank_dummy		__PR((long addr, int blanktype));
 EXPORT	int	drive_getdisktype	__PR((cdr_t *dp, dstat_t *dsp));
@@ -57,19 +64,26 @@ EXPORT	cdr_t	*get_cdrcmds		__PR((void));
  * List of CD-R drivers
  */
 cdr_t	*drivers[] = {
+#ifdef	DRV_DVD
+	&cdr_dvd,
+#endif
 	&cdr_mmc,
+	&cdr_mmc_sony,
 	&cdr_cd,
 	&cdr_oldcd,
 	&cdr_philips_cdd521O,
 	&cdr_philips_dumb,
 	&cdr_philips_cdd521,
 	&cdr_philips_cdd522,
+	&cdr_kodak_pcd600,
 	&cdr_pioneer_dw_s114x,
 	&cdr_plasmon_rf4100,
 	&cdr_yamaha_cdr100,
 	&cdr_ricoh_ro1420,
 	&cdr_sony_cdu924,
 	&cdr_teac_cdr50,
+	&cdr_cdr_simul,
+	&cdr_dvd_simul,
 	(cdr_t *)NULL,
 };
 
@@ -82,7 +96,8 @@ drive_identify(dp, ip)
 }
 
 EXPORT int
-drive_attach()
+drive_attach(dp)
+	cdr_t			*dp;
 {
 	return (0);
 }
@@ -151,13 +166,19 @@ EXPORT cdr_t *
 get_cdrcmds()
 {
 	cdr_t	*dp = (cdr_t *)0;
+	BOOL	is_dvd = FALSE;
 	extern	struct scsi_inquiry inq;
 
 	/*
 	 * First check for SCSI-3/mmc drives.
 	 */
-	if (is_mmc()) {
-		dp = &cdr_mmc;
+	if (is_mmc(&is_dvd)) {
+#ifdef	DRV_DVD
+		if (is_dvd)
+			dp = &cdr_dvd;
+		else
+#endif
+			dp = &cdr_mmc;
 
 	} else switch (dev) {
 
@@ -179,6 +200,9 @@ get_cdrcmds()
 	case DEV_TEAC_CD_R50S:	dp = &cdr_teac_cdr50;		break;
 
 	case DEV_PIONEER_DW_S114X: dp = &cdr_pioneer_dw_s114x;	break;
+#ifdef	DRV_DVD
+	case DEV_PIONEER_DVDR_S101:dp = &cdr_dvd;		break;
+#endif
 
 	default:		dp = &cdr_mmc;
 	}

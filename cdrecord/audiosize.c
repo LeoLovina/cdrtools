@@ -1,7 +1,7 @@
-/* @(#)audiosize.c	1.8 98/02/15 Copyright 1998 J. Schilling */
+/* @(#)audiosize.c	1.9 98/05/06 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)audiosize.c	1.8 98/02/15 Copyright 1998 J. Schilling";
+	"@(#)audiosize.c	1.9 98/05/06 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -248,6 +248,8 @@ wavsize(f)
 				ret = AU_BAD_CODING;
 				goto err;
 			}
+			if ((cursor + size + sizeof (chunk)) > sb.st_size)
+				size = sb.st_size - (cursor  + sizeof (chunk));
 			return (size);
 		}
 		cursor += size + sizeof (chunk);

@@ -1,4 +1,4 @@
-/* @(#)io.h	2.8 97/06/03 Copyright 1986, 1995 J. Schilling */
+/* @(#)io.h	2.9 98/09/05 Copyright 1986, 1995 J. Schilling */
 /*
  *	Copyright (c) 1986, 1995 J. Schilling
  */
@@ -20,12 +20,8 @@
 
 #include <mconfig.h>
 #include <standard.h>
-#ifdef	HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef	HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
+#include <unixstd.h>
+#include <fctldefs.h>
 
 #ifdef	NO_USG_STDIO
 #	ifdef	HAVE_USG_STDIO

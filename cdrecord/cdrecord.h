@@ -1,4 +1,4 @@
-/* @(#)cdrecord.h	1.35 98/04/15 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.h	1.43 98/10/18 Copyright 1995 J. Schilling */
 /*
  *	Definitions for cdrecord
  *
@@ -65,7 +65,7 @@
 
 #define	DEFAULT_FIFOSIZE (4*1024*1024)
 
-typedef struct index {
+typedef struct tindex {
 	int	dummy;		/* Not yet implemented */
 } tindex_t;
 
@@ -84,7 +84,7 @@ typedef struct track {
 	char	tracktype;	/* Track type (toc type)		*/
 	char	dbtype;		/* Data block type for this track	*/
 	int	flags;		/* Flags (see below)			*/
-	tindex_t *index;	/* Track index descriptor		*/
+	tindex_t *tindex;	/* Track index descriptor		*/
 } track_t;
 
 /*
@@ -298,13 +298,13 @@ struct disk_status {
 	long	ds_diskid;		/* Disk identification		*/
 	int	ds_flags;		/* Disk_status flags		*/
 	int	ds_type;		/* Abstract disk type		*/
-	u_char	ds_disktype;		/* Disk type (from TOC/PMA)	*/
-	u_char	ds_diskstat;		/* Disk status (MMC)		*/
-	u_char	ds_sessstat;		/* Status of last sesion (MMC)	*/
-	u_char	ds_trfirst;		/* first track #		*/
-	u_char	ds_trlast;		/* last track #			*/
-	u_char	ds_trfirst_ls;		/* first track # in last session*/
-	u_char	ds_barcode[8];		/* Disk bar code		*/
+	Uchar	ds_disktype;		/* Disk type (from TOC/PMA)	*/
+	Uchar	ds_diskstat;		/* Disk status (MMC)		*/
+	Uchar	ds_sessstat;		/* Status of last sesion (MMC)	*/
+	Uchar	ds_trfirst;		/* first track #		*/
+	Uchar	ds_trlast;		/* last track #			*/
+	Uchar	ds_trfirst_ls;		/* first track # in last session*/
+	Uchar	ds_barcode[8];		/* Disk bar code		*/
 
 	long	ds_first_leadin;	/* Start of first lead in (ATIP)*/
 	long	ds_last_leadout;	/* Start of last lead out (ATIP)*/
@@ -336,7 +336,7 @@ struct cdr_cmd {
 #else
 	cdr_t	*(*cdr_identify)	__PR((cdr_t *, void *));		/* identify drive */
 #endif
-	int	(*cdr_attach)		__PR((void));		/* init error decoding etc*/
+	int	(*cdr_attach)		__PR((cdr_t *));		/* init error decoding etc*/
 	int	(*cdr_getdisktype)	__PR((cdr_t *, dstat_t *));	/* get disk type */
 	int	(*cdr_load)		__PR((void));		/* load disk */
 	int	(*cdr_unload)		__PR((void));		/* unload disk */
@@ -383,6 +383,7 @@ extern	int	pad_track	__PR((cdr_t *dp, int track, track_t *trackp,
 extern	void	load_media	__PR((cdr_t *));
 extern	void	unload_media	__PR((cdr_t *, int));
 extern	void	raisepri	__PR((int));
+extern	int	getnum		__PR((char* arg, long* valp));
 
 /*
  * cd_misc.c
@@ -391,6 +392,7 @@ extern	int	from_bcd	__PR((int b));
 extern	int	to_bcd		__PR((int i));
 extern	long	msf_to_lba	__PR((int m, int s, int f));
 extern	BOOL	lba_to_msf	__PR((long lba, msf_t *mp));
+extern	void	print_min_atip	__PR((long li, long lo));
 
 /*
  * fifo.c
@@ -423,11 +425,18 @@ extern	int	write_packet_data __PR((cdr_t *dp, int track, track_t *trackp));
  * modes.c
  */
 extern	BOOL	get_mode_params	__PR((int page, char *pagename,
-					u_char *modep, u_char *cmodep,
-					u_char *dmodep, u_char *smodep,
+					Uchar *modep, Uchar *cmodep,
+					Uchar *dmodep, Uchar *smodep,
 					int *lenp));
-extern	BOOL	set_mode_params	__PR((char *pagename, u_char *modep,
+extern	BOOL	set_mode_params	__PR((char *pagename, Uchar *modep,
 					int len, int save, int secsize));
+
+/*
+ * misc.c
+ */
+#ifdef	timerclear
+extern	void	timevaldiff	__PR((struct timeval *start, struct timeval *stop));
+#endif
 
 /*
  * scsi_cdr.c
@@ -449,6 +458,7 @@ extern	int	scsi_set_speed	__PR((int readspeed, int writespeed));
 extern	int	qic02		__PR((int));
 extern	int	write_xg0	__PR((caddr_t, long, long, int));
 extern	int	write_xg1	__PR((caddr_t, long, long, int));
+extern	int	write_xg5	__PR((caddr_t, long, long, int));
 extern	int	write_track	__PR((long, int));
 extern	int	scsi_flush_cache __PR((void));
 extern	int	read_toc	__PR((caddr_t, int, int, int, int));
@@ -464,14 +474,14 @@ extern	int	recover		__PR((int));
 extern	int	first_writable_addr __PR((long *, int, int, int, int));
 extern	int	reserve_track	__PR((unsigned long));
 extern	BOOL	allow_atapi	__PR((BOOL new));
-extern	int	mode_select	__PR((u_char *, int, int, int));
-extern	int	mode_sense	__PR((u_char *dp, int cnt, int page, int pcf));
-extern	int	mode_select_sg0	__PR((u_char *, int, int, int));
-extern	int	mode_sense_sg0	__PR((u_char *dp, int cnt, int page, int pcf));
-extern	int	mode_select_g0	__PR((u_char *, int, int, int));
-extern	int	mode_select_g1	__PR((u_char *, int, int, int));
-extern	int	mode_sense_g0	__PR((u_char *dp, int cnt, int page, int pcf));
-extern	int	mode_sense_g1	__PR((u_char *dp, int cnt, int page, int pcf));
+extern	int	mode_select	__PR((Uchar *, int, int, int));
+extern	int	mode_sense	__PR((Uchar *dp, int cnt, int page, int pcf));
+extern	int	mode_select_sg0	__PR((Uchar *, int, int, int));
+extern	int	mode_sense_sg0	__PR((Uchar *dp, int cnt, int page, int pcf));
+extern	int	mode_select_g0	__PR((Uchar *, int, int, int));
+extern	int	mode_select_g1	__PR((Uchar *, int, int, int));
+extern	int	mode_sense_g0	__PR((Uchar *dp, int cnt, int page, int pcf));
+extern	int	mode_sense_g1	__PR((Uchar *dp, int cnt, int page, int pcf));
 extern	int	speed_select_yamaha	__PR((int speed, int dummy));
 extern	int	speed_select_philips	__PR((int speed, int dummy));
 extern	int	write_track_info __PR((int));
@@ -480,6 +490,7 @@ extern	int	read_trackinfo	__PR((int, long *, struct msf *, int *, int *, int *))
 extern	int	read_B0		__PR((BOOL isbcd, long *b0p, long *lop));
 extern	int	read_session_offset __PR((long *));
 extern	int	read_session_offset_philips __PR((long *));
+extern	int	sense_secsize	__PR((int current));
 extern	int	select_secsize	__PR((int));
 extern	BOOL	is_cddrive	__PR((void));
 extern	BOOL	is_unknown_dev	__PR((void));
@@ -493,12 +504,12 @@ extern	BOOL	recovery_needed	__PR((void));
 extern	int	scsi_load	__PR((void));
 extern	int	scsi_unload	__PR((void));
 extern	int	scsi_cdr_write	__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
-extern	struct cd_mode_page_2A * mmc_cap __PR((u_char *modep));
+extern	struct cd_mode_page_2A * mmc_cap __PR((Uchar *modep));
 extern	void	mmc_getval	__PR((struct cd_mode_page_2A *mp,
 					BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
 					BOOL *dvdp));
-extern	BOOL	is_mmc		__PR((void));
+extern	BOOL	is_mmc		__PR((BOOL *dvdp));
 extern	BOOL	mmc_check	__PR((BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
 					BOOL *dvdp));
@@ -512,7 +523,7 @@ extern	cdr_t	*drive_identify		__PR((cdr_t *, struct scsi_inquiry *ip));
 #else
 extern	cdr_t	*drive_identify		__PR((cdr_t *, void *ip));
 #endif
-extern	int	drive_attach		__PR((void));
+extern	int	drive_attach		__PR((cdr_t *));
 extern	int	attach_unknown		__PR((void));
 extern	int	blank_dummy		__PR((long addr, int blanktype));
 extern	int	drive_getdisktype	__PR((cdr_t *dp, dstat_t *dsp));
@@ -538,3 +549,4 @@ extern	long	wavsize		__PR((int f));
  * diskid.c
  */
 extern	void	pr_manufacturer		__PR((msf_t *mp));
+extern	long	disk_rcap		__PR((msf_t *mp, long maxblock));

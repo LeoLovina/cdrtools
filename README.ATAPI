@@ -4,15 +4,28 @@ and From: Gadi Oxman <gadio@netvision.net.il>
 
 It is only valid for Linux !
 
-Please use cdrecord-1.6a5 or later, it includes the modifications
-needed for ATAPI drives and is still working with other SCSI drives.
-If you want to use older revisions of cdrecord (not recommended)
+The basic driver design in Solaris would also allow to use ATAPI
+drives but unfortunately, Sun made a mistake in the mid-level design.
+If you want to use ATAPI drives with Solaris, ask Sun why they don't
+support SCSI passthrough to IDE although they are using a common driver
+concept.
+
+Please use cdrecord-1.6 final or later (if available), it includes the
+modifications needed for ATAPI drives and is still working with other 
+SCSI drives. If you want to use older revisions of cdrecord (not recommended)
 you need to apply some patches as described below.
 
 If you use Linux Kernel version 2.1.73 and later there are no
 kernel patches needed to run cdrecord. If you are using a Linux
 kernel prior to 2.1.73 you need to apply some patches to 
-the  kernel souces ide.h and ide-scsi.c (see below).
+the  kernel sources ide.h and ide-scsi.c (see below).
+
+If you are using Linux 2.0.35 or later you also don't need to patch.
+
+If you like to use ATAPI drives, I recommend to use the newer releases
+mentioned above to avoid the need for a patch. However, you still need
+to configure a kernel with ATAPI/SCSI hostadapter emulation. Read 
+carefully the following instructions:
 
 In any case, you need to disable generic IDE support in order to make
 ATAPI SCSI emulation working.
@@ -20,7 +33,7 @@ ATAPI SCSI emulation working.
 Many people ask why I use ATAPI-SCSI emulation.
 
 	The use of the naming convention "ATAPI-SCSI emulation" is a
-	litle bit missleading. It should rather be called:
+	litle bit misleading. It should rather be called:
 		"SCSI host adapter emulation"
 
 	The ATAPI standard describes method of sending SCSI commands over IDE
@@ -31,10 +44,28 @@ Many people ask why I use ATAPI-SCSI emulation.
 If you have problems to talk to the device when it is jumpered as "slave"
 try to use it as "master".
 
+NOTICE:
+
+With the newer kernels it seems to be possible to run SCSI/ATAPI hostadapter
+emulation and generic IDE at the same time by selectively telling the 
+kernel what to use for which drive.  However, this would not be needed
+if the Linux SCSI CD-ROM driver would be more up to date and supports
+standard comforming drives.
 
 Jörg Schilling <schilling@fokus.gmd.de>
 
 --------------------------------------------------
+Here is a hint from Alan Brown <alanb@manawatu.gen.nz>:
+
+To allow ATAPI cd and ide-scsi support on the same machine, add 
+`hd<x>=ide-scsi` to the lilo.conf append entry, or use 
+`hd<x>=ide-scsi` at the bootup lilo prompt. 
+
+I have my HP-7200 RW drive as the primary drive on the second IDE 
+bus, so the statement used is "hdc=ide-scsi" 
+
+--------------------------------------------------
+
 Hope that the following  is helpful to you.
 
 I recently purchased a HP-7110i CD-RW, which is the U.S. only version of
@@ -71,7 +102,7 @@ cdrecord to recognize it as a SCSI device.
 
 3. Get the patches and apply them
 
-Attached find kernel patches for kernel souces ide.h and ide-scsi.c, and
+Attached find kernel patches for kernel sources ide.h and ide-scsi.c, and
 cdrecord source scsi_cdr.c (version 1.5 only). 
 
 3. Recompile kernel with SCSI emulation support
@@ -126,6 +157,13 @@ by all programs (/dev/scd0 etc.), so you might want to relink
 work again.
 
 
+-------------------------------------------------------------------------------
+HOTE: The patches below are not needed anymore!
+
+1)	Actual cdrecord releases support ATAPI
+
+2)	Linux 2.0.35 or Linux 2.1.73 or later include ATAPI support
+-------------------------------------------------------------------------------
 
 
 ----------------linux/drivers/block/ide.h----------------------
@@ -156,7 +194,7 @@ work again.
 
 -----------------------cdrecord-1.5/cdrecord/scsi_cdr----------------
 
-If you want to use cdrecord-1.5 relpace the old functions by the following
+If you want to use cdrecord-1.5 replace the old functions by the following
 if you use cdrecord-1.6a5 you don't need this *** JS ***
 
 EXPORT int

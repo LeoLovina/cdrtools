@@ -1,4 +1,4 @@
-/* @(#)error.c	1.9 97/06/01 Copyright 1985 J. Schilling */
+/* @(#)error.c	1.10 98/09/05 Copyright 1985 J. Schilling */
 /*
  *	fprintf() on standard error stdio stream
  *
@@ -23,11 +23,7 @@
 #include <mconfig.h>
 #include <stdio.h>
 #include <standard.h>
-#ifdef	HAVE_STDARG_H
-#	include <stdarg.h>
-#else
-#	include <varargs.h>
-#endif
+#include <vadefs.h>
 
 /* VARARGS1 */
 #ifdef	PROTOTYPES

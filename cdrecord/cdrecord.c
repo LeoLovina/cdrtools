@@ -1,10 +1,10 @@
-/* @(#)cdrecord.c	1.53 98/04/15 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.c	1.66 98/10/18 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdrecord.c	1.53 98/04/15 Copyright 1995 J. Schilling";
+	"@(#)cdrecord.c	1.66 98/10/18 Copyright 1995 J. Schilling";
 #endif
 /*
- *	Record data on a CD-Recorder
+ *	Record data on a CD/CVD-Recorder
  *
  *	Copyright (c) 1995 J. Schilling
  */
@@ -28,7 +28,7 @@ static	char sccsid[] =
 #include <stdio.h>
 #include <standard.h>
 #include <stdxlib.h>
-#include <fcntl.h>
+#include <fctldefs.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -36,8 +36,9 @@ static	char sccsid[] =
 #include <sys/stat.h>
 #include <unixstd.h>
 #include <sys/mman.h>
-#include <string.h>
+#include <strdefs.h>
 #include <waitdefs.h>
+#include <utypes.h>
 
 #include <scgio.h>		/* XXX wegen inquiry */
 #include "scsireg.h"		/* XXX wegen SC_NOT_READY */
@@ -46,7 +47,11 @@ static	char sccsid[] =
 #include "scsitransp.h"
 #include "scsi_scan.h"
 
-char	cdr_version[] = "1.6";
+#ifndef	O_BINARY		/* Only present on DOS or similar */
+#define	O_BINARY	0
+#endif
+
+char	cdr_version[] = "1.6.1";
 
 /*
  * Map toc/track types into names.
@@ -163,13 +168,15 @@ LOCAL	void	print_track	__PR((int, long, struct msf *, int, int, int));
 LOCAL	void	prtimediff	__PR((const char *fmt,
 					struct timeval *start,
 					struct timeval *stop));
-#if defined(_POSIX_PRIORITY_SCHEDULING)
+#if !defined(HAVE_SYS_PRIOCNTL_H)
 LOCAL	int	rt_raisepri	__PR((int));
 #endif
 EXPORT	void	raisepri	__PR((int));
 LOCAL	void	checkgui	__PR((void));
-LOCAL	long	number		__PR((char* arg, int* retp));
-LOCAL	int	getnum		__PR((char* arg, long* valp));
+LOCAL	char *	astoll		__PR((const char *s, Llong *ll));
+LOCAL	Llong	number		__PR((char* arg, int* retp));
+EXPORT	int	getnum		__PR((char* arg, long* valp));
+EXPORT	int	getllnum	__PR((char *arg, Llong* lvalp));
 LOCAL	int	getbltype	__PR((char* optstr, long *typep));
 
 EXPORT int 
@@ -191,6 +198,7 @@ main(ac, av)
 	cdr_t	*dp = (cdr_t *)0;
 	dstat_t	ds;
 	long	startsec = 0L;
+	int	old_secsize = -1;
 	int	errs = 0;
 
 	save_args(ac, av);
@@ -227,7 +235,8 @@ main(ac, av)
 		init_fifo(fs);
 	}
 
-	open_scsi(dev, timeout, (flags & F_MSINFO) == 0 || lverbose);
+	if (open_scsi(dev, timeout, (flags & F_MSINFO) == 0 || lverbose) <= 0)
+		comerr("Cannot open SCSI driver.\n");
 
 	bufsize = scsi_bufsize(BUF_SIZE);
 	if ((buf = scsi_getbuf(bufsize)) == NULL)
@@ -245,11 +254,13 @@ main(ac, av)
 	 * First try to check which type of SCSI device we
 	 * have.
 	 */
+	if (debug || lverbose)
+		printf("atapi: %d\n", scsi_isatapi());
 	silent++;
 	test_unit_ready();	/* eat up unit attention */
 	silent--;
 	if (!do_inquiry((flags & F_MSINFO) == 0 || lverbose)) {
-		errmsgno(EX_BAD, "Cannot do inquiry for CD-Recorder.\n");
+		errmsgno(EX_BAD, "Cannot do inquiry for CD/DVD-Recorder.\n");
 		if (unit_ready())
 			errmsgno(EX_BAD, "The unit seems to be hung and needs power cycling.\n");
 		exit(EX_BAD);
@@ -269,18 +280,18 @@ main(ac, av)
 	}
 
 	if (!is_cddrive())
-		comerrno(EX_BAD, "Sorry, no CD-Drive found on this target.\n");
+		comerrno(EX_BAD, "Sorry, no CD/DVD-Drive found on this target.\n");
 	if (dp == (cdr_t *)0)
-		comerrno(EX_BAD, "Sorry, no supported CD-Recorder found on this target.\n");
+		comerrno(EX_BAD, "Sorry, no supported CD/DVD-Recorder found on this target.\n");
 
 	if (((flags & (F_MSINFO|F_TOC|F_LOAD|F_EJECT)) == 0 || tracks > 0) &&
 					(dp->cdr_flags & CDR_ISREADER) != 0) {
 		comerrno(EX_BAD,
-		"Sorry, no CD-Recorder or unsupported CD-Recorder found on this target.\n");
+		"Sorry, no CD/DVD-Recorder or unsupported CD/DVD-Recorder found on this target.\n");
 	}
 
-	if ((*dp->cdr_attach)() != 0)
-		comerrno(EX_BAD, "Cannot attach driver for CD-Recorder.\n");
+	if ((*dp->cdr_attach)(dp) != 0)
+		comerrno(EX_BAD, "Cannot attach driver for CD/DVD-Recorder.\n");
 
 	if ((flags & F_MSINFO) == 0 || lverbose) {
 		printf("Using %s (%s).\n", dp->cdr_drtext, dp->cdr_drname);
@@ -293,7 +304,7 @@ main(ac, av)
 	if ((flags & F_CHECKDRIVE) != 0)
 		exit(0);
 
-	if (tracks == 0 && (flags & F_EJECT) != 0) {
+	if (tracks == 0 && (flags & F_FIX) == 0 && (flags & F_EJECT) != 0) {
 		/*
 		 * Do not check if the unit is ready here to allow to open
 		 * an empty unit too.
@@ -322,6 +333,12 @@ main(ac, av)
 		scsi_prevent_removal(0);	/* allow manual open */
 		exit(0);
 	}
+	old_secsize = sense_secsize(1);
+	if (old_secsize < 0)
+		old_secsize = sense_secsize(0);
+	if (lverbose)
+		printf("Current Secsize: %d\n", old_secsize);
+
 /*audioread(dp, flags);*/
 /*unload_media(dp, flags);*/
 /*return 0;*/
@@ -370,10 +387,11 @@ main(ac, av)
 		unload_media(dp, flags);
 		exit(EX_BAD);
 	}
+
 	/*
 	 * Last chance to quit!
 	 */
-	printf("Starting to write CD at speed %d in %s mode for %s session.\n",
+	printf("Starting to write CD/DVD at speed %d in %s mode for %s session.\n",
 		speed,
 		(flags & F_DUMMY) ? "dummy" : "write",
 		(flags & F_MULTI) ? "multi" : "single");
@@ -412,7 +430,12 @@ main(ac, av)
 			unload_media(dp, flags);
 			exit(EX_BAD);
 		}
-		if (tracks == 0) {
+		if (gettimeofday(&fixtime, (struct timezone *)0) < 0)
+			errmsg("Cannot get blank time\n");
+		if (lverbose)
+			prtimediff("Blanking time: ", &starttime, &fixtime);
+
+		if (!wait_unit_ready(60) || tracks == 0) {
 			scsi_prevent_removal(0);
 			exit(0);
 		}
@@ -432,7 +455,7 @@ main(ac, av)
 	track[0].trackno = trackno;	/* XXX Hack for TEAC fixate */
 
 	/*
-	 * Now we actually start writing to the CD.
+	 * Now we actually start writing to the CD/DVD.
 	 * XXX Check total size of the tracks and remaining size of disk.
 	 */
 	if ((*dp->cdr_open_session)(tracks, track, toctype, flags & F_MULTI) < 0) {
@@ -514,6 +537,15 @@ fix_it:
 			prtimediff("Fixating time: ", &stoptime, &fixtime);
 	}
 
+	if (old_secsize > 0) {
+		/*
+		 * Try to restore the old sector size.
+		 */
+		silent++;
+		select_secsize(old_secsize);
+		silent--;
+	}
+
 	unload_media(dp, flags);
 
 #ifdef	FIFO
@@ -541,7 +573,7 @@ usage(excode)
 	error("\t-v		increment general verbose level by one\n");
 	error("\t-V		increment SCSI command transport verbose level by one\n");
 	error("\t-debug		print additional debug messages\n");
-	error("\tdev=target	SCSI target to use as CD-Recorder\n");
+	error("\tdev=target	SCSI target to use as CD/DVD-Recorder\n");
 	error("\ttimeout=#	set the default SCSI command timeout to #.\n");
 	error("\tdriver=name	user supplied driver name, use with extreme care\n");
 	error("\t-checkdrive	check if a driver for the drive is present\n");
@@ -565,7 +597,6 @@ usage(excode)
 	error("\t		In this case default track type is CD-ROM XA2\n");
 	error("\t-fix		fixate a corrupt or unfixated disk (generate a TOC)\n");
 	error("\t-nofix		do not fixate disk after writing tracks\n");
-	error("\tbytes=#		Length of valid track data in bytes (obsolete)\n");
 	error("\ttsize=#		Length of valid data in next track\n");
 	error("\tpadsize=#	Amount of padding for next track\n");
 	error("\tpregap=#	Amount of pre-gap sectors before next track\n");
@@ -716,7 +747,7 @@ write_track_data(dp, track, trackp)
 		bytes_read += count;
 		if (tracksize >= 0 && bytes_read >= tracksize) {
 			count -= bytes_read - tracksize;
-			if (trackp->padsize == 0 || (bytes_read/secsize) >= 300)
+			if (trackp->padsize == 0 && (bytes_read/secsize) >= 300)
 				islast = TRUE;
 		}
 
@@ -738,7 +769,7 @@ write_track_data(dp, track, trackp)
 			}
 			bytespt = count;
 			secspt = count / secsize;
-			if (trackp->padsize == 0 || (bytes_read/secsize) >= 300)
+			if (trackp->padsize == 0 && (bytes_read/secsize) >= 300)
 				islast = TRUE;
 		}
 
@@ -992,7 +1023,7 @@ checktsize(tracks, trackp)
 	int	i;
 	long	curr;
 	long	total = 0;
-	long	btotal;
+	Ullong	btotal;
 	track_t	*tp;
 
 	for (i = 1; i <= tracks; i++) {
@@ -1013,17 +1044,17 @@ checktsize(tracks, trackp)
 	if (!lverbose)
 		return (total);
 
-	btotal = total * 2352;
+	btotal = (Ullong)total * 2352;
 /* XXX Sector Size ??? */
 	if (tracks > 0) {
-		printf("Total size:     %3ld MB (%02d:%02d.%02d) = %ld sectors\n",
-			btotal >> 20,
+		printf("Total size:     %3lu MB (%02d:%02d.%02d) = %ld sectors\n",
+			(Ulong)(btotal >> 20),
 			minutes(btotal),
 			seconds(btotal),
 			hseconds(btotal), total);
 		btotal += 150 * 2352;
-		printf("Lout start:     %3ld MB (%02d:%02d/%02d) = %ld sectors\n",
-			btotal >> 20,
+		printf("Lout start:     %3lu MB (%02d:%02d/%02d) = %ld sectors\n",
+			(Ulong)(btotal >> 20),
 			minutes(btotal),
 			seconds(btotal),
 			frames(btotal), total);
@@ -1070,18 +1101,22 @@ checkdsize(dp, dsp, tsize)
 	long	tsize;
 {
 	long	startsec = 0L;
+	long	endsec = 0L;
 
 	silent++;
 	(*dp->cdr_next_wr_address)(/*i*/ 0, (track_t *)0, &startsec);
 	silent--;
 
+	endsec = startsec + tsize;
+
 	if (dsp->ds_maxblocks > 0) {
 		if (lverbose)
-			printf("Blocks total: %ld Blocks remaining: %ld\n",
+			printf("Blocks total: %ld Blocks current: %ld Blocks remaining: %ld\n",
 					dsp->ds_maxblocks,
-					dsp->ds_maxblocks - startsec);
+					dsp->ds_maxblocks - startsec,
+					dsp->ds_maxblocks - endsec);
 
-		if (startsec + tsize > dsp->ds_maxblocks) {
+		if (endsec > dsp->ds_maxblocks) {
 			errmsgno(EX_BAD,
 			"WARNING: Data may not fit on current disk.\n");
 
@@ -1089,20 +1124,21 @@ checkdsize(dp, dsp, tsize)
 /*			return (FALSE);*/
 		}
 		if (lverbose && dsp->ds_maxrblocks > 0)
-			printf("RBlocks total: %ld RBlocks remaining: %ld\n",
+			printf("RBlocks total: %ld RBlocks current: %ld RBlocks remaining: %ld\n",
 					dsp->ds_maxrblocks,
-					dsp->ds_maxrblocks - startsec);
-		if (dsp->ds_maxrblocks > 0 && startsec + tsize > dsp->ds_maxrblocks) {
+					dsp->ds_maxrblocks - startsec,
+					dsp->ds_maxrblocks - endsec);
+		if (dsp->ds_maxrblocks > 0 && endsec > dsp->ds_maxrblocks) {
 			errmsgno(EX_BAD,
 			"Data does not fit on current disk.\n");
 			return (FALSE);
 		}
 	} else {
-		if (startsec + tsize >= (405000-301)) {		/*<90 min disk*/
+		if (endsec >= (405000-301)) {			/*<90 min disk*/
 			errmsgno(EX_BAD,
 				"Data will not fit on any disk.\n");
 			return (FALSE);
-		} else if (startsec + tsize >= (333000-150)) {	/* 74 min disk*/
+		} else if (endsec >= (333000-150)) {		/* 74 min disk*/
 			errmsgno(EX_BAD,
 			"WARNING: Data may not fit on standard 74min disk.\n");
 		}
@@ -1132,7 +1168,7 @@ raise_fdlim()
 }
 
 char	*opts =
-"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,dev*,timeout#,driver*,bytes#,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,multi,fix,nofix,debug,v+,V+,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose";
+"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,dev*,timeout#,driver*,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,multi,fix,nofix,debug,v+,V+,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose";
 
 LOCAL void
 gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, blankp)
@@ -1152,8 +1188,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 	char	* const*cav;
 	char	*driver = NULL;
 	long	bltype = -1;
-	long	tracksize;
-	long	padsize;
+	Llong	tracksize;
+	Llong	padsize;
 	long	pregapsize;
 	long	defpregap = -1L;
 	long	secsize;
@@ -1198,8 +1234,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 	cac = --ac;
 	cav = ++av;
 	for (;; cac--,cav++) {
-		tracksize = -1L;
-		padsize = 0L;
+		tracksize = (Llong)-1L;
+		padsize = (Llong)0L;
 		pregapsize = defpregap;
 		audio = data = mode2 = xa1 = xa2 = cdi = 0;
 		isize = nopreemp = nopad = 0;
@@ -1208,9 +1244,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 				&help, &version, &checkdrive, &prcap,
 				&inq, &scanbus, &reset, &ignsize,
 				devp, timeoutp, &driver,
-				&tracksize,
-				getnum, &tracksize,
-				getnum, &padsize,
+				getllnum, &tracksize,
+				getllnum, &padsize,
 				getnum, &pregapsize,
 				getnum, &defpregap,
 				&speed,
@@ -1332,12 +1367,12 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 		if (preemp)
 			flags |= TI_PREEMP;
 
-		if ((flags & TI_AUDIO) == 0 && padsize > 0L)
+		if ((flags & TI_AUDIO) == 0 && padsize > (Llong)0L)
 			pad = TRUE;
 		if (pad) {
 			flags |= TI_PAD;
-			if ((flags & TI_AUDIO) == 0 && padsize == 0L)
-				padsize = PAD_SIZE;
+			if ((flags & TI_AUDIO) == 0 && padsize == (Llong)0L)
+				padsize = (Llong)PAD_SIZE;
 		}
 		if (bswab)
 			flags |= TI_SWAB;
@@ -1360,7 +1395,7 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 			if (access(cav[0], R_OK) < 0)
 				comerr("No read access for '%s'.\n", cav[0]);
 
-			if ((trackp[tracks].f = open(cav[0], O_RDONLY)) < 0)
+			if ((trackp[tracks].f = open(cav[0], O_RDONLY|O_BINARY)) < 0)
 				comerr("Cannot open '%s'.\n", cav[0]);
 		}
 		if (!is_auname(cav[0]) && !is_wavname(cav[0]))
@@ -1427,7 +1462,7 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 	if (!*devp)
 		*devp = getenv("CDR_DEVICE");
 	if (!*devp && (*flagsp & (F_VERSION|F_SCANBUS)) == 0) {
-		errmsgno(EX_BAD, "No CD-Recorder device specified.\n");
+		errmsgno(EX_BAD, "No CD/DVD-Recorder device specified.\n");
 		usage(EX_BAD);
 	}
 	if (*flagsp & (F_LOAD|F_MSINFO|F_TOC|F_FIX|F_VERSION|F_CHECKDRIVE|F_PRCAP|F_INQUIRY|F_SCANBUS|F_RESET)) {
@@ -1489,21 +1524,26 @@ EXPORT void
 load_media(dp)
 	cdr_t	*dp;
 {
-	register int	i;
+	int	code;
+	int	key;
 
 	/*
 	 * Do some preparation before...
 	 */
 	silent++;			/* Be quiet if this fails	*/
-	(*dp->cdr_load)();		/* First try to load media and	*/
+	test_unit_ready();		/* First eat up unit attention	*/
+	(*dp->cdr_load)();		/* now try to load media and	*/
 	scsi_start_stop_unit(1, 0);	/* start unit in silent mode	*/
 	silent--;
 
 	if (!wait_unit_ready(60)) {
-		i = scsi_sense_code();
-		if (scsi_sense_key() == SC_NOT_READY && (i == 0x3A || i == 0x30))
+		code = scsi_sense_code();
+		key = scsi_sense_key();
+		scsi_prevent_removal(0);/* In case someone locked it	*/
+
+		if (key == SC_NOT_READY && (code == 0x3A || code == 0x30))
 			comerrno(EX_BAD, "No disk / Wrong disk!\n");
-		comerrno(EX_BAD, "CD-Recorder not ready.\n");
+		comerrno(EX_BAD, "CD/DVD-Recorder not ready.\n");
 	}
 
 	scsi_prevent_removal(1);
@@ -1514,6 +1554,7 @@ load_media(dp)
 	silent--;
 	test_unit_ready();
 	scsi_start_stop_unit(1, 0);
+	wait_unit_ready(120);
 }
 
 EXPORT void
@@ -1546,11 +1587,13 @@ void audioread(dp, flags)
 #ifdef	DEBUG
 	int speed = 1;
 	int dummy = 0;
+extern	struct	scsi_capacity	cap;
 
 	if ((*dp->cdr_set_speed_dummy)(speed, dummy) < 0)
 		exit(-1);
 	if ((*dp->cdr_set_secsize)(2352) < 0)
 		exit(-1);
+	cap.c_bsize = 2352;
 
 	read_scsi(buf, 1000, 1);
 	printf("XXX:\n");
@@ -1588,12 +1631,12 @@ print_toc(dp)
 	int	first;
 	int	last;
 	long	lba;
+	long	xlba;
 	struct msf msf;
 	int	adr;
 	int	control;
 	int	mode;
 	int	i;
-extern	struct scsi_capacity	cap;
 
 	silent++;
 	if (read_capacity() < 0) {
@@ -1609,14 +1652,18 @@ extern	struct scsi_capacity	cap;
 	printf("first: %d last %d\n", first, last);
 	for (i = first; i <= last; i++) {
 		read_trackinfo(i, &lba, &msf, &adr, &control, &mode);
-		if (cap.c_bsize == 512)
-			lba /= 4;
+		xlba = -150 + \
+			msf.msf_frame + (75*msf.msf_sec) + (75*60*msf.msf_min);
+		if (xlba == lba/4)
+			lba = xlba;
 		print_track(i, lba, &msf, adr, control, mode);
 	}
 	i = 0xAA;
 	read_trackinfo(i, &lba, &msf, &adr, &control, &mode);
-	if (cap.c_bsize == 512)
-		lba /= 4;
+	xlba = -150 + \
+		msf.msf_frame + (75*msf.msf_sec) + (75*60*msf.msf_min);
+	if (xlba == lba/4)
+		lba = xlba;
 	print_track(i, lba, &msf, adr, control, mode);
 }
 
@@ -1730,6 +1777,15 @@ rt_raisepri(pri)
 {
 	struct sched_param scp;
 
+	/*
+	 * Verify that scheduling is available
+	 */
+#ifdef	_SC_PRIORITY_SCHEDULING
+	if (sysconf(_SC_PRIORITY_SCHEDULING) == -1) {
+		errmsg("WARNING: RR-scheduler not available, disabling.\n");
+		return(-1);
+	}
+#endif
 	fillbytes(&scp, sizeof(scp), '\0');
 	scp.sched_priority = sched_get_priority_max(SCHED_RR) - pri;
 	if (sched_setscheduler(0, SCHED_RR, &scp) < 0) {
@@ -1756,8 +1812,12 @@ raisepri(pri)
 {
 	if (rt_raisepri(pri) >= 0)
 		return;
+#ifdef	PRIO_PROCESS
 	if (setpriority(PRIO_PROCESS, getpid(), -20 + pri) < 0)
-		comerr("Cannot set priority\n");
+		comerr("Cannot set priority.\n");
+#else
+	errmsgno(EX_BAD, "Cannot set priority on this OS.\n");
+#endif
 }
 
 #endif	/* HAVE_SYS_PRIOCNTL_H */
@@ -1774,18 +1834,45 @@ checkgui()
 	}
 }
 
-LOCAL long
+LOCAL char *
+astoll(s, ll)
+	register const char *s;
+        Llong *ll;
+{
+	char	*p;
+	long	l = 0;
+
+	p = astol(s, &l);
+	*ll = (Llong)l;
+	return (p);
+}
+
+LOCAL Llong
 number(arg, retp)
 	register char	*arg;
 		int	*retp;
 {
-	long	val	= 0;
+	Llong	val	= 0;
 
 	if (*retp != 1)
 		return (val);
-	if (*arg == '\0')
+	if (*arg == '\0') {
 		*retp = -1;
-	else if (*(arg = astol(arg, &val))) {
+	} else if (*(arg = astoll(arg, &val))) {
+		if (*arg == 'p' || *arg == 'P') {
+			val *= (1024*1024);
+			val *= (1024*1024*1024);
+			arg++;
+		}
+		if (*arg == 't' || *arg == 'T') {
+			val *= (1024*1024);
+			val *= (1024*1024);
+			arg++;
+		}
+		if (*arg == 'g' || *arg == 'G') {
+			val *= (1024*1024*1024);
+			arg++;
+		}
 		if (*arg == 'm' || *arg == 'M') {
 			val *= (1024*1024);
 			arg++;
@@ -1818,14 +1905,25 @@ number(arg, retp)
 	return (val);
 }
 
-LOCAL int
+EXPORT int
 getnum(arg, valp)
 	char	*arg;
 	long	*valp;
 {
 	int	ret = 1;
 
-	*valp = number(arg, &ret);
+	*valp = (long)number(arg, &ret);
+	return (ret);
+}
+
+EXPORT int
+getllnum(arg, lvalp)
+	char	*arg;
+	Llong	*lvalp;
+{
+	int	ret = 1;
+
+	*lvalp = number(arg, &ret);
 	return (ret);
 }
 

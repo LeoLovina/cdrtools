@@ -27,6 +27,8 @@ LDPATH=		-L/opt/schily/lib
 # Installation config stuff
 #
 ###########################################################################
+#INS_BASE=	/opt/schily
+#INS_KBASE=	/
 INS_BASE=	/tmp/schily
 INS_KBASE=	/tmp/schily/root
 #
@@ -35,4 +37,3 @@ DEFUMASK=	002
 DEFINSMODE=    755
 DEFINSUSR=     bin
 DEFINSGRP=     bin
-
