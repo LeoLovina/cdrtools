@@ -23,6 +23,12 @@ include		$(SRCROOT)/$(RULESDIR)/rules.lib
 # $@ $* and $^ on some places for this reason.
 ###########################################################################
 
+.INIT:
+	@echo "	==> The folloging messages may occur:"
+	@echo "	==> cannot find include file: <align.h>"
+	@echo "	==> cannot find include file: <avoffset.h>"
+	@echo "	==> this is not an error, these files are made during the build."
+
 cmpbytes.o fillbytes.o movebytes.o: align.h
 $(ARCHDIR)/cmpbytes.o $(ARCHDIR)/fillbytes.o $(ARCHDIR)/movebytes.o: align.h
 

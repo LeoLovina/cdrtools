@@ -7,7 +7,7 @@ However, this internal copy is always returned so the
 SCSI library always belives that an error occured.
 
 As this implementation bug makes it impossible to sense
-other error/excption contditions the driver needs to be fixed.
+other error/excption conditions the driver needs to be fixed.
 
 As a workaround you can activate a hack in the file scsi-bsd.c
 by using

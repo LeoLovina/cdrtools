@@ -1,4 +1,4 @@
-/* @(#)scsidefs.h	1.14 97/08/24 Copyright 1988 J. Schilling */
+/* @(#)scsidefs.h	1.17 98/03/24 Copyright 1988 J. Schilling */
 /*
  *	Definitions for SCSI devices i.e. for error strings in scsierrs.c
  *
@@ -65,17 +65,23 @@
 #define	DEV_MMC_CDROM		501
 #define	DEV_MMC_CDR		502
 #define	DEV_MMC_CDRW		503
+#define	DEV_MMC_DVD		504
 
-#define	DEV_CDD_521		510
-#define	DEV_CDD_522		511
-#define	DEV_CDD_2000		512
-#define	DEV_CDD_2600		513
+#define	DEV_CDD_521_OLD		510
+#define	DEV_CDD_521		511
+#define	DEV_CDD_522		512
+#define	DEV_CDD_2000		513
+#define	DEV_CDD_2600		514
 #define	DEV_YAMAHA_CDR_100	520
 #define	DEV_YAMAHA_CDR_400	521
 #define	DEV_PLASMON_RF_4100	530
 #define	DEV_SONY_CDU_924	540
 #define	DEV_RICOH_RO_1420C	550
 #define	DEV_TEAC_CD_R50S	560
+#define	DEV_MATSUSHITA_7501	570
+#define	DEV_MATSUSHITA_7502	571
+#define	DEV_PIONEER_DW_S114X	580
+#define	DEV_PIONEER_DVDR_S101	581
 
 /*
  * Scanners

@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.15 97/08/25 Copyright 1988,1995 J. Schilling */
+/* @(#)scsitransp.c	1.24 98/04/12 Copyright 1988,1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.15 97/08/25 Copyright 1988,1995 J. Schilling";
+	"@(#)scsitransp.c	1.24 98/04/12 Copyright 1988,1995 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -24,6 +24,8 @@ static	char sccsid[] =
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#include <mconfig.h>
 
 #include <sys/param.h>	/* XXX nonportable to use u_char */
 #include <stdio.h>
@@ -104,11 +106,15 @@ LOCAL	void	scsitimes	__PR((void));
 LOCAL	BOOL	scsierr		__PR((void));
 LOCAL	int	scsicheckerr	__PR((char *));
 EXPORT	void	scsiprinterr	__PR((char *));
+EXPORT	void	scsiprintcdb	__PR((void));
+EXPORT	void	scsiprintwdata	__PR((void));
+EXPORT	void	scsiprintrdata	__PR((void));
 EXPORT	void	scsiprintstatus	__PR((void));
 EXPORT	void	scsiprbytes	__PR((char *, unsigned char *, int));
 EXPORT	void	scsiprsense	__PR((unsigned char *, int));
 EXPORT	int	scsi_sense_key	__PR((void));
 EXPORT	int	scsi_sense_code	__PR((void));
+EXPORT	int	scsi_sense_qual	__PR((void));
 EXPORT	void	scsiprintdev	__PR((struct scsi_inquiry *));
 
 #ifdef	HAVE_SCG
@@ -295,11 +301,19 @@ int scsicmd(name)
 		printf("\nExecuting '%s' command on Bus %d Target %d, Lun %d timeout %ds\n",
 			name, scsibus, scmd.target, scmd.cdb.g0_cdb.lun,
 			scmd.timeout);
-		scsiprbytes("CDB: ", scmd.cdb.cmd_cdb, scmd.cdb_len);
+		scsiprintcdb();
+		if (verbose > 1)
+			scsiprintwdata();
+		flush();
 	}
 
-	if (scsi_running)
+	if (scsi_running) {
+		if (scsi_command) {
+			error("Currently running '%s' command.\n",
+							scsi_command);
+		}
 		raisecond("SCSI ALREADY RUNNING !!", 0L);
+	}
 	gettimeofday(&cmdstart, (struct timezone *)0);
 	scsi_command = name;
 	scsi_running = TRUE;
@@ -308,7 +322,16 @@ int scsicmd(name)
 	scsitimes();
 	if (ret < 0)
 		comerr("Cannot send SCSI cmd via ioctl\n");
-	return (scsicheckerr(name));
+	ret = scsicheckerr(name);
+	if (verbose || (ret && silent == 0)) {
+		printf("cmd finished after %ld.%03lds timeout %ds\n",
+			(long)cmdstop.tv_sec, (long)cmdstop.tv_usec/1000,
+			scmd.timeout);
+		if (verbose > 1)
+			scsiprintrdata();
+		flush();
+	}
+	return (ret);
 }
 
 EXPORT
@@ -352,8 +375,10 @@ int scsicheckerr(cmd)
 			scsiprinterr(cmd);
 		ret = -1;
 	}
-	if ((!silent || verbose) && scmd.resid)
+	if ((!silent || verbose) && scmd.resid) {
 		printf("resid: %d\n", scmd.resid);
+		flush();
+	}
 	return (ret);
 }
 
@@ -385,12 +410,47 @@ void scsiprinterr(cmd)
 	}
 
 	errmsgno(cp->ux_errno, "%s: scsi sendcmd: %s\n", cmd, err);
+	scsiprintcdb();
+
 	if (cp->error <= SCG_RETRYABLE)
 		scsiprintstatus();
 
 	if (cp->scb.chk) {
 		scsiprsense((u_char *)&cp->sense, cp->sense_count);
 		scsierrmsg(&cp->sense, &cp->scb, -1, scsi_nonstderrs);
+	}
+	flush();
+}
+
+EXPORT void
+scsiprintcdb()
+{
+	scsiprbytes("CDB: ", scmd.cdb.cmd_cdb, scmd.cdb_len);
+}
+
+EXPORT void
+scsiprintwdata()
+{
+	if (scmd.size > 0 && (scmd.flags & SCG_RECV_DATA) == 0) {
+		printf("Sending %d (0x%X) bytes of data.\n",
+			scmd.size, scmd.size);
+		scsiprbytes("Write Data: ",
+			(Uchar *)scmd.addr,
+			scmd.size > 100 ? 100 : scmd.size);
+	}
+}
+
+EXPORT void
+scsiprintrdata()
+{
+	if (scmd.size > 0 && (scmd.flags & SCG_RECV_DATA) != 0) {
+		printf("Got %d (0x%X), expecting %d (0x%X) bytes of data.\n",
+			scmd.size-scmd.resid, scmd.size-scmd.resid,
+			scmd.size, scmd.size);
+		scsiprbytes("Received Data: ",
+			(Uchar *)scmd.addr,
+			(scmd.size-scmd.resid) > 100 ?
+			100 : (scmd.size-scmd.resid));
 	}
 }
 
@@ -468,6 +528,17 @@ scsi_sense_code()
 	else
 		code = cp->sense.code;
 	return(code);
+}
+
+EXPORT int
+scsi_sense_qual()
+{
+	register struct scg_cmd *cp = &scmd;
+
+	if (cp->sense.code >= 0x70)
+		return (((struct scsi_ext_sense*)&(cp->sense))->qual_code);
+	else
+		return (0);
 }
 
 EXPORT

@@ -1,0 +1,100 @@
+*** write.c.bak	Mon Feb 16 18:56:56 1998
+--- write.c	Fri Apr 17 11:07:29 1998
+***************
+*** 121,126 ****
+--- 121,147 ----
+  
+  void FDECL4(xfwrite, void *, buffer, int, count, int, size, FILE *, file)
+  {
++ 	/*
++ 	 * This is a hack that could be made better. XXXIs this the only place?
++ 	 * It is definitely needed on Operating Systems that do not
++ 	 * allow to write files that are > 2GB.
++ 	 * If the system is fast enough to be able to feed 1400 KB/s
++ 	 * writing speed of a DVD-R drive, use stdout.
++ 	 * If the system cannot do this reliable, you need to use this
++ 	 * hacky option.
++ 	 */
++ 	if (split_output != 0 && ftell(file) > (1024 * 1024 * 1024) ) {
++ 		static int	idx = 0;
++ 		char	nbuf[128];
++ 
++ 		sprintf(nbuf, "part_%02d", idx++);
++ 		file = freopen(nbuf, "w", file);
++ 		if (file == NULL) {
++ 			fprintf(stderr, "Cannot open '%s'.\n", nbuf);
++ 			exit(1);
++ 		}
++ 
++ 	}
+       while(count) 
+       {
+  	  int got = fwrite(buffer,size,count,file);
+***************
+*** 404,411 ****
+--- 425,437 ----
+       else
+         {
+  	 sort_goof = 0;
++ #ifdef __STDC__
+  	 qsort(sortlist, dcount, sizeof(struct directory_entry *), 
+  	       (int (*)(const void *, const void *))compare_dirs);
++ #else
++ 	 qsort(sortlist, dcount, sizeof(struct directory_entry *), 
++ 	       compare_dirs);
++ #endif
+  	 
+  	 /* 
+  	  * Now reassemble the linked list in the proper sorted order 
+***************
+*** 610,615 ****
+--- 636,643 ----
+  			 
+  		    }
+  #endif
++ #ifdef	NOT_NEEDED	/* Never use this code if you like to create a DVD */
++ 
+  		    if(last_extent > (800000000 >> 11)) 
+  		    { 
+  			 /*
+***************
+*** 620,625 ****
+--- 648,654 ----
+  			 fprintf(stderr,"Reported file size is %d extents\n", s_entry->size);
+  			 exit(1);
+  		    }
++ #endif
+  		    continue;
+  	       }
+  
+***************
+*** 912,919 ****
+--- 941,953 ----
+    do
+    {
+         fix = 0;
++ #ifdef __STDC__
+         qsort(&pathlist[1], next_path_index-1, sizeof(struct directory *), 
+  	     (int (*)(const void *, const void *))compare_paths);
++ #else
++        qsort(&pathlist[1], next_path_index-1, sizeof(struct directory *), 
++ 	     compare_paths);
++ #endif
+  
+         for(j=1; j<next_path_index; j++)
+         {
+***************
+*** 1031,1036 ****
+--- 1065,1076 ----
+  
+    should_write = last_extent - session_start;
+  
++   if( print_size > 0 )
++     {
++       fprintf(stderr,"Total extents scheduled to be written = %d\n", 
++ 	      last_extent - session_start);
++ 	exit(0);
++     }
+    if( verbose > 0 )
+      {
+  #ifdef DBG_ISO

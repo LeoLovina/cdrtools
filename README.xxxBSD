@@ -13,7 +13,7 @@ the CD-Recorder as it is on other architectures.
 User level SCSI seems not be be well tested on *BSD
 
 It would be nice if the kernel hackers of all *BSD flavors could aggree in
-adding decent and useful SCSU user land transport support.
+adding decent and useful SCSI user land transport support.
 This would cause the following canges:
 
 	-	Add a driver that is present by default and offeres an

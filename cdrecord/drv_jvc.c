@@ -1,7 +1,7 @@
-/* @(#)drv_jvc.c	1.6 97/09/10 Copyright 1997 J. Schilling */
+/** @(#)drv_jvc.c	1.29 98/04/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_jvc.c	1.6 97/09/10 Copyright 1997 J. Schilling";
+	"@(#)drv_jvc.c	1.29 98/04/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -25,13 +25,17 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
+
 #include <stdio.h>
 #include <standard.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/file.h>
+#include <unixstd.h>
 
+#include <utypes.h>
 #include <btorder.h>
 #include <scgio.h>
 #include <scsidefs.h>
@@ -44,8 +48,8 @@ struct	scg_cmd		scmd;
 struct	scsi_inquiry	inq;
 
 /* just a hack */
-long	lba_blocks;
 long	lba_addr;
+BOOL	last_done;
 
 /*
  * macros for building MSF values from LBA
@@ -61,25 +65,26 @@ extern	int	lun;
 
 extern	int	silent;
 extern	int	verbose;
+extern	int	lverbose;
 
 #if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 struct teac_mode_page_21 {		/* teac dummy selection */
-	u_char	MP_P_CODE;		/* parsave & pagecode */
+		MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x01 = 1 Byte */
-	u_char	dummy		: 2;
-	u_char	res		: 6;
+	Ucbit	dummy		: 2;
+	Ucbit	res		: 6;
 };
 #else
 struct teac_mode_page_21 {		/* teac dummy selection */
-	u_char	MP_P_CODE;		/* parsave & pagecode */
+		MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x01 = 1 Byte */
-	u_char	res		: 6;
-	u_char	dummy		: 2;
+	Ucbit	res		: 6;
+	Ucbit	dummy		: 2;
 };
 #endif
 
 struct teac_mode_page_31 {		/* teac speed selection */
-	u_char	MP_P_CODE;		/* parsave & pagecode */
+		MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x02 = 2 Byte */
 	u_char	speed;
 	u_char	res;
@@ -93,26 +98,147 @@ struct cdd_52x_mode_data {
 	} pagex;
 };
 
+#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct pgm_subcode {		/* subcode for progam area */
+	u_char	subcode;
+	Ucbit	addr		: 4;
+	Ucbit	control		: 4;
+	u_char	track;
+	u_char	index;
+};
+
+#else
+
+struct pgm_subcode {		/* subcode for progam area */
+	u_char	subcode;
+	Ucbit	control		: 4;
+	Ucbit	addr		: 4;
+	u_char	track;
+	u_char	index;
+};
+
+#endif
+
+#define	set_pgm_subcode(sp, t, c, a, tr, idx)		(\
+			(sp)->subcode = (t),		 \
+			(sp)->control = (c),		 \
+			(sp)->addr = (a),		 \
+			(sp)->track = MSF_CONV(tr),	 \
+			(sp)->index = (idx))
+
+#define	SC_P		1	/* Subcode defines pre-gap (Pause)	*/
+#define	SC_TR		0	/* Subcode defines track data		*/
+
+#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+typedef struct lin_subcode {	/* subcode for lead in area */
+	Ucbit	addr		: 4;
+	Ucbit	control		: 4;
+	u_char	track;
+	u_char	msf[3];
+} lsc_t;
+
+#else
+
+typedef struct lin_subcode {	/* subcode for lead in area */
+	Ucbit	control		: 4;
+	Ucbit	addr		: 4;
+	u_char	track;
+	u_char	msf[3];
+} lsc_t;
+
+#endif
+
+#define	set_toc_subcode(sp, c, a, tr, bno)				(\
+			((lsc_t *)sp)->control = (c),			 \
+			((lsc_t *)sp)->addr = (a),			 \
+			((lsc_t *)sp)->track = MSF_CONV(tr),		 \
+			((lsc_t *)sp)->msf[0] = MSF_CONV(LBA_MIN(bno)),	 \
+			((lsc_t *)sp)->msf[1] = MSF_CONV(LBA_SEC(bno)),	 \
+			((lsc_t *)sp)->msf[2] = MSF_CONV(LBA_FRM(bno)),	 \
+			&((lsc_t *)sp)->msf[3])
+
+#define	set_lin_subcode(sp, c, a, pt, min, sec, frm)			(\
+			((lsc_t *)sp)->control = (c),			 \
+			((lsc_t *)sp)->addr = (a),			 \
+			((lsc_t *)sp)->track = (pt),			 \
+			((lsc_t *)sp)->msf[0] = (min),			 \
+			((lsc_t *)sp)->msf[1] = (sec),			 \
+			((lsc_t *)sp)->msf[2] = (frm),			 \
+			&((lsc_t *)sp)->msf[3])
+
+#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct upc_subcode {		/* subcode for upc/bar code */
+	u_char	res;
+	Ucbit	addr		: 4;
+	Ucbit	control		: 4;
+	u_char	upc[13];
+};
+
+#else
+
+struct upc_subcode {		/* subcode for upc/bar code */
+	u_char	res;
+	Ucbit	control		: 4;
+	Ucbit	addr		: 4;
+	u_char	upc[13];
+};
+
+#endif
+
+#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct isrc_subcode {		/* subcode for ISRC code */
+	u_char	res;
+	Ucbit	addr		: 4;
+	Ucbit	control		: 4;
+	u_char	isrc[12];
+	u_char	res14;
+};
+
+#else
+
+struct isrc_subcode {		/* subcode for ISRC code */
+	u_char	res;
+	Ucbit	control		: 4;
+	Ucbit	addr		: 4;
+	u_char	isrc[12];
+	u_char	res14;
+};
+
+#endif
+
+
 LOCAL	int	teac_attach	__PR((void));
 LOCAL	int	teac_getdisktype __PR((cdr_t *dp, dstat_t *dsp));
 LOCAL	int	speed_select_teac __PR((int speed, int dummy));
-LOCAL	int	next_wr_addr_jvc __PR((int track, long *ap));
+LOCAL	int	select_secsize_teac __PR((track_t *trackp));
+LOCAL	int	next_wr_addr_jvc __PR((int track, track_t *, long *ap));
 LOCAL	int	write_teac_xg1	__PR((caddr_t, long, long, int, BOOL));
-LOCAL	int	cdr_write_teac	__PR((char *bufp, long sectaddr, long size, int blocks));
-LOCAL	int	open_track_jvc	__PR((int track, track_t *track_info));
-LOCAL	int	teac_fixation	__PR((int onp, int dummy, int toctype));
-LOCAL	int	close_track_teac __PR((int track));
+LOCAL	int	cdr_write_teac	__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+LOCAL	int	open_track_jvc	__PR((cdr_t *dp, int track, track_t *trackp));
+LOCAL	int	teac_fixation	__PR((int onp, int dummy, int toctype, int tracks, track_t *trackp));
+LOCAL	int	close_track_teac __PR((int track, track_t *trackp));
+LOCAL	int	teac_open_session __PR((int tracks, track_t *trackp, int toctype, int multi));
 LOCAL	int	teac_calibrate __PR((int toctype, int multi));
 LOCAL	int	opt_power_judge	__PR((int judge));
 LOCAL	int	clear_subcode	__PR((void));
-LOCAL	int	set_limits	__PR((int lba, int length));
+LOCAL	int	set_limits	__PR((long lba, long length));
 LOCAL	int	set_subcode	__PR((u_char *subcode_data, int length));
+LOCAL	int	read_disk_info_teac __PR((u_char *data, int length, int type));
 LOCAL	int	teac_freeze	__PR((int bp_flag));
+LOCAL	int	teac_wr_pma	__PR((void));
+LOCAL	int	teac_rd_pma	__PR((void));
+LOCAL	int	next_wr_addr_teac __PR((long start_lba, long last_lba));
 
 cdr_t	cdr_teac_cdr50 = {
-	0, 0,
+	0,
+	CDR_TAO|CDR_DAO|CDR_SWABAUDIO|CDR_NO_LOLIMIT,
 	"teac_cdr50",
-	"driver for Teac CD-R50S, JVC XR-W2010, Pinnacle RCD-5020",
+	"driver for Teac CD-R50S, Teac CD-R55S, JVC XR-W2010, Pinnacle RCD-5020",
+	0,
 	drive_identify,
 	teac_attach,
 	teac_getdisktype,
@@ -127,10 +253,11 @@ cdr_t	cdr_teac_cdr50 = {
 	cdr_write_teac,
 	open_track_jvc,
 	close_track_teac,
-	teac_calibrate,
+	teac_open_session,
 	cmd_dummy,
 	read_session_offset_philips,
 	teac_fixation,
+	blank_dummy,
 };
 
 LOCAL int
@@ -138,33 +265,26 @@ teac_getdisktype(dp, dsp)
 	cdr_t	*dp;
 	dstat_t	*dsp;
 {
-	struct	scsi_mode_header *mhp;
-	struct	scsi_mode_page_header *mp;
-	char			mode[256];
-	int			len = 12;
-	int			page = 0;
+	struct scsi_mode_data md;
+	int	count = sizeof(struct scsi_mode_header) +
+			sizeof(struct scsi_mode_blockdesc);
+	int	len;
+	int	page = 0;
+	long	l;
 
-	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
 	(void)test_unit_ready();
-	verbose++;
-	if (mode_sense((u_char *)mode, len, page, 0) < 0) {	/* Page n current */
-		verbose--;
-printf("ERROR\n");
+	if (mode_sense((u_char *)&md, count, page, 0) < 0) {	/* Page n current */
 		return (-1);
 	} else {
-		len = ((struct scsi_mode_header *)mode)->sense_data_len + 1;
+		len = ((struct scsi_mode_header *)&md)->sense_data_len + 1;
 	}
-	verbose--;
-	if (((struct scsi_mode_header *)mode)->blockdesc_len >= 8) {
+	if (((struct scsi_mode_header *)&md)->blockdesc_len < 8)
+		return (-1);
 
-	mp = (struct scsi_mode_page_header *)
-		(mode + sizeof(struct scsi_mode_header) +
-		((struct scsi_mode_header *)mode)->blockdesc_len);
-	}
-
-printf("END\n");
-
+	l = a_to_3_byte(md.blockdesc.nlblock);
+	dsp->ds_maxblocks = l;
 	return (0);
 }
 
@@ -204,19 +324,62 @@ speed_select_teac(speed, dummy)
 }
 
 LOCAL int
-next_wr_addr_jvc(track, ap)
+select_secsize_teac(trackp)
+	track_t	*trackp;
+{
+	struct scsi_mode_data md;
+	int	count = sizeof(struct scsi_mode_header) +
+			sizeof(struct scsi_mode_blockdesc);
+	int	len;
+	int	page = 0;
+
+	fillbytes((caddr_t)&md, sizeof(md), '\0');
+
+	(void)test_unit_ready();
+	if (mode_sense((u_char *)&md, count, page, 0) < 0) {	/* Page n current */
+		return (-1);
+	} else {
+		len = ((struct scsi_mode_header *)&md)->sense_data_len + 1;
+	}
+	if (((struct scsi_mode_header *)&md)->blockdesc_len < 8)
+		return (-1);
+
+	md.header.sense_data_len = 0;
+	md.header.blockdesc_len = 8;
+
+	md.blockdesc.density = 1;
+	if (trackp->secsize == 2352)
+		md.blockdesc.density = 4;
+	i_to_3_byte(md.blockdesc.lblen, trackp->secsize);
+	
+	return (mode_select((u_char *)&md, count, 0, inq.data_format >= 2));
+}
+
+LOCAL int
+next_wr_addr_jvc(track, trackp, ap)
 	int	track;
+	track_t	*trackp;
 	long	*ap;
 {
+	if (track > 0) {
+		*ap = lba_addr;
+	} else {
+		long	nwa;
+
+		if (read_B0(TRUE, &nwa, NULL) < 0)
+			return (-1);
+
+		*ap = nwa + 150;
+	}
 	return (0);
 }
 
 LOCAL int
-write_teac_xg1(bp, addr, size, cnt, extwr)
+write_teac_xg1(bp, sectaddr, size, blocks, extwr)
 	caddr_t	bp;		/* address of buffer */
-	long	addr;		/* disk address (sector) to put */
+	long	sectaddr;	/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
-	int	cnt;		/* sectorcount */
+	int	blocks;		/* sector count */
 	BOOL	extwr;		/* is an extended write */
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -229,8 +392,8 @@ write_teac_xg1(bp, addr, size, cnt, extwr)
 	scmd.target = target;
 	scmd.cdb.g1_cdb.cmd = SC_EWRITE;
 	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, addr);
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	g1_cdbaddr(&scmd.cdb.g1_cdb, sectaddr);
+	g1_cdblen(&scmd.cdb.g1_cdb, blocks);
 	scmd.cdb.g1_cdb.vu_97 = extwr;
 
 	if (scsicmd("write_teac_g1") < 0)
@@ -238,142 +401,178 @@ write_teac_xg1(bp, addr, size, cnt, extwr)
 	return (size - scmd.resid);
 }
 
-EXPORT int
-cdr_write_teac(bufp, sectaddr, size, blocks)
-	char	*bufp;
-	long	sectaddr;
-	long	size;
-	int	blocks;
+LOCAL int
+cdr_write_teac(bp, sectaddr, size, blocks, islast)
+	caddr_t	bp;		/* address of buffer */
+	long	sectaddr;	/* disk address (sector) to put */
+	long	size;		/* number of bytes to transfer */
+	int	blocks;		/* sector count */
+	BOOL	islast;		/* last write for track */
 {
 	int	ret;
 
-	ret = write_teac_xg1(bufp, sectaddr, size, blocks, TRUE);
+	if (islast)
+		last_done = TRUE;
+
+	ret = write_teac_xg1(bp, sectaddr, size, blocks, !islast);
 	if (ret < 0)
 		return (ret);
 
-	lba_addr += blocks;
+	lba_addr = sectaddr + blocks;
 	return (ret);
 }
 
 LOCAL int
-open_track_jvc(track, track_info)
+open_track_jvc(dp, track, trackp)
+	cdr_t	*dp;
 	int	track;
-	track_t *track_info;
+	track_t	*trackp;
 {
-	int	i;
-	int	lba;
 	int	status;
-	int	blocks;
-	int	secspt;
-	int	secsize;
-	int	last_one;
-	int	numbytes;
-	int	num_written;
-	int	numtransfer;
-	u_char  *pregap_buf;
-	u_char	subcode_buf[4];
-extern	char	*buf;
+	long	blocks;
+	long	pregapsize;
+	struct	pgm_subcode	sc;
 
-	status = set_limits(-150, 150);
+	last_done = FALSE;
+
+	if (select_secsize_teac(trackp) < 0)
+		return (-1);
+
+	status = clear_subcode();
+/*next_wr_addr_teac();*/
 	if (status < 0)
 		return (status);
 
-	subcode_buf[0] = 1;		/* pregap ? */
-	subcode_buf[1] = 0x41;		/* ctrl/addr */
-	subcode_buf[2] = 1;		/* Q TNO */
-	subcode_buf[3] = 0;		/* index */
-	status = set_subcode(subcode_buf, 4);
-	if (status < 0)
-		return (status);
-
-	secspt = track_info->secspt;
-	secsize = track_info->secsize;
-	pregap_buf = (u_char *)buf;
-	fillbytes(buf, secspt*secsize, '\0');
-
-	/* fill in the first 13 bytes with a code ???? */
-	pregap_buf[0]  = 'T';
-	pregap_buf[1]  = 'D';
-	pregap_buf[2]  = 'I';
-	pregap_buf[3]  = 0x01;
-	pregap_buf[4]  = 'P';
-	pregap_buf[5]  = 0x01;
-	pregap_buf[6]  = 0x01;
-	pregap_buf[7]  = 0x01;
-	pregap_buf[8]  = 0x01;
-	pregap_buf[9]  = 0x80;
-	pregap_buf[10] = 0xFF;
-	pregap_buf[11] = 0xFF;
-	pregap_buf[12] = 0xFF;
-
-
-	/* replicate this code for some reason */
-	for (i=1; i < secspt; i++)
-		movebytes(pregap_buf, &pregap_buf[i*secsize], 13);
-
-
-	numtransfer = 145 / secspt;
-	last_one = 145 % secspt;
-
-	for (lba=-145, i=0; i < numtransfer; i++, lba += track_info->secspt) {
-		/*
-		 * now write the pregap code to the disk
-		 */
-		numbytes = secspt * secsize;
-		num_written = write_teac_xg1((caddr_t)pregap_buf, lba, numbytes, secspt, TRUE);
-		if (num_written != numbytes) {
-			return (-1);
-		}
-	}
-	if (last_one > 0){
-		numbytes = last_one * secsize;
-		num_written = write_teac_xg1((caddr_t)pregap_buf, lba, numbytes, last_one, TRUE);
-		if (num_written != numbytes) {
-			return(-1);
-		}
+if (trackp->pregapsize != 0) {
+	if (lverbose > 1) {
+		printf("set_limits(%ld, %ld)-> %ld\n",
+		lba_addr, trackp->pregapsize, lba_addr + trackp->pregapsize);
 	}
 
-	blocks = track_info->tracksize/track_info->secsize +
-		 (track_info->tracksize%track_info->secsize?1:0);
-/* -----------------------------------------------------------------
- * This is just a hack for now because I don't understand the pregap length
- * calculation in checktsize.  There is definately a size problem.  I think
- * that checktsize may be wrong since its block size is the audio size
- * 2352.
------------------------------------------------------------------ */
-lba_blocks=blocks; /* just a hack for now because I don't know how this works */
-
-	/* -----------------------------------------------------------------
-	 * set the limits for the new subcode - seems to apply to all
-	 * of the data track.
-	----------------------------------------------------------------- */
-	status = set_limits(0, blocks+2);
+	status = set_limits(lba_addr, trackp->pregapsize);
 	if (status < 0)
 		return (status);
-
-	subcode_buf[0] = 0;		/* pregap ? */
-	subcode_buf[1] = 0x41;		/* ctrl/addr */
-	subcode_buf[2] = 1;		/* Q TNO */
-	subcode_buf[3] = 1;		/* index */
-	status = set_subcode(subcode_buf, 4);
-	return (status);
-
-}
-
-LOCAL int
-close_track_teac(track)
-	int	track;
-{
-	char	sector[3000];
 
 	/*
-	 * need read sector size
-	 * XXX do we really need this ?
-	 * XXX if we need this can we set blocks to 0 ?
+	 * Set pre-gap (pause - index 0)
 	 */
-lba_blocks++;
-	return (write_teac_xg1(sector, lba_addr, 2048, 1, FALSE));
-/*	return (0);*/
+	set_pgm_subcode(&sc, SC_P,
+			st2mode[trackp->sectype&ST_MASK], ADR_POS, track, 0);
+
+	if (lverbose > 1)
+		scsiprbytes("Subcode:", (u_char *)&sc, sizeof(sc));
+
+	status = set_subcode((u_char *)&sc, sizeof(sc));
+	if (status < 0)
+		return (status);
+
+	pregapsize = trackp->pregapsize;
+	if (!is_audio(trackp)) {
+		lba_addr += 5;	/* link & run in blocks */
+		pregapsize -= 5;
+	}
+	if (lverbose > 1) {
+		printf("pad_track(%ld, %ld)-> %ld\n",
+			lba_addr, pregapsize, lba_addr + pregapsize);
+	}
+	if (pad_track(dp, track, trackp,
+			lba_addr, pregapsize*trackp->secsize,
+			FALSE, (long *)0) < 0)
+		return (-1);
+}
+
+	blocks = trackp->tracksize/trackp->secsize +
+		 (trackp->tracksize%trackp->secsize?1:0);
+	blocks += trackp->padsize/trackp->secsize +
+		 (trackp->padsize%trackp->secsize?1:0);
+	if (blocks < 300)
+		blocks = 300;
+	if (!is_audio(trackp))
+		blocks += 2;
+if (!is_last(trackp) && trackp[1].pregapsize == 0)
+		blocks -= 150;
+
+	/*
+	 * set the limits for the new subcode - seems to apply to all
+	 * of the data track.
+	 * Unknown tracksize is handled in open_session.
+	 * We definitely need to know the tracksize in this driver.
+	 */
+	if (lverbose > 1) {
+		printf("set_limits(%ld, %ld)-> %ld\n",
+			lba_addr, blocks, lba_addr + blocks);
+	}
+	status = set_limits(lba_addr, blocks);
+	if (status < 0)
+		return (status);
+
+	/*
+	 * Set track start (index 1)
+	 */
+	set_pgm_subcode(&sc, SC_TR,
+			st2mode[trackp->sectype&ST_MASK], ADR_POS, track, 1);
+
+	if (lverbose > 1)
+		scsiprbytes("Subcode:", (u_char *)&sc, sizeof(sc));
+
+	status = set_subcode((u_char *)&sc, sizeof(sc));
+	if (status < 0)
+		return (status);
+
+if (!is_last(trackp) && trackp[1].pregapsize == 0) {
+	blocks += lba_addr;
+	pregapsize = 150;
+
+	if (lverbose > 1) {
+		printf("set_limits(%ld, %ld)-> %ld\n",
+		blocks, pregapsize, blocks + pregapsize);
+	}
+
+	status = set_limits(blocks, pregapsize);
+	if (status < 0)
+		return (status);
+
+	/*
+	 * Set pre-gap (pause - index 0)
+	 */
+	track++;
+	trackp++;
+	set_pgm_subcode(&sc, SC_P,
+			st2mode[trackp->sectype&ST_MASK], ADR_POS, track, 0);
+
+	if (lverbose > 1)
+		scsiprbytes("Subcode:", (u_char *)&sc, sizeof(sc));
+
+	status = set_subcode((u_char *)&sc, sizeof(sc));
+	if (status < 0)
+		return (status);
+}
+	return (status);
+}
+
+LOCAL	char	sector[3000];
+
+LOCAL int
+close_track_teac(track, trackp)
+	int	track;
+	track_t	*trackp;
+{
+	int	ret = 0;
+
+	if (!last_done) {
+		printf("WARNING: adding dummy block to close track.\n");
+		/*
+		 * need read sector size
+		 * XXX do we really need this ?
+		 * XXX if we need this can we set blocks to 0 ?
+		 */
+		ret =  write_teac_xg1(sector, lba_addr, 2352, 1, FALSE);
+		lba_addr++;
+	}
+	if (!is_audio(trackp))
+		lba_addr += 2;
+	teac_wr_pma();
+	return (ret);
 }
 
 
@@ -387,21 +586,53 @@ static const char *sd_teac50_error_str[] = {
 	"\100\205diagnostic failure on servo processor",	/* 40 85 */
 	"\100\206diagnostic failure on program rom",		/* 40 86 */
 	"\100\220thermal sensor failure",			/* 40 90 */
+	"\200\000controller prom error",			/* 80 00 */	/* JVC */
+	"\201\000no disk present - couldn't get focus",		/* 81 00 */	/* JVC */
+	"\202\000no cartridge present",				/* 82 00 */	/* JVC */
+	"\203\000unable to spin up",				/* 83 00 */	/* JVC */
+	"\204\000addr exceeded the last valid block addr",	/* 84 00 */	/* JVC */
+	"\205\000sync error",					/* 85 00 */	/* JVC */
+	"\206\000address can't find or not data track",		/* 86 00 */	/* JVC */
+	"\207\000missing track",				/* 87 00 */	/* JVC */
+	"\213\000cartridge could not be ejected",		/* 8B 00 */	/* JVC */
+	"\215\000audio not playing",				/* 8D 00 */	/* JVC */
+	"\216\000read toc error",				/* 8E 00 */	/* JVC */
 	"\217\000a blank disk is detected by read toc",		/* 8F 00 */
 	"\220\000pma less disk - not a recordable disk",	/* 90 00 */
+	"\223\000mount error",					/* 93 00 */	/* JVC */
 	"\224\000toc less disk",				/* 94 00 */
+	"\225\000disc information less disk",			/* 95 00 */	/* JVC */
+	"\226\000disc information read error",			/* 96 00 */	/* JVC */
+	"\227\000linear velocity measurement error",		/* 97 00 */	/* JVC */
+	"\230\000drive sequence stop",				/* 98 00 */	/* JVC */
+	"\231\000actuator velocity control error",		/* 99 00 */	/* JVC */
+	"\232\000slider velocity control error",		/* 9A 00 */	/* JVC */
 	"\233\000opc initialize error",				/* 9B 00 */
+	"\233\001power calibration not executed",		/* 9B 01 */
 	"\234\000opc execution eror",				/* 9C 00 */
 	"\234\001alpc error - opc execution",			/* 9C 01 */
 	"\234\002opc execution timeout",			/* 9C 02 */
 	"\245\000disk application code does not match host application code",	/* A5 00 */
 	"\255\000completed preview write",			/* AD 00 */
+	"\256\000invalid B0 value",				/* AE 00 */	/* JVC */
 	"\257\000pca area full",				/* AF 00 */
+	"\260\000efm isn't detected",				/* B0 00 */	/* JVC */
+	"\263\000no logical sector",				/* B3 00 */	/* JVC */
 	"\264\000full pma area",				/* B4 00 */
 	"\265\000read address is atip area - blank",		/* B5 00 */
 	"\266\000write address is efm area - aleady written",	/* B6 00 */
+	"\271\000abnormal spinning - servo irq",		/* B9 00 */	/* JVC */
 	"\272\000no write data - buffer empty",			/* BA 00 */
 	"\273\000write emergency occurred",			/* BB 00 */
+	"\274\000read timeout",					/* BC 00 */	/* JVC */
+	"\277\000abnormal spin - nmi",				/* BF 00 */	/* JVC */
+	"\301\0004th run-in block detected",			/* C1 00 */
+	"\302\0003rd run-in block detected",			/* C2 00 */
+	"\303\0002nd run-in block detected",			/* C3 00 */
+	"\304\0001st run-in block detected",			/* C4 00 */
+	"\305\000link block detected",				/* C5 00 */
+	"\306\0001st run-out block detected",			/* C6 00 */
+	"\307\0002nd run-out block detected",			/* C7 00 */
 	"\314\000write request means mixed data mode",		/* CC 00 */
 	"\315\000unable to ensure reliable writing with the inserted disk - unsupported disk",	/* CD 00 */
 	"\316\000unable to ensure reliable writing as the inserted disk does not support speed",/* CE 00 */
@@ -417,81 +648,186 @@ teac_attach()
 }
 
 LOCAL int
-teac_fixation(onp, dummy, toctype)
-	int onp;
-	int dummy;
-	int toctype;
+teac_fixation(onp, dummy, toctype, tracks, trackp)
+	int	onp;
+	int	dummy;
+	int	toctype;
+	int	tracks;
+	track_t	*trackp;
 {
-	int total_lba;
-	int status;
-	u_char	subcode_buf[24];
+	long	lba;
+	int	status;
+	u_char	*sp;
+	int	i;
+extern	char	*buf;
 
+	if (tracks < 1) {
+		/*
+		 * We come here if cdrecord isonly called with the -fix option.
+		 * As long as we cannot read and interpret the PMA, we must
+		 * abort here.
+		 */
+		teac_rd_pma();
+/*		errmsgno(EX_BAD, "Cannot fixate zero track disk.\n");;*/
+		errmsgno(EX_BAD, "Cannot fixate without track list (not yet implemented).\n");;
+		return (-1);
+	}
+	sp = (u_char *)buf;
+
+	sleep(1);
 
 	status = clear_subcode();
+	sleep(1);
 	if (status < 0)
 		return (status);
 
-	subcode_buf[0] = 0;		/* reserved */
-	subcode_buf[1] = 0;		/* reserved */
-	subcode_buf[2] = 0;		/* Q TNO */
-/* obviously we need track 1 to track n here instead of just 1 */
-	/* track 1 data */
-	subcode_buf[3] = 0x41;		/* ctrl/adr */
-	subcode_buf[4] = 1;		/* track no */
-	subcode_buf[5] = 0;		/* start MSF=00:02:00 (LBA=0) */
-	subcode_buf[6] = 2;
-	subcode_buf[7] = 0;
+	sp[0] = 0;		/* reserved */
+	sp[1] = 0;		/* reserved */
+	sp[2] = 0;		/* Q TNO */
 
-	/* first track on disk */
-	subcode_buf[8] = 0x41;		/* ctrl/adr */
-	subcode_buf[9] = 0xa0;		/* point=A0 */
-	subcode_buf[10] = 1;		/* first track */
-	subcode_buf[11] = 0;		/* type: 0=CD-DA or CD-ROM */
-	subcode_buf[12] = 0;		/* reserved */
+	sp = &sp[3];		/* point past header */
 
-	/* last track on disk */
-	subcode_buf[13] = 0x41;		/* ctrl/adr */
-	subcode_buf[14] = 0xa1;		/* point=A1 */
-	subcode_buf[15] = 1;		/* last track */
-	subcode_buf[16] = 0;		/* type: 0=CD-DA or CD-ROM */
-	subcode_buf[17] = 0;		/* reserved */
+	/*
+	 * Set up TOC entries for all tracks
+	 */
+	for(i=1; i <= tracks; i++) {
+		lba = trackp[i].trackstart+150;	/* MSF=00:02:00 is LBA=0 */
 
-	/* start of lead out */
-	subcode_buf[18] = 0x41;		/* ctrl/adr */
-	subcode_buf[19] = 0xa2;		/* point=A2 */
-	/* start of lead out area in MSF */
-	/* is this correct */
-	total_lba = lba_blocks + 150 + 2;
-	/* 00:00:00=-150(LBA) */
-	subcode_buf[20] = MSF_CONV(LBA_MIN(total_lba));
-	subcode_buf[21] = MSF_CONV(LBA_SEC(total_lba));
-	subcode_buf[22] = MSF_CONV(LBA_FRM(total_lba));
-	status = set_subcode(subcode_buf, 23);
+		sp = set_toc_subcode(sp,
+				/* ctrl/adr for this track */
+				st2mode[trackp[i].sectype&ST_MASK], ADR_POS,
+					trackp[i].trackno, lba);
+	}
+
+	/*
+	 * Set first track on disk
+	 *
+	 * XXX We set the track type for the lead-in to the track type
+	 * XXX of the first track. The TEAC manual states that we should use
+	 * XXX audio if the disk contains both, audio and data tracks.
+	 */
+	sp = set_lin_subcode(sp,
+		/* ctrl/adr for first track */
+		st2mode[trackp[1].sectype&ST_MASK], ADR_POS,
+		0xA0,				/* Point A0 */
+		trackp[1].trackno,		/* first track # */
+		toc2sess[toctype & TOC_MASK],	/* disk type */
+		0);				/* reserved */
+
+	/*
+	 * Set last track on disk
+	 */
+	sp = set_lin_subcode(sp,
+		/* ctrl/adr for first track */
+		st2mode[trackp[1].sectype&ST_MASK], ADR_POS,
+		0xA1,				/* Point A1 */
+		MSF_CONV(trackp[tracks].trackno),/* last track # */
+		0,				/* reserved */
+		0);				/* reserved */
+
+	/*
+	 * Set start of lead out area in MSF
+	 * MSF=00:02:00 is LBA=0
+	 */
+	lba = lba_addr + 150;
+	if (lverbose > 1)
+	printf("lba: %ld lba_addr: %ld\n", lba, lba_addr);
+
+	if (lverbose > 1)
+	printf("Lead out start: (%02d:%02d/%02d)\n",
+			minutes(lba*2352),
+			seconds(lba*2352),
+			frames(lba*2352));
+
+	sp = set_lin_subcode(sp,
+		/* ctrl/adr for first track */
+		st2mode[trackp[1].sectype&ST_MASK], ADR_POS,
+		0xA2,				/* Point A2 */
+		MSF_CONV(LBA_MIN(lba)),
+		MSF_CONV(LBA_SEC(lba)),
+		MSF_CONV(LBA_FRM(lba)));
+
+	status = sp - ((u_char *)buf);
+	if (lverbose > 1) {
+		printf("Subcode len: %d\n", status);
+		scsiprbytes("Subcode:", (u_char *)buf, status);
+	}
+	status = set_subcode((u_char *)buf, status);
+	sleep(1);
 	if (status < 0)
 		return (status);
 
-	/* now write the toc */
+	/*
+	 * now write the toc
+	 */
 	status = teac_freeze(!onp);
 	return (status);
 
 }
 
 LOCAL int
-teac_calibrate(toctype, multi)
-	int toctype;
-	int multi;
+teac_open_session(tracks, trackp, toctype, multi)
+	int	tracks;
+	track_t	*trackp;
+	int	toctype;
+	int	multi;
 {
-	int status;
+	int	i;
+
+	for (i = 1; i <= tracks; i++) {
+		if (trackp[i].tracksize < 0) {
+			/*
+			 * XXX How about setting the subcode range to infinity.
+			 * XXX and correct it in clode track before writing
+			 * XXX the PMA?
+			 */
+			errmsgno(EX_BAD, "Track %d has unknown length.\n", i);
+			return (-1);
+		}
+	}
+	return (teac_calibrate(toctype, multi));
+}
+
+LOCAL int
+teac_calibrate(toctype, multi)
+	int	toctype;
+	int	multi;
+{
+	int	status;
+
+	silent++;
+	if (read_B0(TRUE, &lba_addr, NULL) < 0)
+		lba_addr = -150;
+	silent--;
 
 	status = clear_subcode();
 	if (status < 0)
 		return (status);
 
+	if (lverbose) {
+		fprintf(stdout, "Judging disk...");
+		flush();
+	}
 	status = opt_power_judge(1);
-	if (status < 0)
+	if (status < 0) {
+		printf("\n");
 		return (status);
+	}
+	if (lverbose) {
+		fprintf(stdout, "done.\nCalibrating laser...");
+		flush();
+	}
 
 	status = opt_power_judge(0);
+	if (lverbose) {
+		fprintf(stdout, "done.\n");
+	}
+	silent++;
+	if (next_wr_addr_teac(-1, -1) < 0) {
+		if (verbose == 0 && scsi_sense_key() != SC_ILLEGAL_REQUEST)
+			scsiprinterr("next writable address");
+	}
+	silent--;
 	return (status);
 }
 
@@ -500,16 +836,18 @@ teac_calibrate(toctype, multi)
 #define SC_SET_SUBCODE		0xc2		/* teac 10 byte command */
 #define SC_READ_PMA		0xc4		/* teac 10 byte command */
 #define SC_READ_DISK_INFO	0xc7		/* teac 10 byte command */
+#define SC_WRITE_PMA		0xe1		/* teac 12 byte command */
 #define SC_FREEZE		0xe3		/* teac 12 byte command */
 #define SC_OPC_EXECUTE		0xec		/* teac 12 byte command */
 #define SC_CLEAR_SUBCODE	0xe4		/* teac 12 byte command */
+#define SC_NEXT_WR_ADDRESS	0xe6		/* teac 12 byte command */
 
 /* -----------------------------------------------------------------
  * Optimum power calibration for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
 opt_power_judge(judge)
-	int judge;
+	int	judge;
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
 	scmd.addr = (caddr_t)0;
@@ -518,7 +856,7 @@ opt_power_judge(judge)
 	scmd.cdb_len = SC_G5_CDBLEN;
 	scmd.sense_len = CCS_SENSE_LEN;
 	scmd.target = target;
-	scmd.timeout = 30;
+	scmd.timeout = 60;
 
 	scmd.cdb.g5_cdb.cmd = SC_OPC_EXECUTE;
 	scmd.cdb.g5_cdb.lun = lun;
@@ -545,7 +883,7 @@ clear_subcode()
 	scmd.cdb.g5_cdb.lun = lun;
 	scmd.cdb.g5_cdb.addr[3] = 0x80;
 
-	return (scsicmd("clear_subcode"));
+	return (scsicmd("clear subcode"));
 }
 
 /* -----------------------------------------------------------------
@@ -553,8 +891,8 @@ clear_subcode()
 ----------------------------------------------------------------- */
 LOCAL int
 set_limits(lba, length)
-	int	lba;
-	int	length;
+	long	lba;
+	long	length;
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
 	scmd.addr = (caddr_t)0;
@@ -569,7 +907,7 @@ set_limits(lba, length)
 	i_to_long(&scmd.cdb.g5_cdb.addr[0], lba);
 	i_to_long(&scmd.cdb.g5_cdb.count[0], length);
 
-	return (scsicmd("set_limits"));
+	return (scsicmd("set limits"));
 }
 
 /* -----------------------------------------------------------------
@@ -591,11 +929,11 @@ set_subcode(subcode_data, length)
 	scmd.cdb.g1_cdb.cmd = SC_SET_SUBCODE;
 	scmd.cdb.g1_cdb.lun = lun;
 	g1_cdblen(&scmd.cdb.g1_cdb, length);
-	return (scsicmd("set_subcode"));
+	return (scsicmd("set subcode"));
 }
 
 LOCAL int
-read_disk_info(data, length, type)
+read_disk_info_teac(data, length, type)
 	u_char	*data;
 	int	length;
 	int	type;
@@ -610,7 +948,7 @@ read_disk_info(data, length, type)
 
 	scmd.cdb.g1_cdb.cmd = SC_READ_DISK_INFO;
 	scmd.cdb.g1_cdb.lun = lun;
-	return (scsicmd("read_disk_info"));
+	return (scsicmd("read disk info teac"));
 }
 
 /* -----------------------------------------------------------------
@@ -633,4 +971,104 @@ teac_freeze(bp_flag)
 	scmd.cdb.g5_cdb.lun = lun;
 	scmd.cdb.g5_cdb.addr[3] = bp_flag ? 0x80 : 0;
 	return (scsicmd("teac_freeze"));
+}
+
+LOCAL int
+teac_wr_pma()
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = (caddr_t)0;
+	scmd.size = 0;
+	scmd.flags = SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G5_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+
+	scmd.cdb.g5_cdb.cmd = SC_WRITE_PMA;
+	scmd.cdb.g5_cdb.lun = lun;
+	return (scsicmd("teac_write_pma"));
+}
+
+/* -----------------------------------------------------------------
+ * Read PMA for Teac Drives.
+----------------------------------------------------------------- */
+LOCAL int
+teac_rd_pma()
+{
+	unsigned char	xx[256];
+
+	fillbytes((caddr_t)xx, sizeof(xx), '\0');
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = (caddr_t)xx;
+	scmd.size = sizeof(xx);
+	scmd.flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G1_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+
+	scmd.cdb.g1_cdb.cmd = SC_READ_PMA;
+	scmd.cdb.g1_cdb.lun = lun;
+
+	g1_cdblen(&scmd.cdb.g1_cdb, sizeof(xx));
+
+/*	return (scsicmd("teac_read_pma"));*/
+	if (scsicmd("teac_read_pma") < 0)
+		return (-1);
+
+	if (verbose) {
+		scsiprbytes("PMA Data", xx, sizeof(xx) - scsigetresid());
+	}
+	if (lverbose) {
+		int	i;
+		Uchar	*p;
+
+		scsiprbytes("PMA Header: ", xx, 4);
+		i = xx[2];
+		p = &xx[4];
+		for (; i <= xx[3]; i++) {
+			scsiprbytes("PMA: ", p, 10);
+			p += 10;
+		}
+	}
+	return (0);
+}
+
+/* -----------------------------------------------------------------
+ * Next writable address for Teac Drives.
+----------------------------------------------------------------- */
+LOCAL int
+next_wr_addr_teac(start_lba, last_lba)
+	long	start_lba;
+	long	last_lba;
+{
+	unsigned char	xx[256];
+
+	fillbytes((caddr_t)xx, sizeof(xx), '\0');
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = (caddr_t)xx;
+	scmd.size = sizeof(xx);
+	scmd.flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G5_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+
+	scmd.cdb.g5_cdb.cmd = SC_NEXT_WR_ADDRESS;
+	scmd.cdb.g5_cdb.lun = lun;
+
+	i_to_long(&scmd.cdb.g5_cdb.addr[0], start_lba);
+	i_to_long(&scmd.cdb.g5_cdb.count[0], last_lba);
+
+	if (verbose)
+		printf("start lba: %ld last lba: %ld\n",
+					start_lba, last_lba);
+
+/*	return (scsicmd("next writable address"));*/
+	if (scsicmd("next writable address") < 0)
+		return (-1);
+
+	if (verbose) {
+		scsiprbytes("WRa Data", xx, sizeof(xx) - scsigetresid());
+		printf("NWA: %ld\n", a_to_u_long(xx));
+	}
+	return (0);
 }

@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd.c	1.4 97/09/01 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd.c	1.5 98/03/14 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd.c	1.4 97/09/01 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd.c	1.5 98/03/14 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the NetBSD/FreeBSD/OpenBSD generic SCSI implementation.
@@ -40,7 +40,7 @@ static	char __sccsid[] =
 LOCAL	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 
 /*#define	MAX_DMA_BSD	(32*1024)*/
-#define	MAX_DMA_BSD	(64*1024)	/* Check if this is not too big */
+#define	MAX_DMA_BSD	(60*1024)	/* More seems to make problems */
 
 
 LOCAL	int	scsi_send	__PR((int f, struct scg_cmd *sp));

@@ -1,7 +1,7 @@
-/* @(#)scsi-sgi.c	1.6 97/09/01 Copyright 1997 J. Schilling */
+/* @(#)scsi-sgi.c	1.7 97/09/23 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sgi.c	1.6 97/09/01 Copyright 1997 J. Schilling";
+	"@(#)scsi-sgi.c	1.7 97/09/23 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the SGI generic SCSI implementation.
@@ -295,6 +295,7 @@ scsi_send(f, sp)
 	TIME(dsp)	= (sp->timeout * 1000) + 100;
 	
 	errno		= 0;
+	sp->ux_errno	= 0;
 	sp->sense_count	= 0;
 
 #ifdef	USE_DSLIB
@@ -309,8 +310,7 @@ scsi_send(f, sp)
 	if (RET(dsp)) {
 		if (RET(dsp) == DSRT_SHORT) {
 			sp->resid = DATALEN(dsp)- DATASENT(dsp);
-		}
-		if (errno) {
+		} else if (errno) {
 			sp->ux_errno = errno;
 		} else {
 			sp->ux_errno = EIO;

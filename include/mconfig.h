@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.17 97/07/17 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.18 97/11/06 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -319,6 +319,8 @@ extern "C" {
  */
 #if	defined(_IBMR2) || defined(_AIX)
 #	define	IS_UNIX		/* ??? really ??? */
+#	define	NO_FLOATINGPOINT/* XXX until isinf()/isnan() is solved*/
+#	define	USE_FLOATINGARGS/* Use up args from floatingpoint format */
 #ifndef	PROTOTYPES
 #	define	PROTOTYPES
 #endif
@@ -340,7 +342,7 @@ extern "C" {
 #	define	MAJOR_IN_SYSMACROS
 /*#	define	HAVE_USG_STDIO*/
 #	define	HAVE_STRERROR
-/*#	define	HAVE_MEMMOVE*/
+#	define	HAVE_MEMMOVE
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM

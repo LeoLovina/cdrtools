@@ -1,0 +1,71 @@
+*** joliet.c.bak	Mon Feb 16 18:56:55 1998
+--- joliet.c	Fri Apr 17 11:10:19 1998
+***************
+*** 217,223 ****
+     * Set this one up.
+     */
+    memcpy(vol_desc->root_directory_record, &jroot_record, 
+! 	 sizeof(struct iso_directory_record) + 1);
+  
+    /*
+     * Finally, we have a bunch of strings to convert to Unicode.
+--- 217,223 ----
+     * Set this one up.
+     */
+    memcpy(vol_desc->root_directory_record, &jroot_record, 
+! 	 sizeof(struct iso_directory_record));
+  
+    /*
+     * Finally, we have a bunch of strings to convert to Unicode.
+***************
+*** 353,360 ****
+--- 353,365 ----
+    do
+    {
+         fix = 0;
++ #ifdef	__STDC__
+         qsort(&jpathlist[1], next_jpath_index-1, sizeof(struct directory *), 
+  	     (int (*)(const void *, const void *))joliet_compare_paths);
++ #else
++        qsort(&jpathlist[1], next_jpath_index-1, sizeof(struct directory *), 
++ 	     joliet_compare_paths);
++ #endif
+  
+         for(j=1; j<next_jpath_index; j++)
+         {
+***************
+*** 707,713 ****
+     * Do not split a directory entry across a sector boundary 
+     */
+    s_entry = this_dir->jcontents;
+!   this_dir->ce_bytes = 0;
+    for(s_entry = this_dir->jcontents; s_entry; s_entry = s_entry->jnext)
+      {
+        int jreclen;
+--- 712,721 ----
+     * Do not split a directory entry across a sector boundary 
+     */
+    s_entry = this_dir->jcontents;
+! /*
+!  * XXX Is it ok to comment this out?
+!  */
+! /*XXX JS  this_dir->ce_bytes = 0;*/
+    for(s_entry = this_dir->jcontents; s_entry; s_entry = s_entry->jnext)
+      {
+        int jreclen;
+***************
+*** 826,833 ****
+--- 834,846 ----
+       }
+    
+       sort_goof = 0;
++ #ifdef	__STDC__
+       qsort(sortlist, dcount, sizeof(struct directory_entry *), 
+  	   (int (*)(const void *, const void *))joliet_compare_dirs);
++ #else
++      qsort(sortlist, dcount, sizeof(struct directory_entry *), 
++ 	   joliet_compare_dirs);
++ #endif
+       
+       /* 
+        * Now reassemble the linked list in the proper sorted order 

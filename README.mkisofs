@@ -1,5 +1,11 @@
 This release of cdrecord includes support for mkisofs.
 
+	NOTE:	mkisofs-1.11 and a patched mkisofs-1.12b3 are included
+		The later could not been prooved to be 100% bug free.
+		For this reason, the global 'make' procedure uses 1.11
+		If you like to use 1.12b3, you may chdir into mkisofs-1.12b3
+		and run make in this directory.
+
 **** Do NOT run configure in the directory mkisofs-1.11 ****
 
 I changed the make system to use my make file system.

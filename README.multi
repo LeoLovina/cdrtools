@@ -28,7 +28,7 @@ Next step is to check if cdrecord is able to retrieve the following data:
 
 	2) The next writable address in the unwritten session following the current.
 	   This should be the number of sectors written in the first
-	   run + ~ 5000 sectors for about 10MB lead out/in
+	   run + ~ 11400 sectors for about 22MB lead out/in
 
 To get this information type:
 
@@ -113,6 +113,6 @@ cdrecord -msinfo dev=2,0
 The first number should be the first writable address from the retrieved by the
 first call after creating the first session.
 The second number should be the first number + number of sectors of the second session
-+ ~ 5000 sectors.
++ ~ 11400 sectors.
 
 Joerg Schilling

@@ -1,8 +1,11 @@
-If you are on Solaris, you must disable volume management
-before creating a CD.
+If you are on Solaris or NeXT-Step/Apple Rhapsody,
+you must disable volume management before creating a CD.
 
 This is needed because newer drives identify themselves correctly
 as CD-ROM drives. Unfortunately, the volume management daemon from
-Sun does not grok, that there may be a recordable medium in the drive.
+Sun/Apple does not grok, that there may be a recordable medium in the drive.
 
-You do this permanently by editing /etc/vold.conf
+You do this on Solaris permanently by editing /etc/vold.conf
+NeXT-Step/Apple Rhapsody will only work correctly if you reboot while
+the CD-R drive is powered off.
+

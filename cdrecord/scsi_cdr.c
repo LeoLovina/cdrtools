@@ -1,7 +1,7 @@
-/* @(#)scsi_cdr.c	1.17 97/09/10 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.45 98/04/17 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.17 97/09/10 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.45 98/04/17 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -32,13 +32,18 @@ static	char sccsid[] =
  *		most of the SCSI commands are send with the
  *		SCG_CMD_RETRY flag enabled.
  */
+#include <mconfig.h>
+
 #include <stdio.h>
 #include <standard.h>
+#include <stdxlib.h>
+#include <unixstd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/file.h>
 
+#include <utypes.h>
 #include <btorder.h>
 #include <scgio.h>
 #include <scsidefs.h>
@@ -67,6 +72,7 @@ EXPORT	int	open_scsi	__PR((char *scsidev, int timeout,
 EXPORT	void	scsi_settimeout	__PR((int timeout));
 
 EXPORT	BOOL	unit_ready	__PR((void));
+EXPORT	BOOL	wait_unit_ready	__PR((int secs));
 EXPORT	int	test_unit_ready	__PR((void));
 EXPORT	int	rezero_unit	__PR((void));
 EXPORT	int	request_sense	__PR((void));
@@ -85,21 +91,31 @@ EXPORT	int	scsi_flush_cache __PR((void));
 EXPORT	int	read_toc	__PR((caddr_t, int, int, int, int));
 EXPORT	int	read_toc_philips __PR((caddr_t, int, int, int, int));
 EXPORT	int	read_header	__PR((caddr_t, long, int, int));
+EXPORT	int	read_disk_info	__PR((caddr_t, int));
 EXPORT	int	read_track_info	__PR((caddr_t, int, int));
 EXPORT	int	read_track_info_philips	__PR((caddr_t, int, int));
-EXPORT	int	close_track_philips __PR((int track));
-EXPORT	int	fixation	__PR((int, int, int));
-EXPORT	int	scsi_close_session __PR((int type));
+EXPORT	int	close_track_philips __PR((int track, track_t *trackp));
+EXPORT	int	fixation	__PR((int, int, int, int tracks, track_t *trackp));
+EXPORT	int	scsi_close_tr_session __PR((int type, int track));
+EXPORT	int	scsi_blank	__PR((long addr, int blanktype));
 EXPORT	int	recover		__PR((int));
 EXPORT	int	first_writable_addr __PR((long *, int, int, int, int));
 EXPORT	int	reserve_track	__PR((unsigned long));
-EXPORT	int	mode_select	__PR((unsigned char *, int, int, int));
+EXPORT	BOOL	allow_atapi	__PR((BOOL new));
+EXPORT	int	mode_select	__PR((u_char *, int, int, int));
 EXPORT	int	mode_sense	__PR((u_char *dp, int cnt, int page, int pcf));
+EXPORT	int	mode_select_sg0	__PR((u_char *, int, int, int));
+EXPORT	int	mode_sense_sg0	__PR((u_char *dp, int cnt, int page, int pcf));
+EXPORT	int	mode_select_g0	__PR((u_char *, int, int, int));
+EXPORT	int	mode_select_g1	__PR((u_char *, int, int, int));
+EXPORT	int	mode_sense_g0	__PR((u_char *dp, int cnt, int page, int pcf));
+EXPORT	int	mode_sense_g1	__PR((u_char *dp, int cnt, int page, int pcf));
 EXPORT	int	speed_select_yamaha	__PR((int speed, int dummy));
 EXPORT	int	speed_select_philips	__PR((int speed, int dummy));
 EXPORT	int	write_track_info __PR((int));
 EXPORT	int	read_tochdr	__PR((cdr_t *, int *, int *));
 EXPORT	int	read_trackinfo	__PR((int, long *, struct msf *, int *, int *, int *));
+EXPORT	int	read_B0		__PR((BOOL isbcd, long *b0p, long *lop));
 EXPORT	int	read_session_offset __PR((long *));
 EXPORT	int	read_session_offset_philips __PR((long *));
 EXPORT	int	select_secsize	__PR((int));
@@ -114,10 +130,17 @@ EXPORT	BOOL	do_inquiry	__PR((BOOL));
 EXPORT	BOOL	recovery_needed	__PR((void));
 EXPORT	int	scsi_load	__PR((void));
 EXPORT	int	scsi_unload	__PR((void));
-EXPORT	int	scsi_cdr_write	__PR((char *bufp, long sectaddr, long size, int blocks));
+EXPORT	int	scsi_cdr_write	__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+EXPORT	struct cd_mode_page_2A * mmc_cap __PR((u_char *modep));
+EXPORT	void	mmc_getval	__PR((struct cd_mode_page_2A *mp,
+					BOOL *cdrrp, BOOL *cdwrp,
+					BOOL *cdrrwp, BOOL *cdwrwp,
+					BOOL *dvdp));
 EXPORT	BOOL	is_mmc		__PR((void));
 EXPORT	BOOL	mmc_check	__PR((BOOL *cdrrp, BOOL *cdwrp,
-					BOOL *cdrrwp, BOOL *cdwrwp));
+					BOOL *cdrrwp, BOOL *cdwrwp,
+					BOOL *dvdp));
+EXPORT	void	print_capabilities __PR((void));
 
 
 EXPORT int
@@ -179,9 +202,49 @@ unit_ready()
 			return (FALSE);
 		return (TRUE);
 	}
-
+	if (((struct scsi_ext_sense *)&scmd.sense)->key == SC_UNIT_ATTENTION) {
+		if (test_unit_ready() >= 0)	/* alles OK */
+			return (TRUE);
+	}
 						/* FALSE wenn NOT_READY */
 	return (((struct scsi_ext_sense *)&scmd.sense)->key != SC_NOT_READY);
+}
+
+EXPORT BOOL
+wait_unit_ready(secs)
+	int	secs;
+{
+	int	i;
+	int	c;
+	int	k;
+	int	ret;
+
+	silent++;
+	ret = test_unit_ready();		/* eat up unit attention */
+	silent--;
+
+	if (ret >= 0)				/* success that's enough */
+		return (TRUE);
+
+	silent++;
+	for (i=0; i < secs && (ret = test_unit_ready()) < 0; i++) {
+		if (scmd.scb.busy != 0) {
+			sleep(1);
+			continue;
+		}
+		c = scsi_sense_code();
+		k = scsi_sense_key();
+		if (k == SC_NOT_READY && (c == 0x3A || c == 0x30)) {
+			scsiprinterr("test_unit_ready");
+			silent--;
+			return (FALSE);
+		}
+		sleep(1);
+	}
+	silent--;
+	if (ret < 0)
+		return (FALSE);
+	return (TRUE);
 }
 
 EXPORT int
@@ -535,12 +598,12 @@ read_toc(bp, track, cnt, msf, fmt)
 }
 
 EXPORT int
-read_toc_philips(bp, track, cnt, msf, ses)
+read_toc_philips(bp, track, cnt, msf, fmt)
 	caddr_t	bp;
 	int	track;
 	int	cnt;
 	int	msf;
-	int	ses;
+	int	fmt;
 
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -556,8 +619,11 @@ read_toc_philips(bp, track, cnt, msf, ses)
 		scmd.cdb.g1_cdb.res = 1;
 	scmd.cdb.g1_cdb.res6 = track;
 	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
-	if (ses)
+
+	if (fmt & 1)
 		scmd.cdb.g1_cdb.vu_96 = 1;
+	if (fmt & 2)
+		scmd.cdb.g1_cdb.vu_97 = 1;
 
 	if (scsicmd("read toc") < 0)
 		return (-1);
@@ -591,6 +657,29 @@ read_header(bp, addr, cnt, msf)
 }
 
 EXPORT int
+read_disk_info(bp, cnt)
+	caddr_t	bp;
+	int	cnt;
+
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = bp;
+	scmd.size = cnt;
+	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G1_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.timeout = 4 * 60;		/* Needs up to 2 minutes */
+	scmd.cdb.g1_cdb.cmd = 0x51;
+	scmd.cdb.g1_cdb.lun = lun;
+	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+
+	if (scsicmd("read disk info") < 0)
+		return (-1);
+	return (0);
+}
+
+EXPORT int
 read_track_info(bp, track, cnt)
 	caddr_t	bp;
 	int	track;
@@ -604,6 +693,7 @@ read_track_info(bp, track, cnt)
 	scmd.cdb_len = SC_G1_CDBLEN;
 	scmd.sense_len = CCS_SENSE_LEN;
 	scmd.target = target;
+	scmd.timeout = 4 * 60;		/* Needs up to 2 minutes */
 	scmd.cdb.g1_cdb.cmd = 0x52;
 	scmd.cdb.g1_cdb.lun = lun;
 	scmd.cdb.g1_cdb.reladr = 1;
@@ -643,17 +733,20 @@ read_track_info_philips(bp, track, cnt)
  * Needed for JVC too.
  */
 EXPORT int
-close_track_philips(track)
+close_track_philips(track, trackp)
 	int	track;
+	track_t	*trackp;
 {
 	return (scsi_flush_cache());
 }
 
 EXPORT int
-fixation(onp, dummy, type)
+fixation(onp, dummy, type, tracks, trackp)
 	int	onp;	/* open next program area */
 	int	dummy;
 	int	type;	/* TOC type 0: CD-DA, 1: CD-ROM, 2: CD-ROM/XA1, 3: CD-ROM/XA2, 4: CDI */
+	int	tracks;
+	track_t	*trackp;
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
 	scmd.flags = SCG_DISRE_ENA;
@@ -671,8 +764,9 @@ fixation(onp, dummy, type)
 }
 
 EXPORT int
-scsi_close_session(type)
+scsi_close_tr_session(type, track)
 	int	type;
+	int	track;
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
 	scmd.flags = SCG_DISRE_ENA;
@@ -682,12 +776,30 @@ scsi_close_session(type)
 	scmd.timeout = 8 * 60;		/* Needs up to 4 minutes */
 	scmd.cdb.g1_cdb.cmd = 0x5B;
 	scmd.cdb.g1_cdb.lun = lun;
-/*	scmd.cdb.g1_cdb.addr[0] = type;*/
-	scmd.cdb.g1_cdb.addr[0] = 2;
+	scmd.cdb.g1_cdb.addr[0] = type;
+	scmd.cdb.g1_cdb.addr[3] = track;
 	
-	if (scsicmd("close session") < 0)
+	if (scsicmd("close track/session") < 0)
 		return (-1);
 	return (0);
+}
+
+EXPORT int
+scsi_blank(addr, blanktype)
+	long	addr;
+	int	blanktype;
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.flags = SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G5_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.timeout = 160 * 60; /* full blank at 1x could take 80 minutes */
+	scmd.cdb.g5_cdb.cmd = 0xA1;	/* Blank */
+	scmd.cdb.g0_cdb.high_addr = blanktype;
+	g1_cdbaddr(&scmd.cdb.g5_cdb, addr);
+
+	return (scsicmd("blank unit"));
 }
 
 EXPORT int
@@ -765,8 +877,137 @@ reserve_track(len)
 	return (0);
 }
 
+/*
+ * XXX First try to handle ATAPI:
+ * XXX ATAPI cannot handle SCSI 6 byte commands.
+ * XXX We try to simulate 6 byte mode sense/select.
+ */
+LOCAL BOOL	is_atapi;
+
+EXPORT BOOL
+allow_atapi(new)
+	BOOL	new;
+{
+	BOOL	old = is_atapi;
+	u_char	mode[256];
+
+	if (new == old)
+		return (old);
+
+	silent++;
+	if (new &&
+	    mode_sense_g1(mode, 8, 0x3F, 0) < 0) {	/* All pages current */
+		new = FALSE;
+	}
+	silent--;
+
+	is_atapi = new;
+	return (old);
+}
+
 EXPORT int
 mode_select(dp, cnt, smp, pf)
+	u_char	*dp;
+	int	cnt;
+	int	smp;
+	int	pf;
+{
+	if (is_atapi)
+		return (mode_select_sg0(dp, cnt, smp, pf));
+	return (mode_select_g0(dp, cnt, smp, pf));
+}
+
+EXPORT int
+mode_sense(dp, cnt, page, pcf)
+	u_char	*dp;
+	int	cnt;
+	int	page;
+	int	pcf;
+{
+	if (is_atapi)
+		return (mode_sense_sg0(dp, cnt, page, pcf));
+	return (mode_sense_g0(dp, cnt, page, pcf));
+}
+
+/*
+ * Simulate mode select g0 with mode select g1.
+ */
+EXPORT int
+mode_select_sg0(dp, cnt, smp, pf)
+	u_char	*dp;
+	int	cnt;
+	int	smp;
+	int	pf;
+{
+	u_char	xmode[256+4];
+	int	amt = cnt;
+
+	movebytes(&dp[4], &xmode[8], cnt-4);
+	if (amt < 4) {		/* Data length. medium type & VU */
+		amt += 1;
+	} else {
+		amt += 4;
+	}
+	xmode[0] = 0;
+	xmode[1] = 0;
+	xmode[2] = dp[1];
+	xmode[3] = dp[2];
+	xmode[4] = 0;
+	xmode[5] = 0;
+	i_to_short(&xmode[6], dp[3]);
+
+	if (verbose) scsiprbytes("Mode Parameters (un-converted)", dp, cnt);
+
+	return (mode_select_g1(xmode, amt, smp, pf));
+}
+
+/*
+ * Simulate mode sense g0 with mode sense g1.
+ */
+EXPORT int
+mode_sense_sg0(dp, cnt, page, pcf)
+	u_char	*dp;
+	int	cnt;
+	int	page;
+	int	pcf;
+{
+	u_char	xmode[256+4];
+	int	amt = cnt;
+	int	len;
+
+	fillbytes((caddr_t)xmode, sizeof(scmd), '\0');
+	if (amt < 4) {		/* Data length. medium type & VU */
+		amt += 1;
+	} else {
+		amt += 4;
+	}
+	if (mode_sense_g1(xmode, amt, page, pcf) < 0)
+		return (-1);
+
+	amt -= scsigetresid();
+	if (amt > 4)
+		movebytes(&xmode[8], &dp[4], amt-4);
+	len = a_to_u_short(xmode);
+	if (len == 0) {
+		dp[0] = 0;
+	} else if (len < 6) {
+		if (len > 2)
+			len = 2;
+		dp[0] = len;
+	} else {
+		dp[0] = len - 3;
+	}
+	dp[1] = xmode[2];
+	dp[2] = xmode[3];
+	len = a_to_u_short(&xmode[6]);
+	dp[3] = len;
+
+	if (verbose) scsiprbytes("Mode Sense Data (converted)", dp, cnt - scmd.resid);
+	return (0);
+}
+
+EXPORT int
+mode_select_g0(dp, cnt, smp, pf)
 	u_char	*dp;
 	int	cnt;
 	int	smp;
@@ -784,15 +1025,43 @@ mode_select(dp, cnt, smp, pf)
 	scmd.cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
 	scmd.cdb.g0_cdb.count = cnt;
 
-	printf("%s ", smp?"Save":"Set ");
-	if (verbose)
+	if (verbose) {
+		printf("%s ", smp?"Save":"Set ");
 		scsiprbytes("Mode Parameters", dp, cnt);
+	}
 
-	return (scsicmd("mode select"));
+	return (scsicmd("mode select g0"));
 }
 
 EXPORT int
-mode_sense(dp, cnt, page, pcf)
+mode_select_g1(dp, cnt, smp, pf)
+	u_char	*dp;
+	int	cnt;
+	int	smp;
+	int	pf;
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = (caddr_t)dp;
+	scmd.size = cnt;
+	scmd.flags = SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G1_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.cdb.g1_cdb.cmd = 0x55;
+	scmd.cdb.g1_cdb.lun = lun;
+	scmd.cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
+	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+
+	if (verbose) {
+		printf("%s ", smp?"Save":"Set ");
+		scsiprbytes("Mode Parameters", dp, cnt);
+	}
+
+	return (scsicmd("mode select g1"));
+}
+
+EXPORT int
+mode_sense_g0(dp, cnt, page, pcf)
 	u_char	*dp;
 	int	cnt;
 	int	page;
@@ -815,14 +1084,42 @@ mode_sense(dp, cnt, page, pcf)
 	scmd.cdb.g0_cdb.count = page ? 0xFF : 24;
 	scmd.cdb.g0_cdb.count = cnt;
 
-	if (scsicmd("mode sense") < 0)
+	if (scsicmd("mode sense g0") < 0)
+		return (-1);
+	if (verbose) scsiprbytes("Mode Sense Data", dp, cnt - scmd.resid);
+	return (0);
+}
+
+EXPORT int
+mode_sense_g1(dp, cnt, page, pcf)
+	u_char	*dp;
+	int	cnt;
+	int	page;
+	int	pcf;
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = (caddr_t)dp;
+	scmd.size = cnt;
+	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G1_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.cdb.g1_cdb.cmd = 0x5A;
+	scmd.cdb.g1_cdb.lun = lun;
+#ifdef	nonono
+	scmd.cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
+#endif
+	scmd.cdb.g1_cdb.addr[0] = (page&0x3F) | ((pcf<<6)&0xC0);
+	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+
+	if (scsicmd("mode sense g1") < 0)
 		return (-1);
 	if (verbose) scsiprbytes("Mode Sense Data", dp, cnt - scmd.resid);
 	return (0);
 }
 
 struct cdd_52x_mode_page_21 {	/* write track information */
-	u_char	MP_P_CODE;		/* parsave & pagecode */
+		MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x0E = 14 Bytes */
 	u_char	res_2;
 	u_char	sectype;
@@ -832,7 +1129,7 @@ struct cdd_52x_mode_page_21 {	/* write track information */
 };
 
 struct cdd_52x_mode_page_23 {	/* speed selection */
-	u_char	MP_P_CODE;		/* parsave & pagecode */
+		MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x06 = 6 Bytes */
 	u_char	speed;
 	u_char	dummy;
@@ -843,21 +1140,21 @@ struct cdd_52x_mode_page_23 {	/* speed selection */
 #if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct yamaha_mode_page_31 {	/* drive configuration */
-	u_char	MP_P_CODE;		/* parsave & pagecode */
+		MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x02 = 2 Bytes */
 	u_char	res;
-	u_char	dummy		: 4;
-	u_char	speed		: 4;
+	Ucbit	dummy		: 4;
+	Ucbit	speed		: 4;
 };
 
 #else				/* Motorola byteorder */
 
 struct yamaha_mode_page_31 {	/* drive configuration */
-	u_char	MP_P_CODE;		/* parsave & pagecode */
+		MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x02 = 2 Bytes */
 	u_char	res;
-	u_char	speed		: 4;
-	u_char	dummy		: 4;
+	Ucbit	speed		: 4;
+	Ucbit	dummy		: 4;
 };
 #endif
 
@@ -932,25 +1229,25 @@ write_track_info(sectype)
 }
 
 struct tocheader {
-	char	len[2];
-	char	first;
-	char	last;
+	Uchar	len[2];
+	Uchar	first;
+	Uchar	last;
 };
 
 struct trackdesc {
-	char	res0;
+	Uchar	res0;
 
-#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
-	u_char	control:4;
-	u_char	adr:4;
-#else				/* Motorola byteorder */
-	u_char	adr:4;
-	u_char	control:4;
+#if defined(_BIT_FIELDS_LTOH)		/* Intel byteorder */
+	Ucbit	control		: 4;
+	Ucbit	adr		: 4;
+#else					/* Motorola byteorder */
+	Ucbit	adr		: 4;
+	Ucbit	control		: 4;
 #endif
 
-	char	track;
-	char	res3;
-	char	addr[4];
+	Uchar	track;
+	Uchar	res3;
+	Uchar	addr[4];
 };
 
 struct diskinfo {
@@ -959,17 +1256,17 @@ struct diskinfo {
 };
 
 struct siheader {
-	char	len[2];
-	char	finished;
-	char	unfinished;
+	Uchar	len[2];
+	Uchar	finished;
+	Uchar	unfinished;
 };
 
 struct sidesc {
-	char	sess_number;
-	char	res1;
-	char	track;
-	char	res3;
-	char	addr[4];
+	Uchar	sess_number;
+	Uchar	res1;
+	Uchar	track;
+	Uchar	res3;
+	Uchar	addr[4];
 };
 
 struct sinfo {
@@ -978,13 +1275,40 @@ struct sinfo {
 };
 
 struct trackheader {
-	char	mode;
-	char	res[3];
-	char	addr[4];
+	Uchar	mode;
+	Uchar	res[3];
+	Uchar	addr[4];
 };
 #define	TRM_ZERO	0
 #define	TRM_USER_ECC	1	/* 2048 bytes user data + 288 Bytes ECC/EDC */
 #define	TRM_USER	2	/* All user data (2336 bytes) */
+
+struct ftrackdesc {
+	Uchar	sess_number;
+
+#if defined(_BIT_FIELDS_LTOH)		/* Intel byteorder */
+	Ucbit	control		: 4;
+	Ucbit	adr		: 4;
+#else					/* Motorola byteorder */
+	Ucbit	adr		: 4;
+	Ucbit	control		: 4;
+#endif
+
+	Uchar	track;
+	Uchar	point;
+	Uchar	amin;
+	Uchar	asec;
+	Uchar	aframe;
+	Uchar	res7;
+	Uchar	pmin;
+	Uchar	psec;
+	Uchar	pframe;
+};
+
+struct fdiskinfo {
+	struct tocheader	hd;
+	struct ftrackdesc	desc[1];
+};
 
 
 EXPORT	int
@@ -1000,12 +1324,17 @@ read_tochdr(dp, fp, lp)
 	tp = (struct tocheader *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc(xb, 0, sizeof(struct tocheader), 0, FMT_TOC) < 0)
-		comerrno(EX_BAD, "Cannot read TOC header\n");
+	if (read_toc(xb, 0, sizeof(struct tocheader), 0, FMT_TOC) < 0) {
+		if (silent == 0)
+			errmsgno(EX_BAD, "Cannot read TOC header\n");
+		return (-1);
+	}
 	len = a_to_u_short(tp->len) + sizeof(struct tocheader)-2;
 	if (len >= 4) {
-		*fp = tp->first;
-		*lp = tp->last;
+		if (fp)
+			*fp = tp->first;
+		if (lp)
+			*lp = tp->last;
 		return (0);
 	}
 	return (-1);
@@ -1027,31 +1356,42 @@ read_trackinfo(track, offp, msfp, adrp, controlp, modep)
 	dp = (struct diskinfo *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc(xb, track, sizeof(struct diskinfo), 0, FMT_TOC) < 0)
-		comerrno(EX_BAD, "Cannot read TOC\n");
+	if (read_toc(xb, track, sizeof(struct diskinfo), 0, FMT_TOC) < 0) {
+		errmsgno(EX_BAD, "Cannot read TOC\n");
+		return (-1);
+	}
 	len = a_to_u_short(dp->hd.len) + sizeof(struct tocheader)-2;
 	if (len <  sizeof(struct diskinfo))
 		return (-1);
 
-	*offp = a_to_u_long(dp->desc[0].addr);
-	*adrp = dp->desc[0].adr;
-	*controlp = dp->desc[0].control;
+	if (offp)
+		*offp = a_to_u_long(dp->desc[0].addr);
+	if (adrp)
+		*adrp = dp->desc[0].adr;
+	if (controlp)
+		*controlp = dp->desc[0].control;
 
-	silent++;
-	if (read_toc(xb, track, sizeof(struct diskinfo), 1, FMT_TOC) >= 0) {
-		msfp->msf_min = dp->desc[0].addr[1];
-		msfp->msf_sec = dp->desc[0].addr[2];
-		msfp->msf_frame = dp->desc[0].addr[3];
-	} else {
-		msfp->msf_min = 0;
-		msfp->msf_sec = 0;
-		msfp->msf_frame = 0;
+	if (msfp) {
+		silent++;
+		if (read_toc(xb, track, sizeof(struct diskinfo), 1, FMT_TOC)
+									>= 0) {
+			msfp->msf_min = dp->desc[0].addr[1];
+			msfp->msf_sec = dp->desc[0].addr[2];
+			msfp->msf_frame = dp->desc[0].addr[3];
+		} else {
+			msfp->msf_min = 0;
+			msfp->msf_sec = 0;
+			msfp->msf_frame = 0;
+		}
+		silent--;
 	}
-	silent--;
+
+	if (modep == NULL)
+		return (0);
 
 	if (track == 0xAA) {
 		*modep = -1;
-		return(0);
+		return (0);
 	}
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
@@ -1065,9 +1405,91 @@ read_trackinfo(track, offp, msfp, adrp, controlp, modep)
 		*modep = -1;
 	}
 	silent--;
-	return(0);
+	return (0);
 }
-	
+
+EXPORT	int
+read_B0(isbcd, b0p, lop)
+	BOOL	isbcd;
+	long	*b0p;
+	long	*lop;
+{
+	struct	fdiskinfo *dp;
+	struct	ftrackdesc *tp;
+	char	xb[8192];
+	char	*pe;
+	int	len;
+	long	l;
+
+	dp = (struct fdiskinfo *)xb;
+
+	fillbytes((caddr_t)xb, sizeof(xb), '\0');
+	if (read_toc_philips(xb, 1, sizeof(struct tocheader), 0, FMT_FULLTOC) < 0) {
+		return (-1);
+	}
+	len = a_to_u_short(dp->hd.len) + sizeof(struct tocheader)-2;
+	if (len <  sizeof(struct fdiskinfo))
+		return (-1);
+	if (read_toc_philips(xb, 1, len, 0, FMT_FULLTOC) < 0) {
+		return (-1);
+	}
+	if (verbose) {
+		scsiprbytes("TOC data: ", (Uchar *)xb,
+			len > sizeof(xb) - scsigetresid() ? sizeof(xb) - scsigetresid() : len);
+
+		tp = &dp->desc[0];
+		pe = &xb[len];
+
+		while ((char *)tp < pe) {
+			scsiprbytes("ENT: ", (Uchar *)tp, 11);
+			tp++;
+		}
+	}
+	tp = &dp->desc[0];
+	pe = &xb[len];
+
+	for (; (char *)tp < pe; tp++) {
+		if (tp->sess_number != dp->hd.last)
+			continue;
+		if (tp->point != 0xB0)
+			continue;
+		if (verbose)
+			scsiprbytes("B0: ", (Uchar *)tp, 11);
+		if (isbcd) {
+			l = msf_to_lba(from_bcd(tp->amin),
+				from_bcd(tp->asec),
+				from_bcd(tp->aframe));
+		} else {
+			l = msf_to_lba(tp->amin,
+				tp->asec,
+				tp->aframe);
+		}
+		if (b0p)
+			*b0p = l;
+
+		if (verbose)
+			printf("B0 start: %ld\n", l);
+
+		if (isbcd) {
+			l = msf_to_lba(from_bcd(tp->pmin),
+				from_bcd(tp->psec),
+				from_bcd(tp->pframe));
+		} else {
+			l = msf_to_lba(tp->pmin,
+				tp->psec,
+				tp->pframe);
+		}
+
+		if (verbose)
+			printf("B0 lout: %ld\n", l);
+		if (lop)
+			*lop = l;
+		return (0);
+	}
+	return (-1);
+}
+
+
 /*
  * Return address of first track in last session (SCSI-3/mmc version).
  */
@@ -1121,14 +1543,14 @@ read_session_offset_philips(offp)
 	sp = (struct sinfo *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc_philips((caddr_t)xb, 0, sizeof(struct siheader), 0, 1) < 0)
+	if (read_toc_philips((caddr_t)xb, 0, sizeof(struct siheader), 0, FMT_SINFO) < 0)
 		return (-1);
 	len = a_to_u_short(sp->hd.len) + sizeof(struct siheader)-2;
 	if (len > sizeof(xb)) {
 		errmsgno(EX_BAD, "Session info too big.\n");
 		return (-1);
 	}
-	if (read_toc_philips((caddr_t)xb, 0, len, 0, 1) < 0)
+	if (read_toc_philips((caddr_t)xb, 0, len, 0, FMT_SINFO) < 0)
 		return (-1);
 	/*
 	 * Old drives return the number of finished sessions in first/finished
@@ -1186,9 +1608,9 @@ read_scsi(bp, addr, cnt)
 	int	cnt;
 {
 	if(addr <= G0_MAXADDR && cnt < 256)
-		return(read_g0(bp, addr, cnt));
+		return (read_g0(bp, addr, cnt));
 	else
-		return(read_g1(bp, addr, cnt));
+		return (read_g1(bp, addr, cnt));
 }
 
 EXPORT int
@@ -1292,7 +1714,30 @@ getdev(print)
 				inq.removable = 1;
 			}
 		}
+	} else if (verbose) {
+		int	i;
+		int	len = inq.add_len + 5;
+		Uchar	ibuf[256+5];
+		Uchar	*ip = (Uchar *)&inq;
+		Uchar	c;
+
+		if (len > sizeof (inq) && inquiry((caddr_t)ibuf, inq.add_len+5) >= 0) {
+			len = inq.add_len+5 - scsigetresid();
+			ip = ibuf;
+		} else {
+			len = sizeof (inq);
+		}
+		printf("Inquiry Data   : ");
+		for (i = 0; i < len; i++) {
+			c = ip[i];
+			if (c >= ' ' && c < 0177)
+				printf("%c", c);
+			else
+				printf(".");
+		}
+		printf("\n");
 	}
+
 	switch (inq.type) {
 
 	case INQ_DASD:
@@ -1373,8 +1818,20 @@ getdev(print)
 				dev = DEV_CDD_2000;
 
 		} else if (strindex("JVC", inq.info)) {
-			if (strindex("XR-W2010", inq.ident))
+			if (strindex("XR-W2001", inq.ident))
 				dev = DEV_TEAC_CD_R50S;
+			else if (strindex("XR-W2010", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+			else if (strindex("R2626", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+
+		} else if (strindex("MITSBISH", inq.info)) {
+
+#ifdef	XXXX_REALLY
+			/* It's MMC compliant */
+			if (strindex("CDRW226", inq.ident))
+				dev = DEV_MMC_CDRW;
+#endif
 
 		} else if (strindex("MITSUMI", inq.info)) {
 			/* Don't know any product string */
@@ -1385,7 +1842,9 @@ getdev(print)
 				strindex("KODAK", inq.info) ||
 				strindex("HP", inq.info)) {
 
-			if (strindex("CDD521", inq.ident))
+			if (strindex("CDD521/00", inq.ident))
+				dev = DEV_CDD_521_OLD;
+			else if (strindex("CDD521", inq.ident))
 				dev = DEV_CDD_521;
 
 			if (strindex("CDD522", inq.ident))
@@ -1394,6 +1853,8 @@ getdev(print)
 				dev = DEV_CDD_522;
 			if (strindex("KHSW/OB", inq.ident))	/* PCD600 */
 				dev = DEV_CDD_522;
+			if (strindex("CDR-240", inq.ident))
+				dev = DEV_CDD_2000;
 
 			if (strindex("CDD20", inq.ident))
 				dev = DEV_CDD_2000;
@@ -1406,10 +1867,20 @@ getdev(print)
 				dev = DEV_CDD_2600;
 
 		} else if (strindex("PINNACLE", inq.info)) {
-			if (strindex("RCD-5020", inq.ident))
+			if (strindex("RCD-1000", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+			if (strindex("RCD5020", inq.ident))
 				dev = DEV_TEAC_CD_R50S;
 			if (strindex("RCD5040", inq.ident))
 				dev = DEV_TEAC_CD_R50S;
+			if (strindex("RCD 4X4", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+
+		} else if (strindex("PIONEER", inq.info)) {
+			if (strindex("CD-WO DW-S114X", inq.ident))
+				dev = DEV_PIONEER_DW_S114X;
+			else if (strindex("DVD-R DVR-S101", inq.ident))
+				dev = DEV_PIONEER_DVDR_S101;
 
 		} else if (strindex("PLASMON", inq.info)) {
 			if (strindex("RF4100", inq.ident))
@@ -1417,13 +1888,24 @@ getdev(print)
 			else if (strindex("CDR4220", inq.ident))
 				dev = DEV_CDD_2000;
 
+		} else if (strindex("PLEXTOR", inq.info)) {
+			if (strindex("CD-R   PX-R24CS", inq.ident))
+				dev = DEV_RICOH_RO_1420C;
+
 		} else if (strindex("RICOH", inq.info)) {
 			if (strindex("RO-1420C", inq.ident))
 				dev = DEV_RICOH_RO_1420C;
 
 		} else if (strindex("SAF", inq.info)) {	/* Smart & Friendly */
-			if (strindex("CD-R2004", inq.ident))
+			if (strindex("CD-R2004", inq.ident) ||
+			    strindex("CD-R2006 ", inq.ident))
 				dev = DEV_SONY_CDU_924;
+			else if (strindex("CD-R2006PLUS", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+			else if (strindex("CD-RW226", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+			else if (strindex("CD-R4012", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
 
 		} else if (strindex("SONY", inq.info)) {
 			if (strindex("CD-R   CDU92", inq.ident) ||
@@ -1431,12 +1913,22 @@ getdev(print)
 				dev = DEV_SONY_CDU_924;
 
 		} else if (strindex("TEAC", inq.info)) {
-			if (strindex("CD-R50S", inq.ident))
+			if (strindex("CD-R50S", inq.ident) ||
+			    strindex("CD-R55S", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+
+		} else if (strindex("TRAXDATA", inq.info) ||
+				strindex("Traxdata", inq.info)) {
+			if (strindex("CDR4120", inq.ident))
 				dev = DEV_TEAC_CD_R50S;
 
 		} else if (strindex("T.YUDEN", inq.info)) {
-			if (strindex("CD-WO", inq.ident))
+			if (strindex("CD-WO EW-50", inq.ident))
 				dev = DEV_CDD_521;
+
+		} else if (strindex("WPI", inq.info)) {	/* Wearnes */
+			if (strindex("CDR-632P", inq.ident))
+				dev = DEV_CDD_2600;
 
 		} else if (strindex("YAMAHA", inq.info)) {
 			if (strindex("CDR10", inq.ident))
@@ -1445,6 +1937,12 @@ getdev(print)
 				dev = DEV_YAMAHA_CDR_400;
 			if (strindex("CDR400", inq.ident))
 				dev = DEV_YAMAHA_CDR_400;
+
+		} else if (strindex("MATSHITA", inq.info)) {
+			if (strindex("CD-R   CW-7501", inq.ident))
+				dev = DEV_MATSUSHITA_7501;
+			if (strindex("CD-R   CW-7502", inq.ident))
+				dev = DEV_MATSUSHITA_7502;
 		}
 		if (dev == DEV_UNKNOWN) {
 			/*
@@ -1459,15 +1957,18 @@ getdev(print)
 			BOOL	cdwr	 = FALSE;
 			BOOL	cdrrw	 = FALSE;
 			BOOL	cdwrw	 = FALSE;
+			BOOL	dvd	 = FALSE;
 
 			dev = DEV_CDROM;
 
-			if (mmc_check(&cdrr, &cdwr, &cdrrw, &cdwrw))
+			if (mmc_check(&cdrr, &cdwr, &cdrrw, &cdwrw, &dvd))
 				dev = DEV_MMC_CDROM;
 			if (cdwr)
 				dev = DEV_MMC_CDR;
 			if (cdwrw)
 				dev = DEV_MMC_CDRW;
+			if (dvd)
+				dev = DEV_MMC_DVD;
 		}
 
 	case INQ_PROCD:
@@ -1554,18 +2055,26 @@ printdev()
 	case DEV_MMC_CDROM:	printf("Generic mmc CD-ROM");	break;
 	case DEV_MMC_CDR:	printf("Generic mmc CD-R");	break;
 	case DEV_MMC_CDRW:	printf("Generic mmc CD-RW");	break;
-	case DEV_CDD_521:	printf("Philips CDD521");	break;
-	case DEV_CDD_522:	printf("Philips CDD522");	break;
-	case DEV_CDD_2000:	printf("Philips CDD2000");	break;
-	case DEV_CDD_2600:	printf("Philips CDD2600");	break;
+	case DEV_MMC_DVD:	printf("Generic mmc2 DVD");	break;
+	case DEV_CDD_521:	printf("Philips CDD-521");	break;
+	case DEV_CDD_521_OLD:	printf("Philips old CDD-521");	break;
+	case DEV_CDD_522:	printf("Philips CDD-522");	break;
+	case DEV_CDD_2000:	printf("Philips CDD-2000");	break;
+	case DEV_CDD_2600:	printf("Philips CDD-2600");	break;
 	case DEV_YAMAHA_CDR_100:printf("Yamaha CDR-100");	break;
 	case DEV_YAMAHA_CDR_400:printf("Yamaha CDR-400");	break;
 	case DEV_PLASMON_RF_4100:printf("Plasmon RF-4100");	break;
-	case DEV_SONY_CDU_924:	printf("Sony CDU924S");		break;
+	case DEV_SONY_CDU_924:	printf("Sony CDU-924S");	break;
 	case DEV_RICOH_RO_1420C:printf("Ricoh RO-1420C");	break;
 	case DEV_TEAC_CD_R50S:	printf("Teac CD-R50S");		break;
+	case DEV_MATSUSHITA_7501:printf("Matsushita CW-7501");	break;
+	case DEV_MATSUSHITA_7502:printf("Matsushita CW-7502");	break;
 
-	default:		printf("Missing Entry");	break;
+	case DEV_PIONEER_DW_S114X: printf("Pioneer DW-S114X");	break;
+	case DEV_PIONEER_DVDR_S101:printf("Pioneer DVD-R S101");break;
+
+	default:		printf("Missing Entry for dev %d",
+							 dev);	break;
 
 	}
 	printf(".\n");
@@ -1617,59 +2126,74 @@ scsi_unload()
 }
 
 EXPORT int
-scsi_cdr_write(bufp, sectaddr, size, blocks)
-	char	*bufp;
-	long	sectaddr;
-	long	size;
-	int	blocks;
+scsi_cdr_write(bp, sectaddr, size, blocks, islast)
+	caddr_t	bp;		/* address of buffer */
+	long	sectaddr;	/* disk address (sector) to put */
+	long	size;		/* number of bytes to transfer */
+	int	blocks;		/* sector count */
+	BOOL	islast;		/* last write for track */
 {
-	return (write_xg0(bufp, 0, size, blocks));
+	return (write_xg1(bp, sectaddr, size, blocks));
 }
 
-EXPORT BOOL
-is_mmc()
+EXPORT struct cd_mode_page_2A *
+mmc_cap(modep)
+	u_char	*modep;
 {
-	return (mmc_check(NULL, NULL, NULL, NULL));
-}
-
-EXPORT BOOL
-mmc_check(cdrrp, cdwrp, cdrrwp, cdwrwp)
-	BOOL	*cdrrp;
-	BOOL	*cdwrp;
-	BOOL	*cdrrwp;
-	BOOL	*cdwrwp;
-{
-	u_char	mode[0x100];
 	int	len;
+	int	val;
+	u_char	mode[0x100];
 	struct	cd_mode_page_2A *mp;
-extern	struct	scsi_inquiry	inq;
-
-	if (inq.type != INQ_ROMD)
-		return (FALSE);
+	struct	cd_mode_page_2A *mp2;
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
-	silent++;
 	if (!get_mode_params(0x2A, "CD capabilities",
-			mode, (u_char *)0, (u_char *)0, (u_char *)0, &len)) {
-		silent--;
-		return (FALSE);
-	}
-		silent--;
+			mode, (u_char *)0, (u_char *)0, (u_char *)0, &len))
+		return (NULL);
 
 	if (len == 0)			/* Pre SCSI-3/mmc drive	 	*/
-		return (FALSE);
+		return (NULL);
 
 	mp = (struct cd_mode_page_2A *)
 		(mode + sizeof(struct scsi_mode_header) +
 		((struct scsi_mode_header *)mode)->blockdesc_len);
 
+	/*
+	 * Do some heuristics against pre SCSI-3/mmc VU page 2A
+	 */
 	if (mp->p_len < 0x14)
-		return (FALSE);
-	if (a_to_u_short(mp->max_read_speed) < 176 ||
-			a_to_u_short(mp->cur_read_speed) < 176)
-		return (FALSE);
+		return (NULL);
 
+	val = a_to_u_short(mp->max_read_speed);
+	if (val != 0 && val < 176)
+		return (NULL);
+
+	val = a_to_u_short(mp->cur_read_speed);
+	if (val != 0 && val < 176)
+		return (NULL);
+
+	len -= sizeof(struct scsi_mode_header) +
+		((struct scsi_mode_header *)mode)->blockdesc_len;
+	if (modep)
+		mp2 = (struct cd_mode_page_2A *)modep;
+	else
+		mp2 = malloc(len);
+	if (mp2)
+		movebytes(mp, mp2, len);
+
+	return (mp2);
+}
+
+EXPORT void
+mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
+	struct	cd_mode_page_2A *mp;
+	BOOL	*cdrrp;
+	BOOL	*cdwrp;
+	BOOL	*cdrrwp;
+	BOOL	*cdwrwp;
+	BOOL	*dvdp;
+{
 	if (cdrrp)
 		*cdrrp = (mp->cd_r_read != 0);	/* SCSI-3/mmc CD	*/
 	if (cdwrp)
@@ -1679,6 +2203,136 @@ extern	struct	scsi_inquiry	inq;
 		*cdrrwp = (mp->cd_rw_read != 0);/* SCSI-3/mmc CD	*/
 	if (cdwrwp)
 		*cdwrwp = (mp->cd_rw_write != 0);/* SCSI-3/mmc CD-RW	*/
+	if (dvdp) {
+		*dvdp = 			/* SCSI-3/mmc2 DVD 	*/
+		(mp->dvd_ram_read + mp->dvd_r_read  + mp->dvd_rom_read +
+		 mp->dvd_ram_write + mp->dvd_r_write) != 0;
+	}
+}
+
+EXPORT BOOL
+is_mmc()
+{
+	return (mmc_check(NULL, NULL, NULL, NULL, NULL));
+}
+
+EXPORT BOOL
+mmc_check(cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
+	BOOL	*cdrrp;
+	BOOL	*cdwrp;
+	BOOL	*cdrrwp;
+	BOOL	*cdwrwp;
+	BOOL	*dvdp;
+{
+	u_char	mode[0x100];
+	BOOL	was_atapi;
+	struct	cd_mode_page_2A *mp;
+
+	if (inq.type != INQ_ROMD)
+		return (FALSE);
+
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+
+	was_atapi = allow_atapi(TRUE);
+	silent++;
+	mp = mmc_cap(mode);
+	silent--;
+	allow_atapi(was_atapi);
+	if (mp == NULL)
+		return (FALSE);
+
+	mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp);
 
 	return (TRUE);			/* Generic SCSI-3/mmc CD	*/
+}
+
+#define	DOES(what,flag)	printf("  Does %s%s\n", flag?"":"not ",what);
+#define	IS(what,flag)	printf("  Is %s%s\n", flag?"":"not ",what);
+#define	VAL(what,val)	printf("  %s: %d\n", what, val[0]*256 + val[1]);
+#define	SVAL(what,val)	printf("  %s: %s\n", what, val);
+
+EXPORT void
+print_capabilities()
+{
+	BOOL	was_atapi;
+	u_char	mode[0x100];
+	struct	cd_mode_page_2A *mp;
+static	const	char	*bclk[4] = {"32", "16", "24", "24 (I2S)"};
+static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
+				"disc changer", "cartridge changer",
+				"reserved(6)", "reserved(7)" };
+
+
+	if (inq.type != INQ_ROMD)
+		return;
+
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+
+	was_atapi = allow_atapi(TRUE);	/* Try to switch to 10 byte mode cmds */
+	silent++;
+	mp = mmc_cap(mode);
+	silent--;
+	allow_atapi(was_atapi);
+	if (mp == NULL)
+		return;
+
+	printf ("\nDrive capabilities, per page 2A:\n\n");
+
+	DOES("read CD-R media", mp->cd_r_read);
+	DOES("write CD-R media", mp->cd_r_write);
+	DOES("read CD-RW media", mp->cd_rw_read);
+	DOES("write CD-RW media", mp->cd_rw_write);
+	DOES("read DVD-ROM media", mp->dvd_rom_read);
+	DOES("read DVD-R media", mp->dvd_r_read);
+	DOES("write DVD-R media", mp->dvd_r_write);
+	DOES("read DVD-RAM media", mp->dvd_ram_read);
+	DOES("write DVD-RAM media", mp->dvd_ram_write);
+	DOES("support test writing", mp->test_write);
+	printf("\n");
+	DOES("read Mode 2 Form 1 blocks", mp->mode_2_form_1);
+	DOES("read Mode 2 Form 2 blocks", mp->mode_2_form_2);
+	DOES("read digital audio blocks", mp->cd_da_supported);
+	if (mp->cd_da_supported) 
+		DOES("restart non-streamed digital audio reads accurately", mp->cd_da_accurate);
+	DOES("read multi-session CDs", mp->multi_session);
+	DOES("read fixed-packet CD media using Method 2", mp->method2);
+	DOES("read CD bar code", mp->read_bar_code);
+	DOES("read R-W subcode information", mp->rw_supported);
+	if (mp->rw_supported) 
+		DOES("return R-W subcode de-interleaved and error-corrected", mp->rw_deint_corr);
+	DOES("return CD media catalog number", mp->UPC);
+	DOES("return CD ISRC information", mp->ISRC);
+	DOES("support C2 error pointers", mp->c2_pointers);
+	DOES("deliver composite A/V data", mp->composite);
+	printf("\n");
+	DOES("play audio CDs", mp->audio_play);
+	if (mp->audio_play) {
+		VAL("Number of volume control levels", mp->num_vol_levels);
+		DOES("support individual volume control setting for each channel", mp->sep_chan_vol);
+		DOES("support independent mute setting for each channel", mp->sep_chan_mute);
+		DOES("support digital output on port 1", mp->digital_port_1);
+		DOES("support digital output on port 2", mp->digital_port_2);
+		if (mp->digital_port_1 || mp->digital_port_2) {
+			DOES("send digital data LSB-first", mp->LSBF);
+			DOES("set LRCK high for left-channel data", mp->RCK);
+			DOES("have valid data on falling edge of clock", mp->BCK);
+			SVAL("Length of data in BCLKs", bclk[mp->length]);
+		}
+	}
+	printf("\n");
+	SVAL("Loading mechanism type", load[mp->loading_type]);
+	DOES("support ejection of CD via START/STOP command", mp->eject);
+	DOES("lock media on power up via prevent jumper", mp->prevent_jumper);
+	DOES("allow media to be locked in the drive via PREVENT/ALLOW command", mp->lock);
+	IS("currently in a media-locked state", mp->lock_state);
+	DOES("have load-empty-slot-in-changer feature", mp->sw_slot_sel);
+	DOES("support Individual Disk Present feature", mp->disk_present_rep);
+	printf("\n");
+	VAL("Maximum read  speed in kB/s", mp->max_read_speed);
+	VAL("Current read  speed in kB/s", mp->cur_read_speed);
+	VAL("Maximum write speed in kB/s", mp->max_write_speed);
+	VAL("Current write speed in kB/s", mp->cur_write_speed);
+	VAL("Buffer size in KB", mp->buffer_size);
+
+	return;			/* Generic SCSI-3/mmc CD	*/
 }

@@ -1,0 +1,15 @@
+*** fnmatch.c.bak	Sat Mar 22 03:53:13 1997
+--- fnmatch.c	Fri Apr 17 11:32:36 1998
+***************
+*** 26,31 ****
+--- 26,35 ----
+  #include <errno.h>
+  #include <fnmatch.h>
+  
++ #ifndef	__STDC__
++ #define	const
++ #endif
++ 
+  #ifndef FNM_FILE_NAME
+  #define	FNM_FILE_NAME	FNM_PATHNAME /* Preferred GNU name.  */
+  #endif

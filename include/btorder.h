@@ -1,4 +1,4 @@
-/* @(#)btorder.h	1.3 97/08/25 Copyright 1996 J. Schilling */
+/* @(#)btorder.h	1.6 98/03/02 Copyright 1996 J. Schilling */
 /*
  *	Definitions for Bitordering
  *
@@ -31,7 +31,7 @@
 #else
 #	if defined(sun3) || defined(mc68000) || \
 	   defined(sun4) || defined(__sparc) || defined(sparc) || \
-	   defined(__hppa)
+	   defined(__hppa) || defined(_ARCH_PPC) || defined(_IBMR2)
 #		define _BIT_FIELDS_HTOL
 #	endif
 
@@ -42,6 +42,16 @@
 #	if defined(__i386) || defined(i386) || \
 	   defined(__alpha) || defined(alpha)
 #		define _BIT_FIELDS_LTOH
+#	endif
+
+#	if defined(__ppc__) || defined(ppc) || defined(__ppc) || \
+	   defined(__PPC) || defined(powerpc)
+
+#		if	defined(__BIG_ENDIAN__)
+#			define _BIT_FIELDS_HTOL
+#		else
+#			define _BIT_FIELDS_LTOH
+#		endif
 #	endif
 #endif
 

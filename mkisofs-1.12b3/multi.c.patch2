@@ -1,0 +1,185 @@
+*** multi.c.bak	Sat Dec  6 22:05:05 1997
+--- multi.c	Sat Apr 18 01:28:14 1998
+***************
+*** 55,74 ****
+--- 55,92 ----
+  static int  DECL(merge_old_directory_into_tree, (struct directory_entry *,
+  						 struct directory *));
+  
++ #ifdef	__STDC__
+  static int
+  isonum_711 (unsigned char * p)
++ #else
++ static int
++ isonum_711 (p)
++ 	unsigned char * p;
++ #endif
+  {
+  	return (*p & 0xff);
+  }
+  
++ #ifdef	__STDC__
+  int
+  isonum_721 (unsigned char * p)
++ #else
++ int
++ isonum_721 (p)
++ 	unsigned char * p;
++ #endif
+  {
+  	return ((p[0] & 0xff) | ((p[1] & 0xff) << 8));
+  }
+  
++ #ifdef	__STDC__
+  static int
+  isonum_723 (unsigned char * p)
++ #else
++ static int
++ isonum_723 (p)
++ 	unsigned char * p;
++ #endif
+  {
+  #if 0
+  	if (p[0] != p[3] || p[1] != p[2]) {
+***************
+*** 79,86 ****
+--- 97,110 ----
+  	return (isonum_721 (p));
+  }
+  
++ #ifdef	__STDC__
+  int
+  isonum_731 (unsigned char * p)
++ #else
++ int
++ isonum_731 (p)
++ 	unsigned char * p;
++ #endif
+  {
+  	return ((p[0] & 0xff)
+  		| ((p[1] & 0xff) << 8)
+***************
+*** 88,95 ****
+--- 112,125 ----
+  		| ((p[3] & 0xff) << 24));
+  }
+  
++ #ifdef	__STDC__
+  int
+  isonum_733 (unsigned char * p)
++ #else
++ int
++ isonum_733 (p)
++ 	unsigned char * p;
++ #endif
+  {
+  	return (isonum_731 (p));
+  }
+***************
+*** 751,756 ****
+--- 781,788 ----
+    unsigned int ttbl_extent = 0;
+    unsigned int ttbl_index  = 0;
+  
++   char whole_path[1024];
++ 
+    /*
+     * Whatever is leftover in the list needs to get merged back
+     * into the directory.
+***************
+*** 761,767 ****
+  	{
+  	  continue;
+  	}
+!       
+        if( pnt[i]->name != NULL
+  	  && strcmp(pnt[i]->name, "<translation table>") == 0 )
+  	{
+--- 793,811 ----
+  	{
+  	  continue;
+  	}
+! 
+!       if( pnt[i]->name != NULL && pnt[i]->whole_name == NULL)
+!        {
+!          /*
+!           * Set the name for this directory.
+!           */
+!          strcpy(whole_path, this_dir->de_name);
+!          strcat(whole_path, SPATH_SEPARATOR);
+!          strcat(whole_path, pnt[i]->name);
+! 
+!          pnt[i]->whole_name = strdup(whole_path);
+!        }
+! 
+        if( pnt[i]->name != NULL
+  	  && strcmp(pnt[i]->name, "<translation table>") == 0 )
+  	{
+***************
+*** 882,887 ****
+--- 926,932 ----
+    int				  n_orig;
+    struct directory		* this_dir, *next_brother;
+    char				  whole_path[1024];
++   int				dotdd_found;
+  
+    this_dir = (struct directory *) e_malloc(sizeof(struct directory));
+    memset(this_dir, 0, sizeof(struct directory));
+***************
+*** 909,914 ****
+--- 954,962 ----
+    strcat(whole_path, dpnt->name);
+    this_dir->de_name = strdup(whole_path);
+  
++   this_dir->whole_name = strdup(whole_path);
++   this_dir->dir_flags = DIR_HAS_DOT | DIR_HAS_DOTDOT;
++ 
+    /*
+     * Now fill this directory using information from the previous
+     * session.
+***************
+*** 920,925 ****
+--- 968,974 ----
+     * merge_remaining_entries handle this, but it gets rather confused
+     * by the '.' and '..' entries.
+     */
++   dotdd_found = 0;
+    for(i=0; i < n_orig; i ++ )
+      {
+        /*
+***************
+*** 941,951 ****
+--- 990,1022 ----
+  	  memset(contents[i]->isorec.extent, 0, 8);
+  	}
+  
++       /*
++        * Set the whole name for this file.
++        */
++       strcpy(whole_path, this_dir->whole_name);
++       strcat(whole_path, SPATH_SEPARATOR);
++       strcat(whole_path, contents[i]->name);
++ 
++       contents[i]->whole_name = strdup(whole_path);
++ 
++       if(i<2) 
++           dotdd_found++;
+        contents[i]->next = this_dir->contents;
+        contents[i]->filedir = this_dir;
+        this_dir->contents = contents[i];
+        contents[i] = NULL;
+      }
++    if(dotdd_found == 2)
++    {
++       fprintf(stderr, "\n CHANGED HP: dir '%s' has dot.dott.", this_dir->whole_name);
++       this_dir->dir_flags |= DIR_HAS_DOT | DIR_HAS_DOTDOT;
++    }
++ #ifdef	NONO
++    else
++    {
++       fprintf(stderr, "\n WARNING HP: dir has NO dot.dott.");
++    }
++ #endif
+  
+    /*
+     * Zero the extent number for ourselves.

@@ -1,6 +1,15 @@
-/* @(#)standard.h	1.17 97/01/26 Copyright 1985 J. Schilling */
+/* @(#)standard.h	1.18 98/02/15 Copyright 1985 J. Schilling */
 /*
  *	standard definitions
+ *
+ *	This file should be included past:
+ *
+ *	mconfig.h / config.h
+ *	stdio.h
+ *	stdlib.h
+ *	unistd.h
+ *	string.h
+ *	sys/types.h
  *
  *	Copyright (c) 1985 J. Schilling
  */
@@ -14,7 +23,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -57,12 +66,14 @@
 #define	INTERN	static
 #define	LOCAL	static
 #define	FAST	register
-#define	global	extern
-#define	import	extern
-#define	export
-#define	intern	static
-#define	local	static
-#define	fast	register
+#if defined(_JOS) || defined(JOS)
+#	define	global	extern
+#	define	import	extern
+#	define	export
+#	define	intern	static
+#	define	local	static
+#	define	fast	register
+#endif
 #ifndef	PROTOTYPES
 #	ifndef	const
 #		define	const
@@ -90,6 +101,17 @@ typedef int bool;
 #	endif
 #else
 	typedef	void	VOID;
+#endif
+
+#if	defined(_SIZE_T)     || defined(_T_SIZE_) || defined(_T_SIZE) || \
+	defined(__SIZE_T)    || defined(_SIZE_T_) || \
+	defined(_GCC_SIZE_T) || defined(_SIZET_)  || \
+	defined(__sys_stdtypes_h) || defined(___int_size_t_h)
+
+#ifndef	HAVE_SIZE_T
+#	define	HAVE_SIZE_T
+#endif
+
 #endif
 
 #ifdef	EOF	/* stdio.h has been included */
@@ -182,7 +204,9 @@ extern	void	setfp __PR((void * const *));
 extern	int	wait_chld __PR((int));
 extern	int	geterrno __PR((void));
 extern	void	raisecond __PR((const char *, long));
-extern	int	snprintf __PR((char *, unsigned, const char *, ...));
+#ifdef	HAVE_SIZE_T
+extern	int	snprintf __PR((char *, size_t, const char *, ...));
+#endif
 /*extern	int	sprintf __PR((char *, const char *, ...)); ist woanders falsch deklariert !!!*/
 extern	char	*strcatl __PR((char *, ...));
 extern	int	streql __PR((const char *, const char *));

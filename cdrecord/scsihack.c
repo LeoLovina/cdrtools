@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.5 97/08/31 Copyright 1997 J. Schilling */
+/* @(#)scsihack.c	1.7 97/11/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.5 97/08/31 Copyright 1997 J. Schilling";
+	"@(#)scsihack.c	1.7 97/11/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -60,6 +60,13 @@ static	char _sccsid[] =
 #include "scsi-hpux.c"
 
 #endif	/* HP-UX */
+
+#if	defined(_IBMR2) || defined(_AIX)
+#define	SCSI_IMPL		/* We have a SCSI implementation for AIX */
+
+#include "scsi-aix.c"
+
+#endif	/* AIX */
 
 #ifdef	__NEW_ARCHITECTURE
 #define	SCSI_IMPL		/* We have a SCSI implementation for XXX */

@@ -1,7 +1,7 @@
-/* @(#)drv_philips.c	1.6 97/09/10 Copyright 1997 J. Schilling */
+/* @(#)drv_philips.c	1.16 98/04/12 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_philips.c	1.6 97/09/10 Copyright 1997 J. Schilling";
+	"@(#)drv_philips.c	1.16 98/04/12 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -25,6 +25,8 @@ static	char sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <mconfig.h>
+
 #include <stdio.h>
 #include <standard.h>
 
@@ -34,24 +36,89 @@ static	char sccsid[] =
 #include "cdrecord.h"
 
 extern	int	silent;
+extern	int	verbose;
+extern	int	lverbose;
 
 LOCAL	int	philips_load	__PR((void));
 LOCAL	int	philips_unload	__PR((void));
+LOCAL	int	philips_dumbload	__PR((void));
+LOCAL	int	philips_dumbunload	__PR((void));
+LOCAL	int	speed_select_oldphilips		__PR((int speed, int dummy));
+LOCAL	int	speed_select_dumbphilips	__PR((int speed, int dummy));
+LOCAL	int	speed_select_pioneer	__PR((int speed, int dummy));
 LOCAL	int	philips_getdisktype __PR((cdr_t *dp, dstat_t *dsp));
-LOCAL	int	next_wr_addr_philips __PR((int track, long *ap));
-LOCAL	int	open_track_philips __PR((int track, track_t *track_info));
-LOCAL	int	open_track_yamaha __PR((int track, track_t *track_info));
+LOCAL	int	next_wr_addr_philips __PR((int track, track_t *trackp, long *ap));
+LOCAL	int	scsi_cdr_write_philips __PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+LOCAL	int	open_track_philips __PR((cdr_t *dp, int track, track_t *track_info));
+LOCAL	int	open_track_oldphilips __PR((cdr_t *dp, int track, track_t *track_info));
+LOCAL	int	open_track_yamaha __PR((cdr_t *dp, int track, track_t *track_info));
 
 LOCAL	int	philips_attach	__PR((void));
 LOCAL	int	plasmon_attach	__PR((void));
 LOCAL	int	ricoh_attach	__PR((void));
+LOCAL	int	philips_getlilo	__PR((long *lilenp, long *lolenp));
 
+
+cdr_t	cdr_philips_cdd521O = {
+	0,
+	CDR_TAO|CDR_TRAYLOAD,
+	"philips_cdd521_old",
+	"driver for Philips old CDD-521",
+	0,
+	drive_identify,
+	philips_attach,
+	philips_getdisktype,
+	philips_load,
+	philips_unload,
+	recovery_needed,
+	recover,
+	speed_select_oldphilips,
+	select_secsize,
+	next_wr_addr_philips,
+	reserve_track,
+	scsi_cdr_write_philips,
+	open_track_oldphilips,
+	close_track_philips,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
+	cmd_dummy,
+	read_session_offset_philips,
+	fixation,
+	blank_dummy,
+};
+
+cdr_t	cdr_philips_dumb = {
+	0,
+	CDR_TAO|CDR_TRAYLOAD,
+	"philips_dumb",
+	"driver for Philips CDD-521 with pessimistic assumptions",
+	0,
+	drive_identify,
+	philips_attach,
+	philips_getdisktype,
+	philips_dumbload,
+	philips_dumbunload,
+	recovery_needed,
+	recover,
+	speed_select_dumbphilips,
+	select_secsize,
+	next_wr_addr_philips,
+	reserve_track,
+	scsi_cdr_write_philips,
+	open_track_oldphilips,
+	close_track_philips,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
+	cmd_dummy,
+	read_session_offset_philips,
+	fixation,
+	blank_dummy,
+};
 
 cdr_t	cdr_philips_cdd521 = {
 	0,
 	CDR_TAO|CDR_TRAYLOAD,
 	"philips_cdd521",
 	"driver for Philips CDD-521",
+	0,
 	drive_identify,
 	philips_attach,
 	philips_getdisktype,
@@ -63,13 +130,14 @@ cdr_t	cdr_philips_cdd521 = {
 	select_secsize,
 	next_wr_addr_philips,
 	reserve_track,
-	scsi_cdr_write,
+	scsi_cdr_write_philips,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int, int)))cmd_dummy,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation,
+	blank_dummy,
 };
 
 cdr_t	cdr_philips_cdd522 = {
@@ -77,6 +145,7 @@ cdr_t	cdr_philips_cdd522 = {
 	CDR_TAO|CDR_DAO|CDR_TRAYLOAD,
 	"philips_cdd522",
 	"driver for Philips CDD-522",
+	0,
 	drive_identify,
 	philips_attach,
 	philips_getdisktype,
@@ -88,13 +157,14 @@ cdr_t	cdr_philips_cdd522 = {
 	select_secsize,
 	next_wr_addr_philips,
 	reserve_track,
-	scsi_cdr_write,
+	scsi_cdr_write_philips,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int, int)))cmd_dummy,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation,
+	blank_dummy,
 };
 
 cdr_t	cdr_plasmon_rf4100 = {
@@ -102,6 +172,7 @@ cdr_t	cdr_plasmon_rf4100 = {
 	CDR_TAO|CDR_TRAYLOAD,
 	"plasmon_rf4100",
 	"driver for Plasmon RF 4100",
+	0,
 	drive_identify,
 	plasmon_attach,
 	philips_getdisktype,
@@ -113,13 +184,41 @@ cdr_t	cdr_plasmon_rf4100 = {
 	select_secsize,
 	next_wr_addr_philips,
 	reserve_track,
-	scsi_cdr_write,
+	scsi_cdr_write_philips,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int, int)))cmd_dummy,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation,
+	blank_dummy,
+};
+
+cdr_t	cdr_pioneer_dw_s114x = {
+	0,
+	CDR_TAO|CDR_TRAYLOAD,
+	"pioneer_dws114x",
+	"driver for Pioneer DW-S114X",
+	0,
+	drive_identify,
+	philips_attach,
+	philips_getdisktype,
+	scsi_load,
+	scsi_unload,
+	recovery_needed,
+	recover,
+	speed_select_pioneer,
+	select_secsize,
+	next_wr_addr_philips,
+	reserve_track,
+	scsi_cdr_write_philips,
+	open_track_yamaha,
+	close_track_philips,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
+	cmd_dummy,
+	read_session_offset_philips,
+	fixation,
+	blank_dummy,
 };
 
 cdr_t	cdr_yamaha_cdr100 = {
@@ -127,6 +226,7 @@ cdr_t	cdr_yamaha_cdr100 = {
 	CDR_TAO|CDR_DAO|CDR_CADDYLOAD|CDR_SWABAUDIO,
 	"yamaha_cdr100",
 	"driver for Yamaha CDR-100 / CDR-102",
+	0,
 	drive_identify,
 	philips_attach,
 	drive_getdisktype,
@@ -138,13 +238,14 @@ cdr_t	cdr_yamaha_cdr100 = {
 	select_secsize,
 	next_wr_addr_philips,
 	reserve_track,
-	scsi_cdr_write,
+	scsi_cdr_write_philips,
 	open_track_yamaha,
 	close_track_philips,
-	(int(*)__PR((int, int)))cmd_dummy,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation,
+	blank_dummy,
 };
 
 cdr_t	cdr_ricoh_ro1420 = {
@@ -152,6 +253,7 @@ cdr_t	cdr_ricoh_ro1420 = {
 	CDR_TAO|CDR_DAO|CDR_CADDYLOAD,
 	"ricoh_ro1420c",
 	"driver for Ricoh RO-1420C",
+	0,
 	drive_identify,
 	ricoh_attach,
 	philips_getdisktype,
@@ -163,13 +265,14 @@ cdr_t	cdr_ricoh_ro1420 = {
 	select_secsize,
 	next_wr_addr_philips,
 	reserve_track,
-	scsi_cdr_write,
+	scsi_cdr_write_philips,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int, int)))cmd_dummy,
+	(int(*)__PR((int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation,
+	blank_dummy,
 };
 
 LOCAL int
@@ -185,15 +288,106 @@ philips_unload()
 }
 
 LOCAL int
+philips_dumbload()
+{
+	int	ret;
+
+	silent++;
+	ret = load_unload_philips(1);
+	silent--;
+	if (ret < 0)
+		return (scsi_load());
+	return (0);
+}
+
+LOCAL int
+philips_dumbunload()
+{
+	int	ret;
+
+	silent++;
+	ret = load_unload_philips(0);
+	silent--;
+	if (ret < 0)
+		return (scsi_unload());
+	return (0);
+}
+
+LOCAL int
+speed_select_pioneer(speed, dummy)
+	int	speed;
+	int	dummy;
+{
+	if (speed < 2) {
+		speed = 2;
+		if (lverbose)
+			printf("WARNING: setting to minimum speed (2).\n");
+	}
+	return (speed_select_philips(speed, dummy));
+}
+
+LOCAL int
+speed_select_oldphilips(speed, dummy)
+	int	speed;
+	int	dummy;
+{
+	if (lverbose)
+		printf("WARNING: ignoring selected speed.\n");
+	if (dummy) {
+		errmsgno(EX_BAD, "Cannot set dummy writing for this device.\n");
+		return (-1);
+	}
+	return (0);
+}
+
+LOCAL int
+speed_select_dumbphilips(speed, dummy)
+	int	speed;
+	int	dummy;
+{
+	if (speed_select_philips(speed, dummy) < 0)
+		return (speed_select_oldphilips(speed, dummy));
+	return (0);
+}
+
+LOCAL int
 philips_getdisktype(dp, dsp)
 	cdr_t	*dp;
 	dstat_t	*dsp;
 {
 	long	dummy;
+	long	lilen;
+	long	lolen;
+	msf_t	msf;
 
 	silent++;
-	dummy = (*dp->cdr_next_wr_address)(0, &dummy);
+	dummy = (*dp->cdr_next_wr_address)(0, (track_t *)0, &lilen);
 	silent--;
+
+	if (lverbose && dummy >= 0 && lilen == 0) {
+		silent++;
+		dummy = philips_getlilo(&lilen, &lolen);
+		silent--;
+
+		if (dummy >= 0) {
+/*			printf("lead-in len: %d lead-out len: %d\n", lilen, lolen);*/
+			lba_to_msf(-150 - lilen, &msf);
+
+			printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
+				-150 - lilen, msf.msf_min, msf.msf_sec, msf.msf_frame);
+
+			if (read_trackinfo(0xAA, &lolen,
+						NULL, NULL, NULL, NULL) >= 0) {
+
+				lba_to_msf(lolen, &msf);
+				printf(
+				"  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
+				lolen, msf.msf_min, msf.msf_sec, msf.msf_frame);
+			}
+			lba_to_msf(-150 - lilen, &msf);
+			pr_manufacturer(&msf);
+		}
+	}
 
 	/*
 	 * Check for "Command sequence error" first.
@@ -207,12 +401,23 @@ philips_getdisktype(dp, dsp)
 		unload_media(dp, F_EJECT);
 		load_media(dp);
 	}
+	silent++;
+	if (read_B0(FALSE, NULL, &lolen) >= 0) {
+/*		printf("lead out B0: %ld\n", lolen);*/
+		dsp->ds_maxblocks = lolen;
+	} else if (read_trackinfo(0xAA, &lolen, NULL, NULL, NULL, NULL) >= 0) {
+/*		printf("lead out AA: %ld\n", lolen);*/
+		dsp->ds_maxblocks = lolen;
+	}
+	silent--;
+
 	return (drive_getdisktype(dp, dsp));
 }
 
 LOCAL int
-next_wr_addr_philips(track, ap)
+next_wr_addr_philips(track, trackp, ap)
 	int	track;
+	track_t	*trackp;
 	long	*ap;
 {
 
@@ -223,7 +428,19 @@ next_wr_addr_philips(track, ap)
 }
 
 LOCAL int
-open_track_philips(track, track_info)
+scsi_cdr_write_philips(bp, sectaddr, size, blocks, islast)
+	caddr_t	bp;		/* address of buffer */
+	long	sectaddr;	/* disk address (sector) to put */
+	long	size;		/* number of bytes to transfer */
+	int	blocks;		/* sector count */
+	BOOL	islast;		/* last write for track */
+{
+	return (write_xg0(bp, 0, size, blocks));
+}
+
+LOCAL int
+open_track_philips(dp, track, track_info)
+	cdr_t	*dp;
 	int	track;
 	track_t *track_info;
 {
@@ -240,8 +457,21 @@ open_track_philips(track, track_info)
 }
 
 LOCAL int
-open_track_yamaha(track, track_info)
-	int	track;
+open_track_oldphilips(dp, track, track_info)
+	cdr_t	*dp;
+ 	int	track;
+	track_t	*track_info;
+{
+	if (write_track(0, track_info->sectype) < 0)
+		return (-1);
+
+	return (0);
+}
+
+LOCAL int
+open_track_yamaha(dp, track, track_info)
+	cdr_t	*dp;
+ 	int	track;
 	track_t	*track_info;
 {
 	if (select_secsize(track_info->secsize) < 0)
@@ -430,3 +660,46 @@ ricoh_attach()
 	scsi_setnonstderrs(sd_ro1420_error_str);
 	return (0);
 }
+
+#include "scgio.h"
+
+extern struct scg_cmd scmd;
+extern	int	target;
+extern	int	lun;
+
+LOCAL int
+philips_getlilo(lilenp, lolenp)
+	long	*lilenp;
+	long	*lolenp;
+{
+	char	buf[4];
+	long	li, lo;
+
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = buf;
+	scmd.size = sizeof(buf);;
+	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G1_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.cdb.g1_cdb.cmd = 0xEE;	/* Read session info */
+	scmd.cdb.g1_cdb.lun = lun;
+	g1_cdblen(&scmd.cdb.g1_cdb, sizeof(buf));
+	
+	if (scsicmd("read session info") < 0)
+		return (-1);
+
+	if (verbose)
+		scsiprbytes("Session info data: ", (u_char *)buf, sizeof(buf) - scmd.resid);
+
+	li = a_to_u_short(buf);
+	lo = a_to_u_short(&buf[2]);
+
+	if (lilenp)
+		*lilenp = li;
+	if (lolenp)
+		*lolenp = lo;
+
+	return (0);
+}
+

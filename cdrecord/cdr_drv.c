@@ -1,7 +1,7 @@
-/* @(#)cdr_drv.c	1.4 97/09/10 Copyright 1997 J. Schilling */
+/* @(#)cdr_drv.c	1.6 98/03/26 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdr_drv.c	1.4 97/09/10 Copyright 1997 J. Schilling";
+	"@(#)cdr_drv.c	1.6 98/03/26 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device abstraction layer
@@ -34,8 +34,11 @@ static	char sccsid[] =
 extern	cdr_t	cdr_oldcd;
 extern	cdr_t	cdr_cd;
 extern	cdr_t	cdr_mmc;
+extern	cdr_t	cdr_philips_cdd521O;
+extern	cdr_t	cdr_philips_dumb;
 extern	cdr_t	cdr_philips_cdd521;
 extern	cdr_t	cdr_philips_cdd522;
+extern	cdr_t	cdr_pioneer_dw_s114x;
 extern	cdr_t	cdr_plasmon_rf4100;
 extern	cdr_t	cdr_yamaha_cdr100;
 extern	cdr_t	cdr_sony_cdu924;
@@ -45,6 +48,7 @@ extern	cdr_t	cdr_teac_cdr50;
 EXPORT	cdr_t 	*drive_identify		__PR((cdr_t *, struct scsi_inquiry *ip));
 EXPORT	int	drive_attach		__PR((void));
 EXPORT	int	attach_unknown		__PR((void));
+EXPORT	int	blank_dummy		__PR((long addr, int blanktype));
 EXPORT	int	drive_getdisktype	__PR((cdr_t *dp, dstat_t *dsp));
 EXPORT	int	cmd_dummy		__PR((void));
 EXPORT	cdr_t	*get_cdrcmds		__PR((void));
@@ -56,8 +60,11 @@ cdr_t	*drivers[] = {
 	&cdr_mmc,
 	&cdr_cd,
 	&cdr_oldcd,
+	&cdr_philips_cdd521O,
+	&cdr_philips_dumb,
 	&cdr_philips_cdd521,
 	&cdr_philips_cdd522,
+	&cdr_pioneer_dw_s114x,
 	&cdr_plasmon_rf4100,
 	&cdr_yamaha_cdr100,
 	&cdr_ricoh_ro1420,
@@ -84,6 +91,15 @@ EXPORT int
 attach_unknown()
 {
 	errmsgno(EX_BAD, "Unsupported drive type\n");
+	return (-1);
+}
+
+EXPORT int
+blank_dummy(addr, blanktype)
+	long	addr;
+	int	blanktype;
+{
+	printf("This drive or media does not support the BLANK command\n");
 	return (-1);
 }
 
@@ -150,6 +166,7 @@ get_cdrcmds()
 	case DEV_MMC_CDR:	dp = &cdr_mmc;			break;
 	case DEV_MMC_CDRW:	dp = &cdr_mmc;			break;
 
+	case DEV_CDD_521_OLD:	dp = &cdr_philips_cdd521O;	break;
 	case DEV_CDD_521:	dp = &cdr_philips_cdd521;	break;
 	case DEV_CDD_522:
 	case DEV_CDD_2000:
@@ -160,6 +177,8 @@ get_cdrcmds()
 	case DEV_SONY_CDU_924:	dp = &cdr_sony_cdu924;		break;
 	case DEV_RICOH_RO_1420C:dp = &cdr_ricoh_ro1420;		break;
 	case DEV_TEAC_CD_R50S:	dp = &cdr_teac_cdr50;		break;
+
+	case DEV_PIONEER_DW_S114X: dp = &cdr_pioneer_dw_s114x;	break;
 
 	default:		dp = &cdr_mmc;
 	}

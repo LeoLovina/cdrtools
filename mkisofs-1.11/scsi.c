@@ -1,7 +1,7 @@
-/* @(#)scsi.c	1.2 97/05/21 Copyright 1997 J. Schilling */
+/* @(#)scsi.c	1.4 97/11/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi.c	1.2 97/05/21 Copyright 1997 J. Schilling";
+	"@(#)scsi.c	1.4 97/11/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1997 J. Schilling
@@ -23,10 +23,12 @@ static	char sccsid[] =
  */
 
 #ifdef	USE_SCG
+#include <mconfig.h>
+
 #include <stdio.h>
 #include <standard.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <stdxlib.h>
+#include <unixstd.h>
 
 #include "mkisofs.h"
 #include "scsireg.h"

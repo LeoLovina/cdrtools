@@ -1,42 +1,1249 @@
+*************** Release 1.6 *******************
+
+Fri Apr 17 12:53:59 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.45
+	  & before ibuf removed because it is an array
+
+Fri Apr 17 12:45:38 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.44
+	  min/sec/frame -> amin/asec/aframe because of min() Macro
+
+Thu Apr 16 01:43:26 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.26
+	  -ignsize new
+	  web page for cdrecord added
+
+Thu Apr 16 00:55:39 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* diskid.c 1.2
+	  Print if Manufacturer is in none of the tables
+
+Thu Apr 16 00:52:13 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.24
+	  ds_maxblock -> ds_maxblocks
+	  do get_atip() always, but print if lverbose is set
+
+Thu Apr 16 00:32:50 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.35
+	* cdrecord.c 1.53
+	  ds_maxblock -> ds_maxblocks
+	  new Option -ignsize
+
+Thu Apr 16 00:31:32 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.29
+	* drv_philips.c 1.16
+	  ds_maxblock -> ds_maxblocks
+
+Sun Apr 12 16:14:07 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.43
+	  Smart & Friendly CD-R4012 (TEAC CDR-55S) new
+
+Sun Apr 12 02:15:15 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.24
+	  scsiprintcdb()/scsiprintwdata()/scsiprintrdata() new
+	  print scsiprintcdb() on errors
+
+Sun Apr 12 01:58:26 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.34
+	* cdrecord.c 1.52
+	  Real Blocks new
+	  1.6a14 -> 1.6
+
+Wed Apr  1 03:28:36 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.51
+	  checkgui() now has verbose print
+
+Wed Apr  1 01:36:59 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.28
+	  lberbose > 1 for all subcode Messages
+	  teac_wr_pma()/teac_rd_pma() new
+	  JVC Errorcodes new
+	  check for cdrecord -fix without Parameter
+	  hide Illegal Command errorcode for next_wr_addr_teac()
+
+Wed Apr  1 01:29:49 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.23
+	* scsi_cdr.c 1.42
+	* drv_mmc.c 1.23
+	  GCC Warnings removed: printf format errors
+
+Tue Mar 31 20:58:07 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.50
+	  ->1.6a14, LOAD & EJECT works for CD-ROM too
+	  GUI test on STDERR
+	  first Trackno -> track[0] as Hack
+
+Tue Mar 31 20:56:43 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.25
+	  CREDITS
+	  better Documentation for tsize= & TEAC
+
+Sun Mar 29 15:31:08 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.24
+	  -vv/-VV mods
+	  -fix: not for TEAC
+	  -load new
+	  timeout= Option
+	  tsize= description because of tracksize and TEAC
+	  nice/SunOS -> nice/others
+
+Sun Mar 29 15:26:19 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.15
+	  open_session() with tracks & trackp Parameters
+	  Philips CDD-521 old/dumb new
+	  Pioneer DW-S114X new
+
+Sun Mar 29 15:22:29 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.22
+	  open_session() with tracks & trackp Parameters
+	  Check for zeroed ATIP Info
+	  wait_unit_ready() for ATAPI - sorry not working
+
+Sat Mar 28 23:43:07 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.49
+	  check_recovery() now uses flags for unload_media()
+	  call unload_media() on input buffer, wait error, and for blank media error
+	  open_session() now usees tracks & trackp Parameters for Sizecheck
+	  Printing of is_swab() with audio fixed
+
+Sat Mar 28 23:22:30 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.27
+	  teac_open_session() checks tracksize ( <= 0 is not possible)
+
+Sat Mar 28 23:21:08 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.41
+	  wait_unit_ready() now handles BUSY
+	  mode_sense_sg0() movebytes() count handling corrected (amt-4)
+	  better (komplete) Inquiry printing with -V
+	  JVC XR-W2001 / Plilips CDD521/00 / Traxdata CDR4120 / Pioneer CD-WO DW-S114X / Pinnacle RCD-1000 new
+
+Sat Mar 28 23:06:05 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsireg.h 1.18
+	  SCSI Status codes
+
+Fri Mar 27 01:04:50 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.18
+	* cdrecord.h 1.33
+	  open_session() with tracks & trackp parameters
+
+Thu Mar 26 22:42:29 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdr_drv.c 1.6
+	  Pioneer DW-S 114, old Philips, dumb Philips new
+
+Tue Mar 24 21:30:08 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.32
+	  is_*() Macros now clearer: != 0
+
+Tue Mar 24 21:29:18 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsidefs.h 1.17
+	  DEV_CDD_521_OLD new
+
+Sat Mar 14 17:49:09 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-bsd.c 1.5
+	  MAX_DMA_BSD 64k -> 60k
+
+Thu Mar 12 23:48:19 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.26
+	  set ds_maxblock
+	  next_wr_addr_jvc() uses read_B0() if track == 0
+	  use trackp[i].trackno for TOC
+	  Lead-out Start time now uses frames
+	  teac_calibrate() inits lba_addr from read_B0()
+	  next_wr_addr_teac() with Parameters
+
+Thu Mar 12 23:42:09 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.48
+	  use real Track nubmers
+	  -v/-V now Inc type Flag
+	  print remaining capacity
+	  Pregapsize || bug fixed
+	  Trackno in struct track
+	  wait_unit_ready() new
+
+Thu Mar 12 23:35:26 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.14
+	  Print computed ATIP only for empty Disk
+	  ATIP printout now prints Lead-out start time too
+	  compute Disk capacity
+
+Thu Mar 12 22:33:50 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.17
+	  close_track_sony() -> track = 0 !
+	  mode_sense() -> get_mode_params()
+
+Thu Mar 12 22:24:10 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.31
+	  Strukt track now includes trackno
+	  CDR_DVD new
+	  from_bcd()/to_bcd() new
+	  wait_unit_ready() new
+	  read_B0() new
+
+Thu Mar 12 22:20:40 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.40
+	  unit_ready() now checks for UNIT_ATTENTION
+	  wait_unit_ready() new
+	  toc struktures char -> Uchar
+	  read_tochdr()/read_trackinfo() may have NULL Pointer Args
+	  read_B0() new
+
+Thu Mar 12 22:12:16 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.22
+	  Print data if verbose > 1
+
+Thu Mar 12 01:21:58 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cd_misc.c 1.2
+	  from_bcd()/to_bcd() new
+
+Tue Mar 10 00:07:50 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.47
+	* drv_mmc.c 1.21
+	  checkgui() & isgui new
+
+Mon Mar  9 23:29:02 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.20
+	  Read ATIP non-fatal
+	  warnung in fixation with correct lverbose flag
+
+Sun Mar  8 15:02:13 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.39
+	  SAF CD-R2006PRO CD-R2006, JVC R2626 new
+
+Sun Mar  8 14:59:31 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.46
+	  Default Timeout -> 40s
+	  flags int -> long
+	  new Option -load
+	  Print Lead-out start
+	  90 Min value corrected
+
+Sun Mar  8 14:56:53 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.30
+	  fsamples()/frames() new
+
+Fri Mar  6 01:11:56 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.21
+	  print SCSI command names before ABORT
+
+Thu Mar  5 01:15:26 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsierrs.c 2.15
+	  referres -> refers
+
+Thu Mar  5 01:15:02 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.h 1.11
+	* scsitransp.c 1.20
+	  scsi_sense_qual() new
+
+Mon Mar  2 22:50:12 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.19
+	  msf_to_lba()/lba_to_msf() -> cd_misc.c
+	  len += 2 to correct length for TOC & disk Info
+	  failed read ATIP is no fatal error
+	  better print_atip()
+
+Mon Mar  2 22:45:53 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cd_misc.c 1.1
+	  date and time created 98/03/02 22:45:53 by joerg
+
+Mon Mar  2 22:39:02 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.29
+	  F_LOAD new
+	  All Flags sorted
+	  msf_to_lba()/lba_to_msf() new
+
+Mon Mar  2 22:36:10 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.13
+	  philips_getlilo() new
+	  print disk manufacturer new
+
+Mon Mar  2 21:56:53 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.38
+	  Pinnacle RCD 4X4, SAF CD-RW226 new
+
+Mon Feb 23 22:32:27 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.37
+	  read_toc_philips() same parameters as read_toc() (ses -> fmt)
+
+Mon Feb 23 22:30:57 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.18
+	  msf_to_lba() corrected (+-150 bug)
+	  lba_to_msf() new
+	  Check for Complete Disk: 0xFF:0xFF/0xFF
+	  pr_manufacturer() new with lverbose
+	  different Formatting
+
+Mon Feb 23 21:54:28 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.45
+	  80 Minute limit -> 90 Minutes
+
+Mon Feb 23 21:51:56 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* diskid.c 1.1
+	  date and time created 98/02/23 21:51:56 by joerg
+
+Sun Feb 22 23:23:22 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.10
+	  fifo_percent() with Parameter
+	  FIFO Bug (duoubling of a segment at end of writing) fixed
+
+Sun Feb 22 22:54:46 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.44
+	  fifo_percent() with Parameter
+	  unit_ready() for UNLOAD removed
+	  print Disk capacity
+
+Sun Feb 22 22:52:53 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* wm_packet.c 1.6
+	  fifo_percent() with Parameter
+
+Sun Feb 22 22:47:51 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.28
+	  fifo_percent() with Parameter
+	  msf_t typedef
+	  pr_manufacturer() new
+
+Sun Feb 15 21:01:03 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.8
+	  getWavShort() & getWavLong() Definitions removed
+
+Tue Feb 10 01:00:48 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.43
+	  New option timeout=#
+
+Mon Feb  9 12:44:40 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.18
+	  timeout from 1/100 sec -> 1/HZ sec
+
+Sun Feb  8 21:56:01 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.17
+	  Missing bracket at read() inserted
+
+Sun Feb  8 18:45:19 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.36
+	  Tayo Yuden CD-WO EW-50 better Inquiry
+
+Sun Feb  8 15:52:15 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.9
+	  fifo_percent() returns -1 if buflen == 0
+	  dummy fifo_percent() always -1
+
+Sun Feb  8 15:50:43 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* wm_packet.c 1.5
+	* cdrecord.c 1.42
+	  Copyright -> 1998
+	  fs Reference in fifo_percent() removed
+	  fifo_percent() in wm_packet new
+
+Sun Feb  8 13:54:25 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.23
+	  fs= - administrative part
+	  .au & .wav description
+	  better -swab description
+
+Sun Feb  8 13:30:33 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.16
+	  Fix for sendcommand() befor scsi_getbuf() call
+	  read() < 0 now handled
+
+Sun Feb  8 13:28:38 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.7
+	  Definitions for WAVE better
+	  better WAV recognition from Dave
+
+Sat Feb  7 23:20:14 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.25
+	  close_track_teac() fixed only audio uses no run-out blocks
+
+Sat Feb  7 23:18:43 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.41
+	  rezero_unit() now silent not supported by all drives
+
+Sat Feb  7 23:14:03 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.35
+	  Kodak CDR-240 new
+
+Sun Feb  1 23:17:33 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.8
+	  HAVE_SHM -> HAVE_USGSHM was a typo
+
+Sun Feb  1 21:20:48 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.34
+	  DVD enhancements in mmv_getval() & print_capabilities()
+
+Sun Feb  1 20:35:06 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsireg.h 1.17
+	  DVD Definitions in Mode Page 2A
+
+Sun Feb  1 19:56:10 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.15
+	  scsi_getbuf() hat nun char *ret wegen pointer Aritmetik
+	  sizeof() cast comparison to int
+	  scsi_send(): superfluous ; before scsi_settimeout() removed
+
+Sun Feb  1 19:45:21 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.40
+	  filename new in struct track
+	  Errorcode and exit() in audio*size()
+
+Sun Feb  1 19:44:08 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* auheader.h 1.1
+	  date and time created 98/02/01 19:44:08 by joerg
+
+Sun Feb  1 19:44:00 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.6
+	  auheader.h new
+	  Errorcodes
+
+Sun Feb  1 19:43:26 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.27
+	  filename new in struct track
+	  cd_mode_page_2A *cdr_cdcap new in struct cdr_cmd
+
+Sun Feb  1 19:42:28 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.12
+	* drv_sony.c 1.16
+	* drv_mmc.c 1.17
+	* drv_jvc.c 1.24
+	  cd_mode_page_2A *cdr_cdcap new in struct cdr_cmd
+
+Sun Feb  1 16:03:29 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.16
+	  ATIP Enhanced
+
+Sun Feb  1 15:56:31 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.15
+	  mmv_check() -> mmc_cap()/mmc_getval()
+	  Handle non-trayload drives
+	  warning for dummy/verbose while fixating
+
+Sun Feb  1 15:49:17 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsidefs.h 1.16
+	  DEV_MMC_DVD, DEV_PIONEER_DVDR_S101 new
+
+Sun Feb  1 15:46:50 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.33
+	  mmc_getval() & mmv_check() with dvdp
+	  DEV_MMC_DVD new
+	  Pioneer DVD-R S101, TEAC CD-R55S new
+	  allow_atapi() in print_capabilities()
+	  heuristic with speed >= 176 according to mmc2
+
+Sun Feb  1 15:46:17 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.39
+	  better CD-Recorder warning
+
+Sun Feb  1 14:53:02 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.38
+	  Honour file sizes
+	  better usage() Output
+	  .au & .wav Filesize recognition
+	  early recognition of "incompatible medium"
+	  sched_setscheduler() error code (< 0) is correct
+
+Sun Feb  1 14:39:27 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.26
+	  mmc_getval() & mmv_check() with dvdp
+	  TI_WAV & is_wav() removed
+
+Sun Feb  1 14:33:39 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.5
+	  Complete recognition of a Wavheader (with Hilfe from Heiko)
+
+Mon Jan 26 01:56:21 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-aix.c 1.4
+	  valloc() re-implemented (not available in AIX libc)
+	  scsi sense handling ready
+
+Mon Jan 26 01:51:58 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.32
+	  mmc_cap(), mmc_getval() new
+	  Strings for printcap() static for K&R
+
+Mon Jan 26 01:07:27 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.4
+	  Filesize - header for Sun .au Files, data_size is not always correct
+
+Sun Jan 25 23:08:00 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.3
+	  Sun .au Header new
+
+Sun Jan 25 22:58:58 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.25
+	  TI_NOWAV -> TI_NOAUHDR, is_auname() & ausize() new
+
+Sun Jan 25 18:10:47 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.24
+	  TI_NOWAV, mmc_cap() & mmg_getval(), is_wavname() new
+
+Sun Jan 25 16:16:23 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.2
+	  is_wavname() new
+
+Sun Jan 25 16:02:26 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* audiosize.c 1.1
+	  date and time created 98/01/25 16:02:26 by joerg
+
+Sun Jan 25 13:38:40 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.23
+	  Errortexts for CD-R55S
+
+Sat Jan 24 17:52:52 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* wm_packet.c 1.4
+	* fifo.c 1.7
+	  Honour file sizes
+
+Fri Jan 23 02:08:22 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.14
+	  scsi_initdev() new to allow concurrent cdrecord's
+
+Fri Jan 23 02:04:01 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.22
+	* drv_mmc.c 1.14
+	* drv_sony.c 1.15
+	* scsireg.h 1.16
+	* scgio.h 2.12
+	  Uint for Bitfields -> Ucbit
+
+Sun Jan 18 14:25:01 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.19
+	  flush() calls to correctly mix stderr/stdout
+
+Sun Jan 18 14:23:33 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.23
+	  TI_WAV, is_wav(), wavsize() nee
+
+Sat Jan 17 22:07:03 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.22
+	* cdrecord.c 1.37
+	  -reset Option new
+
+Sat Jan 17 21:53:58 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.22
+	  F_RESET, F_PRATIP, F_PRDINFO, SES_UNDEF new
+	  Definitios for disk status and session status
+	  dstat_t enhanced
+	  CDR_NOLOLIMIT & CDR_ALLOC new
+	  fifo_percent(), allow_atapi(),  mode_sense_??()/mode_select_??() new
+
+Sat Jan 17 21:35:54 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.6
+	  undef FIFO if no shared mamory
+	  SHM_LOCK for Linux
+	  Stat buffer for fifosize
+	  removed sp->cont because it is not secure  (use diff)
+	  fifo_percent() new
+
+Sat Jan 17 21:20:57 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.36
+	  -reset new
+	  fifo_percent() printing for -v
+
+Sat Jan 17 21:09:24 1998 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.21
+	  Better description of dev= and -scanbus
+
+Tue Dec 23 01:26:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.31
+	  Plextor PX-R24CS
+	  S&F CD-R2006PLUS
+	  Wearns CDR-632P new
+
+Tue Dec 23 01:23:34 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.30
+	  Uint in Bitfields -> Ucbit
+
+Thu Dec 11 19:30:31 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.18
+	  Print command execution time for each failed (non-silent) command
+
+Sun Nov  9 18:33:48 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.13
+	  Remove get Page 0x2A for Matsushita CW-7502
+	  has_mode_page() checks "current" instead of "default"
+
+Sat Nov  8 16:11:51 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.35
+	  Disk size check -> checkdsize() : new
+
+Fri Nov  7 00:02:20 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-aix.c 1.3
+	  timeout counts in seconds
+
+Fri Nov  7 00:04:11 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsireg.h 1.15
+	* scgio.h 2.11
+	* scsi_cdr.c 1.29
+	* drv_sony.c 1.14
+	* drv_mmc.c 1.12
+	* drv_jvc.c 1.21
+	  u_char in Bitfields -> Uint
+
+Thu Nov  6 20:27:08 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.7
+	  Typo __AIX -> defined(_IBMR2) || defined(_AIX)
+
+Thu Nov  6 20:26:23 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-aix.c 1.2
+	  sccsid[] -> __sccsid[], fd -> f Typo, #include <malloc.h>
+
+Thu Nov  6 20:22:14 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.20
+	  Typo corrected
+
+Thu Nov  6 20:19:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.17
+	* scsierrs.c 2.14
+	* scsi_cdr.c 1.28
+	* scsi.c 1.4
+	* drv_sony.c 1.13
+	* drv_philips.c 1.11
+	* drv_mmc.c 1.11
+	* drv_jvc.c 1.20
+	  #include <mconfig.h> for AIX
+
+Thu Nov  6 20:18:25 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.34
+	   #ifdef RLIMIT_NOFILE fuer AIX
+
+Wed Nov  5 18:01:32 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.19
+	  Better doc for fs=
+
+Wed Nov  5 17:57:50 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.10
+	  msf_to_lba() new, get_diskinfo() new, di_to_dstat() new, getdisktype_mmc() new, additions for Matsushita CW-7502
+
+Wed Nov  5 17:43:41 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.5
+	  switch -> if then else
+
+Wed Nov  5 17:15:45 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.33
+	  init struct disk_status, better aritmetic for disk size
+
+Wed Nov  5 17:14:29 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.4
+	  print FIFO min fill in percent
+
+Tue Nov  4 11:20:22 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.26
+	  return (mode_select_g0(dp, cnt, smp, pf)) was missing in mode_select()
+
+Tue Nov  4 10:35:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.13
+	  Check for NULL at return of valloc()
+
+Tue Nov  4 00:13:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.19
+	  New flag CDR_NO_LOLIMIT
+
+Sun Nov  2 16:17:10 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.25
+	  SCSI mode(6/10) conversion for ATAPI, distinguish between S&F 2006PLUS / S&F 2006PLUS
+
+Sun Nov  2 14:57:57 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsitransp.c 1.16
+	  Print finish time
+
+Sun Nov  2 14:54:50 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scgio.h 2.10
+	  i_to_4_byte new
+
+Thu Oct 23 19:21:19 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.6
+	  AIX Support
+
+Thu Oct 23 19:20:25 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-aix.c 1.1
+	  date and time created 97/10/23 18:20:25 by joerg
+
+Thu Oct 23 19:12:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.9
+	  Enhancements for packet writing
+
+Thu Oct 23 01:35:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.18
+	  New options -prcap, -packet, pktsize =#, -noclose
+
+Wed Oct 22 23:50:44 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.18
+	* wm_packet.c 1.3
+	* cdrecord.c 1.32
+	  fflush(stdout) -> flush(), flush() after Fixating...
+
+Wed Oct 22 23:49:12 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.24
+	  scsi_close-session() -> scsi_close_tr_session()
+
+Wed Oct 22 23:49:11 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.21
+	  scsi_close-session() -> scsi_close_tr_session()
+
+Sun Oct 19 15:41:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.23
+	* cdrecord.c 1.31
+	  Prevent medium removal problems fixed (read TOC) & Matsushita CD-750?
+
+Sun Oct 19 15:40:32 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsidefs.h 1.15
+	  Matsushita CW-7501 & CW-7502
+
+Sun Oct 19 02:08:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.12
+	* drv_philips.c 1.10
+	* drv_jvc.c 1.17
+	* wm_packet.c 1.2
+	* cdrecord.h 1.20
+	* cdrecord.c 1.30
+	  next_wr_address() has track_t * added
+
+Sun Oct 19 01:37:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.16
+	  read_disk_info() -> read_disk_info_teac(), zero pre-gap audio support, opt_power_judge() timeout -> 60 sec
+
+Sun Oct 19 01:33:21 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.22
+	  read_disk_info() new, print_capabilities() new
+
+Sun Oct 19 00:40:36 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.29
+	* cdrecord.h 1.19
+	  get_buf() new, -prcap & print_capabilities() new, -packet new, pktsize=# new
+
+Sun Oct 19 00:36:32 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* wm_track.c 1.1
+	* wm_session.c 1.1
+	* wm_packet.c 1.1
+	  date and time created 97/10/18 23:36:31 by joerg
+
+Sat Oct 18 19:14:05 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi.c 1.3
+	  stdlib.h -> stdxlib.h, unistd.h -> unixstd.h
+
+Sat Oct 18 01:34:19 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* modes.c 1.3
+	  Ausgabe der Mode Parameter wenn mode_select() nicht klappt & return FALSE
+
+****	1.6a3 ***
+
+Sun Oct 12 20:00:21 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.17
+	* cdrecord.c 1.28
+	  New options pregap= defpregap=
+
+Sun Oct 12 19:30:45 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.18
+	  is_first() & is_last() new
+
+Sat Oct 11 18:01:28 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.27
+	  islast debug printf deleted
+
+Sat Oct 11 17:57:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.21
+	* drv_sony.c 1.11
+	* drv_philips.c 1.9
+	* drv_mmc.c 1.8
+	* drv_jvc.c 1.15
+	* cdrecord.h 1.17
+	* cdrecord.c 1.26
+	  islast for TEAC & no run-out blocks for disksize computing
+
+Sat Oct 11 14:54:03 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.14
+	  OLD_CLOSE_TRACK re-aktiviert, clear_subcode() in open_track(), set_limits() in open_track() for audio without run-out, dummy sector -> static to be zeroed
+
+Thu Oct  9 14:14:24 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.13
+	  Audio Tracks have no link&run-in
+
+Thu Oct  9 02:01:23 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.12
+	  SWABAUDIO Flag new
+
+Wed Oct  8 17:24:40 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.20
+	* drv_sony.c 1.10
+	* drv_philips.c 1.8
+	* drv_mmc.c 1.7
+	* cdrecord.h 1.16
+	* cdrecord.c 1.25
+	  Modification of data structures for JVC/TEAC
+
+Wed Oct  8 17:23:41 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.3
+	  WRITER_MAXWAIT 20 -> 120 s
+
+Wed Oct  8 17:14:04 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.11
+	  Enhancements for audio and multi track disks
+
+Wed Oct  8 14:48:06 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.16
+	  Better doc for padsize & fs=
+
+Mon Oct  6 20:37:39 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.10
+	  Modified to use pad_track()
+
+Mon Oct  6 20:32:11 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.24
+	  In pad_track(): if (bytesp != 0) check was missing ->coredump
+
+Mon Oct  6 20:29:22 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.19
+	  SMART&FRIENDLY CD-R2006
+
+Sun Oct  5 16:53:45 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.6
+	  verbose printing modified
+
+Sun Oct  5 16:53:09 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.23
+	  Check for bytesp != 0 in pad_track()
+
+Sat Oct  4 01:09:56 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.22
+	  realtime raisepri Problem for HP-UX fixed (function present bot not working)
+
+Fri Oct  3 21:33:13 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.18
+	* drv_sony.c 1.9
+	* drv_philips.c 1.7
+	* drv_mmc.c 1.5
+	* drv_jvc.c 1.9
+	* cdrecord.h 1.15
+	* cdrecord.c 1.21
+	* cdrecord.1 1.15
+	* cdr_drv.c 1.5
+	  new option blank=type for CD-RW
+
+Fri Oct  3 16:23:00 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.20
+	  pad_track() new, await_faio() new & init_faio() befor wait loop, always pad to 300 sectors , padsize= option new, DEFAULT_FIFOSIZE new
+
+Thu Oct  2 02:02:10 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.2
+	  MIN_BUFFERS -> 3, await_faio() new, kill_faio() new, stdin EOF check, Messages only for debug
+
+Thu Oct  2 01:38:39 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.14
+	  padsize Option new, nice --18 bug, 's' & 'f' mult for getnum()
+
+Thu Oct  2 01:31:28 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.8
+	  sleep()'s added to cure fixating problems ???
+
+Thu Oct  2 01:19:46 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.14
+	  DEFAULT_FIFOSIZE, roundup(), tracksize & padsize -> long, pad_track() new, await_fifo() & kill_fifo() new, minutes() cast to int
+
+Wed Sep 24 00:02:39 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.19
+	  Fifo & tracksize Option
+
+Tue Sep 23 23:46:27 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.7
+	  Bug with resid != 0 fixed
+
+Sun Sep 21 23:20:15 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.13
+	  fs= Option, tsize= Option, mkisofs | cdrecord with fs= EXAMPLE
+
+Sun Sep 21 22:58:34 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fifo.c 1.1
+	  date and time created 97/09/21 21:58:34 by joerg
+
+Sun Sep 21 22:45:08 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.13
+	  faio_get_buf() & fifo_stats()
+
+Sun Sep 21 01:12:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.12
+	  fifo code
+
+Wed Sep 17 13:55:57 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.7
+	  Typo in cdr_write_teac() EXPORT -> LOCAL
+
+Wed Sep 17 13:55:06 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.18
+	  raisepri() has Parameter (n below Max), _POSIX_PRIORITY_SCHEDULING, _POSIX_MEMLOCK
+
+*************** Release 1.5 *******************
+
+Mon Sep 15 16:46:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* README 1.9
+	  Anpassungen fuer release 1.5
+
+Wed Sep 10 18:40:49 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.17
+	  Print always Copyright except for -msinfo
+
+Wed Sep 10 18:12:59 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.17
+	  Inquiry debug data indented
+	  Mode Parameters only for verbose
+
+Wed Sep 10 17:57:32 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.16
+	  Flags defs von cdrecord.c -> cdrecord.h
+	  load_media() new
+	  load/unload_madia() global
+	  Track verbose output after inquiry
+	  Test errorcodes while burning
+	  Dummy blocks added for close_track() is not an error
+	  -nofix Flag activated
+	  Exit code for burning errors: -2
+	  Swabaudio automatic
+
+Wed Sep 10 17:43:12 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.11
+	  Flag defs from cdrecord.c
+	  getdisktype() with cdr_t *
+	  load_media() new
+	  load/unload_madia() global
+
+Wed Sep 10 17:42:13 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdr_drv.c 1.4
+	* drv_jvc.c 1.6
+	  getdisktype() with cdr_t *
+
+Wed Sep 10 17:41:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.6
+	  philips_getdisktype() new for automatic eject on "Command Sequence Error"
+
+Wed Sep 10 16:50:56 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.12
+	  Scsibus , typo removed
+
+Wed Sep 10 15:10:03 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.11
+	  1.4 -> 1.5
+
+Wed Sep 10 15:04:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.8
+	  new_track_sony() return valoe corrected
+
+Wed Sep 10 15:03:36 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.10
+	  Changes for cdrecord-1.5
+
+Thu Sep  4 19:26:00 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.12
+	  Use channel on multi channel controlers
+
+Thu Sep  4 19:09:10 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.5
+	* drv_sony.c 1.7
+	* scsi_cdr.c 1.16
+	  inq.ansi_version -> inq.data_format for all mode_select() calls
+	  for Philips CDD-522 (version == 1 , format == 2)
+
+Wed Sep  3 02:00:33 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.11
+	  scsi_mapbus() new
+	  better timeout handling
+	  copy Struct now automatic Variable
+	  Sense Data error = SCG_RETRYABLE
+
+Mon Sep  1 01:25:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.6
+	* scsi-linux-sg.c 1.10
+	* scsi-hpux.c 1.4
+	* scsi-bsd.c 1.4
+	  Last tuning make all implementations equal
+	  Open only one file if possible.
+	  Better bound checking
+
+Sun Aug 31 23:21:06 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-hpux.c 1.3
+	  Array again has 8 Luns
+	  havebus tests bounds
+
+Sun Aug 31 23:18:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.5
+	  MAX_* introduced, open max 1 lun (for now)
+
+Sun Aug 31 20:14:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-hpux.c 1.2
+	  MAX_LUN now 1
+
+Sun Aug 31 20:10:25 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-hpux.c 1.1
+	  date and time created 97/08/31 19:10:25 by joerg
+
+Sun Aug 31 18:00:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.5
+	  HP-UX added
+
+Tue Aug 26 19:37:15 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.15
+	  init dp in main now correctly
+
+Tue Aug 26 17:50:20 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.4
+	  Support complete without using -lds
+
+Tue Aug 26 17:47:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.15
+	  scsibus/target/lun now now -1 if bus is scanned
+	  to make sure that not ony one target can be opened.
+
+Tue Aug 26 17:46:22 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.14
+	  test_unit_ready() after select_target() (SCANBUS)
+
+Tue Aug 26 01:47:41 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.3
+	  unused includes removed
+
+Mon Aug 25 22:02:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scgio.h 2.9
+	* scsitransp.c 1.15
+	* scsi-sgi.c 1.2
+	* scsi-linux-sg.c 1.9
+	* scsi-bsd.c 1.3
+	  errno -> ux_errno in scg_cmd for POSIX multithread
+
+Mon Aug 25 21:27:55 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.1
+	  date and time created 97/08/25 20:27:55 by joerg
+
+Mon Aug 25 18:10:12 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.13
+	  raisepri() not always done
+
+Sun Aug 24 22:58:37 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.4
+	  First pre-aplha makes one data track only
+
+Sun Aug 24 17:03:05 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.12
+	  New options: driver=name -checkdrive -inq -scanbus -nofix
+	  set_trsizes() later
+	  get_cdr_cmds() new
+	  first simple sizecheck
+	  "swap" output from print_data_track() removed
+
+Sun Aug 24 16:54:31 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.10
+	  struct disk_status new
+	  is_unknown_dev() new
+	  is_mmc() new
+	  mmc_check() new
+	  set_cdrcmds() new
+
+Sun Aug 24 16:53:09 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.14
+	  is_unknown_dev() new
+	  is_mmc() new
+	  mmc_check() new
+	  open_scsi() modified for scsi_scan()
+	  Device recognition new for CD-R
+	  scsi_load() now correct
+
+Sun Aug 24 16:22:22 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.9
+	  -nofix new
+	  driver=name new
+	  -checkdrive new
+	  -inq new
+	  -scanbus new
+	  Sense Output uses new form
+
+Sun Aug 24 16:19:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.4
+	  CDR_SWABAUDIO new
+	  cd_mode* pages -> scsireg.h
+	  identify_mmc() uses mmc_check()
+
+Sun Aug 24 16:18:00 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdr_drv.c 1.3
+	  set_cdrcmds() new
+	  get_cdrcmds() enhanced
+
+Sun Aug 24 15:47:30 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.6
+	* drv_philips.c 1.5
+	  CDR_SWABAUDIO Flag new
+
+Sun Aug 24 14:51:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsidefs.h 1.14
+	  CDD-2000 & CDD-2600 new
+	  MMC Definitionen new
+
+Sun Aug 24 14:18:47 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsireg.h 1.14
+	  CD mode pages 05 & 2A
+
+Sun Aug 10 19:29:38 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.4
+	* drv_sony.c 1.5
+	* drv_mmc.c 1.3
+	* cdrecord.h 1.9
+	* cdrecord.c 1.11
+	  cdr_driver -> cdr_drname + cdr_drtext
+	  open_track() with track_info * instead of many arguments
+
+Sun Aug 10 18:10:14 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.13
+	  LOAD (A6) command now uses correct SCSI definition
+
+Sun Aug 10 17:43:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.8
+	  Buffer overflow in sg_rq corrected
+	  timeout corrected (semicolon past if)
+	  12 Byte Hack now OK
+
+Sun Aug 10 17:42:06 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scgio.h 2.8
+	  SCSI g5 command struct now ansi compliant
+
+Sun Aug 10 17:40:30 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.4
+	  SGI include
+
+Fri Jul 18 13:41:46 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.12
+	  read_capacity() new
+	  scsi_load_unload() new
+	  scsi_set_sped() new
+	  write_xg1() new
+	  read_toc() for SCSI-3 new
+	  read_toc_philips() from old name
+	  read_track_info() -> read_track_info_philips()
+	  read_track_info() new
+	  scsi_close_session() new
+	  first_writable_address() with address Pointer
+	  read_tochdr() with cdr_t * ????
+	  read_session_offset() with offset Pointer + Version for SCSI-3
+	  is_cdrecorder() removed, Taiyo Yuden new
+
+Fri Jul 18 12:35:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.7
+	  with new ioctl() SCSI_IOCTL_GET_BUS_NUMBER more SCSI busses
+
+Fri Jul 18 02:49:46 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.8
+	  -version
+	  better -isosize Doku
+	  -multi warning removed
+
+Fri Jul 18 02:44:11 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.10
+	  fix_it now past open_session()
+	  next_writable_address() and read_session_offset() now with adress Pointer
+	  -version usage()
+	  superfluous argument removed with lout
+
+Fri Jul 18 02:31:23 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.8
+	* drv_mmc.c 1.2
+	  SCSI-3/mmc first implementation
+
+Fri Jul 18 02:25:10 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_jvc.c 1.3
+	* drv_philips.c 1.3
+	* drv_sony.c 1.4
+	  next_writable_address now has adress pointer
+	  read_session_offset_philips() extracted
+
+Thu Jul 17 18:12:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-bsd.c 1.2
+	  ifdef for BSD SENSE bug
+
+Thu Jul 17 17:43:10 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isosize.c 1.3
+	  filedescriptor sense (seek) test.
+
+Tue Jul 15 21:27:29 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isosize.c 1.2
+	  & before vd.vd_type deleted
+
+Tue Jul 15 21:26:57 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.3
+	  & before mode deleted
+
+Tue Jul 15 21:16:46 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.9
+	  version string
+	  write_track_data() with startsec parameter
+	  cd_recorder/drive recognition now uses cdr_t
+	  print_toc() with cdr_t parameter
+	  open_session() with multi parameter
+	  Progress printing in write_track_data() now uses correct rounding
+	  dbtype with -multi corrected
+	  read_session_offset() with cdr_t parameter
+	  print_toc() prints sector numbers correctly and 'lout' for 0xAA
+
+Tue Jul 15 13:34:04 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdr_drv.c 1.2
+	  drive_identify may modify cdr_t struct pointer
+	  Yamaha CDR-400 correct with cdr_mmc
+
+Tue Jul 15 13:24:49 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_philips.c 1.2
+	* drv_jvc.c 1.2
+	* drv_sony.c 1.2
+	  open_track() with dbtyp arg
+	  open_session() with multi arg
+	  struct cdr_t driver flags filled in
+	  driver type string
+
+Tue Jul  8 19:42:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.6
+	  /dev/sg0 ... tested too
+
+Tue Jul  8 18:00:39 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-bsd.c 1.1
+	  date and time created 97/07/08 17:00:39 by joerg
+
+Tue Jul  8 17:59:20 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsihack.c 1.3
+	  New Implementation for *BSD
+
+Sun Jun 22 19:58:40 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.11
+	  Smart & Friendly Support
+
 *************** Release 1.4 *******************
 
-Sat Jun 21 19:58:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 19:58:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.1 1.7
 	  Updates for release 1.4
 
-Sat Jun 21 18:11:25 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 18:11:25 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi.c 1.2
 	  scsireg.h Include
 
-Sat Jun 21 00:52:33 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 00:52:33 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* drv_sony.c 1.1
 	  date and time created 97/05/20 23:52:33 by joerg
 
-Sat Jun 21 00:27:56 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 00:27:56 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* drv_philips.c 1.1
 	  date and time created 97/05/20 23:27:56 by joerg
 
-Sat Jun 21 00:27:50 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 00:27:50 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* drv_mmc.c 1.1
 	  date and time created 97/05/20 23:27:50 by joerg
 
-Sat Jun 21 00:27:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 00:27:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* drv_jvc.c 1.1
 	  date and time created 97/05/20 23:27:43 by joerg
 
-Sat Jun 21 00:27:14 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 00:27:14 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi_cdr.c 1.10
 	  mode_select() uses inq.ansi_version >= 2
 
-Sat Jun 21 00:26:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 00:26:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.h 1.7
 	  attach_unknown() new
 
-Sat Jun 21 00:26:05 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Mai 21 00:26:05 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdr_drv.c 1.1
 	  date and time created 97/05/20 23:26:05 by joerg
 
-Thu Jun 19 23:46:54 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Thu Mai 19 23:46:54 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.c 1.8
 	  Struct track -> cdrecord.h
 	  DB_XXX Data block types
@@ -45,13 +1252,13 @@ Thu Jun 19 23:46:54 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	  checktsize() new
 	  CDR_SPEED & CDR_DEVICE
 
-Thu Jun 19 16:59:44 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Thu Mai 19 16:59:44 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.h 1.6
 	  struct track from cdrecord.c
 	  DB_XXX Data block types
 	  cdr_cmd Struct as Drive Abstraction Layer
 
-Thu Jun 19 15:42:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Thu Mai 19 15:42:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi_cdr.c 1.9
 	  Prototypes lokal too
 	  scsi_load_unload() -> load_unload_philips()
@@ -63,11 +1270,11 @@ Thu Jun 19 15:42:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	  inquiry news new drives
 	  scsi_cdr_write()
 
-Mon Jun 16 15:46:48 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Mon Mai 16 15:46:48 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* config.h 1.1
 	  date and time created 97/05/16 14:46:48 by jes
 
-Mon Jun 16 15:46:48 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Mon Mai 16 15:46:48 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi.c 1.1
 	  date and time created 97/05/16 14:46:48 by jes
 
@@ -75,75 +1282,75 @@ Fri May 23 22:09:21 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.c 1.14
 	  bad 2. Parameter in gettimeofday -> struct timezone *
 
-Fri May 23 22:08:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Apr 23 22:08:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsierrs.c 2.13
 	  missing %s in Formatstring added
 
-Wed May 14 00:54:03 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Apr 14 00:54:03 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsireg.h 1.13
 	  new scsi device types
 
-Wed May 14 00:53:28 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Apr 14 00:53:28 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.c 1.13
 	  scsireset() into hack part
 	  scsi_setnonstderrs() new, scsierrmsg() chganges
 	  new scsi devicetype codes, Solaris x86 dmasize without gethostid()
 
-Wed May 14 00:46:27 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Apr 14 00:46:27 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.h 1.10
 	  Changes for scsierrs.c enhancements
 
-Wed May 14 00:45:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Apr 14 00:45:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsierrs.c 2.12
 	  Enhancements for SCSI-2 & SCSI-3
 
-Tue May  6 17:15:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Apr  6 17:15:43 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsidefs.h 1.13
 	  Different order & Yamaha CDR-400, Sony CDU-924, Ricoh RO-1420, Teac CD-R50 new
 
-Tue May  6 16:36:38 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Apr  6 16:36:38 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scgio.h 2.7
 	  Enhancements for SCSI-2 & SCSI-3
 
-Tue May  6 14:10:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Apr  6 14:10:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi-linux-sg.c 1.5
 	  CCD-> CCS Typo
 
-Tue May  6 13:59:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Apr  6 13:59:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsihack.c 1.2
 	  scsireset() -> transport specific part
 
-Tue May  6 13:59:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Apr  6 13:59:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi-linux-sg.c 1.4
 	  scsireset() -> transport specific part
 
 *************** Release 1.3 *******************
 
-Fri Apr  4 19:48:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Mar  4 19:48:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* README 1.6
 	  Changes for Release 1.3
 
-Fri Apr  4 18:57:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Mar  4 18:57:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.1 1.6
 	  release 1.3
 
-Fri Apr  4 18:46:37 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Mar  4 18:46:37 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.1 1.5
 	  Changes for Release 1.3
 
-Fri Apr  4 11:55:28 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Mar  4 11:55:28 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi-linux-sg.c 1.3
 	  scsihack.c & scsi-linux-sg.c splitted
 
-Fri Apr  4 11:53:59 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Mar  4 11:53:59 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsihack.c 1.1
 	  date and time created 97/03/04 10:53:59 by jes
 
-Fri Apr  4 11:52:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Mar  4 11:52:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* iso9660.h 1.2
 	  Quick hack for ANSI C
 
-Wed Apr  2 17:16:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 17:16:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi_cdr.c 1.8
 	  open_scsi() with verbose arg
 	  write_track() & write_track_info() isaudio/preemp -> sectype
@@ -153,44 +1360,44 @@ Wed Apr  2 17:16:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	  is_cddrive() new read_scsi() now korrekt with G0_MAXADDR & cnt < 256
 	  HACK XXX scsi_capacity to 2048 bytes Sectorsize initialized for mkisofs-1.10
 
-Wed Apr  2 16:51:24 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 16:51:24 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.c 1.12
 	  BAD -> EX_BAD, BOOL scsi_havebus() new
 	  scsi_fileno(bus, tgt, lun) new with 3 Parameters, MAX_DMA_SUN386 new
 
-Wed Apr  2 16:46:44 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 16:46:44 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi-linux-sg.c 1.2
 	  better Kommentar
 
-Wed Apr  2 16:35:04 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 16:35:04 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.h 1.9
 	  BOOL scsi_havebus() new, scsi_fileno(bus, tgt, lun) new with 3 Parameters
 
-Wed Apr  2 16:33:18 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 16:33:18 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scgio.h 2.6
 	  intriduced _SCGIO_H & bei __STDC__ 0xFF000000UL
 
-Wed Apr  2 16:14:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 16:14:35 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsidefs.h 1.12
 	  BAD -> EX_BAD
 
-Wed Apr  2 16:14:04 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 16:14:04 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* port.c 1.6
 	  include fmt.h only if #ifdef FMT
 
-Wed Apr  2 16:07:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 16:07:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi-linux-sg.c 1.1
 	  date and time created 97/03/02 15:07:53 by joerg
 
-Wed Apr  2 15:49:56 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 15:49:56 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* iso9660.h 1.1
 	  date and time created 97/03/02 14:49:56 by joerg
 
-Wed Apr  2 15:48:55 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 15:48:55 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* isosize.c 1.1
 	  date and time created 97/03/02 14:48:55 by joerg
 
-Wed Apr  2 15:40:32 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 15:40:32 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.c 1.7
 	  toctname[] * sectname[] new
 	  ldebug -> debug, HAVE_MLOCKALL, -msinfo new, -toc new
@@ -198,80 +1405,80 @@ Wed Apr  2 15:40:32 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	  better Check for options, print_msinfo() new, print_toc() new
 	  HAVE_SYS_PRIOCNTL_H new
 
-Wed Apr  2 15:30:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Mar  2 15:30:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.h 1.5
 	  BAD -> EX_BAD in standard.h, TOC_* defines, ST_* defines, struct msf
 	  several Interface changes for Prototypes
 
-Wed Feb 19 00:23:11 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Jan 19 00:23:11 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.c 1.6
 	  Changed to use scsi_buf_size() & scsi_getbuf(), better gcc Kompat.
 
-Wed Feb 12 23:11:18 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Jan 12 23:11:18 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.c 1.11
 	  Sbufsize -> long, scsi_maxdma() new
 
-Wed Feb 12 22:10:33 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Wed Jan 12 22:10:33 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.h 1.8
 	  Sbufsize -> long
 
-Fri Feb  7 21:10:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Jan  7 21:10:26 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* port.c 1.5
 	  ANSI C & printf %ld
 
-Thu Feb  6 22:45:03 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Thu Jan  6 22:45:03 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.h 1.7
 	  scsi_sense_key() & scsi_sense_code() from fmt.c
 
-Thu Feb  6 22:45:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Thu Jan  6 22:45:02 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.c 1.10
 	  scsi_sense_key() & scsi_sense_code() from fmt.c
 
-Mon Feb  3 14:47:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Mon Jan  3 14:47:53 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.h 1.6
 	  scsi_bufsize() & scsi_getbuf() new
 
-Mon Feb  3 14:47:52 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Mon Jan  3 14:47:52 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.c 1.9
 	  scsi_bufsize() & scsi_getbuf() new
 
-Fri Jan 31 17:16:13 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Fri Dec 31 17:16:13 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsireg.h 1.12
 	  Defekt List: length & list_block -> char[] for Byteorder
 
-Tue Jan 28 20:51:42 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Dec 28 20:51:42 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scgio.h 2.5
 	  #error beseitigt for SunOS cc
 
-Tue Jan 28 14:28:01 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Dec 28 14:28:01 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsitransp.c 1.8
 	  debug -> kdebug
 
-Tue Jan 28 14:19:16 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Tue Dec 28 14:19:16 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scgio.h 2.4
 	  debug -> kdebug
 
-Sun Jan 19 16:18:18 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sun Dec 19 16:18:18 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi_cdr.c 1.7
 	  Mitsumi
 
-Sun Jan 19 16:14:12 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sun Dec 19 16:14:12 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* README 1.5
 	  Performance X86 & Mitsumi
 
-Sat Jan 18 12:37:38 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Dec 18 12:37:38 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsierrs.c 2.11
 	  param.h, sys/buf.h, sun/dklabel.h, sun/dkio.h eliminated
 
-Sat Jan 18 03:26:04 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Dec 18 03:26:04 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* README 1.4
-	  Aenderungen fuer Release 1.2
+	  Changes for Release 1.2
 
-Sat Jan 18 03:24:14 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Dec 18 03:24:14 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.1 1.4
 	  Changes for Release 1.2
 
-Sat Jan 18 03:13:41 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sat Dec 18 03:13:41 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* cdrecord.c 1.5
 	  -swab new
 	  LOCAL functions
@@ -280,11 +1487,11 @@ Sat Jan 18 03:13:41 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	  write_track_info() disabled
 	  -pad for audio, pad to 2352 bytes.
 
-Sun Jan 12 21:09:24 1997 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Sun Dec 12 21:09:24 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsi_cdr.c 1.6
 	  Flush cache & Fixation with big Timeout.
 
-Thu Dec 26 10:54:18 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+Thu Nov 26 10:54:18 1996 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* scsierrs.c 2.10
 	  New Codes for CDD-2000 & Support for Yamaha CDR-100
 
@@ -303,7 +1510,7 @@ Wed Dec 12 21:09:24 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
 Mo Dec 3 13:03:30 1996  J. Schilling  <joerg@schily.isdn.cs.tu-berlin.de>
 
 	* Set sector size on all drive types before writing,
-	* Ommit the write_track_info Mode Select before write_track
+	* Omwith the write_track_info Mode Select before write_track
 	  even for Philips drives (this is currently not needed because
 	  we don't support ISRC codes at this time).
 

@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.12 97/09/04 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.18 98/02/09 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.12 97/09/04 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.18 98/02/09 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -76,10 +76,11 @@ LOCAL	short	buscookies[MAX_SCG];
 #endif
 
 LOCAL	int	pack_id = 5;
-LOCAL	char	*SCSIbuf;
+LOCAL	char	*SCSIbuf = (char *)-1;
 
 LOCAL	int	scsi_send	__PR((int f, struct scg_cmd *sp));
 LOCAL	BOOL	scsi_setup	__PR((int f, int busno, int tgt, int tlun));
+LOCAL	void	scsi_initdev	__PR((int f));
 LOCAL	int	scsi_mapbus	__PR((int ino));
 LOCAL	void	scsi_settimeout	__PR((int f, int timeout));
 
@@ -140,10 +141,6 @@ scsi_setup(f, busno, tgt, tlun)
 	int	tgt;
 	int	tlun;
 {
-	struct sg_rep {
-		struct sg_header	hd;
-		unsigned char		rbuf[100];
-	} sg_rep;
 	struct	sg_id {
 		long	l1; /* target | lun << 8 | channel << 16 | low_ino << 24 */
 		long	l2; /* Unique id */
@@ -159,21 +156,6 @@ scsi_setup(f, busno, tgt, tlun)
 
 	if (scsibus >= 0 && target >= 0 && lun >= 0)
 		onetarget = TRUE;
-
-	/* Eat any unwanted garbage from prior use of this device */
-
-	n = fcntl(f, F_GETFL);	/* Be very proper about this */
-	fcntl(f, F_SETFL, n|O_NONBLOCK);
-
-	fillbytes((caddr_t)&sg_rep, sizeof(struct sg_header), '\0');
-	sg_rep.hd.reply_len = sizeof(struct sg_header);
-
-	while (read(f, &sg_rep, sizeof(sg_rep)) >= 0 || errno != EAGAIN)
-		;
-
-	fcntl(f, F_SETFL, n);
-
-	scsi_settimeout(f, deftimeout);
 
 	ioctl(f, SCSI_IOCTL_GET_IDLUN, &sg_id);
 	if (debug)
@@ -204,13 +186,42 @@ scsi_setup(f, busno, tgt, tlun)
 
 	if (onetarget) {
 		if (Bus == busno && Target == tgt && Lun == tlun) {
+			scsi_initdev(f);
 			return (TRUE);
 		} else {
 			scgfiles[Bus][Target][Lun] = (short)-1;
 			close(f);
 		}
+	} else {
+		scsi_initdev(f);
 	}
 	return (FALSE);
+}
+
+LOCAL void
+scsi_initdev(f)
+	int	f;
+{
+	struct sg_rep {
+		struct sg_header	hd;
+		unsigned char		rbuf[100];
+	} sg_rep;
+	int	n;
+
+	/* Eat any unwanted garbage from prior use of this device */
+
+	n = fcntl(f, F_GETFL);	/* Be very proper about this */
+	fcntl(f, F_SETFL, n|O_NONBLOCK);
+
+	fillbytes((caddr_t)&sg_rep, sizeof(struct sg_header), '\0');
+	sg_rep.hd.reply_len = sizeof(struct sg_header);
+
+	while (read(f, &sg_rep, sizeof(sg_rep)) >= 0 || errno != EAGAIN)
+		;
+
+	fcntl(f, F_SETFL, n);
+
+	scsi_settimeout(f, deftimeout);
 }
 
 LOCAL int
@@ -243,7 +254,7 @@ EXPORT void *
 scsi_getbuf(amt)
 	long	amt;
 {
-	void	*ret;
+	char	*ret;
 
 	if (scg_maxdma == 0)
 		scg_maxdma = scsi_maxdma();
@@ -259,9 +270,11 @@ scsi_getbuf(amt)
 	 * setting up the /dev/sg data structures.
 	 */
 	ret = valloc((size_t)(amt+getpagesize()));
+	if (ret == NULL)
+		return (ret);
 	ret += getpagesize();
 	SCSIbuf = ret;
-	return (ret);
+	return ((void *)ret);
 }
 
 EXPORT
@@ -310,9 +323,9 @@ scsi_settimeout(f, tmo)
 	int	f;
 	int	tmo;
 {
-	tmo *= 100;
+	tmo *= HZ;
 	if (tmo)
-		tmo += 50;
+		tmo += HZ/2;
 
 	if (ioctl(f, SG_SET_TIMEOUT, &tmo) < 0)
 		comerr("Cannot set SG_SET_TIMEOUT.\n");
@@ -349,7 +362,7 @@ scsi_send(int f, struct scg_cmd *sp)
 			printf("DMA addr: 0x%8.8lX size: %d - using copy buffer\n",
 				(long)sp->addr, sp->size);
 		}
-		if (sp->size > (sizeof(sg_rq.buf) - SCG_MAX_CMD)) {
+		if (sp->size > (int)(sizeof(sg_rq.buf) - SCG_MAX_CMD)) {
 			errno = ENOMEM;
 			return (-1);
 		}
@@ -375,7 +388,7 @@ scsi_send(int f, struct scg_cmd *sp)
 		sgp->hd.pack_len += sp->size;
 	}
 	i = sizeof(struct sg_header) + amt;
-	if ((amt = write(f, sgp, i)) < 0) {	/* write */
+	if ((amt = write(f, sgp, i)) < 0) {			/* write */
 		scsi_settimeout(f, deftimeout);
 		return (-1);
 	} else if (amt != i) {
@@ -388,7 +401,10 @@ scsi_send(int f, struct scg_cmd *sp)
 		sgp = sgp2;
 	}
 	sgp->hd.sense_buffer[0] = 0;
-	amt = read(f, sgp, sgp->hd.reply_len);	/* read */
+	if ((amt = read(f, sgp, sgp->hd.reply_len)) < 0) {	/* read */
+		scsi_settimeout(f, deftimeout);
+		return (-1);
+	}
 
 	if (sp->flags & SCG_RECV_DATA && ((void *)sgp->buf != (void *)sp->addr)) {
 		movebytes(sgp->buf, sp->addr, sp->size);
@@ -434,7 +450,7 @@ scsi_send(int f, struct scg_cmd *sp)
 		sp->sense_count = 16;
 		movebytes(sgp->hd.sense_buffer, sp->u_sense.cmd_sense, sp->sense_count);
 	}
-	if (sp->timeout != deftimeout);
+	if (sp->timeout != deftimeout)
 		scsi_settimeout(f, deftimeout);
 	return 0;
 }

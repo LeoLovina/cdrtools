@@ -1,7 +1,7 @@
-/* @(#)modes.c	1.2 97/09/04 Copyright 1988 J. Schilling */
+/* @(#)modes.c	1.4 97/11/09 Copyright 1988 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)modes.c	1.2 97/09/04 Copyright 1988 J. Schilling";
+	"@(#)modes.c	1.4 97/11/09 Copyright 1988 J. Schilling";
 #endif
 /*
  *	SCSI mode page handling
@@ -68,13 +68,18 @@ again:
 	(void)test_unit_ready();
 	silent++;
 /* Maxoptix bringt Aborted cmd 0x0B mit code 0x4E (overlapping cmds)*/
-	if (mode_sense(mode, len, page, 2) < 0) {	/* Page n default */
+
+	/*
+	 * The Matsushita CW-7502 will sometimes deliver a zeroed
+	 * mode page 2A if "Page n default" is used instead of "current".
+	 */
+	if (mode_sense(mode, len, page, 0) < 0) {	/* Page n current */
 		silent--;
 		return (FALSE);
 	} else {
 		len = ((struct scsi_mode_header *)mode)->sense_data_len + 1;
 	}
-	if (mode_sense(mode, len, page, 2) < 0) {	/* Page n default */
+	if (mode_sense(mode, len, page, 0) < 0) {	/* Page n current */
 		silent--;
 		return (FALSE);
 	}
@@ -214,6 +219,8 @@ BOOL set_mode_params(pagename, modep, len, save, secsize)
 		if (mode_select(modep, len, 0, inq.data_format >= 2) < 0) {
 			errmsgno(EX_BAD,
 			   "Warning: using default %s data.\n", pagename);
+			scsiprbytes("Mode Select Data", modep, len);
+			return (FALSE);
 		}
 	}
 	return (TRUE);

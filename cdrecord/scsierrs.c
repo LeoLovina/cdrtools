@@ -1,7 +1,7 @@
-/* @(#)scsierrs.c	2.13 97/04/23 Copyright 1987-1996 J. Schilling */
+/* @(#)scsierrs.c	2.15 98/03/05 Copyright 1987-1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsierrs.c	2.13 97/04/23 Copyright 1987-1996 J. Schilling";
+	"@(#)scsierrs.c	2.15 98/03/05 Copyright 1987-1996 J. Schilling";
 #endif
 /*
  *	Error printing for scsitransp.c
@@ -23,6 +23,8 @@ static	char sccsid[] =
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#include <mconfig.h>
 
 #include <stdio.h>
 #include <standard.h>
@@ -637,7 +639,7 @@ scsierrmsg(sense, status, sense_code, errvec)
 	switch (key) {
 
 	case SC_ILLEGAL_REQUEST:
-		printf("error referres to %s part, bit ptr %d %s field ptr %d",
+		printf("error refers to %s part, bit ptr %d %s field ptr %d",
 			ext_sense->cd? "command":"data",
 			ext_sense->bptr,
 			ext_sense->bpv? "(valid)":"(not valid)",

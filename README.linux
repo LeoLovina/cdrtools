@@ -32,4 +32,14 @@ and re-compile and re-install your kernel.
 
 Linux kernels past 2.0.30 will probably already have this patch included.
 
+IMPORTANT:
+
+-	In some architectures (at least on sparc / alpha / ppc) kernels prior
+	to 2.0.32 are not usable because the call to mlockall() kills cdrecord.
+
+-       You may need to edit /usr/src/linux/asm*/shmparam.h to allow at least 
+        4 MB of shared memory for your architecture by modifying SHMMAX
+	and re-compile/re-install Linux !
+	(note that Linux for Intel by default allows 16 MB) 
+
 Joerg

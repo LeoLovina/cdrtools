@@ -1,4 +1,4 @@
-/* @(#)scgio.h	2.9 97/08/25 Copyright 1986 J. Schilling */
+/* @(#)scgio.h	2.12 98/01/23 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI general driver 'scg'
  *
@@ -23,6 +23,7 @@
 #ifndef	_SCGIO_H
 #define	_SCGIO_H
 
+#include <utypes.h>
 #include <btorder.h>
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
@@ -44,22 +45,22 @@ error  One of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL must be defined
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct	scsi_status {
-	u_char	vu_00	: 1;	/* vendor unique */
-	u_char	chk	: 1;	/* check condition: sense data available */
-	u_char	cm	: 1;	/* condition met */
-	u_char	busy	: 1;	/* device busy or reserved */
-	u_char	is	: 1;	/* intermediate status sent */
-	u_char	vu_05	: 1;	/* vendor unique */
+	Ucbit	vu_00	: 1;	/* vendor unique */
+	Ucbit	chk	: 1;	/* check condition: sense data available */
+	Ucbit	cm	: 1;	/* condition met */
+	Ucbit	busy	: 1;	/* device busy or reserved */
+	Ucbit	is	: 1;	/* intermediate status sent */
+	Ucbit	vu_05	: 1;	/* vendor unique */
 #define st_scsi2	vu_05	/* SCSI-2 modifier bit */
-	u_char	vu_06	: 1;	/* vendor unique */
-	u_char	st_rsvd	: 1;	/* reserved */
+	Ucbit	vu_06	: 1;	/* vendor unique */
+	Ucbit	st_rsvd	: 1;	/* reserved */
 
 #ifdef	SCSI_EXTENDED_STATUS
 #define	ext_st1	st_rsvd		/* extended status (next byte valid) */
 	/* byte 1 */
-	u_char	ha_er	: 1;	/* host adapter detected error */
-	u_char	reserved: 6;	/* reserved */
-	u_char	ext_st2	: 1;	/* extended status (next byte valid) */
+	Ucbit	ha_er	: 1;	/* host adapter detected error */
+	Ucbit	reserved: 6;	/* reserved */
+	Ucbit	ext_st2	: 1;	/* extended status (next byte valid) */
 	/* byte 2 */
 	u_char	byte2;		/* third byte */
 #endif	/* SCSI_EXTENDED_STATUS */
@@ -68,21 +69,21 @@ struct	scsi_status {
 #else	/* Motorola byteorder */
 
 struct	scsi_status {
-	u_char	st_rsvd	: 1;	/* reserved */
-	u_char	vu_06	: 1;	/* vendor unique */
-	u_char	vu_05	: 1;	/* vendor unique */
+	Ucbit	st_rsvd	: 1;	/* reserved */
+	Ucbit	vu_06	: 1;	/* vendor unique */
+	Ucbit	vu_05	: 1;	/* vendor unique */
 #define st_scsi2	vu_05	/* SCSI-2 modifier bit */
-	u_char	is	: 1;	/* intermediate status sent */
-	u_char	busy	: 1;	/* device busy or reserved */
-	u_char	cm	: 1;	/* condition met */
-	u_char	chk	: 1;	/* check condition: sense data available */
-	u_char	vu_00	: 1;	/* vendor unique */
+	Ucbit	is	: 1;	/* intermediate status sent */
+	Ucbit	busy	: 1;	/* device busy or reserved */
+	Ucbit	cm	: 1;	/* condition met */
+	Ucbit	chk	: 1;	/* check condition: sense data available */
+	Ucbit	vu_00	: 1;	/* vendor unique */
 #ifdef	SCSI_EXTENDED_STATUS
 #define	ext_st1	st_rsvd		/* extended status (next byte valid) */
 	/* byte 1 */
-	u_char	ext_st2	: 1;	/* extended status (next byte valid) */
-	u_char	reserved: 6;	/* reserved */
-	u_char	ha_er	: 1;	/* host adapter detected error */
+	Ucbit	ext_st2	: 1;	/* extended status (next byte valid) */
+	Ucbit	reserved: 6;	/* reserved */
+	Ucbit	ha_er	: 1;	/* host adapter detected error */
 	/* byte 2 */
 	u_char	byte2;		/* third byte */
 #endif	/* SCSI_EXTENDED_STATUS */
@@ -97,11 +98,11 @@ struct	scsi_status {
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct	scsi_sense {		/* scsi sense for error classes 0-6 */
-	u_char	code	: 7;	/* error class/code */
-	u_char	adr_val	: 1;	/* sense data is valid */
+	Ucbit	code	: 7;	/* error class/code */
+	Ucbit	adr_val	: 1;	/* sense data is valid */
 #ifdef	comment
-	u_char	high_addr:5;	/* high byte of block addr */
-	u_char	rsvd	: 3;
+	Ucbit	high_addr:5;	/* high byte of block addr */
+	Ucbit	rsvd	: 3;
 #else
 	u_char	high_addr;	/* high byte of block addr */
 #endif
@@ -112,11 +113,11 @@ struct	scsi_sense {		/* scsi sense for error classes 0-6 */
 #else	/* Motorola byteorder */
 
 struct	scsi_sense {		/* scsi sense for error classes 0-6 */
-	u_char	adr_val	: 1;	/* sense data is valid */
-	u_char	code	: 7;	/* error class/code */
+	Ucbit	adr_val	: 1;	/* sense data is valid */
+	Ucbit	code	: 7;	/* error class/code */
 #ifdef	comment
-	u_char	rsvd	: 3;
-	u_char	high_addr:5;	/* high byte of block addr */
+	Ucbit	rsvd	: 3;
+	Ucbit	high_addr:5;	/* high byte of block addr */
 #else
 	u_char	high_addr;	/* high byte of block addr */
 #endif
@@ -136,16 +137,16 @@ struct	scsi_sense {		/* scsi sense for error classes 0-6 */
 
 struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	/* byte 0 */
-	u_char	type	: 7;	/* fixed at 0x70 */
-	u_char	adr_val	: 1;	/* sense data is valid */
+	Ucbit	type	: 7;	/* fixed at 0x70 */
+	Ucbit	adr_val	: 1;	/* sense data is valid */
 	/* byte 1 */
 	u_char	seg_num;	/* segment number, applies to copy cmd only */
 	/* byte 2 */
-	u_char	key	: 4;	/* sense key, see below */
-	u_char		: 1;	/* reserved */
-	u_char	ili	: 1;	/* incorrect length indicator */
-	u_char	eom	: 1;	/* end of media */
-	u_char	fil_mk	: 1;	/* file mark on device */
+	Ucbit	key	: 4;	/* sense key, see below */
+	Ucbit		: 1;	/* reserved */
+	Ucbit	ili	: 1;	/* incorrect length indicator */
+	Ucbit	eom	: 1;	/* end of media */
+	Ucbit	fil_mk	: 1;	/* file mark on device */
 	/* bytes 3 through 7 */
 	u_char	info_1;		/* information byte 1 */
 	u_char	info_2;		/* information byte 2 */
@@ -160,11 +161,11 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	u_char 	sense_code;	/* sense code */
 	u_char	qual_code;	/* sense code qualifier */
 	u_char	fru_code;	/* Field replacable unit code */
-	u_char	bptr:3;		/* bit pointer for failure (if bpv) */
-	u_char	bpv:1;		/* bit pointer is valid */
-	u_char	:2;
-	u_char	cd:1;		/* pointers refer to command not data */
-	u_char	sksv:1;		/* sense key specific valid */
+	Ucbit	bptr	: 3;	/* bit pointer for failure (if bpv) */
+	Ucbit	bpv	: 1;	/* bit pointer is valid */
+	Ucbit		: 2;
+	Ucbit	cd	: 1;	/* pointers refer to command not data */
+	Ucbit	sksv	: 1;	/* sense key specific valid */
 	u_char	field_ptr[2];	/* field pointer for failure */
 	u_char	add_info[2];	/* round up to 20 bytes */
 };
@@ -173,16 +174,16 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 
 struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	/* byte 0 */
-	u_char	adr_val	: 1;	/* sense data is valid */
-	u_char	type	: 7;	/* fixed at 0x70 */
+	Ucbit	adr_val	: 1;	/* sense data is valid */
+	Ucbit	type	: 7;	/* fixed at 0x70 */
 	/* byte 1 */
 	u_char	seg_num;	/* segment number, applies to copy cmd only */
 	/* byte 2 */
-	u_char	fil_mk	: 1;	/* file mark on device */
-	u_char	eom	: 1;	/* end of media */
-	u_char	ili	: 1;	/* incorrect length indicator */
-	u_char		: 1;	/* reserved */
-	u_char	key	: 4;	/* sense key, see below */
+	Ucbit	fil_mk	: 1;	/* file mark on device */
+	Ucbit	eom	: 1;	/* end of media */
+	Ucbit	ili	: 1;	/* incorrect length indicator */
+	Ucbit		: 1;	/* reserved */
+	Ucbit	key	: 4;	/* sense key, see below */
 	/* bytes 3 through 7 */
 	u_char	info_1;		/* information byte 1 */
 	u_char	info_2;		/* information byte 2 */
@@ -197,11 +198,11 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	u_char 	sense_code;	/* sense code */
 	u_char	qual_code;	/* sense code qualifier */
 	u_char	fru_code;	/* Field replacable unit code */
-	u_char	sksv:1;		/* sense key specific valid */
-	u_char	cd:1;		/* pointers refer to command not data */
-	u_char	:2;
-	u_char	bpv:1;		/* bit pointer is valid */
-	u_char	bptr:3;		/* bit pointer for failure (if bpv) */
+	Ucbit	sksv	: 1;	/* sense key specific valid */
+	Ucbit	cd	: 1;	/* pointers refer to command not data */
+	Ucbit		: 2;
+	Ucbit	bpv	: 1;	/* bit pointer is valid */
+	Ucbit	bptr	: 3;	/* bit pointer for failure (if bpv) */
 	u_char	field_ptr[2];	/* field pointer for failure */
 	u_char	add_info[2];	/* round up to 20 bytes */
 };
@@ -264,32 +265,32 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 
 struct	scsi_g0cdb {		/* scsi group 0 command description block */
 	u_char	cmd;		/* command code */
-	u_char	high_addr : 5;	/* high part of block address */
-	u_char	lun	  : 3;	/* logical unit number */
+	Ucbit	high_addr : 5;	/* high part of block address */
+	Ucbit	lun	  : 3;	/* logical unit number */
 	u_char	mid_addr;	/* middle part of block address */
 	u_char	low_addr;	/* low part of block address */
 	u_char	count;		/* transfer length */
-	u_char	link	  : 1;	/* link (another command follows) */
-	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
-	u_char	rsvd	  : 4;	/* reserved */
-	u_char	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
-	u_char	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
+	Ucbit	link	  : 1;	/* link (another command follows) */
+	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
+	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
+	Ucbit	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
 };
 
 #else	/* Motorola byteorder */
 
 struct	scsi_g0cdb {		/* scsi group 0 command description block */
 	u_char	cmd;		/* command code */
-	u_char	lun	  : 3;	/* logical unit number */
-	u_char	high_addr : 5;	/* high part of block address */
+	Ucbit	lun	  : 3;	/* logical unit number */
+	Ucbit	high_addr : 5;	/* high part of block address */
 	u_char	mid_addr;	/* middle part of block address */
 	u_char	low_addr;	/* low part of block address */
 	u_char	count;		/* transfer length */
-	u_char	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
-	u_char	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
-	u_char	rsvd	  : 4;	/* reserved */
-	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
-	u_char	link	  : 1;	/* link (another command follows) */
+	Ucbit	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
+	Ucbit	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
+	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
+	Ucbit	link	  : 1;	/* link (another command follows) */
 };
 #endif
 
@@ -297,34 +298,34 @@ struct	scsi_g0cdb {		/* scsi group 0 command description block */
 
 struct	scsi_g1cdb {		/* scsi group 1 command description block */
 	u_char	cmd;		/* command code */
-	u_char	reladr	  : 1;	/* address is relative */
-	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
-	u_char	lun	  : 3;	/* logical unit number */
+	Ucbit	reladr	  : 1;	/* address is relative */
+	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
+	Ucbit	lun	  : 3;	/* logical unit number */
 	u_char	addr[4];	/* logical block address */
 	u_char	res6;		/* reserved byte 6 */
 	u_char	count[2];	/* transfer length */
-	u_char	link	  : 1;	/* link (another command follows) */
-	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
-	u_char	rsvd	  : 4;	/* reserved */
-	u_char	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
-	u_char	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
+	Ucbit	link	  : 1;	/* link (another command follows) */
+	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
+	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
+	Ucbit	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
 };
 
 #else	/* Motorola byteorder */
 
 struct	scsi_g1cdb {		/* scsi group 1 command description block */
 	u_char	cmd;		/* command code */
-	u_char	lun	  : 3;	/* logical unit number */
-	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
-	u_char	reladr	  : 1;	/* address is relative */
+	Ucbit	lun	  : 3;	/* logical unit number */
+	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
+	Ucbit	reladr	  : 1;	/* address is relative */
 	u_char	addr[4];	/* logical block address */
 	u_char	res6;		/* reserved byte 6 */
 	u_char	count[2];	/* transfer length */
-	u_char	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
-	u_char	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
-	u_char	rsvd	  : 4;	/* reserved */
-	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
-	u_char	link	  : 1;	/* link (another command follows) */
+	Ucbit	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
+	Ucbit	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
+	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
+	Ucbit	link	  : 1;	/* link (another command follows) */
 };
 #endif
 
@@ -332,34 +333,34 @@ struct	scsi_g1cdb {		/* scsi group 1 command description block */
 
 struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	u_char	cmd;		/* command code */
-	u_char	reladr	  : 1;	/* address is relative */
-	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
-	u_char	lun	  : 3;	/* logical unit number */
+	Ucbit	reladr	  : 1;	/* address is relative */
+	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
+	Ucbit	lun	  : 3;	/* logical unit number */
 	u_char	addr[4];	/* logical block address */
 	u_char	count[4];	/* transfer length */
 	u_char	res10;		/* reserved byte 10 */
-	u_char	link	  : 1;	/* link (another command follows) */
-	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
-	u_char	rsvd	  : 4;	/* reserved */
-	u_char	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
-	u_char	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
+	Ucbit	link	  : 1;	/* link (another command follows) */
+	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
+	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
+	Ucbit	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
 };
 
 #else	/* Motorola byteorder */
 
 struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	u_char	cmd;		/* command code */
-	u_char	lun	  : 3;	/* logical unit number */
-	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
-	u_char	reladr	  : 1;	/* address is relative */
+	Ucbit	lun	  : 3;	/* logical unit number */
+	Ucbit	res	  : 4;	/* reserved bits 1-4 of byte 1 */
+	Ucbit	reladr	  : 1;	/* address is relative */
 	u_char	addr[4];	/* logical block address */
 	u_char	count[4];	/* transfer length */
 	u_char	res10;		/* reserved byte 10 */
-	u_char	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
-	u_char	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
-	u_char	rsvd	  : 4;	/* reserved */
-	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
-	u_char	link	  : 1;	/* link (another command follows) */
+	Ucbit	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
+	Ucbit	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
+	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
+	Ucbit	link	  : 1;	/* link (another command follows) */
 };
 #endif
 
@@ -459,6 +460,11 @@ XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
 #define	i_to_3_byte(a, i)	(((u_char *)(a))[0] = ((i) >> 16)& 0xFF,\
 				 ((u_char *)(a))[1] = ((i) >> 8) & 0xFF,\
 				 ((u_char *)(a))[2] = (i) & 0xFF)
+
+#define	i_to_4_byte(a, i)	(((u_char *)(a))[0] = ((i) >> 24)& 0xFF,\
+				 ((u_char *)(a))[1] = ((i) >> 16)& 0xFF,\
+				 ((u_char *)(a))[2] = ((i) >> 8) & 0xFF,\
+				 ((u_char *)(a))[3] = (i) & 0xFF)
 
 #define	i_to_short(a, i)	(((u_char *)(a))[0] = ((i) >> 8) & 0xFF,\
 				 ((u_char *)(a))[1] = (i) & 0xFF)

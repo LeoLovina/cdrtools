@@ -70,9 +70,3 @@ check hard links. Use
 in this case.
 
 Joerg Schilling
-
-P.S. 	cdrecord-1.4 will be out on 26.5.1997 with added support for
-	Sony CDU-924, Ricoh RO-1420C and Plasmon RF-4100
-
- 	star-1.1 will be out on 26.5.1997 It has some speed improvements
-	some bug fixes and some other improvements.

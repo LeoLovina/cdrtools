@@ -97,13 +97,13 @@ exec gmake "$@"
 and call 'Gmake' instead of gmake.
 
 If you like to use 'smake', you may obtain a copy of the makefile
-system that contains precompiled versions of 'smake'.
-The package is located on:
+system. Various newer releases contain precompiled versions of 'smake'.
+The packages are located on:
 
 ftp://ftp.fokus.gmd.de/pub/unix/makefiles/
 
-The precompiled binaries are located in bins/<arch-name>/smake
-(e.g. bin/sparc-sunos5-cc/smake).
+Precompiled binaries of 'smake' are located in bins/<arch-name>/smake
+(e.g. bin/sparc-sunos5-cc/smake) of each package.
 
 Smake has a -D flag to see the actual makefile source used
 and a -d flag that gives easy to read debugging. Use smake -xM
