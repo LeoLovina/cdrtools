@@ -1,7 +1,7 @@
-/* @(#)cdda2wav.c	1.13 00/04/12 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)cdda2wav.c	1.15 00/04/27 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)cdda2wav.c	1.13 00/04/12 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)cdda2wav.c	1.15 00/04/27 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #undef DEBUG_BUFFER_ADDRESSES
@@ -448,7 +448,7 @@ static void CloseAudio(fname_baseval, track, bulkflag, channels_val, nSamples,
 	struct soundfile *audio_out;
 {
       /* define length */
-      audio_out->ExitSound( global.audio, nSamples*global.OutSampleSize*channels_val );
+      audio_out->ExitSound( global.audio, (nSamples-global.SkippedSamples)*global.OutSampleSize*channels_val );
 
       close (global.audio);
       global.audio = -1;
@@ -1361,10 +1361,11 @@ if (left_in_track < 0) {
 			(g_toc[current_track].dwStartSector -
 			 g_toc[current_track-1].dwStartSector)*CD_FRAMESIZE_RAW,
 			global.audio_out);
-	    }
-	  }
+	    } /* global.nofile */
+	  } /* if ( bulk && SamplesToWrite > 0 ) */
 	  current_track++;
-	}
+
+	} /* left_in_track <= InSamples */
 	InSamples -= how_much;
 
       }  /* end while */
@@ -1433,21 +1434,12 @@ forked_write()
       
       nSamplesDone = do_write(get_oldest_buffer());
 
-      if (global.parent_died == 0) {
+      if (global.parent_died == 0 && nSamplesDone < nSamplesToDo) {
         drop_buffer();
       }
 
     } /* end while */
 
-
-    if (global.verbose) {
-      if (global.tracktitle[current_track -1] != NULL) {
-        fprintf( stderr, "\b\b\b\b100%%  track %2u '%s' successfully recorded\n",
-		current_track, global.tracktitle[current_track-1]);
-      } else {
-        fprintf( stderr, "\b\b\b\b100%%  track %2u successfully recorded\n", current_track);
-      }
-    }
 }
 #else
 
@@ -1477,14 +1469,6 @@ nonforked_loop()
       fprintf(stderr,"%u unsuccessful matches while reading\n",total_unsuccessful_retries);
     }
 
-    if (global.verbose) {
-      if (global.tracktitle[current_track -1] != NULL) {
-        fprintf( stderr, "  track %2u '%s' successfully recorded\n",
-		current_track, global.tracktitle[current_track-1]);
-      } else {
-        fprintf( stderr, "  track %2u successfully recorded\n", current_track);
-      }
-    }
 }
 #endif
 
@@ -1644,6 +1628,7 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
 	endtrack = strtoul( endptr, &endptr2, 10 );
 	if (endptr2 == endptr)
 		endtrack = track;
+	else if (track == endtrack) bulk = -1;
 	break;
 	}
       case 'i':    /* override start index */
@@ -1763,7 +1748,7 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
 	break;
       case 'B':    /* bulk transfer */
         if (!am_i_cdda2wav) break;
-	bulk = 1;
+	if (bulk != -1) bulk = 1;
 	break;
       case 'T':    /* do deemphasis on the samples */
         if (!am_i_cdda2wav) break;
@@ -1887,6 +1872,8 @@ fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
   } else {
     usage2("Incorrect audio type setting: %3s", audio_type);
   }
+
+  if (bulk == -1) bulk = 0;
 
   global.need_big_endian = global.audio_out->need_big_endian;
   if (global.outputendianess != NONE)

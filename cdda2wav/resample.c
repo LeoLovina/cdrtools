@@ -1,7 +1,8 @@
-/* @(#)resample.c	1.7 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)resample.c	1.8 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)resample.c	1.7 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)resample.c	1.8 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt";
+
 
 #endif
 /* resampling module 
@@ -300,39 +301,58 @@ emit_sample( lsumval, rsumval, channels )
             } else *pDst++ = ( unsigned char ) sum + ( 1 << 7 );
 	} else {
 	    short * myptr = (short *) pDst;
-	    if ( waitforsignal == 1 && sum != 0 ) {
-		if ( any_signal == 0 ) {
+	    if ( waitforsignal == 1 ) {
+	      if ( any_signal == 0 ) {
+	        if ( sum != 0 ) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
-		}
-	    } else global.SkippedSamples++;
-	    *myptr = sum;
-	    pDst += sizeof( short );
+		    *myptr = sum; pDst += sizeof( short );
+		} else global.SkippedSamples++;
+	      } else { *myptr = sum; pDst += sizeof( short ); }
+	    } else { *myptr = sum; pDst += sizeof( short ); }
 	}
     } else {
 	/* stereo section */
 	lsumval >>= global.sh_bits;
 	rsumval >>= global.sh_bits;
 	if ( global.sh_bits == 8 ) {
-	    if ( waitforsignal == 1 && ((( char ) lsumval != '\0') || (( char ) rsumval != '\0'))) {
-		if ( any_signal == 0 ) {
+	    if ( waitforsignal == 1 ) {
+	      if ( any_signal == 0 ) {
+	        if ( ((( char ) lsumval != '\0') || (( char ) rsumval != '\0'))) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
-		}
-	    } else global.SkippedSamples++;
-	    *pDst++ = ( unsigned char )( short ) lsumval + ( 1 << 7 );
-	    *pDst++ = ( unsigned char )( short ) rsumval + ( 1 << 7 );
+		    *pDst++ = ( unsigned char )( short ) lsumval + ( 1 << 7 );
+		    *pDst++ = ( unsigned char )( short ) rsumval + ( 1 << 7 );
+		} else global.SkippedSamples++;
+	      } else {
+		*pDst++ = ( unsigned char )( short ) lsumval + ( 1 << 7 );
+		*pDst++ = ( unsigned char )( short ) rsumval + ( 1 << 7 );
+	      }
+	    } else {
+		*pDst++ = ( unsigned char )( short ) lsumval + ( 1 << 7 );
+		*pDst++ = ( unsigned char )( short ) rsumval + ( 1 << 7 );
+	    }
 	} else {
 	    short * myptr = (short *) pDst;
-	    if ( waitforsignal == 1 && ((( short ) lsumval != 0) || (( short ) rsumval != 0))) {
-		if ( any_signal == 0 ) {
+	    if ( waitforsignal == 1 ) {
+	      if ( any_signal == 0 ) {
+	        if ( ((( short ) lsumval != 0) || (( short ) rsumval != 0))) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
-		}
-	    } else global.SkippedSamples++;
-	    *myptr++ = ( short ) lsumval;
-	    *myptr   = ( short ) rsumval;
-	    pDst += 2*sizeof( short );
+		    *myptr++ = ( short ) lsumval;
+		    *myptr   = ( short ) rsumval;
+		    pDst += 2*sizeof( short );
+		} else global.SkippedSamples++;
+	      } else {
+		*myptr++ = ( short ) lsumval;
+		*myptr   = ( short ) rsumval;
+		pDst += 2*sizeof( short );
+	      }
+	    } else {
+	      *myptr++ = ( short ) lsumval;
+	      *myptr   = ( short ) rsumval;
+	      pDst += 2*sizeof( short );
+	    }
 	}
     }
 }
@@ -464,25 +484,26 @@ error type unsigned long is too small
 }
 
 #ifdef	ECHO_TO_SOUNDCARD
-static long ReSampleBuffer			__PR((unsigned char *p, unsigned char *newp, long samples));
-static long ReSampleBuffer( p, newp, samples)
+static long ReSampleBuffer			__PR((unsigned char *p, unsigned char *newp, long samples, int samplesize));
+static long ReSampleBuffer( p, newp, samples, samplesize)
 	unsigned char *p;
 	unsigned char *newp;
 	long samples;
+	int samplesize;
 {
-	double idx=0;
-	long    di=0,si=0;
+	double idx=0.0;
+	UINT4  di=0,si=0;
 
 	if (global.playback_rate == 100.0) {
-		memcpy(newp, p, 4* samples);
+		memcpy(newp, p, samplesize* samples);
 		di = samples;
 	} else while( si < samples ){
-		memcpy( newp+(di*4), p+(si*4), 4 );
+		memcpy( newp+(di*samplesize), p+(si*samplesize), samplesize );
 		idx += (double)(global.playback_rate/100.0);
-		si = (long)idx;
+		si = (UINT4)idx;
 		di++;
 	}
-	return di;
+	return di*samplesize;
 }
 #endif
 
@@ -926,7 +947,7 @@ none__missing:
                newlen = (100*(outlen/4))/global.playback_rate;
                newlen = (newlen*4);
                if ( (newp != NULL) || (newp = (unsigned char *) malloc( 2*global.nsectors*CD_FRAMESIZE_RAW+32 )) ) {
-			newlen = 4*ReSampleBuffer( pStart, newp, outlen/4 );
+			newlen = ReSampleBuffer( pStart, newp, outlen/4, global.OutSampleSize*global.channels );
 			write_snd_device((char *)newp, newlen);
                }
     }
@@ -950,7 +971,7 @@ none__missing:
       todo = outlen;
       while (todo != 0) {
 	int retval_;
-	retval_ = global.audio_out->WriteSound ( global.audio, pStart, todo );
+	retval_ = global.audio_out->WriteSound ( global.audio, p2, todo );
 	if (retval_ < 0) break;
 
 	p2 += retval_;
@@ -965,5 +986,8 @@ none__missing:
         perror("Probably disk space exhausted");
         return 1;
     }
-  } else return 0;
+  } else {
+    *TotSamplesDone += SamplesToDo;
+    return 0;
+  }
 }

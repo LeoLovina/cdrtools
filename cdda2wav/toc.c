@@ -1,7 +1,7 @@
-/* @(#)toc.c	1.10 00/03/29 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)toc.c	1.11 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)toc.c	1.10 00/03/29 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)toc.c	1.11 00/04/17 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /*
@@ -1995,8 +1995,12 @@ void DisplayToc ( )
       maxlen = (maxlen + 12 + 8 + 7)/8;
 
       for ( i = 0; i < cdtracks; i++ ) {
-	if ( global.tracktitle[i] != NULL ) {
-	  fprintf( stderr, "Track %2u: '%s'", i+1, global.tracktitle[i]);
+	if ( maxlen != 3 ) {
+	  if ( global.tracktitle[i] != NULL ) {
+	    fprintf( stderr, "Track %2u: '%s'", i+1, global.tracktitle[i]);
+	  } else {
+	    fprintf( stderr, "Track %2u: '%s'", i+1, "");
+	  }
 	  if ( global.trackcreator[i] != NULL
             && global.trackcreator[i][0] != '\0'
 #if 1
