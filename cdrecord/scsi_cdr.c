@@ -2,10 +2,10 @@
 XXX
 SIZEOF testen !!!
 */
-/* @(#)scsi_cdr.c	1.84 00/01/28 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.89 00/04/26 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.84 00/01/28 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.89 00/04/26 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -60,6 +60,7 @@ static	char sccsid[] =
 
 EXPORT	BOOL	unit_ready	__PR((SCSI *scgp));
 EXPORT	BOOL	wait_unit_ready	__PR((SCSI *scgp, int secs));
+EXPORT	BOOL	scsi_in_progress __PR((SCSI *scgp));
 EXPORT	int	test_unit_ready	__PR((SCSI *scgp));
 EXPORT	int	rezero_unit	__PR((SCSI *scgp));
 EXPORT	int	request_sense	__PR((SCSI *scgp));
@@ -83,12 +84,13 @@ EXPORT	int	read_toc_philips __PR((SCSI *scgp, caddr_t, int, int, int, int));
 EXPORT	int	read_header	__PR((SCSI *scgp, caddr_t, long, int, int));
 EXPORT	int	read_disk_info	__PR((SCSI *scgp, caddr_t, int));
 EXPORT	int	read_track_info	__PR((SCSI *scgp, caddr_t, int, int));
+EXPORT	int	send_opc	__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
 EXPORT	int	read_track_info_philips	__PR((SCSI *scgp, caddr_t, int, int));
-EXPORT	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track));
+EXPORT	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track, BOOL immed));
 EXPORT	int	read_master_cue	__PR((SCSI *scgp, caddr_t bp, int sheet, int cnt));
 EXPORT	int	send_cue_sheet	__PR((SCSI *scgp, caddr_t bp, long size));
 EXPORT	int	read_buff_cap	__PR((SCSI *scgp, long *, long *));
-EXPORT	int	scsi_blank	__PR((SCSI *scgp, long addr, int blanktype));
+EXPORT	int	scsi_blank	__PR((SCSI *scgp, long addr, int blanktype, BOOL immed));
 EXPORT	BOOL	allow_atapi	__PR((SCSI *scgp, BOOL new));
 EXPORT	int	mode_select	__PR((SCSI *scgp, Uchar *, int, int, int));
 EXPORT	int	mode_sense	__PR((SCSI *scgp, Uchar *dp, int cnt, int page, int pcf));
@@ -192,6 +194,24 @@ wait_unit_ready(scgp, secs)
 	if (ret < 0)
 		return (FALSE);
 	return (TRUE);
+}
+
+EXPORT BOOL
+scsi_in_progress(scgp)
+	SCSI	*scgp;
+{
+	if (scsi_sense_key(scgp) == SC_NOT_READY &&
+		/*
+		 * Logigal unit not ready operation/long_write in progress
+		 */
+	    scsi_sense_code(scgp) == 0x04 &&
+	    (scsi_sense_qual(scgp) == 0x07 || scsi_sense_qual(scgp) == 0x08)) {
+		return (TRUE);
+	} else {
+		if (scgp->silent <= 1)
+			scsiprinterr(scgp);
+	}
+	return (FALSE);
 }
 
 EXPORT int
@@ -828,6 +848,35 @@ read_track_info(scgp, bp, track, cnt)
 }
 
 EXPORT int
+send_opc(scgp, bp, cnt, doopc)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	cnt;
+	int	doopc;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 60;
+	scmd->cdb.g1_cdb.cmd = 0x54;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.reladr = doopc?1:0;
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	scgp->cmdname = "send opc";
+
+	if (scsicmd(scgp) < 0)
+		return (-1);
+	return (0);
+}
+
+EXPORT int
 read_track_info_philips(scgp, bp, track, cnt)
 	SCSI	*scgp;
 	caddr_t	bp;
@@ -857,10 +906,11 @@ read_track_info_philips(scgp, bp, track, cnt)
 }
 
 EXPORT int
-scsi_close_tr_session(scgp, type, track)
+scsi_close_tr_session(scgp, type, track, immed)
 	SCSI	*scgp;
 	int	type;
 	int	track;
+	BOOL	immed;
 {
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
@@ -875,6 +925,8 @@ scsi_close_tr_session(scgp, type, track)
 	scmd->cdb.g1_cdb.addr[0] = type;
 	scmd->cdb.g1_cdb.addr[3] = track;
 
+	if (immed)
+		scmd->cdb.g1_cdb.reladr = 1;
 #ifdef	nono
 	scmd->cdb.g1_cdb.reladr = 1;	/* IMM hack to test Mitsumi behaviour*/
 #endif
@@ -989,10 +1041,11 @@ read_buff_cap(scgp, sp, fp)
 }
 
 EXPORT int
-scsi_blank(scgp, addr, blanktype)
+scsi_blank(scgp, addr, blanktype, immed)
 	SCSI	*scgp;
 	long	addr;
 	int	blanktype;
+	BOOL	immed;
 {
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
@@ -1005,6 +1058,9 @@ scsi_blank(scgp, addr, blanktype)
 	scmd->cdb.g5_cdb.cmd = 0xA1;	/* Blank */
 	scmd->cdb.g0_cdb.high_addr = blanktype;
 	g1_cdbaddr(&scmd->cdb.g5_cdb, addr);
+
+	if (immed)
+		scmd->cdb.g5_cdb.res |= 8;
 
 	scgp->cmdname = "blank unit";
 
@@ -2133,6 +2189,10 @@ getdev(scgp, print)
 			else if (strbeg("CD-R4012", prod_ident))
 				scgp->dev = DEV_TEAC_CD_R50S;
 
+		} else if (strbeg("SANYO", vendor_info)) {
+			if (strbeg("CD-WO CRD-R24S", prod_ident))
+				scgp->dev = DEV_CDD_521;
+
 		} else if (strbeg("SONY", vendor_info)) {
 			if (strbeg("CD-R   CDU92", prod_ident) ||
 			    strbeg("CD-R   CDU94", prod_ident))
@@ -2540,6 +2600,7 @@ static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 	DOES("read digital audio blocks", mp->cd_da_supported);
 	if (mp->cd_da_supported) 
 		DOES("restart non-streamed digital audio reads accurately", mp->cd_da_accurate);
+	DOES("support BURN-Proof (Sanyo)", mp->res_4);
 	DOES("read multi-session CDs", mp->multi_session);
 	DOES("read fixed-packet CD media using Method 2", mp->method2);
 	DOES("read CD bar code", mp->read_bar_code);

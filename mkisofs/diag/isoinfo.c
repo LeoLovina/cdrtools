@@ -1,3 +1,8 @@
+/* @(#)isoinfo.c	1.16 00/04/21 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)isoinfo.c	1.16 00/04/21 joerg";
+#endif
 /*
  * File isodump.c - dump iso9660 directory information.
  *
@@ -19,8 +24,6 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
-
-static char rcsid[] ="$Id: isoinfo.c,v 1.6 1999/03/02 03:41:36 eric Exp $";
 
 /*
  * Simple program to dump contents of iso9660 image in more usable format.
@@ -94,6 +97,7 @@ int	isonum_721	__PR((char * p));
 int	isonum_723	__PR((char * p));
 int	isonum_731	__PR((char * p));
 int	isonum_733	__PR((unsigned char * p));
+void	printchars	__PR((char *s, int n));
 void	dump_pathtab	__PR((int block, int size));
 int	parse_rr	__PR((unsigned char * pnt, int len, int cont_flag));
 void	dump_rr		__PR((struct iso_directory_record * idr));
@@ -204,10 +208,10 @@ dump_pathtab(block, size)
 	    {
 		namebuf[j] = buf[offset + 8 + j*2+1];
 	    }
-	    printf("%4d: %4d %x %s\n", idx, pindex, extent, namebuf);
+	    printf("%4d: %4d %x %.*s\n", idx, pindex, extent, len, namebuf);
 	    break;
 	case 0:
-	    printf("%4d: %4d %x %s\n", idx, pindex, extent, buf + offset + 8);
+	    printf("%4d: %4d %x %.*s\n", idx, pindex, extent, len, buf + offset + 8);
 	}
 
 	idx++;
@@ -746,6 +750,7 @@ main(argc, argv)
       int block = 16;
       while( (unsigned char) ipd.type[0] != ISO_VD_END )
 	{
+		if( (unsigned char) ipd.type[0] == ISO_VD_SUPPLEMENTARY )
 	  /*
 	   * Find the UCS escape sequence.
 	   */

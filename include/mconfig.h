@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.30 00/01/28 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.32 00/03/25 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -78,7 +78,7 @@ extern "C" {
 #	define	IS_SUN
 #endif
 
-#if defined(__CYGWIN32__)
+#if defined(__CYGWIN32__) || defined(__CYGWIN__)
 #       define IS_GCC_WIN32
 #endif
 
@@ -175,10 +175,13 @@ extern "C" {
 #endif
 
 /*
- * Apple Rhapsody
+ * Apple Rhapsody (This is the name for Mac OS X beta)
  */
 #if defined(__NeXT__) && defined(__TARGET_OSNAME) && __TARGET_OSNAME == rhapsody
 #	define HAVE_OSDEF /* prevent later definitions to overwrite current */
+#	ifndef	IS_UNIX
+#	define	IS_UNIX
+#	endif
 #endif
 
 /*
@@ -190,6 +193,19 @@ extern "C" {
 				 *  NeXT Step 3.x uses __flsbuf(unsigned char , FILE *)
 				 * instead of __flsbuf(int, FILE *)
 				 */
+#	ifndef	IS_UNIX
+#	define	IS_UNIX
+#	endif
+#endif
+
+/*
+ * Mac OS X
+ */
+#if defined(__APPLE__) && defined(__MACH__)
+#	ifndef	IS_UNIX
+#	define	IS_UNIX
+#	endif
+#	define	IS_MACOS_X
 #endif
 
 /*

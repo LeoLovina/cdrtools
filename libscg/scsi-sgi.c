@@ -1,7 +1,7 @@
-/* @(#)scsi-sgi.c	1.19 99/09/17 Copyright 1997 J. Schilling */
+/* @(#)scsi-sgi.c	1.20 00/02/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sgi.c	1.19 99/09/17 Copyright 1997 J. Schilling";
+	"@(#)scsi-sgi.c	1.20 00/02/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the SGI generic SCSI implementation.
@@ -45,7 +45,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.19";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.20";	/* The version for this transport*/
 
 #ifdef	USE_DSLIB
 
@@ -197,11 +197,12 @@ scsi_close(scgp)
 
 	for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++)
+			for (l=0; l < MAX_LUN ; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
 				scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
+			}
 		}
 	}
 #else

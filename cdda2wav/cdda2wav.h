@@ -1,4 +1,4 @@
-/* @(#)cdda2wav.h	1.3 00/01/25 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)cdda2wav.h	1.4 00/02/13 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /***
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Heiko Eissfeldt
@@ -35,6 +35,7 @@
 void FatalError __PR((const char *szMessage, ...));
 void AnalyzeQchannel __PR(( unsigned frame ));
 long SamplesNeeded __PR(( long amount, long undersampling));
+unsigned int get_current_track __PR(( void ));
 
 #if defined (sun) && !defined(SVR4)
 #define  atexit(f) on_exit(f, 0)

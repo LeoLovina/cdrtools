@@ -1,4 +1,4 @@
-#ident @(#)cdrecord.dfl	1.1 98/12/06 Copyr 1998 J. Schilling
+#ident @(#)cdrecord.dfl	1.2 00/04/16 Copyr 1998 J. Schilling
 #
 # This file is /etc/default/cdrecord
 # It contains defaults that are used if no command line option
@@ -23,9 +23,11 @@ CDR_FIFOSIZE=4m
 # They are used if the device name does not contain the
 # the characters ',', ':', '/' and '@'
 #
-# drive name	device	speed	fifosize
+# drive name	device	speed	fifosize driveropts
 #
-teac=		1,3,0	-1	-1
-panasonic=	1,4,0	-1	-1
-yamaha=		1,5,0	-1	-1
-cdrom=		0,6,0	2	1m
+teac=		1,3,0	-1	-1	""
+panasonic=	1,4,0	-1	-1	""
+plextor=	1,4,0	12	-1	""
+sanyo=		1,4,0	12	-1	burnproof
+yamaha=		1,5,0	-1	-1	""
+cdrom=		0,6,0	2	1m	""

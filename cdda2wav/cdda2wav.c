@@ -1,7 +1,7 @@
-/* @(#)cdda2wav.c	1.6 00/01/11 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)cdda2wav.c	1.13 00/04/12 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)cdda2wav.c	1.6 00/01/11 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)cdda2wav.c	1.13 00/04/12 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #undef DEBUG_BUFFER_ADDRESSES
@@ -93,6 +93,8 @@ static char     sccsid[] =
 #if defined (HAVE_SYS_IOCTL_H) && (HAVE_SYS_IOCTL_H == 1)
 #include <sys/ioctl.h>
 #endif
+#include <errno.h>
+#include <sys/stat.h>
 
 #if defined (HAVE_SYS_WAIT_H) && (HAVE_SYS_WAIT_H == 1)
 #include <sys/wait.h>
@@ -111,6 +113,9 @@ static char     sccsid[] =
 #include "raw.h"	/* raw file handling */
 #include "aiff.h"	/* aiff file handling */
 #include "aifc.h"	/* aifc file handling */
+#ifdef	USE_LAME
+#include "mp3.h"	/* mp3 file handling */
+#endif
 #include "interface.h"  /* low level cdrom interfacing */
 #include "cdda2wav.h"
 #include "resample.h"
@@ -136,6 +141,8 @@ static void set_offset			__PR((myringbuff *p, int offset));
 static int get_offset			__PR((myringbuff *p));
 static void usage			__PR((void));
 static void init_globals		__PR((void));
+static int is_fifo __PR((char * filename));
+
 
 #if defined (__GLIBC__) || defined(_GNU_C_SOURCE) || defined(__USE_GNU) || defined(__CYGWIN32__)
 #define USE_GETOPT_LONG
@@ -210,6 +217,12 @@ static unsigned long nSamplesToDo;
 static unsigned int current_track;
 static int bulk = 0;
 
+unsigned int get_current_track __PR((void));
+
+unsigned int get_current_track()
+{
+	return current_track;
+}
 
 static void RestrictPlaybackRate( newrate )
 	long newrate;
@@ -283,6 +296,7 @@ static void output_indices(fp, p, trackstart)
   int ci;
 
   fprintf(fp, "Index=\t\t");
+
   if (p == NULL) {
     fprintf(fp, "0\n");
     return;
@@ -306,7 +320,7 @@ static void output_indices(fp, p, trackstart)
 }
 
 /*
- * write information at the end of the sampling process
+ * write information before the start of the sampling process
  *
  *
  * uglyfied for Joerg Schillings ultra dumb line parser
@@ -337,9 +351,11 @@ static int write_info_file(fname_baseval, track, SamplesDone, numbered)
   if (!info_fp)
     return -1;
 
+#if 0
 #ifdef MD5_SIGNATURES
   if (global.md5blocksize)
     MD5Final (global.MD5_result, &global.context);
+#endif
 #endif
 
   utc_time = time(NULL);
@@ -377,10 +393,10 @@ static int write_info_file(fname_baseval, track, SamplesDone, numbered)
 	  , SamplesDone/588L,(int)(SamplesDone%588));
   fprintf(info_fp, 
 	  "Pre-emphasis=\t%s\n"
-	  , g_toc[track-1].bFlags & 1 ? "yes" : "no");
+	  , g_toc[track-1].bFlags & 1 && (global.deemphasize == 0) ? "yes" : "no");
   fprintf(info_fp, 
 	  "Channels=\t%d\n"
-	  , g_toc[track-1].bFlags & 8 ? 4 : 2);
+	  , g_toc[track-1].bFlags & 8 ? 4 : global.channels == 2 ? 2 : 1);
   fprintf(info_fp, 
 	  "Copy_permitted=\t%s\n"
 	  , g_toc[track-1].bFlags & 2 ? "yes" : "no");
@@ -390,6 +406,11 @@ static int write_info_file(fname_baseval, track, SamplesDone, numbered)
 	  );
   fprintf(info_fp, "# index list\n");
   output_indices(info_fp, global.trackindexlist[track-1], GetStartSector(track));
+#if 0
+/* MD5 checksums in info files are currently broken.
+ *  for on-the-fly-recording the generation of info files has been shifted
+ *  before the recording starts, so there is no checksum at that point.
+ */
 #ifdef MD5_SIGNATURES
   fprintf(info_fp, 
 	  "#(blocksize) checksum\nMD-5=\t\t(%d) %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n"
@@ -410,6 +431,7 @@ static int write_info_file(fname_baseval, track, SamplesDone, numbered)
 	  , global.MD5_result[13]
 	  , global.MD5_result[14]
 	  , global.MD5_result[15]);
+#endif
 #endif
   fclose(info_fp);
   return 0;
@@ -488,10 +510,10 @@ fprintf(stderr, "Cdda2wav single process terminating, \n");
     /* tell minimum and maximum amplitudes, if required */
     if (global.findminmax) {
       fprintf(stderr,
-	 "right channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
+	 "Right channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
 	global.minamp[0], global.maxamp[0]);
       fprintf(stderr,
-	 "left  channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
+	 "Left  channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
 	global.minamp[1], global.maxamp[1]);
     }
 
@@ -520,20 +542,20 @@ fprintf(stderr, "Parent wait for child death, \n");
     } else {
       if (WIFEXITED(chld_return_status)) {
         if (WEXITSTATUS(chld_return_status)) {
-          fprintf(stderr, "Child exited with %d\n", WEXITSTATUS(chld_return_status));
+          fprintf(stderr, "\nW Child exited with %d\n", WEXITSTATUS(chld_return_status));
         }
       }
       if (WIFSIGNALED(chld_return_status)) {
-        fprintf(stderr, "Child exited due to signal %d\n", WTERMSIG(chld_return_status));
+        fprintf(stderr, "\nW Child exited due to signal %d\n", WTERMSIG(chld_return_status));
       }
       if (WIFSTOPPED(chld_return_status)) {
-        fprintf(stderr, "Child is stopped due to signal %d\n", WSTOPSIG(chld_return_status));
+        fprintf(stderr, "\nW Child is stopped due to signal %d\n", WSTOPSIG(chld_return_status));
       }
     }
 #endif
 
 #ifdef DEBUG_CLEANUP
-fprintf(stderr, "Parent child death, state:%d\n", chld_return_status);
+fprintf(stderr, "\nW Parent child death, state:%d\n", chld_return_status);
 #endif
   }
 #ifdef GPROF
@@ -619,18 +641,20 @@ static void OpenAudio (fname, rate, nBitsPerSample, channels_val, expected_bytes
   if (global.audio == -1) {
 
     global.audio = open (fname, O_CREAT | O_WRONLY | O_TRUNC | O_BINARY
-#ifdef O_NONBLOCK
-			 | O_NONBLOCK
-#endif
 #ifdef SYNCHRONOUS_WRITE
 			 | O_SYNC
 #endif
 		  , 0666);
     if (global.audio == -1) {
+      if (errno == EAGAIN && is_fifo(fname)) {
+        FatalError ("Could not open fifo %s. Probably no fifo reader present.\n", fname);
+      }
       perror("open audio sample file");
       FatalError ("Could not open file %s\n", fname);
     }
   }
+  global.SkippedSamples = 0;
+  any_signal = 0;
   audio_out->InitSound( global.audio, channels_val, (unsigned long)rate, nBitsPerSample, expected_bytes );
 
 #ifdef MD5_SIGNATURES
@@ -763,7 +787,7 @@ static void usage( )
 "         -e          : echo audio data to sound device SOUND_DEV.\n");
 #endif
   fprintf( stderr,
-"         -v level    : print informations on current cd (level: 0-63).\n");
+"         -v level    : print informations on current cd (level: 0-255).\n");
   fprintf( stderr,
 "         -N          : no file operation.\n");
   fprintf( stderr,
@@ -840,6 +864,7 @@ static void init_globals()
   global.overlap = 1;           /* amount of overlapping sectors */
   global.useroverlap = -1;      /* amount of overlapping sectors user override */
   global.need_hostorder = 0;	/* processing needs samples in host endianess */
+  global.in_lendian = -1;	/* input endianess from SetupSCSI() */
   global.outputendianess = NONE; /* user specified output endianess */
   global.findminmax  =  0;	/* flag find extrem amplitudes */
 #ifdef HAVE_LIMITS_H
@@ -889,6 +914,29 @@ static int strcasecmp(s1, s2)
   return -1;
 }
 #endif
+
+static int is_fifo(filename)
+	char * filename;
+{
+#if	defined S_ISFIFO
+  struct stat statstruct;
+
+  if (stat(filename, &statstruct)) {
+    /* maybe the output file does not exist. */
+    if (errno == ENOENT)
+	return 0;
+    else comerr("Error during stat for output file\n");
+  } else {
+    if (S_ISFIFO(statstruct.st_mode)) {
+	return 1;
+    }
+  }
+  return 0;
+#else
+  return 0;
+#endif
+}
+
 
 #if !defined (HAVE_STRTOUL) || (HAVE_STRTOUL != 1)
 static unsigned int strtoul __PR(( const char *s1, char **s2, int base ));
@@ -940,8 +988,10 @@ switch_to_realtime_priority()
 
         /* get info */
         strcpy(info.pc_clname, "RT");
-        if (-1 == priocntl(P_PID, pid, PC_GETCID, (void *)&info))
-                comerr("Cannot get priority class id priocntl(PC_GETCID)\n");
+        if (-1 == priocntl(P_PID, pid, PC_GETCID, (void *)&info)) {
+                errmsg("Cannot get priority class id priocntl(PC_GETCID)\n");
+		goto prio_done;
+	}
 
         movebytes(info.pc_clinfo, &rtinfo, sizeof(rtinfo_t));
 
@@ -953,7 +1003,8 @@ switch_to_realtime_priority()
         movebytes(&rtparam, param.pc_clparms, sizeof(rtparms_t));
 	needroot(0);
         if (-1 == priocntl(P_PID, pid, PC_SETPARMS, (void *)&param))
-                comerr("Cannot set priority class parameters priocntl(PC_SETPARMS)\n");
+                errmsg("Cannot set priority class parameters priocntl(PC_SETPARMS)\n");
+prio_done:
 	dontneedroot();
 }
 #else
@@ -978,8 +1029,8 @@ switch_to_realtime_priority()
 	needroot(0);
 	if (-1 == sched_setscheduler(getpid(), SCHED_FIFO, &sched_parms)
 		&& global.quiet != 1)
-		perror("cannot set posix realtime scheduling policy");
-	dontneedroot();
+		errmsg("cannot set posix realtime scheduling policy\n");
+		dontneedroot();
 	}
 }
 #else
@@ -1261,13 +1312,12 @@ if (left_in_track < 0) {
 		  (char *)(p->data) + current_offset,
 		  (InSamples - how_much) * 4);
 
-	if ((unsigned long) left_in_track < InSamples) {
+	if ((unsigned long) left_in_track <= InSamples) {
 
 	  if (bulk) {
 	    /* finish sample file for this track */
 	    CloseAudio(global.fname_base, current_track, bulk, global.channels,
 	  	  global.nSamplesDoneInTrack, global.audio_out);
-	    any_signal = 0;
           } else if (SamplesToWrite == 0) {
 	    /* finish sample file for this track */
 	    CloseAudio(global.fname_base, track, bulk, global.channels,
@@ -1276,11 +1326,14 @@ if (left_in_track < 0) {
 
 	  if (global.verbose) {
 	    if (global.tracktitle[current_track -1] != NULL) {
-	      fprintf( stderr, "  track %2u '%s' successfully recorded\n", 
+	      fprintf( stderr, "\b\b\b\b100%%  track %2u '%s' successfully recorded", 
 			current_track, global.tracktitle[current_track-1]);
             } else {
-	      fprintf( stderr, "  track %2u successfully recorded\n", current_track);
+	      fprintf( stderr, "\b\b\b\b100%%  track %2u successfully recorded", current_track);
             }
+	    if (waitforsignal == 1)
+		fprintf(stderr, ". %d silent samples omitted", global.SkippedSamples);
+	    fputs("\n", stderr);
           }
 
           global.nSamplesDoneInTrack = 0;
@@ -1389,10 +1442,10 @@ forked_write()
 
     if (global.verbose) {
       if (global.tracktitle[current_track -1] != NULL) {
-        fprintf( stderr, "  track %2u '%s' successfully recorded\n",
+        fprintf( stderr, "\b\b\b\b100%%  track %2u '%s' successfully recorded\n",
 		current_track, global.tracktitle[current_track-1]);
       } else {
-        fprintf( stderr, "  track %2u successfully recorded\n", current_track);
+        fprintf( stderr, "\b\b\b\b100%%  track %2u successfully recorded\n", current_track);
       }
     }
 }
@@ -1469,7 +1522,8 @@ int main( argc, argv )
 
   /* When being invoked as list_audio_tracks, just dump a list of
      audio tracks. */
-  am_i_cdda2wav = strcmp(argv[0],"list_audio_tracks");
+  am_i_cdda2wav = !(strlen(argv[0]) >= sizeof("list_audio_tracks")-1
+	&& !strcmp(argv[0]+strlen(argv[0])+1-sizeof("list_audio_tracks"),"list_audio_tracks"));
   if (!am_i_cdda2wav) global.verbose = SHOW_JUSTAUDIOTRACKS;
 
   /* Control those set-id privileges... */
@@ -1513,7 +1567,8 @@ int main( argc, argv )
 #ifdef MD5_SIGNATURES
       case 'M':
         if (!am_i_cdda2wav) break;
-	global.md5blocksize = strtoul( optarg, NULL, 10 );
+fprintf(stderr, "MD5 signatures are currently broken! Sorry\n");
+	/*global.md5blocksize = strtoul( optarg, NULL, 10 ); */
         break;
 #endif
       case 'O':    /* override audio type */
@@ -1693,9 +1748,9 @@ int main( argc, argv )
 #ifdef	Thomas_will_es
 	global.no_file = 1;
 	global.no_infofile = 1;
-	global.no_cddbfile = 1;
 	global.verbose = SHOW_MAX;
 #endif
+	global.no_cddbfile = 1;
 	global.gui = 1;
 	break;
       case 'Q':   /* silent scsi mode */
@@ -1749,6 +1804,14 @@ int main( argc, argv )
   }
 
   /* check all parameters */
+  if (global.buffers < 1) {
+    usage2("Incorrect buffer setting: %d", global.buffers);
+  }
+
+  if (global.nsectors < 1) {
+    usage2("Incorrect nsectors setting: %d", global.nsectors);
+  }
+
   if (global.verbose < 0 || global.verbose > SHOW_MAX) {
     usage2("Incorrect verbose level setting: %d",global.verbose);
   }
@@ -1793,14 +1856,6 @@ int main( argc, argv )
     usage2("Incorrect interface setting: %s",int_name);
   }
 
-  /* If we need to calculate with samples or write them to a soundcard,
-   * we need a conversion to host byte order.
-   */ 
-  if (global.channels != 2 
-      || bits != 16
-      || rate != 44100)
-	global.need_hostorder = 1;
-
   /* check * init audio file */
   if (!strncmp(audio_type,"wav",3)) {
     global.audio_out = &wavsound;
@@ -1815,6 +1870,20 @@ int main( argc, argv )
     global.audio_out = &aiffsound;
   } else if (!strncmp(audio_type, "aifc", 4)) {
     global.audio_out = &aifcsound;
+#ifdef USE_LAME
+  } else if (!strncmp(audio_type, "mp3", 3)) {
+    global.audio_out = &mp3sound;
+    if (!global.quiet) {
+	unsigned char Lame_version[20];
+
+	fetch_lame_version(Lame_version);
+	fprintf(stderr, "Using LAME version %s.\n", Lame_version);
+    }
+    if (bits < 9) {
+	bits = 16;
+	fprintf(stderr, "Warning: sample size forced to 16 bit for MP3 format.\n");
+    }
+#endif /* USE_LAME */
   } else {
     usage2("Incorrect audio type setting: %3s", audio_type);
   }
@@ -1830,6 +1899,14 @@ int main( argc, argv )
     strcat(global.fname_base, audio_type);
   }
 
+  /* If we need to calculate with samples or write them to a soundcard,
+   * we need a conversion to host byte order.
+   */ 
+  if (global.channels != 2 
+      || bits != 16
+      || rate != 44100)
+	global.need_hostorder = 1;
+
   /*
    * all options processed.
    * Now a file name per track may follow 
@@ -1838,24 +1915,15 @@ int main( argc, argv )
   argv2 = argv + optind;
   if ( optind < argc ) {
     if (!strcmp(argv[optind],"-")) {
-      /*
-       * pipe mode
-       */
-      if (bulk == 1) {
-        fprintf(stderr, "bulk mode disabled while outputting to a pipe\n");
-        bulk = 0;
-      }
 #if     defined(__CYGWIN32__) || defined(__EMX__)
       setmode(fileno(stdout), O_BINARY);
 #endif
-
       global.audio = dup (fileno(stdout));
       strncpy( global.fname_base, "standard output", sizeof(global.fname_base) );
       global.fname_base[sizeof(global.fname_base)-1]=0;
-      global.no_infofile = 1;
-      global.no_cddbfile = 1;
-    } else if (optind + 1 < argc) {
-	/* do we have more than one argument? */
+    } else if (is_fifo(argv[optind])) {
+    } else {
+	/* we do have at least one argument */
 	global.multiname = 1;
     }
   }
@@ -1869,13 +1937,69 @@ int main( argc, argv )
 
     SETSIGHAND(set_nonforked, SIGPIPE, "SIGPIPE")
 
-
   /* setup interface and open cdrom device */
   /* request sychronization facilities and shared memory */
   SetupInterface( );
+
+  /* use global.useroverlap to set our overlap */
+  if (global.useroverlap != -1)
+	global.overlap = global.useroverlap;
+
+  /* check for more valid option combinations */
+
+  if (global.nsectors < 1+global.overlap) {
+	fprintf( stderr, "Warning: Setting #nsectors to minimum of %d, due to jitter correction!\n", global.overlap+1);
+	  global.nsectors = global.overlap+1;
+  }
+
+  if (global.overlap > 0 && global.buffers < 2) {
+	fprintf( stderr, "Warning: Setting #buffers to minimum of 2, due to jitter correction!\n");
+	  global.buffers = 2;
+  }
+
+    /* Value of 'nsectors' must be defined here */
+
+    global.shmsize = HEADER_SIZE + ENTRY_SIZE_PAGE_AL * global.buffers;
+
+#if	defined (HAVE_FORK_AND_SHAREDMEM)
+#if	defined(HAVE_SMMAP) || defined(HAVE_USGSHM) || defined(HAVE_DOSALLOCSHAREDMEM)
+    he_fill_buffer = request_shm_sem(global.shmsize, (unsigned char **)&he_fill_buffer);
+    if (he_fill_buffer == NULL) {
+#else /* have shared memory */
+    if (1) {
+#endif
+	fprintf( stderr, "no shared memory available!\n");
+	exit(2);
+    }
+#else /* do not have fork() and shared memory */
+    he_fill_buffer = malloc(global.shmsize);
+    if (he_fill_buffer == NULL) {
+	fprintf( stderr, "no buffer memory available!\n");
+	exit(2);
+    }
+#endif
+
+    if (global.verbose != 0)
+   	 fprintf(stderr,
+   		 "%u bytes buffer memory requested, %d buffers, %d sectors\n",
+   		 global.shmsize, global.buffers, global.nsectors);
+
+    /* initialize pointer into shared memory segment */
+    last_buffer = he_fill_buffer + 1;
+    total_segments_read = (unsigned long *) (last_buffer + 1);
+    total_segments_written = total_segments_read + 1;
+    child_waits = (int *) (total_segments_written + 1);
+    parent_waits = child_waits + 1;
+    in_lendian = parent_waits + 1;
+    *in_lendian = global.in_lendian;
+
+    set_total_buffers(global.buffers, sem_id);
+
+
 #if defined(HAVE_SEMGET) && defined(USE_SEMAPHORES)
   atexit ( free_sem );
 #endif
+
   /*
    * set input endian default
    */
@@ -1915,18 +2039,10 @@ int main( argc, argv )
     fputs( "\n", stderr );
   }
 
-  have_CD_extra = FixupTOC(cdtracks + 1);
+  FixupTOC(cdtracks + 1);
 
   if ( global.verbose & (SHOW_TOC | SHOW_STARTPOSITIONS) )
     DisplayToc ();
-
-  /* use global.useroverlap to set our overlap */
-  if (global.useroverlap != -1)
-	global.overlap = global.useroverlap;
-
-  if (global.nsectors < 1+global.overlap) {
-      usage2("Overlap (%d) is greater or equal than nsectors (%d)\nUse -P to set the overlap sectors and -n to set the nsectors",global.overlap, global.nsectors);
-  }
 
   /* try to get some extra kicks */
   needroot(0);
@@ -1962,7 +2078,7 @@ int main( argc, argv )
 
     if ( lSector < 0 ) {
       if ( bulk == 0 ) {
-        FatalError ( "track %d not found\n", track );
+        FatalError ( "Track %d not found\n", track );
       } else {
         fprintf(stderr, "Skipping data track %d...\n", track);
 	if (endtrack == track) endtrack++;
@@ -1978,7 +2094,7 @@ int main( argc, argv )
     sector_offset += ScanIndices( track, cd_index, bulk );
   } else {
     cd_index = 1;
-    if (global.verbose & SHOW_INDICES) {
+    if (global.deemphasize || (global.verbose & SHOW_INDICES)) {
       ScanIndices( track, cd_index, bulk );
     }
   }
@@ -1986,12 +2102,12 @@ int main( argc, argv )
   lSector += sector_offset;
   /* check against end sector of track */
   if ( lSector >= lSector_p1 ) {
-    fputs( "sector offset exceeds track size (ignored)\n", stderr );
+    fputs( "W Sector offset exceeds track size (ignored)\n", stderr );
     lSector -= sector_offset;
   }
 
   if ( lSector < 0L ) {
-    fputs( "negative start sector! Set to zero.\n", stderr );
+    fputs( "Negative start sector! Set to zero.\n", stderr );
     lSector = 0L;
   }
 
@@ -2009,10 +2125,10 @@ int main( argc, argv )
         rectime = (lSector_p2 - lSector) / 75.0;
         nSamplesToDo = (long)(rectime*44100.0 + 0.5);
       } else {
-        fputs( "end track is no valid audio track (ignored)\n", stderr );
+        fputs( "End track is no valid audio track (ignored)\n", stderr );
       }
     } else {
-      fputs( "track range does not consist of audio tracks only (ignored)\n", stderr );
+      fputs( "Track range does not consist of audio tracks only (ignored)\n", stderr );
     }
   } else {
     /* Prepare the maximum recording duration.
@@ -2034,16 +2150,47 @@ int main( argc, argv )
       usage2("Time interval is too short. Choose a duration greater than %d.%02d secs!", 
 	       undersampling/44100, (int)(undersampling/44100) % 100);
   }
+  if ( optind < argc ) {
+    if (!strcmp(argv[optind],"-") || is_fifo(argv[optind])) {
+      /*
+       * pipe mode
+       */
+      if (bulk == 1) {
+        fprintf(stderr, "W Bulk mode is disabled while outputting to a %spipe\n",
+		is_fifo(argv[optind]) ? "named " : "");
+        bulk = 0;
+      }
+      global.no_cddbfile = 1;
+    }
+  }
+  if (global.no_infofile == 0) {
+    global.no_infofile = 1;
+    if (global.channels == 1 || bits != 16 || rate != 44100) {
+      fprintf(stderr, "W Sample conversions disable generation of info files!\n");
+    } else if (waitforsignal == 1) {
+      fprintf(stderr, "W Option -w 'wait for signal' disables generation of info files!\n");
+    } else if (sector_offset != 0) {
+      fprintf(stderr, "W Using an start offset (option -o) disables generation of info files!\n");
+    } else if (!bulk &&
+      !(lSector == GetStartSector(track) &&
+        (lSector + rectime*75.0) == GetEndSector(track) + 1)) {
+      fprintf(stderr, "W Duration is not set for complete tracks (option -d), this disables generation\n  of info files!\n");
+    } else {
+      global.no_infofile = 0;
+    }
+  }
+
   SamplesToWrite = nSamplesToDo*2/(int)int_part;
 
   tracks_included = GetTrack(
 	      (unsigned) (lSector + nSamplesToDo/CD_FRAMESAMPLES -1))
-				     - track + 1;
-  if ( !waitforsignal ) {
+				     - max(track,FirstAudioTrack()) + 1;
 
-      if (global.multiname != 0 && optind + tracks_included > argc) {
+  if (global.multiname != 0 && optind + tracks_included > argc) {
 	global.multiname = 0;
-      }
+  }
+
+  if ( !waitforsignal ) {
 
 #ifdef INFOFILES
       if (!global.no_infofile) {
@@ -2060,8 +2207,14 @@ int main( argc, argv )
 		  strncpy( global.fname_base, tmp_fname, sizeof(global.fname_base)-8 );
  		global.fname_base[sizeof(global.fname_base)-1]=0;
 		minsec = max(lSector, GetStartSector(i));
-		maxsec = min(lSector_p2, 1+GetEndSector(i));
-		write_info_file(global.fname_base,i,(maxsec-minsec)*CD_FRAMESAMPLES, bulk && global.multiname == 0);
+		maxsec = min(lSector + rectime*75.0, 1+GetEndSector(i));
+		if (minsec == GetStartSector(i) &&
+		    maxsec == 1+GetEndSector(i)) {
+			write_info_file(global.fname_base,i,(maxsec-minsec)*CD_FRAMESAMPLES, bulk && global.multiname == 0);
+		} else {
+			fprintf(stderr,
+				 "Partial length copy for track %d, no info file will be generated for this track!\n", i);
+		}
 		if (!bulk) break;
 	}
 	reset_name_iterator();
@@ -2134,7 +2287,8 @@ int main( argc, argv )
   if ( 1 ) {
       if ( (global.verbose & SHOW_SUMMARY) && !just_the_toc ) {
 	fprintf(stderr, "samplefile size will be %lu bytes.\n",
-           global.audio_out->GetHdrSize() + SamplesToWrite*global.OutSampleSize*global.channels  ); 
+           global.audio_out->GetHdrSize() +
+	   global.audio_out->InSizeToOutSize(SamplesToWrite*global.OutSampleSize*global.channels)  ); 
         fprintf (stderr, "recording %d.%05d seconds %s with %d bits @ %5d.%01d Hz"
 	      ,(int)rectime , (int)(rectime * 10000) % 10000,
 	      global.channels == 1 ? "mono":"stereo", bits, (int)rate, (int)(rate*10)%10);
@@ -2162,14 +2316,14 @@ int main( argc, argv )
     /* child WRITER section */
 
 #ifdef	__EMX__
-    if (DosGetSharedMem(fill_buffer, 3)) {
+    if (DosGetSharedMem(he_fill_buffer, 3)) {
       comerr("DosGetSharedMem() failed.\n");
     }
 #endif
     global.have_forked = 1;
     forked_write();
 #ifdef	__EMX__
-    DosFreeMem(fill_buffer);
+    DosFreeMem(he_fill_buffer);
     _exit(0);
 #endif
     exit(0);
@@ -2181,7 +2335,7 @@ int main( argc, argv )
 
     forked_read();
 #ifdef	__EMX__
-    DosFreeMem(fill_buffer);
+    DosFreeMem(he_fill_buffer);
 #endif
     exit(0);
   } else

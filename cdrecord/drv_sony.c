@@ -1,7 +1,7 @@
-/* @(#)drv_sony.c	1.37 99/10/17 Copyright 1997 J. Schilling */
+/* @(#)drv_sony.c	1.39 00/04/16 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_sony.c	1.37 99/10/17 Copyright 1997 J. Schilling";
+	"@(#)drv_sony.c	1.39 00/04/16 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -161,7 +161,7 @@ LOCAL	int	speed_select_sony	__PR((SCSI *scgp, int *speedp, int dummy));
 LOCAL	int	next_writable_address_sony __PR((SCSI *scgp, long *ap, int track, int sectype, int tracktype));
 LOCAL	int	new_track_sony		__PR((SCSI *scgp, int track, int sectype, int tracktype));
 LOCAL	int	open_track_sony		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *track_info));
-LOCAL	int	open_session_sony	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	open_session_sony	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
 LOCAL	int	get_page22_sony		__PR((SCSI *scgp, char *mode));
 LOCAL	int	sony_attach		__PR((SCSI *scgp, cdr_t *dp));
 #ifdef	SONY_DEBUG
@@ -197,6 +197,7 @@ cdr_t	cdr_sony_cdu924 = {
 	read_session_offset_philips,
 	finalize_sony,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 LOCAL int
@@ -696,8 +697,9 @@ open_track_sony(scgp, dp, track, track_info)
 }
 
 LOCAL int
-open_session_sony(scgp, tracks, trackp, toctype, multi)
+open_session_sony(scgp, dp, tracks, trackp, toctype, multi)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	tracks;
 	track_t	*trackp;
 	int	toctype;

@@ -1,7 +1,7 @@
-/* @(#)scsi_cmds.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)scsi_cmds.c	1.3 00/02/17 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)scsi_cmds.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)scsi_cmds.c	1.3 00/02/17 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /* file for all SCSI commands
@@ -230,7 +230,7 @@ void ReadTocTextSCSIMMC ( scgp )
         scmd->cdb.g1_cdb.cmd = 0x43;		/* Read TOC command */
         scmd->cdb.g1_cdb.lun = scgp->lun;
         scmd->cdb.g1_cdb.addr[0] = 5;		/* format field */
-        scmd->cdb.g1_cdb.res6 = 1;		/* track/session */
+        scmd->cdb.g1_cdb.res6 = 0;	/* track/session is reserved */
         g1_cdblen(&scmd->cdb.g1_cdb, 4);
 
         scgp->silent++;
@@ -260,7 +260,7 @@ void ReadTocTextSCSIMMC ( scgp )
         scmd->cdb.g1_cdb.cmd = 0x43;		/* Read TOC command */
         scmd->cdb.g1_cdb.lun = scgp->lun;
         scmd->cdb.g1_cdb.addr[0] = 5;		/* format field */
-        scmd->cdb.g1_cdb.res6 = 1;		/* track/session */
+        scmd->cdb.g1_cdb.res6 = 0;	/* track/session is reserved */
         g1_cdblen(&scmd->cdb.g1_cdb, 2+datalength);
 
         scgp->silent++;
@@ -932,14 +932,24 @@ void SpeedSelectSCSIMMC (scgp, speed)
         scmd->cdb.g5_cdb.cmd = 0xBB;
         scmd->cdb.g5_cdb.lun = scgp->lun;
         i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], spd);
-        i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], spd);
+        i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], 0xffff);
 
         if (scgp->verbose) fprintf(stderr, "\nspeed select MMC...");
 
 	scgp->cmdname = "set cd speed";
 
-        if (scsicmd(scgp) < 0)
-                fprintf (stderr, "speed select MMC failed\n");
+	scgp->silent++;
+        if (scsicmd(scgp) < 0) {
+		if (scsi_sense_key(scgp) == 0x05 &&
+		    scsi_sense_code(scgp) == 0x20 &&
+		    scsi_sense_qual(scgp) == 0x00) {
+			/* this optional command is not implemented */
+		} else {
+			scsiprinterr(scgp);
+                	fprintf (stderr, "speed select MMC failed\n");
+		}
+	}
+	scgp->silent--;
 }
 
 /* request vendor brand and model */

@@ -1,3 +1,8 @@
+/* @(#)isodump.c	1.12 99/12/27 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)isodump.c	1.12 99/12/27 joerg";
+#endif
 /*
  * File isodump.c - dump iso9660 directory information.
  *
@@ -19,8 +24,6 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
-
-static char rcsid[] ="$Id: isodump.c,v 1.3 1999/03/02 03:41:36 eric Exp $";
 
 #include "../config.h"
 

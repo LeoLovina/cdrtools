@@ -1,7 +1,7 @@
-/* @(#)semshm.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)semshm.c	1.4 00/02/17 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)semshm.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)semshm.c	1.4 00/02/17 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #define IPCTST
@@ -209,16 +209,17 @@ int semrequest(dummy, semnum)
   if (semnum == FREE_SEM /* 0 */)  {
       int retval;
     if ((*total_segments_read) - (*total_segments_written) >= global.buffers) {
-      /* child/reader waits for freed buffers from the parent/writer */
-      *child_waits = 1;
+      /* parent/reader waits for freed buffers from the child/writer */
+      *parent_waits = 1;
       retval = read(pipefdp2c[0], &dummy, 1) != 1;
       return retval;
     }
   } else {
       int retval;
+
     if ((*total_segments_read) == (*total_segments_written)) {
-      /* parent/writer waits for defined buffers from the child/reader */
-      *parent_waits = 1;
+      /* child/writer waits for defined buffers from the parent/reader */
+      *child_waits = 1;
       retval = read(pipefdc2p[0], &dummy, 1) != 1;
       return retval;
     }
@@ -235,18 +236,18 @@ int semrelease(dummy, semnum, amount)
   PRETEND_TO_USE(dummy);
 
   if (semnum == FREE_SEM /* 0 */)  {
-    if (*child_waits == 1) {
+    if (*parent_waits == 1) {
       int retval;
-      /* parent/writer signals freed buffer to the child/reader */
-      *child_waits = 0;
+      /* child/writer signals freed buffer to the parent/reader */
+      *parent_waits = 0;
       retval = write(pipefdp2c[1], "12345678901234567890", amount) != amount;
       return retval;
     }
   } else {
-    if (*parent_waits == 1) {
+    if (*child_waits == 1) {
       int retval;
-      /* child/reader signals defined buffers to the parent/writer */
-      *parent_waits = 0;
+      /* parent/reader signals defined buffers to the child/writer */
+      *child_waits = 0;
       retval = write(pipefdc2p[1], "12345678901234567890", amount) != amount;
       return retval;
     }
@@ -326,6 +327,26 @@ static int shm_request(size, memptr)
 #endif
 #endif
 
+/* release semaphores */
+void free_sem __PR(( void ));
+void free_sem()
+{
+#if defined(HAVE_SEMGET) && defined(USE_SEMAPHORES)
+  int   mycmd;
+  union my_semun unused_arg;
+
+  mycmd = IPC_RMID;
+
+  /* HP-UX warns here, but 'unused_arg' is not used for this operation */
+  /* This warning is difficult to avoid, since the structure of the union
+   * generally is not known (os dependent). So we cannot initialize it
+   * properly.
+   */
+  semctl(sem_id,0,mycmd,unused_arg);
+#endif
+
+}
+
 #ifdef  USE_MMAP
 #if defined(HAVE_SMMAP) && defined(USE_MMAP)
 static int shm_request	__PR((unsigned int size, unsigned char **memptr));
@@ -356,26 +377,6 @@ static int shm_request(size, memptr)
 		*memptr = (unsigned char *)addr;
 
 	return 0;
-}
-
-/* release semaphores and shared memory */
-void free_sem __PR(( void ));
-void free_sem()
-{
-#if defined(HAVE_SEMGET) && defined(USE_SEMAPHORES)
-  int   mycmd;
-  union my_semun unused_arg;
-
-  mycmd = IPC_RMID;
-
-  /* HP-UX warns here, but 'unused_arg' is not used for this operation */
-  /* This warning is difficult to avoid, since the structure of the union
-   * generally is not known (os dependent). So we cannot initialize it
-   * properly.
-   */
-  semctl(sem_id,0,mycmd,unused_arg);
-#endif
-
 }
 #endif
 #endif

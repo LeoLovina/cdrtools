@@ -1,7 +1,7 @@
-/** @(#)drv_jvc.c	1.46 99/10/17 Copyright 1997 J. Schilling */
+/** @(#)drv_jvc.c	1.49 00/04/26 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_jvc.c	1.46 99/10/17 Copyright 1997 J. Schilling";
+	"@(#)drv_jvc.c	1.49 00/04/26 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -217,8 +217,10 @@ LOCAL	int	cdr_write_teac		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size
 LOCAL	int	open_track_jvc		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
 LOCAL	int	teac_fixation		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
 LOCAL	int	close_track_teac	__PR((SCSI *scgp, int track, track_t *trackp));
-LOCAL	int	teac_open_session	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));
-LOCAL	int	teac_calibrate		__PR((SCSI *scgp, int toctype, int multi));
+LOCAL	int	teac_open_session	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	teac_init		__PR((SCSI *scgp, int toctype, int multi));
+LOCAL	int	teac_doopc		__PR((SCSI *scgp));
+LOCAL	int	teac_opc		__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
 LOCAL	int	opt_power_judge		__PR((SCSI *scgp, int judge));
 LOCAL	int	clear_subcode		__PR((SCSI *scgp));
 LOCAL	int	set_limits		__PR((SCSI *scgp, long lba, long length));
@@ -268,6 +270,7 @@ cdr_t	cdr_teac_cdr50 = {
 	teac_fixation,
 /*	blank_dummy,*/
 	blank_jvc,
+	teac_opc,
 };
 
 LOCAL int
@@ -805,8 +808,9 @@ extern	char	*buf;
 }
 
 LOCAL int
-teac_open_session(scgp, tracks, trackp, toctype, multi)
+teac_open_session(scgp, dp, tracks, trackp, toctype, multi)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	tracks;
 	track_t	*trackp;
 	int	toctype;
@@ -825,11 +829,11 @@ teac_open_session(scgp, tracks, trackp, toctype, multi)
 			return (-1);
 		}
 	}
-	return (teac_calibrate(scgp, toctype, multi));
+	return (teac_init(scgp, toctype, multi));
 }
 
 LOCAL int
-teac_calibrate(scgp, toctype, multi)
+teac_init(scgp, toctype, multi)
 	SCSI	*scgp;
 	int	toctype;
 	int	multi;
@@ -844,6 +848,15 @@ teac_calibrate(scgp, toctype, multi)
 	status = clear_subcode(scgp);
 	if (status < 0)
 		return (status);
+
+	return (0);
+}
+
+LOCAL int
+teac_doopc(scgp)
+	SCSI	*scgp;
+{
+	int	status;
 
 	if (lverbose) {
 		fprintf(stdout, "Judging disk...");
@@ -863,12 +876,32 @@ teac_calibrate(scgp, toctype, multi)
 	if (lverbose) {
 		fprintf(stdout, "done.\n");
 	}
+	/*
+	 * Check for error codes 0xCD ... 0xCF
+	 */
 	scgp->silent++;
 	if (next_wr_addr_teac(scgp, -1, -1) < 0) {
 		if (scgp->verbose == 0 && scsi_sense_key(scgp) != SC_ILLEGAL_REQUEST)
 			scsiprinterr(scgp);
 	}
 	scgp->silent--;
+	return (status);
+}
+
+LOCAL int
+teac_opc(scgp, bp, cnt, doopc)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	cnt;
+	int	doopc;
+{
+	int	status;
+	int	count = 0;
+
+	do {
+		status = teac_doopc(scgp);
+	} while (++count <= 1 && status < 0);
+
 	return (status);
 }
 
@@ -1181,7 +1214,7 @@ blank_jvc(scgp, addr, blanktype)
 		flush();
 	}
 
-	return (scsi_blank(scgp, addr, blanktype));
+	return (scsi_blank(scgp, addr, blanktype, FALSE));
 }
 
 LOCAL int

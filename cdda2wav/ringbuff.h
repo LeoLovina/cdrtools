@@ -1,4 +1,4 @@
-/* @(#)ringbuff.h	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)ringbuff.h	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /* This file contains data structures that reside in the shared memory
  * segment.
  */
@@ -34,7 +34,7 @@ struct ringbuffheader {
   UINT4 data[CD_FRAMESAMPLES];
 };
 
-extern myringbuff **fill_buffer;
+extern myringbuff **he_fill_buffer;
 extern myringbuff **last_buffer;
 extern volatile unsigned long *total_segments_read;
 extern volatile unsigned long *total_segments_written;
@@ -49,14 +49,14 @@ extern volatile int *in_lendian;
 #define SEGMENT_SIZE (global.nsectors*CD_FRAMESIZE_RAW)
 #define ENTRY_SIZE_PAGE_AL multpage(SEGMENT_SIZE + offset_of(myringbuff, data), global.pagesize)
 
-#define RB_BASE ((myringbuff *)(((unsigned char *)fill_buffer) + HEADER_SIZE - offset_of(myringbuff, data)))
+#define RB_BASE ((myringbuff *)(((unsigned char *)he_fill_buffer) + HEADER_SIZE - offset_of(myringbuff, data)))
 
 #define INC(a) (myringbuff *)(((char *)RB_BASE) + (((((char *) (a))-((char *)RB_BASE))/ENTRY_SIZE_PAGE_AL + 1) % total_buffers)*ENTRY_SIZE_PAGE_AL)
 
 
 void set_total_buffers __PR((unsigned int num_buffers, int mysem_id));
 const myringbuff *get_previous_read_buffer __PR((void));
-const myringbuff *get_fill_buffer __PR((void));
+const myringbuff *get_he_fill_buffer __PR((void));
 myringbuff *get_next_buffer __PR((void));
 myringbuff *get_oldest_buffer __PR((void));
 void define_buffer __PR((void));

@@ -1,4 +1,4 @@
-/* @(#)interface.h	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)interface.h	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
 /***
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Heiko Eissfeldt
@@ -100,6 +100,8 @@ typedef struct subq_track_isrc {
     unsigned char track_isrc[15];
 } subq_track_isrc;
 
+#if	!defined	NO_SCSI_STUFF
+
 /* cdrom access function pointer */
 extern void     (*EnableCdda) __PR((SCSI *scgp, int Switch));
 extern unsigned (*ReadToc) __PR(( SCSI *scgp, TOC *ptoc ));
@@ -113,10 +115,12 @@ extern int	(*Play_at) __PR(( SCSI *scgp, unsigned from_sector, unsigned sectors)
 extern int	(*StopPlay) __PR(( SCSI *scgp));
 extern void	(*trash_cache) __PR((UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
 
+SCSI    *get_scsi_p __PR(( void ));
+#endif
+
 extern unsigned char *bufferTOC;
 extern subq_chnl *SubQbuffer;
 
 
 void SetupInterface __PR(( void ));
 int	Toshiba3401 __PR(( void ));
-SCSI    *get_scsi_p __PR(( void ));

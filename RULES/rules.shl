@@ -1,4 +1,4 @@
-#ident "@(#)rules.shl	1.4 98/09/21 "
+#ident "@(#)rules.shl	1.5 00/03/19 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -35,6 +35,10 @@ TARGET_BASE=	$(LIB_PREFIX)$(TARGETLIB)
 TARGET_PATH=	$(OLIBSDIR)
 PTARGET=	$(OLIBSDIR)/$(TARGET)
 PTARGET_BASE=	$(OLIBSDIR)/$(TARGET_BASE)
+
+_INSMODEI=	$(_UNIQ)$(INSMODE)
+__INSMODEI=	$(_INSMODEI:$(_UNIQ)=$(INSMODEF))
+INSMODEI=	$(__INSMODEI:$(_UNIQ)%=%)
 
 all:		$(TARGET_PATH) $(PTARGET)
 

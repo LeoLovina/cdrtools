@@ -1,7 +1,7 @@
-/* @(#)scsi-openserver.c	1.16 00/01/26 Copyright 1998 J. Schilling, Santa Cruz Operation */
+/* @(#)scsi-openserver.c	1.17 00/02/06 Copyright 1998 J. Schilling, Santa Cruz Operation */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-openserver.c	1.16 00/01/26 Copyright 1998 J. Schilling, Santa Cruz Operation";
+	"@(#)scsi-openserver.c	1.17 00/02/06 Copyright 1998 J. Schilling, Santa Cruz Operation";
 #endif
 /*
  *	Interface for the SCO SCSI implementation.
@@ -41,7 +41,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.16";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.17";	/* The version for this transport*/
 
 #define	MAX_SCG		16		/* Max # of cdrom devices */
 #define	MAX_TGT		16		/* Not really needed      */
@@ -565,7 +565,7 @@ scsi_close(scgp)
 
 	for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++)
+			for (l=0; l < MAX_LUN ; l++) {
 
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
@@ -576,6 +576,7 @@ scsi_close(scgp)
 				sdidevs[b][t][l].valid =  0;
 
 				scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
+			}
 		}
 	}
 	return (0);

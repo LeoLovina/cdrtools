@@ -1,3 +1,8 @@
+/* @(#)fnmatch.c	1.3 99/03/02 eric */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)fnmatch.c	1.3 99/03/02 eric";
+#endif
 /* Copyright (C) 1991, 1992, 1993 Free Software Foundation, Inc.
 
 NOTE: The canonical source of this file is maintained with the GNU C Library.
@@ -16,8 +21,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
-
-static char rcsid[] ="$Id: fnmatch.c,v 1.4 1999/03/02 03:41:25 eric Exp $";
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

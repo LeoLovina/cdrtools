@@ -1,7 +1,7 @@
-/* @(#)drv_simul.c	1.12 99/08/30 Copyright 1998 J. Schilling */
+/* @(#)drv_simul.c	1.14 00/04/16 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_simul.c	1.12 99/08/30 Copyright 1998 J. Schilling";
+	"@(#)drv_simul.c	1.14 00/04/16 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Simulation device driver
@@ -60,7 +60,7 @@ LOCAL	int	next_wr_addr_simul	__PR((SCSI *scgp, int track, track_t *trackp, long 
 LOCAL	int	cdr_write_simul		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
 LOCAL	int	open_track_simul	__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
 LOCAL	int	close_track_simul	__PR((SCSI *scgp, int track, track_t *trackp));
-LOCAL	int	open_session_simul	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	open_session_simul	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
 LOCAL	int	fixate_simul		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
 LOCAL	void	tv_sub			__PR((struct timeval *tvp1, struct timeval *tvp2));
 
@@ -105,6 +105,7 @@ cdr_t	cdr_cdr_simul = {
 	read_session_offset,
 	fixate_simul,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_dvd_simul = {
@@ -134,6 +135,7 @@ cdr_t	cdr_dvd_simul = {
 	read_session_offset,
 	fixate_simul,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 LOCAL cdr_t *
@@ -320,8 +322,9 @@ close_track_simul(scgp, track, trackp)
 }
 
 LOCAL int
-open_session_simul(scgp, tracks, trackp, toctype, multi)
+open_session_simul(scgp, dp, tracks, trackp, toctype, multi)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	tracks;
 	track_t	*trackp;
 	int	toctype;

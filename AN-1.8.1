@@ -1,0 +1,500 @@
+NEW features of cdrecord-1.8.1 (shortened):
+
+We are now only a few releases away from the final libscg that includes
+SCSI low level command transport.
+
+/*--------------------------------------------------------------------------*/
+Late changes:
+
+cdrecord:
+
+-	set exit code to 0 if only fixating fails in -dummy mode
+
+-	suppress the unit not ready, long write in progress error for all
+	drives - not only for Mitsumi drives
+
+-	diskid.c now gives better understandable messages for CD-RW
+	in case the disk id is illegal.
+
+mkisofs:
+
+-	Unicode translation table for Apple available with -jcharset mac-roman
+
+mkhybrid:
+
+-	README.rootinfo new
+
+-	The -icon-position will now attempt to preserve folder window 
+	positions, scroll bars, views etc. for Apple/Unix file formats 
+	that support this information (currently CAP, EtherShare, Netatalk) 
+ 
+-	Added -root-info option - which works with the -icon-position 
+	option to preserve the root folder window characteristics. 
+	See README.rootinfo for more about this option. 
+ 
+-	Added 'mac-roman' to the -jcharset option. Converts Macintosh 
+	Roman file name characters to the correct Joliet characters. 
+
+/*--------------------------------------------------------------------------*/
+
+All:
+
+-	Fixed a bug in most SCSI transport code:
+	Missing curly brackets prevented scsi_close() from working corectly.
+
+-	Allow cdrecord to work correctly on Linix if only Parallel Port
+	interfaces are present.
+
+-	fconv.c now  works for HP-UX 11.x
+
+-	avoffset.c now handles both SIGSEV and SIGBUS 
+	This should allow seamless compilation even if unexpected signals
+	are thrown.
+
+-	Fix for config.sub to handle newer HP-PA machines
+
+-	Makefiles now have extended install rules that distinguish
+	bewteen executables and other files
+
+-	Mac OS X integration now complete again with respect to compilation.
+
+	NOTE: Apple removed the SCSI generic driver so there is curently
+	no cdrecordding suppport!
+	It seems that Apple is not willing to support me. Next week, I
+	will give them another try....
+
+-	fixed fconv.c to better emulate fcvt() by ecvt().
+	Cygwin32 has a broken fcvt() routine, so we are
+	forced to emulate fcvt() by ecvt().
+
+-	#include string.h in scsi-linux-pg.c to get a correct
+	prototype for 64 bit CPU's
+
+-	cast for signed/unsigned comparison in *bytes.c and saveargs.c
+
+-	addes RULES link for two HP-PA models: B132L (778) and J5000 (785).
+
+
+Cdrecord:
+
+-	Added send_opc routine to driver interface.
+	This was needed because of a Firmware bug in the Ricoh 7040 and 7060
+	drives. The MMC standad requires that a drive will automatically
+	perform OPC but the Ricoh drives don't do this.
+
+-	Check for sectorsize be doing a SCSI read capacity if the drive does
+	not support block descriptors.
+
+-	new option -waiti lets cdrecord wait until data is available on 
+	standard input before opening the SCSI driver.
+	This allows cdrecord to be used for
+		mkisofs ... | cdrecord ...
+	when writing new sessions to a multi session disk.
+	Before it was impossible because it does not work for two programs
+	to open the SCSI driver simultaneously.
+
+-	The error message "drive not ready long write in progress" is now
+	handeled. Cdrecord may now be used to write in DAO mode to drives from
+	Sony, Mitsumi and Goldstar.
+
+-	Support for Sanyo CD-WO CRD-R24S
+
+-	New Disk manufactuerers:
+
+	"TAROKO INTERNATIONAL CO.,LTD.",
+	"UNIDISC TECHNOLOGY CO.,LTD",
+	"Hong Kong Digital Technology Co., Ltd.",
+	"VIVA MAGNETICS LIMITED" 
+	"VICTOR COMPANY OF JAPAN, LIMITED",
+	 "VIVASTAR AG"
+
+-	New option driveropts= supports to specify driver specific options
+	to cdrecord.
+
+	To get a list of valid options, call:
+
+		cdrecord dev=b,t,l driveropts=help -checkdrive
+
+-	New MMC driver specific option 'burnproof' and 'noburnproof'
+	supports to use the new Buffer Underrun Proof (BURN-Proof) technology
+	developed by Sanyo.
+
+	If you like to use BURN-Proof recording, call
+
+		cdrecord driveropts=burnproof .....
+
+	and test how it works: You will be able to record e.g.
+	data that is read via NFS without any problems.
+
+	I am interested to hear if someone is able to notice clicks
+	or other bad things when recording audio CD's in BURN-Proof mode.
+
+	NOTE: if the busy LED is blinking and the write LED is off,
+		the drive is doing pit-accurate re-syncing of the
+		write position.
+
+-	/etc/default/cdrecord may now specify the cdrecord option 
+	driveropts. This allows to specify to use BURN-Proof mode
+	by default.
+
+-	New file cdrecord.dfl as master for /etc/default/cdrecord
+	Tthe special string "" is the notation for "no driver opts".
+
+	is supporting the BURN-Proof feature and reject the burnprof option
+	if the drive does not support the feature.
+
+-	Changelog updated
+
+-	New manufacturers "VICTOR COMPANY OF JAPAN, LIMITED", "VIVASTAR AG"
+
+-	set exit code to 0 if only fixating fails in -dummy mode
+
+-	suppress the unit not ready, long write in progress error for all
+	drives - not only for Mitsumi drives
+
+-	diskid.c now gives better understandable messages for CD-RW
+	in case the disk id is illegal.
+
+
+Cdda2wav:
+
+-	new entries in TODO list :-)
+-	fix magic in cdda2mp3 script
+-	cleanup documentation (man page)
+-	made -T deemphasizing automatic, when preemphasis is found
+	make sure info files reflect the state of the audio file
+-	fix index scanning (now begins at index 1 position)
+-	allow failure of realtime scheduling, if run as non-root
+-	fix percentage display for the 100% case
+-	added sanity checks for nsectors and buffers settings
+	now '-P1 -n1 -l1' will be adjusted as needed (with warning)
+-	made multiple given file names work with mixed-cd also
+-	moved shared memory allocation from interface.c to cdda2wav.c
+	that allowed to take adjusted buffer and nsector settings into
+	account
+-	removed 'SONY CD-ROM CDU625 1.0' from is-not-mmc-exception table
+-	added 'HITACHI CDR-7930' to the is-cdda-capable table
+-	added a heuristic for formerly not recognized Toshiba ATAPI drives
+	like XM-5402TA
+-	added O_NONBLOCK when opening a cdrom drive 
+	for ioctl usage under Linux
+-	fixed the ugly bug with the combination of -P1 and
+	deemphasizing or channel swapping
+-	added a loop when writing samples out. This fixes
+	writing to a named pipe.
+-	changed speed setting for MMC drives. Write speed
+	is always set to 0xFFFF. The command might fail,
+	since it is not mandatory. This hopefully avoids
+	error messages in the stdout channel.
+	Speed setting does not work fully satisfactorily yet.
+-	moved free_sem() to the right place in order to compile
+	semshm.c even with USE_SEMAPHORES
+-	corrected variable names for swapped roles of parent/child
+-	made cd-extra detection more robust. Implemented a rough
+	file system lookup for the title description file
+-	fixed the cdindex file generation wrt forbidden HTML characters
+
+-	fixed TOC display for cd extra discs.
+	now it is consistent with the output formatted for gui
+-	now detects cactus data shield copy protection and
+	disables ISRC and index scans for an extended drive live
+-	disabled generation of .cddb and .cdindex files for xcdroast
+-	added a line to display the inquiry result for easier debugging
+-	added additional output for detection of MMC-drives
+-	increased SCSI timeout to 300 seconds
+-	added verbose output for ioctl()'ed methods (with -V)
+-	fixed index scanning with ioctl under Linux
+-	disabled the CDROMSTART ioctl in play_at method (made index
+	scanning under FreeBSD very slow.
+-	All files checked in again into SCCS
+-	Better #ifdef's in ioctl.c
+-	Corrected output for CD-Text
+-       sound file interface adapted for mp3 encoding
+        (wav.c, sunc. raw.c, aiff.c aifc.c)
+-       global renaming of fill_buffer -> he_fill_buffer
+        (name clash between cdda2wav and lame)
+-       more sanity checks, check for (named) pipes and
+        disable features that do not work then.
+-       bugfix from Christoph Wohlgemuth: last wav file
+        could get wrong size with -B
+-       warn about currently broken and disabled MD5    checksumming
+-	Changelog updated
+-	fixed a bug in suid handling
+
+Planned features for cdda2wav in cdrtools 1.9alpha:
+-       mp3 support: integration of an mp3 encoder (lame)
+        for directly generated mp3 files.
+        id3 tagging when titles are available from the cd
+-       Cut silence at the front _and_ at the end of tracks,
+        if required.
+-       alternate method for index scanning for MMC drives
+
+-       fixed several bugs with activated -w Option
+
+-       fixed a display bug for -B and the last track
+
+-       generation of info files is done only when full
+        tracks are recorded.
+
+Readcd:
+
+-	Now using autoconfiguration for drand48()
+
+-	Late corrections in error rety mode are now handles correctly
+
+-	statistics now printing correct values for Cygwin
+	(see fconv.c hack for Cygwin bug above)
+
+
+Mkisofs:
+
+-	Now mkisofs is finally in SCCS.
+	After a hard time, all 7 years of development are put into revision 
+	control. Now future development is easier.....
+
+-	Mkisofs now closes the SCSI driver after reading the previous session.
+	This allows you to run 
+		mkisofs -C ... -M ... | cdrecord ....
+
+-	Fix from James Pearson for Joliet disks that will have wrong directory
+	structures when listed via win32.
+
+-	First attempt to integrate the mkhyprid code from James Pearson.
+	To make sure that no new bugs are introduced, a separate binary will
+	be created. This also allows to make mkisofs non-beta while keeping
+	mkhybrid in beta for a while.
+
+	Note: mkisofs is now in final state (1.12.1) while mkhybrid will stay
+	at 1.12.1a09. The next release of mkisofs will be bumped to 2.0 and
+	mkisosfs/mkhybrid will be fully integrated.
+
+-	-B option allows to use the special filename "..."
+	to tell mkisofs to replicate the content of the last partition
+	map to the end of the partition maps.
+	This should allow mkisofs to be used to create Linux SILO
+	boot disks for Sun Sparc systems.
+
+-	Better recognition code for Apple Rhapsody
+
+-	New options -hfs-type & -hfs-creator for mkhybrid code
+
+-	Included a patch from "Artem Hodyush" <artem@duma.gov.ru>
+	that should fix all bugs that are related to
+	Deep Directory Relocation with Rock Ridge and multi-session
+
+-	All sources correctly indented and conforming to schily
+	programming rules.
+
+-	-B option allows to use the special filename "..."
+	to tell mkisofs to replicate the content of the last partition
+	map to the end of the partition maps.
+	This should allow mkisofs to be used to create Linux SILO
+	boot disks for Sun Sparc systems.
+	You would need an updated SILO version and call:
+
+		mkisofs -generic-boot SILO-BOOT_FILE -B "..." [other args]
+
+	Note that "..." is meant literarily.
+
+-	New option -jcharset, thanks to Georgy Salnikov <sge@nmr.nioch.nsc.ru>
+	allows to specify local character set that should be translated into
+	Unicode.
+
+	This allows to use character sets different from ISO-8859-1
+	(e.g. russian KOI-8 or DOS character sets)
+
+	The default is: iso-8859-1 (UNIX) resp. code page 437 (DOS)
+
+	As you see: code from Sibiria can help to freeze the code ;-)
+
+-	struct iso_xa_dir_record according to Yellow book
+	XA disks is now properly handled.
+	If the disk is 100% standard compliant (e.g. Kodak
+	Photo CD's), you will get no more BAD RRVERSION messages for
+	those disks. However, there seem to be a lot of CD's out that
+	have junk after ISO-directory records (some null bytes
+	followed by correct 14 byte XA info). At the moment,
+	mkisofs is not able to deal with these disks. You will
+	need to specify the -no-rr option to disable all extended
+	directory atributes. At the moment, it looks like the
+	problematic disks have all been created by Adaptec products.
+
+-	Joliet sorting is now done according to Unicode rules
+	Thanks to James Pearson.
+
+-	New Option -pad pads 32kB to the end of the ISO9660
+	image. This was needed as many operating systems have a read
+	ahead bug and not all people will use cdrecord to write 
+	the images.
+
+-	Now using a common SCCS history file for mkisofs.8 and mkhybrid.8
+	with help from James Pearson.
+
+-	-l -full-iso9660-filenames option online help corrected
+
+-	New option -hidden & -hidden-list to implement ISO9660 files
+	with existence (hidden) attribute for DOS based systems.
+
+-	Automatic numbering in filenames that is done to make filenames
+	differ in 8.3 or 30 char iso9660 filenames is now done before the dot.
+	This retains the original filename extension and makes it easier
+	for non RR/Joliet users to do senseful things with the files.
+
+	testabcd.c & testabcde.c would have been tralslated to
+
+		TESTABCD.C;1 & TESTABCD.000;1 before
+	and
+		TESTABCD.C;1 & TESTA000.C;1 after the change.
+
+	Note that I cannot use the Microsoft naming scheme
+
+		TESTABCD.C;1 & TESTAB~0.C;1
+
+	Because '~' is an illegal character on ISO-9660 !
+
+-	extended checks for consistence of old session when doing multi-session.
+
+-	New option -check-oldnames to force ISO-9660 name consistence check
+	for all files of old session. It omitted, only filenames with
+	a namelength > 31 are checked.
+
+-	Increase the internal limit of the ISO-9660 filenamelength to 37
+	to allow file version numbers of 32767 not to overflow internal buffers.
+
+-	ISO9660 filename translation code completely rewritten.
+
+	-	The filename extension is now retained if possible.
+		This is even valid for long filenames.
+
+	-	The MAX Filename Length is now 31 (30 + '.' for files
+		and 31 for dirs).
+
+	-	Even for long and shortened filenames, the last character
+		is granted to be a dot.
+
+	-	New option -iso-level allows to set up the ISO9660 conformance
+		level.
+
+	-	New Option -no-iso-translate to suppress translation
+		of '#' and '~'. Request accorting to a hint from
+		Georgy Salnikov <sge@nmr.nioch.nsc.ru> Note that these
+		characters are illegal for ISO9660. If you use this
+		option, you will create an illegal CD but Microsoft
+		insists in using these illegal characters.
+
+	-	The option -l / -full-iso9660-filenames is now reduced to
+		the documented behaviour. The undocumented behaviour is moved
+		to the new option -relaxed-filenames
+
+	-	New option -relaxed-filenames allows ISO9660 filenames
+		to include digits, uppercase characters and all other 7 bit
+		ASCII characters (no lowercase).
+
+	-	New option -allow-lowercase allows ISO9660 filenames
+		to contain lowercase letters in addition to the current
+		set of valid characters.
+
+	-	New option -allow-multidot allows ISO9660 filenames
+		to contain more than one dot (leading dots are handled
+		separately).
+
+	-	New option -use-fileversion allows mkisofs to use file
+		version numbers from the filesystem. This option is the
+		default on VMS.
+
+		The handling of file versions is now correct.
+
+	-	Filenames ending in ".tar.gz" are now converted to ".tgz"
+		Filenames ending in ".ps.gz" are now converted to ".psz"
+		if the option -allow-multidot has not been specified.
+
+	-	Obsolete option -a -all-files has been removed.
+
+
+-	New option -sort from James Pearson sorts file locations according
+	to weighting. Read README.sort for more information.
+
+-	New option -ucs-level to set Unicode conformance level for Joliet.
+	The default has changed to level 3 again as we are now doing
+	Unicode name translation. Note that this option currently only sets
+	the escape sequence in the SVD. The Unicode tanslation is not
+	affected.
+
+-	isoinfo now currectly prints path tables (names are not null terminated)
+
+-	Parsing of TRANS.TBL is now done adaptive instead of using hard coded numbers.
+
+-	Make TRANS.TBL wider to allow 37 char iso names, avoid hard coded values
+
+-	New option -max-iso9660-filenames allows ISO-9660 filenames
+	to be 37 chars long. Use with extreme case as this may cause buffer
+	overflows in the reading OS. As it mainly makes sense to use this
+	option for HP-UX and IBM-AIX target systems, it should be used together
+	with the -U option.
+
+	This option forces to ommit ISO-9660 version numbers.
+
+-	Print a warning when mkisofs creates a filesystem that violates ISO-9660
+
+-	isoinfo now correctly detects the Joliet supplemental volume descriptor.
+
+-	Unicode translation table for Apple available with -jcharset mac-roman
+
+-	Changelog updated
+
+TODO:
+
+	-	better Rock Rodge recognition for multi-session
+
+	-	read Joliet filenames with multi-session if no TRANS.TBL
+		or RR is present. I am looking for a volouteer for this task.
+
+	-	implement Yellow book compliant XA extended dir attributes
+
+	-	add libecc/edc for CDI and similar.
+
+	-	add UDF support
+
+Mkhybrid:
+
+-	Now compiles on Mac OS X without warnings.
+
+-	-hfs-creator option: type corrected
+
+-	HFS files now get the HFS_FNDR_ISINVISIBLE flag if the ISO file
+	is a hidden file.
+
+-	README.rootinfo new
+
+-	The -icon-position will now attempt to preserve folder window 
+	positions, scroll bars, views etc. for Apple/Unix file formats 
+	that support this information (currently CAP, EtherShare, Netatalk) 
+ 
+-	Added -root-info option - which works with the -icon-position 
+	option to preserve the root folder window characteristics. 
+	See README.rootinfo for more about this option. 
+ 
+-	Added 'mac-roman' to the -jcharset option. Converts Macintosh 
+	Roman file name characters to the correct Joliet characters. 
+
+CYGWIN NT-4.0 NOTES:
+
+To compile on Cygwin32, get Cygwin32-beta20 and install it.
+then create a symlink from /bin to the .../bin directory where bash is located.
+Now run 'make' ...
+For more information read README.win32
+
+The files are located on:
+
+ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/alpha ...
+
+NOTE:	These tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
+	tar may get some minor trouble.
+
+WARNING: Do not use 'mc' to extract the tar file!
+	All mc versions before 4.0.14 cannot extract symbolic links correctly.
+
+WARNING: Do not use 'winzip' to extract the tar file!
+	Winzip cannot extract symbolic links correctly.
+
+Joerg

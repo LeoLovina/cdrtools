@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.39 99/09/17 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.41 00/02/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.39 99/09/17 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.41 00/02/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -73,7 +73,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.39";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.41";	/* The version for this transport*/
 
 #ifndef	SCSI_IOCTL_GET_BUS_NUMBER
 #define SCSI_IOCTL_GET_BUS_NUMBER 0x5386
@@ -323,11 +323,12 @@ scsi_close(scgp)
 			continue;
 		scglocal(scgp)->buscookies[b] = (short)-1;
 		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++)
+			for (l=0; l < MAX_LUN ; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
 				scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
+			}
 		}
 	}
 #ifdef	USE_PG
@@ -515,9 +516,15 @@ scsi_maxdma(scgp)
 	 * maximum buffer size.
 	 */
 	if ((maxdma = ioctl(scglocal(scgp)->scgfile, SG_GET_BUFSIZE, 0)) < 0) {
-		if (scglocal(scgp)->scgfile >= 0) {
+#ifdef	USE_PG
+		/*
+		 * If we only have a Parallel port, just return PP maxdma.
+		 */
+		if (scglocal(scgp)->pgbus == 0)
+			return (pg_maxdma(scgp));
+#endif
+		if (scglocal(scgp)->scgfile >= 0)
 			maxdma = MAX_DMA_LINUX;
-		}
 	}
 #endif
 #ifdef	USE_PG

@@ -1,4 +1,4 @@
-dnl @(#)configure.in	1.4 00/01/22 Copyright 1998 J. Schilling
+dnl @(#)configure.in	1.5 00/03/29 Copyright 1998 J. Schilling
 dnl Process this file with autoconf to produce a configure script.
 AC_REVISION($Revision$)dnl
 
@@ -121,6 +121,7 @@ dnl AC_CHECK_FUNCS(ecvt fcvt gcvt)
 AC_CHECK_FUNCS(ecvt_r fcvt_r gcvt_r)
 AC_CHECK_FUNCS(econvert fconvert gconvert)
 AC_CHECK_FUNCS(isinf isnan)
+AC_CHECK_FUNCS(rand drand48)
 AC_CHECK_FUNCS(setpriority DosSetPriority)
 AC_CHECK_FUNCS(DosAllocSharedMem)
 AC_CHECK_FUNCS(seekdir)

@@ -1,7 +1,7 @@
-/* @(#)toc.c	1.3 00/01/11 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)toc.c	1.10 00/03/29 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)toc.c	1.3 00/01/11 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)toc.c	1.10 00/03/29 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /*
@@ -552,7 +552,7 @@ static int process_header(c, dbcc, line)
 	  if (c->headerfield[1] > 0 && c->headerfield[1] < 100) {
 	    memcpy(g_toc[c->headerfield[1]-1].ISRC, line, sizeof(g_toc[0].ISRC));
 	  } else
-	  if (c->headerfield[1] == 0) {
+	  if (c->headerfield[1] == 0 && line[0] != '\0') {
 	    memcpy((char *)MCN, line, 13);
 	    MCN[13] = '\0';
 	  }
@@ -683,16 +683,103 @@ static int tmp_fd;
 #ifdef CD_EXTRA
 /**************** CD-Extra special treatment *********************************/
 
+#include <ctype.h>
+
+static unsigned long Read_CD_Extra_File __PR((unsigned char *Extra_buf, unsigned long sector));
+
+static unsigned long
+Read_CD_Extra_File(Extra_buf, sector)
+	unsigned char	*Extra_buf;
+	unsigned long	sector;
+{
+	unsigned long mysec;
+	
+	/* read PVD */
+	ReadCdRomData(get_scsi_p(), Extra_buf, sector+16, 1);
+
+	/* check ISO signature */
+	if (memcmp(Extra_buf, "\001CD001", 6) != 0) return 0;
+
+	/* get path_table */
+	mysec = Extra_buf[148] << 24;
+	mysec |= Extra_buf[149] << 16;
+	mysec |= Extra_buf[150] << 8;
+	mysec |= Extra_buf[151];
+
+	if (mysec <= sector) return 0;
+
+	/* read path table */
+	ReadCdRomData(get_scsi_p(), Extra_buf, mysec, 1);
+
+	/* find cdplus subdirectory */
+	{ unsigned char * p = Extra_buf;
+		while (p+8 < Extra_buf + CD_FRAMESIZE_RAW) {
+			int namelength;
+			
+			namelength = p[0] | (p[1] << 8);
+			if (namelength == 6 &&
+			    !memcmp(p+8, "CDPLUS", 6)) break;
+			
+			p += 8 + namelength + (namelength & 1);
+		}
+		if (p+8 >= Extra_buf + CD_FRAMESIZE_RAW) return 0;
+
+		/* get extent */
+		mysec = p[2] << 24;
+		mysec |= p[3] << 16;
+		mysec |= p[4] << 8;
+		mysec |= p[5];
+	}
+
+	if (mysec <= sector) return 0;
+
+	ReadCdRomData(get_scsi_p(), Extra_buf, mysec, 1);
+
+	/* find file info.cdp */
+	{ unsigned char * p = Extra_buf;
+		while (p+33 < Extra_buf + CD_FRAMESIZE_RAW) {
+			int namelength;
+			
+			namelength = p[32];
+			if (namelength == 10 &&
+			    !memcmp(p+33, "INFO.CDP;1", 10)) break;
+			
+			p += p[0];
+		}
+		if (p+33 >= Extra_buf + CD_FRAMESIZE_RAW) return 0;
+
+		/* get extent */
+		mysec = p[6] << 24;
+		mysec |= p[7] << 16;
+		mysec |= p[8] << 8;
+		mysec |= p[9];
+	}
+
+	if (mysec <= sector) return 0;
+
+	/* read file info.cdp */
+	ReadCdRomData(get_scsi_p(), Extra_buf, mysec, 1);
+	
+	return mysec - sector;
+}
+
 static unsigned char Extra_buffer[CD_FRAMESIZE_RAW];
 
+/*
+ * Read the file cdplus/info.cdp from the cd extra disc.
+ * This file has to reside at exactly 75 sectors after start of
+ * the last session (according to Blue Book).
+ * Of course, there are a lot dubious cd extras, which don't care :-(((
+ * As an alternative method, we try reading through the iso9660 file system...
+ */
 static int Read_CD_Extra_Info __PR(( unsigned long sector));
 static int Read_CD_Extra_Info(sector)
 	unsigned long sector;
 {
   unsigned i;
   static int offsets[] = {
-     75, 		/* this is observed for 12 cm discs */
-     60 };		/* this has been observed for 5 cm disks */
+     75 		/* this is what blue book says */
+  };
 
   for (i = 0; i < sizeof(offsets)/sizeof(int); i++) {
 #ifdef DEBUG_XTRA
@@ -705,22 +792,31 @@ static int Read_CD_Extra_Info(sector)
        Of course then we lack the last 8 bytes of the sector...
      */
 
-#ifdef DEBUG_XTRA
-    { int ijk;
-      for (ijk = 0; ijk < 96; ijk++) {
-        fprintf(stderr, "%02x  ", Extra_buffer[ijk]);
-        if ((ijk+1) % 16 == 0) fprintf(stderr, "\n");
-      }
-    } 
-#endif
-
     if (Extra_buffer[0] == 0)
       movebytes(Extra_buffer +8, Extra_buffer, CD_FRAMESIZE - 8);
 
     /* check for cd extra */
     if (Extra_buffer[0] == 'C' && Extra_buffer[1] == 'D')
 	return sector+offsets[i];
+
+    /*
+     * CD is not conforming to BlueBook!
+     * Read the file through ISO9660 file system.
+     */
+    {
+    unsigned long offset = Read_CD_Extra_File(Extra_buffer, sector);
+
+    if (offset == 0) return 0;
+
+    if (Extra_buffer[0] == 0)
+      movebytes(Extra_buffer +8, Extra_buffer, CD_FRAMESIZE - 8);
+
+    /* check for cd extra */
+    if (Extra_buffer[0] == 'C' && Extra_buffer[1] == 'D')
+	return sector+offset;
+    }
   }
+
   return 0;
 }
 
@@ -812,6 +908,9 @@ static void Read_Subinfo(pos, length)
       length -= 2 + 1;
       break;
     }
+#ifdef DEBUG_XTRA
+  fprintf(stderr, "info packet %d\n", id);
+#endif
 
     switch (id) {
     case 1:    /* track nummer or 0 */
@@ -825,6 +924,12 @@ static void Read_Subinfo(pos, length)
                memcpy(global.disctitle, Subp + 2, len);
 	       global.disctitle[len] = '\0';
             }
+        }
+      break;
+    case 0x03: /* media catalog number */
+	if (MCN[0] == '\0' && Subp[2] != '\0' && len >= 13) {
+            memcpy(MCN, Subp + 2, 13);
+	    MCN[13] = '\0';
         }
       break;
     case 0x06: /* track title */
@@ -855,8 +960,15 @@ static void Read_Subinfo(pos, length)
             }
         }
       break;
+    case 0x10: /* isrc */
+	if (this_track > 0 && this_track < 100
+	    && g_toc[this_track-1].ISRC[0] == '\0' && Subp[2] != '\0'
+	    && len >= 15) {
+               memcpy(g_toc[this_track-1].ISRC, Subp + 2, 15);
+	       g_toc[this_track-1].ISRC[15] = '\0';
+	}
+      break;
 #if 0
-    case 0x03:
     case 0x04:
     case 0x07:
     case 0x09:
@@ -1062,6 +1174,17 @@ unsigned FixupTOC(no_tracks)
     unsigned mult_off;
     unsigned offset = 0;
 
+    /* special handling of cactus data shield pseudo-red-book-audio cds */
+    if (cdtracks > 0
+      && g_toc[cdtracks].dwStartSector < g_toc[cdtracks-1].dwStartSector) {
+	if (global.quiet == 0) {
+	  fprintf(stderr, "Cactus data shield copy protection detected!\n");
+	  fprintf(stderr, "Audio extraction will probably not work...\n");
+	  fprintf(stderr, "Switching index scan and ISRC scan off!\n");
+	}
+  	global.verbose &= ~(SHOW_ISRC | SHOW_INDICES);
+    }
+
     /* get the multisession offset in sectors */
     mult_off = is_cd_extra(no_tracks);
 
@@ -1095,8 +1218,12 @@ unsigned FixupTOC(no_tracks)
 #ifdef CD_EXTRA
 	    offset = Read_CD_Extra_Info(g_toc[j].dwStartSector);
 #endif
-	have_CD_extra = g_toc[j].dwStartSector;
-        dump_extra_info(offset);
+	    have_CD_extra = g_toc[j].dwStartSector;
+
+	    if (offset != 0) {
+              dump_extra_info(offset);
+	    }
+
 #if defined CDINDEX_SUPPORT || defined CDDB_SUPPORT
 {
     unsigned long	count_audio_tracks = 0;
@@ -1114,6 +1241,7 @@ unsigned FixupTOC(no_tracks)
     }
 }
 #endif
+
             /* set start of track to beginning of lead-out */
 	    g_toc[j].dwStartSector = real_end;
 #if	defined CD_EXTRA && defined DEBUG_XTRA
@@ -1347,7 +1475,7 @@ return 0;
 }
 
 int resolve_id(cddb_id)
-	unsigned cddb_idr;)
+	unsigned cddb_id;
 {
   unsigned servers;
 
@@ -1379,6 +1507,106 @@ static int IsSingleArtist()
 	return 1;
 }
 
+static const char *a2h[255-191] = {
+"&Agrave;",
+"&Aacute;",
+"&Acirc;",
+"&Atilde;",
+"&Auml;",
+"&Aring;",
+"&AElig;",
+"&Ccedil;",
+"&Egrave;",
+"&Eacute;",
+"&Ecirc;",
+"&Euml;",
+"&Igrave;",
+"&Iacute;",
+"&Icirc;",
+"&Iuml;",
+"&ETH;",
+"&Ntilde;",
+"&Ograve;",
+"&Oacute;",
+"&Ocirc;",
+"&Otilde;",
+"&Ouml;",
+"&times;",
+"&Oslash;",
+"&Ugrave;",
+"&Uacute;",
+"&Ucirc;",
+"&Uuml;",
+"&Yacute;",
+"&THORN;",
+"&szlig;",
+"&agrave;",
+"&aacute;",
+"&acirc;",
+"&atilde;",
+"&auml;",
+"&aring;",
+"&aelig;",
+"&ccedil;",
+"&egrave;",
+"&eacute;",
+"&ecirc;",
+"&euml;",
+"&igrave;",
+"&iacute;",
+"&icirc;",
+"&iuml;",
+"&eth;",
+"&ntilde;",
+"&ograve;",
+"&oacute;",
+"&ocirc;",
+"&otilde;",
+"&ouml;",
+"&divide;",
+"&oslash;",
+"&ugrave;",
+"&uacute;",
+"&ucirc;",
+"&uuml;",
+"&yacute;",
+"&thorn;",
+"&yuml;",
+};
+
+static char *
+ascii2html __PR((unsigned char *inp));
+
+static char *
+ascii2html(inp)
+	unsigned char *inp;
+{
+	static unsigned char outline[300];
+	unsigned char *outp = outline;
+
+#define copy_translation(a,b) else if (*inp == (a)) \
+{ strcpy((char *)outp, (b)); outp += sizeof((b))-1; }
+
+	while (*inp != '\0') {
+		if (0) ;
+		copy_translation('"', "&quot;")
+		copy_translation('&', "&amp;")
+		copy_translation('<', "&lt;")
+		copy_translation('>', "&gt;")
+		copy_translation(160, "&nbsp;")
+		else if (*inp < 192) {
+			*outp++ = *inp;
+		} else {
+			strcpy((char *)outp, a2h[*inp-192]);
+			outp += strlen(a2h[*inp-192]);
+		}
+		inp++;
+	}
+	*outp = '\0';
+	return (char *) outline;
+}
+#undef copy_translation
+
 static void emit_cdindex_form(fname_baseval)
 	char *fname_baseval;
 {
@@ -1406,8 +1634,9 @@ static void emit_cdindex_form(fname_baseval)
   /* format XML page according to cdindex DTD (see www.cdindex.org) */
   fprintf( cdindex_form, "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<!DOCTYPE CDInfo SYSTEM \"%s\">\n\n<CDInfo>\n",
 		  CDINDEX_URL);
+
   fprintf( cdindex_form, "   <Title>%s</Title>\n",
-	 global.disctitle ? (char *) global.disctitle : "");
+	 global.disctitle ? ascii2html(global.disctitle) : "");
   /* 
    * In case of mixed mode and Extra-CD, nonaudio tracks are included!
    */
@@ -1418,13 +1647,13 @@ static void emit_cdindex_form(fname_baseval)
 
   if (IsSingleArtist()) {
     fprintf( cdindex_form, "   <SingleArtistCD>\n      <Artist>%s</Artist>\n",
-	 global.creator ? (char *) global.creator : "");
+	 global.creator ? ascii2html(global.creator) : "");
 
     for (i = FirstTrack() - 1; i <= LastTrack() - 1; i++) {
       if (IS_AUDIO(i)) {
         fprintf( cdindex_form,
 	 "      <Track Num=\"%d\">\n         <Name>%s</Name>\n      </Track>\n",
-		  i+1, global.tracktitle[i] ? (char *) global.tracktitle[i] : "");
+		  i+1, global.tracktitle[i] ? ascii2html(global.tracktitle[i]) : "");
       } else {
         fprintf( cdindex_form,
 	 "      <Track Num=\"%d\">\n         <Name>data track</Name>\n      </Track>\n",
@@ -1440,9 +1669,9 @@ static void emit_cdindex_form(fname_baseval)
 
       if (IS_AUDIO(i)) {
         fprintf( cdindex_form, "         <Artist>%s</Artist>\n",
-		  global.trackcreator[i] ? (char *) global.trackcreator[i] : "");
+		  global.trackcreator[i] ? ascii2html(global.trackcreator[i]) : "");
         fprintf( cdindex_form, "         <Name>%s</Name>\n      </Track>\n",
-		  global.tracktitle[i] ? (char *) global.tracktitle[i] : "");
+		  global.tracktitle[i] ? ascii2html(global.tracktitle[i]) : "");
       } else {
         fprintf( cdindex_form,
  "         <Artist>data track</Artist>\n         <Name>data track</Name>\n      </Track>\n");
@@ -1560,6 +1789,8 @@ static void dump_extra_info(from)
   unsigned char *p;
   unsigned pos, length;
 
+  if (from == 0) return;
+
   p = Extra_buffer + 48;
   while (*p != '\0') {
     pos    = GET_BE_UINT_FROM_CHARP(p+2);
@@ -1673,8 +1904,12 @@ void DisplayToc ( )
 	     cdtracks, mins, secnds, frames );
 
     for ( i = 0, ii = 0; i < cdtracks; i++ ) {
+      unsigned trackbeg;
+
       if ( g_toc [i].bTrack <= MAXTRK ) {
-	dw = (unsigned long) (g_toc[i+1].dwStartSector - g_toc[i].dwStartSector /* + 150 - 150 */);
+	trackbeg = have_CD_extra && !IS_AUDIO(i) ? have_CD_extra : g_toc[i].dwStartSector;
+
+	dw = (unsigned long) (g_toc[i+1].dwStartSector - trackbeg /* + 150 - 150 */);
 	mins         =       dw / ( 60*75 );
 	secnds       =     ( dw % ( 60*75 )) / 75;
     frames	     =     ( dw %      75   );
@@ -1834,13 +2069,15 @@ void DisplayToc ( )
 	      secnds       =       ( dw % ( 60*75 )) / 75;
           frames	     =     ( dw %      75   );
           centi_secnds = (4* frames +1 ) /3; /* convert from 1/75 to 1/100 */
-	         fprintf(stderr, "T%02d: %7u %2u:%02u.%02u audio %s %s %s title '%s' from '%s'\n",from,
+	         fprintf(stderr, "T%02d: %7u %2u:%02u.%02u audio %s %s %s title '%s' from ",from,
 	        g_toc[i].dwStartSector,
 			mins,secnds,frames,
 			g_toc [i].bFlags & 1 ? "pre-emphasized" : "linear", /* pre-emph */
 			g_toc [i].bFlags & 2 ? "copyallowed" : "copydenied", /* copy-perm */
 			g_toc [i].bFlags & 8 ? "quadro" : "stereo",
-            (void *) global.tracktitle[i] != NULL ? quote(global.tracktitle[i]) : "", 
+            (void *) global.tracktitle[i] != NULL ? quote(global.tracktitle[i]) : "" 
+			);
+	         fprintf(stderr, "'%s'\n",
 			(void *) global.trackcreator[i] != NULL ? quote(global.trackcreator[i]) : ""
 			);
 	        count_audio_trks++;
@@ -1944,7 +2181,10 @@ void Read_MCN_ISRC()
         }
       }
     }
-    if (MCN[0] != '\0') fprintf(stderr, "\rMedia catalog number: %13.13s\n", MCN);
+    if (MCN[0] != '\0')
+	fprintf(stderr, "\rMedia catalog number: %13.13s\n", MCN);
+    else
+	fprintf(stderr, "\rNo media catalog number present.\n");
   }
 
   if ((global.verbose & SHOW_ISRC) != 0) {
@@ -1955,6 +2195,9 @@ void Read_MCN_ISRC()
     for ( i = 0; i < cdtracks; i++ ) {
       subq_track_isrc * subq_tr;
       unsigned j;
+
+      if (!IS_AUDIO(i))
+	      continue;
 
       if (g_toc[i].ISRC[0] == '\0') {
         fprintf(stderr, "\rscanning for ISRCs: %d ...", i+1);
@@ -2115,12 +2358,28 @@ static int GetIndexOfSector( sec, track )
 
     if (-1 == Play_at(get_scsi_p(), sec, 1)) {
       if ((long)sec == GetEndSector(track)) {
-        fprintf(stderr, "Firmware bug detected! Drive cannot play the very last sector!\n");
+        fprintf(stderr, "Driver and/or firmware bug detected! Drive cannot play the very last sector!\n");
       }
       return -1;
     }
 
     sub_ch = ReadSubQ(get_scsi_p(), GET_POSITIONDATA,0);
+
+
+    /* can we trust that these values are hex and NOT bcd? */
+    if ((sub_ch->track >= 0x10) && (sub_ch->track - track > 5)) {
+	/* change all values from bcd to hex */
+	sub_ch->track = (sub_ch->track >> 4)*10 + (sub_ch->track & 0x0f);
+	sub_ch->index = (sub_ch->index >> 4)*10 + (sub_ch->index & 0x0f);
+    }
+
+#if 0
+    /* compare tracks */
+    if (track != sub_ch->track) {
+	fprintf(stderr, "\ntrack mismatch: %1d, in-track subchannel: %1d (sector %1d)\n",
+		track, sub_ch->track, sec);
+    }
+#endif
 
     /* compare control field with the one from the TOC */
     if ((g_toc[track-1].bFlags & 0x0f) != (sub_ch->control_adr & 0x0f)) {
@@ -2342,6 +2601,7 @@ unsigned ScanIndices( track, cd_index, bulk )
 
   if (!global.quiet && !(global.verbose & SHOW_INDICES))
     fprintf(stderr, "seeking index start ...");
+
   if (bulk != 1) {
     starttrack = track; endtrack = track;
   } else {
@@ -2353,24 +2613,24 @@ unsigned ScanIndices( track, cd_index, bulk )
 #endif
 
   for (i = starttrack; i <= endtrack; i++) {
+    if ( !IS_AUDIO(i-1) )
+	continue;/* skip nonaudio tracks */
+
     if ( global.verbose & SHOW_INDICES ) { 
-	fprintf( stderr, "index scan: %d...\r", i ); 
+	fprintf( stderr, "\rindex scan: %d...", i ); 
 	fflush (stderr);
     }
-    if ( g_toc [i-1].bFlags & CDROM_DATA_TRACK )
-	continue;/* skip nonaudio tracks */
     StartSector = GetStartSector(i);
     LastIndex = ScanBackwardFrom(GetEndSector(i), StartSector, &n_0_transition, i);
-    /* register first index entry for this track */
+
     if (baseindex_pool != NULL) {
 #ifdef DEBUG_INDLIST
-  fprintf(stderr, "audio track %d, arrindex %d\n", i, i - starttrack);
 #endif
+      /* register first index entry for this track */
       baseindex_pool[i - starttrack].next = NULL;
       baseindex_pool[i - starttrack].frameoffset = StartSector;
       global.trackindexlist[i-1] = &baseindex_pool[i - starttrack];
 #ifdef DEBUG_INDLIST
-  fprintf(stderr, "indexbasep %p\n", &baseindex_pool[i - starttrack]);
 #endif
     } else {
       global.trackindexlist[i-1] = NULL;
@@ -2382,7 +2642,7 @@ unsigned ScanIndices( track, cd_index, bulk )
     }
 
     if ((global.verbose & SHOW_INDICES) && LastIndex > 1)
-	fprintf(stderr, "track %2d has %d indices, index table (pairs of 'index: frame offset')\n", i, LastIndex);
+	fprintf(stderr, "\rtrack %2d has %d indices, index table (pairs of 'index: frame offset')\n", i, LastIndex);
 
     if (0 && cd_index != 1) {
 	startindex = cd_index; endindex = cd_index;
@@ -2405,14 +2665,17 @@ unsigned ScanIndices( track, cd_index, bulk )
       if (IndexOffset != -1) {
 		StartSector = IndexOffset;
       }
-      register_index_position(IndexOffset, &last_index_entry);
+      if (j == 1)
+	last_index_entry->frameoffset = IndexOffset;
+      else if (j > 1)
+	register_index_position(IndexOffset, &last_index_entry);
 
       if ( IndexOffset == -1 ) {
 	  if (global.verbose & SHOW_INDICES) {
 	    if (global.gui == 0) {
 	      fprintf(stderr, "%2u: N/A   ",j);
 	    } else {
-	      fprintf(stderr, "T%02d I%02u N/A\n",i,j);
+	      fprintf(stderr, "\rT%02d I%02u N/A\n",i,j);
 	    }
 	  }
       } else {
@@ -2423,18 +2686,20 @@ unsigned ScanIndices( track, cd_index, bulk )
 		    j,
 		    IndexOffset-GetStartSector(i));
 	    } else {
-	      fprintf(stderr, "T%02d I%02u %06lu\n",i,j,IndexOffset-GetStartSector(i));
+	      fprintf(stderr, "\rT%02d I%02u %06lu\n",i,j,IndexOffset-GetStartSector(i));
 	    }
 	  }
 	  if (track == i && cd_index == j) {
 	     retval = IndexOffset-GetStartSector(i);
 	  }
-      }
-    }
+      } /* if IndexOffset */
+    } /* for index */
     register_index_position(n_0_transition, &last_index_entry);
-    if (global.gui == 0 && global.verbose & SHOW_INDICES)
+    if (global.gui == 0 && (global.verbose & SHOW_INDICES) && i != endtrack)
       fputs("\n", stderr);
-  }
+  } /* for tracks */
+  if (global.gui == 0 && (global.verbose & SHOW_INDICES))
+    fputs("\n", stderr);
   StopPlay(get_scsi_p());
   return retval;
 }

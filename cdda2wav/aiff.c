@@ -1,7 +1,7 @@
-/* @(#)aiff.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)aiff.c	1.3 00/03/26 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)aiff.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)aiff.c	1.3 00/03/26 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /***
@@ -171,10 +171,20 @@ static unsigned long GetHdrSize( )
   return sizeof( AiffHdr );
 }
 
+static unsigned long InSizeToOutSize __PR(( unsigned long BytesToDo ));
+
+static unsigned long InSizeToOutSize ( BytesToDo )
+        unsigned long BytesToDo;
+{
+        return BytesToDo;
+}
+
 struct soundfile aiffsound =
 {
 	InitSound,		/* init header method */
 	ExitSound,		/* exit header method */
 	GetHdrSize,		/* report header size method */
+	(int (*) __PR(( int audio, unsigned char *buf, unsigned long BytesToDo ))) write,			/* get sound samples out */
+	InSizeToOutSize,	/* compressed? output file size */
 	1			/* needs big endian samples */
 };

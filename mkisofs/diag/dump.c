@@ -1,3 +1,8 @@
+/* @(#)dump.c	1.9 99/12/27 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)dump.c	1.9 99/12/27 joerg";
+#endif
 /*
  * File dump.c - dump a file/device both in hex and in ASCII.
 
@@ -18,8 +23,6 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
-
-static char rcsid[] ="$Id: dump.c,v 1.3 1999/03/02 03:41:36 eric Exp $";
 
 #include "../config.h"
 

@@ -1,3 +1,5 @@
+# @(#)README.sparcboot	1.1 99/12/12 joerg
+#
 The sparc boot feature does allow you to create your own Sun sparc boot disk.
 This will allow you to create modified Solaris install disks or to create
 installation CD's for other OS that run on sparc systems.

@@ -60,7 +60,7 @@ DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
 
 
 
-Joerg Schilling     Last change: Version 1.8                    1
+Joerg Schilling    Last change: Version 1.8.1                   1
 
 
 
@@ -126,7 +126,7 @@ GGGGEEEENNNNEEEERRRRAAAALLLL OOOOPPPPTTTTIIIIO
 
 
 
-Joerg Schilling     Last change: Version 1.8                    2
+Joerg Schilling    Last change: Version 1.8.1                   2
 
 
 
@@ -192,7 +192,7 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
 
-Joerg Schilling     Last change: Version 1.8                    3
+Joerg Schilling    Last change: Version 1.8.1                   3
 
 
 
@@ -211,6 +211,16 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           fixated disk can usually not be used on a non CD-writer
           type  drive but there are audio CD players that will be
           able to play such a disk.
+
+     ----wwwwaaaaiiiittttiiii
+          Wait for input to become available  on  standard  input
+          before  trying  to  open  the  SCSI driver. This allows
+          ccccddddrrrreeeeccccoooorrrrdddd to read it's input from a pipe even when writ-
+          ing  additional sessions to a multi session disk.  When
+          writing  another  session  to  a  multi  session  disk,
+          mmmmkkkkiiiissssooooffffssss  needs  to read the old session from the device
+          before writing output.  This cannot be done if ccccddddrrrreeeeccccoooorrrrdddd
+          opens the SCSI driver at the same time.
 
      ----llllooooaaaadddd
           Load the media and exit. This only works  with  a  tray
@@ -246,19 +256,9 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
           track       Blank a track.
 
-          unreserve   Unreserve a reserved track.
-
-          trtail      Blank the tail of a track.
-
-          unclose     Unclose last session.
-
-          session     Blank the last session.
-     If used together with the ----ffffoooorrrrcccceeee flag, this  option  may  be
-     used  to blank CD-RW disks that otherwise cannot be blanked.
 
 
-
-Joerg Schilling     Last change: Version 1.8                    4
+Joerg Schilling    Last change: Version 1.8.1                   4
 
 
 
@@ -269,6 +269,15 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
 
+          unreserve   Unreserve a reserved track.
+
+          trtail      Blank the tail of a track.
+
+          unclose     Unclose last session.
+
+          session     Blank the last session.
+     If used together with the ----ffffoooorrrrcccceeee flag, this  option  may  be
+     used  to blank CD-RW disks that otherwise cannot be blanked.
      Note that you may need to  specify  bbbbllllaaaannnnkkkk====_a_l_l  because  some
      drives  will  not  continue  with certain types of bad CD-RW
      disks. Note also that ccccddddeeeeccccoooorrrrdddd does it's best if the  ---- ffffoooorrrrcccceeee
@@ -312,19 +321,10 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           architecture  (e.g. a Sparcstation-2) has only MMU page
           table entries for 16 MBytes  per  process.  Using  more
           than  14  MBytes  for  the fifo may cause the operating
-          system in this case to spend much  time  to  constantly
-          reload  the  MMU tables. Newer machines from Sun do not
-          have this MMU hardware problem. I have  no  information
-          on PC-hardware reflecting this problem.
-
-          If you have buffer underruns or  similar  problems  and
-          observe  a  zero  _f_i_f_o  _e_m_p_t_y  _c_o_u_n_t, you have hardware
-          problems. The fifo size in this case is sufficient.
 
 
 
-
-Joerg Schilling     Last change: Version 1.8                    5
+Joerg Schilling    Last change: Version 1.8.1                   5
 
 
 
@@ -334,6 +334,15 @@ Joerg Schilling     Last change: Version 1.8                    5
 CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
+
+          system in this case to spend much  time  to  constantly
+          reload  the  MMU tables. Newer machines from Sun do not
+          have this MMU hardware problem. I have  no  information
+          on PC-hardware reflecting this problem.
+
+          If you have buffer underruns or  similar  problems  and
+          observe  a  zero  _f_i_f_o  _e_m_p_t_y  _c_o_u_n_t, you have hardware
+          problems. The fifo size in this case is sufficient.
 
      ddddeeeevvvv====_t_a_r_g_e_t
           Sets the SCSI target for  the  CD-Recorder,  see  notes
@@ -378,19 +387,10 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           ddddrrrriiiivvvveeeerrrr====hhhheeeellllpppp.  The reason  for  the  existence  of  this
           option  is  to  allow users to use ccccddddrrrreeeeccccoooorrrrdddd with drives
           that are similar to  supported  drives  but  not  known
-          directly  by  ccccddddrrrreeeeccccoooorrrrdddd.   Use  this option with extreme
-          care. If a wrong driver is used for a device, the  pos-
-          sibility  of  creating  corrupted  disks  is high.  The
-          minimum problem related to a wrong driver is that the ----
-          ssssppppeeeeeeeedddd or ----dddduuuummmmmmmmyyyy will not work.
-
-          There are two  special  driver  entries  in  the  list:
-          ccccddddrrrr____ssssiiiimmmmuuuullll  and  ddddvvvvdddd____ssssiiiimmmmuuuullll.   These  driver  entries are
-          designed to make timing tests at any  speed  or  timing
 
 
 
-Joerg Schilling     Last change: Version 1.8                    6
+Joerg Schilling    Last change: Version 1.8.1                   6
 
 
 
@@ -401,6 +401,15 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
 
+          directly  by  ccccddddrrrreeeeccccoooorrrrdddd.   Use  this option with extreme
+          care. If a wrong driver is used for a device, the  pos-
+          sibility  of  creating  corrupted  disks  is high.  The
+          minimum problem related to a wrong driver is that the ----
+          ssssppppeeeeeeeedddd or ----dddduuuummmmmmmmyyyy will not work.
+
+          There are two  special  driver  entries  in  the  list:
+          ccccddddrrrr____ssssiiiimmmmuuuullll  and  ddddvvvvdddd____ssssiiiimmmmuuuullll.   These  driver  entries are
+          designed to make timing tests at any  speed  or  timing
           tests for drives that do not support the ----dddduuuummmmmmmmyyyy option.
           The simulation drivers implement a drive with a  buffer
           size   of   1MB   that   can   be   changed   via   the
@@ -408,6 +417,14 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           driver  correctly simulates even a buffer underrun con-
           dition.  If the ----dddduuuummmmmmmmyyyy option is  present,  the  simul-
           taion is not aborted in case of a buffer underrun.
+
+     ddddrrrriiiivvvveeeerrrrooooppppttttssss====_o_p_t_i_o_n _l_i_s_t
+          Set driver specific options. The options are  specified
+          a comma separated list.  To get a list of valid options
+          use ddddrrrriiiivvvveeeerrrrooooppppttttssss====_h_e_l_p  together  with  the   - _c_h_e_c_k_d_r_i_v_e
+          option.   Currently only the bbbbuuuurrrrnnnnpppprrrrooooooooffff option is imple-
+          mented to support Buffer Underrun  Proof  writing  with
+          drives that use the Sanyo BURN-Proof technology.
 
 
      ----cccchhhheeeecccckkkkddddrrrriiiivvvveeee
@@ -436,6 +453,20 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           located. This works not on all operating systems.
 
      ----iiiiggggnnnnssssiiiizzzzeeee
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                   7
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
           Ignore the known  size  of  the  medium.  This  options
           should  be  used  with extreme care, it exists only for
           debugging purposes don't use it for other reasons.   It
@@ -453,20 +484,6 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           track number 1.  This option currently only makes sense
           with the TEAC drive when creating  track-at-once  disks
           without the 2 second silence before each track.
-
-
-
-Joerg Schilling     Last change: Version 1.8                    7
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
           This option may go away in future.
 
      ----ppppaaaacccckkkkeeeetttt
@@ -502,6 +519,20 @@ TTTTRRRRAAAACCCCKKKK OOOOPPPPTTTTIIIIOOOONNNNS
           start  of  the  indices.  An  index  list  in the form:
           0,7500,15000 sets index 1 to the start  of  the  track,
           index  2  100  seconds  from the start of the track and
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                   8
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
           index 3 200 seconds from the start of the track.
 
      ----aaaauuuuddddiiiioooo
@@ -519,20 +550,6 @@ TTTTRRRRAAAACCCCKKKK OOOOPPPPTTTTIIIIOOOONNNNS
           If a filename ends in ._a_u or  ._w_a_v  the  file  is  con-
           sidered  to  be a structured audio data file.  CCCCddddrrrreeeeccccoooorrrrdddd
           assumes that the file in this case is a Sun audio  file
-
-
-
-Joerg Schilling     Last change: Version 1.8                    8
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
           or  a  Microsoft  .WAV file and extracts the audio data
           from the files by skipping over  the  non-audio  header
           information.   In  all  other cases, cdrecord will only
@@ -568,6 +585,20 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           presented  in  the big-endian (network) byte order nor-
           mally used by the SCSI protocol.  CCCCddddrrrreeeeccccoooorrrrdddd knows  if  a
           CD-Recorder  needs  audio data in big- or little-endian
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                   9
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
           order, and corrects the byte order of the  data  stream
           to match the needs of the recorder.  You only need the
           -_s_w_a_b flag if your data stream  is  in  Intel  (little-
@@ -585,20 +616,6 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           is a multiple of 2048 bytes.  The file with track  data
           should  contain  an  IIIISSSSOOOO----9999666666660000  or RRRRoooocccckkkk RRRRiiiiddddggggeeee filesystem
           image (see mmmmkkkkiiiissssooooffffssss for more details). If the track data
-
-
-
-Joerg Schilling     Last change: Version 1.8                    9
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
           is an uuuuffffssss filesystem image, fragment size should be set
           to 2 KB or more to allow CR-drives  with  2  KB  sector
           size to to be used for reading.
@@ -634,6 +651,20 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           needed to limit the size of the CD to the size  of  the
           ISO filesystem.  In the second case the option ----iiiissssoooossssiiiizzzzeeee
           is needed to prevent ccccddddrrrreeeeccccoooorrrrdddd from reading the two  run
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  10
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
           out  blocks  that  are  appended by each CD-recorder in
           track at once mode. These two run out blocks cannot  be
           read  and  would  cause  a  buffer under run that would
@@ -651,19 +682,6 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           audio data to be a multiple of 2352  bytes.  The  audio
           data  padding is done with binary zeroes which is equal
           to absolute silence.
-
-
-
-Joerg Schilling     Last change: Version 1.8                   10
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
 
           ----ppppaaaadddd remains valid until disabled by ----nnnnooooppppaaaadddd.
 
@@ -699,6 +717,20 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      ----nnnnoooopppprrrreeeeeeeemmmmpppp
           If this flag is present, all TOC entries for subsequent
           audio tracks will indicate that the audio data has been
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  11
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
           mastered with linear data - this is the default.
 
      ttttssssiiiizzzzeeee====####
@@ -717,20 +749,6 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           and aborts before starting to write.  If  this  happens
           you will need to run mmmmkkkkiiiissssooooffffssss ----pppprrrriiiinnnntttt----ssssiiiizzzzeeee before and use
           the output as an  argument  to  the  ttttssssiiiizzzzeeee=  option  of
-
-
-
-Joerg Schilling     Last change: Version 1.8                   11
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
           ccccddddrrrreeeeccccoooorrrrdddd.
           See ffffssss= option for possible arguments.
 
@@ -764,8 +782,22 @@ EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
 
      If the overall speed of the system  is  sufficient  and  the
      structure  of  the  filesystem  is not too complex, cdrecord
-     will run without creating an image of the ISO 9660  filesys-
-     tem. Simply run the pipeline:
+     will  run  without  creating  an  image  of  the  ISO   9660
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  12
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
+     filesystem. Simply run the pipeline:
 
          mkisofs -R /master/tree |  cdrecord  - v  fs=6m  speed=2
      dev=2,0 -
@@ -782,20 +814,6 @@ EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
          priocntl -e -c RT -p 59 mkisofs -R /master/tree
 
      on Solaris and by
-
-
-
-
-Joerg Schilling     Last change: Version 1.8                   12
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
 
          nice --18 mkisofs -R /master/tree
 
@@ -830,6 +848,21 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
          cdrecord  - v  - dummy  dev=2,0   cdimage.raw   -  audio
      track*.cdaudio
 
+
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  13
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
      To handle drives that need to  know  the  size  of  a  track
      before starting to write, first run
 
@@ -843,25 +876,19 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      where _X_X_X is replaced by the output of the previous  run  of
      mkisofs.
 
+     To copy an audio CD in the most accurate way, first run
+
+         cdda2wav -v255 -D2,0 -B -Owav
+
+     and then run
+
+         cdrecord -v dev=2,0 -dao -useinfo  *.wav
 
 EEEENNNNVVVVIIIIRRRROOOONNNNMMMMEEEENNNNTTTT
      CDR_DEVICE
           This may either hold a device identifier that is  suit-
           able  to the open call of the SCSI transport library or
           a label in the file /etc/default/cdrecord.
-
-
-
-Joerg Schilling     Last change: Version 1.8                   13
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
 
      CDR_SPEED
           Sets the default speed value for writing (see  also   ----
@@ -889,6 +916,19 @@ FFFFIIIILLLLEEEESSSS
                Sets the default speed value for writing (see also
                ----ssssppppeeeeeeeedddd option).
 
+
+
+Joerg Schilling    Last change: Version 1.8.1                  14
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
           CDR_FIFOSIZE
                Sets the default size of the FIFO (see  also  ffffssss====####
                option).
@@ -915,20 +955,6 @@ FFFFIIIILLLLEEEESSSS
                scsibus 0, target 5, lun 0 and should be used with
                speed 4 and a FIFO size of 8 MB.  A  second  drive
                may  be  found  at  scsibus 1, target 6, lun 0 and
-
-
-
-Joerg Schilling     Last change: Version 1.8                   14
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
                uses the default speed and the default FIFO size.
 
 
@@ -955,6 +981,20 @@ NNNNOOOOTTTTEEEESSSS
      The  newer  Philips/HP/Plasmon/Grundig  drives  as  well  as
      Yamaha CDR-100 and CDR-102 work also.  The  Plasmon  RF-4100
      work,  but  has not tested in multi session.  A Philips CDD-
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  15
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
      521 that has not been upgraded  will  not  work.   The  Sony
      CDU-924  has  been  tested, but does not support XA-mode2 in
      hardware.  The sony therefore cannot create conforming multi
@@ -980,20 +1020,6 @@ NNNNOOOOTTTTEEEESSSS
      the command
 
          ccccddddrrrreeeeccccoooorrrrdddd ----dddduuuummmmmmmmyyyy ddddeeeevvvv====2222,,,,0000 ppppaaaaddddssssiiiizzzzeeee====666600000000mmmm ////ddddeeeevvvv////nnnnuuuullllllll
-
-
-
-
-Joerg Schilling     Last change: Version 1.8                   15
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
 
      to create a disk  that  is  entirely  made  of  dummy  data.
      CCCCddddrrrreeeeccccoooorrrrdddd needs to run as root to get access to the ////ddddeeeevvvv////ssssccccgggg????
@@ -1022,6 +1048,19 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      /_d_e_v/_s_c_g?   devices   unless  you  would  allow  anybody  to
      read/write/format all your disks.
 
+
+
+Joerg Schilling    Last change: Version 1.8.1                  16
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
      You should not  connect  old  drives  that  do  not  support
      disconnect/reconnect  to  either  the  SCSI bus that is con-
      nected to the CD-Recorder or the source disk.
@@ -1045,21 +1084,6 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      If you have more information or  SCSI  command  manuals  for
      currently   unsupported   CD-Recorders  please  contact  the
      author.
-
-
-
-
-
-Joerg Schilling     Last change: Version 1.8                   16
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
 
      The Philips CDD 521 CD-Recorder (even in the  upgraded  ver-
      sion) has several firmware bugs. Some of them will force you
@@ -1088,6 +1112,21 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
       +o     It  fetches  to  few  data  in  auto  request   sense
           (CCS/SCSI-2/SCSI-3 needs >= 18).
 
+
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  17
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
      The fifo percent output is computed just after  a  block  of
      data  has  been written to the CD-Recorder. For this reason,
      there will never be 100% fifo fill, while  the  fifo  is  in
@@ -1113,20 +1152,6 @@ DDDDIIIIAAAAGGGGNNNNOOOOSSSSTTTTIIIICCCCSSSS
      The first line gives information about the transport of  the
      command.   The  text  after  the first colon gives the error
      text for the system call from the view  of  the  kernel.  It
-
-
-
-Joerg Schilling     Last change: Version 1.8                   17
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
      usually  is:   IIII////OOOO  eeeerrrrrrrroooorrrr  unless other problems happen. The
      next words contain a short description for the SCSI  command
      that fails. The rest of the line tells you if there were any
@@ -1154,6 +1179,20 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      The sixth line is the error text for the sense code and  the
      sense  qualifier if available.  If the type of the device is
      known, the sense data is decoded from tables in _s_c_s_i_e_r_r_s._c .
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  18
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
      The text is followed by the error value for a field replace-
      able unit.
 
@@ -1179,20 +1218,6 @@ BBBBUUUUGGGGSSSS
 
      CCCCddddrrrreeeeccccoooorrrrdddd currently only warns if the input data will not fit
      on  the  disk.   If you don't abort the command you will get
-
-
-
-Joerg Schilling     Last change: Version 1.8                   18
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
      unpredictable results.
 
      There should be an option to write index numbers  for  audio
@@ -1220,6 +1245,20 @@ CCCCRRRREEEEDDDDIIIITTTTSSSS
                     For the first FIFO implementation.
 
      Dave Platt     (dplatt@feghoot.ml.org)
+
+
+
+Joerg Schilling    Last change: Version 1.8.1                  19
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
                     For creating the experimental packet  writing
                     support,  the  first  implementation of CD-RW
                     blanking support, the first .wav file decoder
@@ -1246,19 +1285,6 @@ MMMMAAAAIIIILLLLIIIINNNNGGGG LLLLIIIISSSSTTTTS
 
           other-cdwrite-request@lists.debian.org
 
-
-
-Joerg Schilling     Last change: Version 1.8                   19
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
-
      and include the  word  _s_u_b_s_c_r_i_b_e  in  the  body.   The  mail
      address of the list is:
 
@@ -1272,7 +1298,7 @@ AAAAUUUUTTTTHHHHOOOORRRR
      Germany
 
      Additional information can be found on:
-     http://www.fokus.gmd.de/nthp/employees/schilling/cdrecord.html
+     http://www.fokus.gmd.de/usr/schilling/cdrecord.html
 
      Mail bugs and suggestions to:
 
@@ -1288,33 +1314,7 @@ AAAAUUUUTTTTHHHHOOOORRRR
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Joerg Schilling     Last change: Version 1.8                   20
+Joerg Schilling    Last change: Version 1.8.1                  20
 
 
 

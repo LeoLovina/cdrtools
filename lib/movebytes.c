@@ -1,4 +1,4 @@
-/* @(#)movebytes.c	1.10 98/02/15 Copyright 1985 J. Schilling */
+/* @(#)movebytes.c	1.11 00/04/12 Copyright 1985 J. Schilling */
 /*
  *	move data
  *
@@ -34,7 +34,10 @@ char *movebytes(fromv, tov, cnt)
 	register char		*to	= tov;
 	register int		n;
 
-	if ((n = cnt) == 0)
+	/*
+	 * If we change cnt to be unsigned, check for == instead of <=
+	 */
+	if ((n = cnt) <= 0)
 		return (to);
 
 	if (from >= to) {
@@ -42,7 +45,7 @@ char *movebytes(fromv, tov, cnt)
 		 * source is on higher adresses than destination:
 		 *	move bytes forwards
 		 */
-		if (n >= 8 * sizeof(long)) {
+		if (n >= (int)(8 * sizeof(long))) {
 			if (l2aligned(from, to)) {
 				register const long *froml = (const long *)from;
 				register long *tol = (long *)to;
@@ -85,7 +88,7 @@ char *movebytes(fromv, tov, cnt)
 		to += n;
 		from += n;
 		ep = to;
-		if (n >= 8 * sizeof(long)) {
+		if (n >= (int)(8 * sizeof(long))) {
 			if (l2aligned(from, to)) {
 				register const long *froml = (const long *)from;
 				register long *tol = (long *)to;

@@ -815,6 +815,9 @@ EOF
     "Power Macintosh":Rhapsody:*)
 	echo powerpc-apple-rhapsody${UNAME_RELEASE}
 	exit 0 ;;
+    "Power Macintosh":"Mac OS":*)
+	echo powerpc-apple-macosx${UNAME_RELEASE}
+	exit 0 ;;
     *:OS/2:*:*)
         echo "i386-pc-os2_emx"
 	exit 0;;

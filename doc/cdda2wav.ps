@@ -440,88 +440,91 @@ mark
 (cdda2wav)1080 2016 w
 10 R f
 ( are)1 165(can retrieve audio tracks from CDROM drives \(see README for a list of drives\) that)14 3684 2 1551 2016 t
-(capable of reading audio data digitally to the host \()9 2141 1 1080 2136 t
+(capable of reading audio data digitally to the host \()9 2105 1 1080 2136 t
 10 B f
-(CDDA)3221 2136 w
+(CDDA)3185 2136 w
 10 R f
-( drives may have been added as well)7 1537(\). Other)1 354 2 3509 2136 t
-(when you read this.)3 806 1 1080 2256 t
+(\).)3473 2136 w
 9 B f
-(OPTIONS)720 2424 w
+(OPTIONS)720 2304 w
 10 S1 f
-(\261)1080 2544 w
+(\261)1080 2424 w
 10 B f
-(D)1145 2544 w
+(D)1145 2424 w
 10 I f
-(device --device)1 640 1 1250 2544 t
+(device --device)1 640 1 1250 2424 t
 10 R f
-(uses)1440 2664 w
+(uses)1440 2544 w
 10 B f
-(device)1657 2664 w
+(device)1657 2544 w
 10 R f
-( example /dev/cdrom for the)4 1215( For)1 218( source for CDDA reading:)4 1170(as the)1 250 4 1968 2664 t
+( example /dev/cdrom for the)4 1215( For)1 218( source for CDDA reading:)4 1170(as the)1 250 4 1968 2544 t
 10 B f
-(cooked)4867 2664 w
+(cooked)4867 2544 w
 10 S f
-(_)5167 2664 w
+(_)5167 2544 w
 10 B f
-(ioctl)5217 2664 w
+(ioctl)5217 2544 w
 10 R f
-(interface and Bus,ID,Lun for the)4 1366 1 1440 2784 t
+(interface and Bus,ID,Lun for the)4 1358 1 1440 2664 t
 10 B f
-(generic)2847 2784 w
+(generic)2837 2664 w
 10 S f
-(_)3157 2784 w
+(_)3147 2664 w
 10 B f
-(scsi)3207 2784 w
+(scsi)3197 2664 w
 10 R f
-( has to correspond with the inter-)6 1410(interface. This)1 592 2 3398 2784 t
-( setting of the environment variable)5 1493( The)1 227(face setting \(see below\).)3 1008 3 1440 2904 t
+(interface. The)1 566 1 3386 2664 t
 10 B f
-(CDDA)4207 2904 w
+(device)3990 2664 w
+10 R f
+(has to correspond with the)4 1106 1 4294 2664 t
+( setting of the environment variable)5 1573( The)1 243( below\).)1 357(interface setting \(see)2 883 4 1440 2784 t
+10 B f
+(CDDA)4551 2784 w
 10 S f
-(_)4495 2904 w
+(_)4839 2784 w
 10 B f
-(DEVICE)4545 2904 w
+(DEVICE)4889 2784 w
 10 R f
-(is overrid-)1 427 1 4973 2904 t
-(den by this option.)3 769 1 1440 3024 t
+(is)5333 2784 w
+(overridden by this option.)3 1057 1 1440 2904 t
 10 S1 f
-(\261)1080 3192 w
+(\261)1080 3072 w
 10 B f
-(A)1145 3192 w
+(A)1145 3072 w
 10 I f
-(auxdevice --auxdevice)1 928 1 1250 3192 t
+(auxdevice --auxdevice)1 928 1 1250 3072 t
 10 R f
-(uses)1440 3312 w
+(uses)1440 3192 w
 10 B f
-(auxdevice)1645 3312 w
+(auxdevice)1645 3192 w
 10 R f
-(as CDROM drive for ioctl usage.)5 1366 1 2100 3312 t
+(as CDROM drive for ioctl usage.)5 1366 1 2100 3192 t
 10 S1 f
-(\261)1080 3480 w
+(\261)1080 3360 w
 10 B f
-(I)1145 3480 w
+(I)1145 3360 w
 10 I f
-(interface --interface)1 842 1 1217 3480 t
+(interface --interface)1 842 1 1217 3360 t
 10 R f
-(speci\256es the interface for CDROM access:)5 1744 1 1440 3600 t
+(speci\256es the interface for CDROM access:)5 1784 1 1440 3480 t
 10 B f
-(generic)3250 3600 w
+(generic)3298 3480 w
 10 S f
-(_)3560 3600 w
+(_)3608 3480 w
 10 B f
-(scsi)3610 3600 w
+(scsi)3658 3480 w
 10 R f
-(or \(on Linux systems\))3 904 1 3793 3600 t
+(or \(on Linux, and FreeBSD systems\))5 1551 1 3849 3480 t
 10 B f
-(cooked)4730 3600 w
+(cooked)1440 3600 w
 10 S f
-(_)5030 3600 w
+(_)1740 3600 w
 10 B f
-(ioctl)5080 3600 w
+(ioctl)1790 3600 w
 10 R f
-(.)5263 3600 w
+(.)1973 3600 w
 10 S1 f
 (\261)1080 3768 w
 10 B f
@@ -1457,63 +1460,63 @@ mark
 ( CDs are recorded with a modi\256ed frequency response called pre-)10 2990(Some older audio)2 777 2 1633 1896 t
 ( correction can be seen in the \257ags)7 1475(emphasis. This is found mostly in classical recordings. The)8 2485 2 1440 2016 t
 ( that show this setting only in the sub-)8 1611(of the Table Of Contents often. But there are recordings,)9 2349 2 1440 2136 t
-( you have a pre-emphasized recording and want cdda2wav to undo this,)11 3025(channels. If you know)3 935 2 1440 2256 t
-( A reverse \256ltering is done before the samples are written into)11 2635(you have to specify this option.)5 1325 2 1440 2376 t
-(the audio \256le.)2 563 1 1440 2496 t
-(Set audio format)2 682 1 1080 2664 t
+( the q-subchannel)2 720(channels. If this option is given, the index scanner will be started, which reads)13 3240 2 1440 2256 t
+( is indicated in the q-subchannel of a track, but not in the TOC,)13 2717(of each track. If pre-emphasis)4 1243 2 1440 2376 t
+( to be present, and subsequently a reverse \256ltering is done for this)12 2729(pre-emphasis will be assumed)3 1231 2 1440 2496 t
+(track before the samples are written into the audio \256le.)9 2251 1 1440 2616 t
+(Set audio format)2 682 1 1080 2784 t
 10 S1 f
-(\261)1440 2784 w
+(\261)1440 2904 w
 10 B f
-(O audiotype)1 571 1 1505 2784 t
+(O audiotype)1 571 1 1505 2904 t
 10 R f
-(can be)1 269 1 2113 2784 t
+(can be)1 269 1 2113 2904 t
 10 I f
-(wav)2419 2784 w
+(wav)2419 2904 w
 10 R f
-(\(for wav \256les\) or)3 709 1 2617 2784 t
+(\(for wav \256les\) or)3 709 1 2617 2904 t
 10 I f
-(au)3363 2784 w
+(au)3363 2904 w
 10 R f
-(or)3500 2784 w
+(or)3500 2904 w
 10 I f
-(sun)3620 2784 w
+(sun)3620 2904 w
 10 R f
-(\(for sun PCM \256les\) or)4 931 1 3796 2784 t
+(\(for sun PCM \256les\) or)4 931 1 3796 2904 t
 10 I f
-(cdr)4765 2784 w
+(cdr)4765 2904 w
 10 R f
-(or)4936 2784 w
+(or)4936 2904 w
 10 I f
-(raw)5057 2784 w
+(raw)5057 2904 w
 10 R f
-(\(for)5251 2784 w
-( \256le samples are coded in linear pulse code)8 1913( All)1 211( for cd writers\).)3 695(headerless \256les to be used)4 1141 4 1440 2904 t
-( Wav)1 259( compact disc format\). This holds for all audio formats.)9 2328(modulation \(as done in the audio)5 1373 3 1440 3024 t
-(\256les are compatible to Wind)4 1176 1 1440 3144 t
+(\(for)5251 2904 w
+( \256le samples are coded in linear pulse code)8 1913( All)1 211( for cd writers\).)3 695(headerless \256les to be used)4 1141 4 1440 3024 t
+( Wav)1 259( compact disc format\). This holds for all audio formats.)9 2328(modulation \(as done in the audio)5 1373 3 1440 3144 t
+(\256les are compatible to Wind)4 1176 1 1440 3264 t
 10 S f
-(*)2616 3144 w
+(*)2616 3264 w
 10 R f
-( the)1 157(ws sound \256les, they have lsb,msb byte order as being used on)11 2577 2 2666 3144 t
-( type \256les are not like the older com-)8 1598( Sun)1 230( extension is '.wav'.)3 855(audio cd. The default \256lename)4 1277 4 1440 3264 t
-( is used. The)3 556(mon logarithmically coded .au \256les, but instead as mentioned above linear PCM)11 3404 2 1440 3384 t
-( AIFF and)2 439( The)1 227( extension is '.au'.)3 777(byte order is msb,lsb to be compatible. The default \256lename)9 2517 4 1440 3504 t
-( their samples in bigendian format)5 1498(the newer variant AIFC from the Apple/SGI world store)8 2462 2 1440 3624 t
-( easiest 'format', the cdr aka raw for-)7 1602( the)1 163( Finally)1 358(\(msb,lsb\). In AIFC no compression is used.)6 1837 4 1440 3744 t
-( satisfy the order wanted by most cd writers.)8 1852(mat. It is done per default in msb,lsb byte order to)10 2108 2 1440 3864 t
-( be)1 157(Since there is no header information in this format, the sample parameters can only)13 3803 2 1440 3984 t
-( extension is)2 526(identi\256ed by playing the samples on a soundcard or similiar. The default \256lename)12 3434 2 1440 4104 t
-('.cdr' or '.raw'.)2 632 1 1440 4224 t
-(Select cdrom drive reading speed)4 1362 1 1080 4392 t
+( the)1 157(ws sound \256les, they have lsb,msb byte order as being used on)11 2577 2 2666 3264 t
+( type \256les are not like the older com-)8 1598( Sun)1 230( extension is '.wav'.)3 855(audio cd. The default \256lename)4 1277 4 1440 3384 t
+( is used. The)3 556(mon logarithmically coded .au \256les, but instead as mentioned above linear PCM)11 3404 2 1440 3504 t
+( AIFF and)2 439( The)1 227( extension is '.au'.)3 777(byte order is msb,lsb to be compatible. The default \256lename)9 2517 4 1440 3624 t
+( their samples in bigendian format)5 1498(the newer variant AIFC from the Apple/SGI world store)8 2462 2 1440 3744 t
+( easiest 'format', the cdr aka raw for-)7 1602( the)1 163( Finally)1 358(\(msb,lsb\). In AIFC no compression is used.)6 1837 4 1440 3864 t
+( satisfy the order wanted by most cd writers.)8 1852(mat. It is done per default in msb,lsb byte order to)10 2108 2 1440 3984 t
+( be)1 157(Since there is no header information in this format, the sample parameters can only)13 3803 2 1440 4104 t
+( extension is)2 526(identi\256ed by playing the samples on a soundcard or similiar. The default \256lename)12 3434 2 1440 4224 t
+('.cdr' or '.raw'.)2 632 1 1440 4344 t
+(Select cdrom drive reading speed)4 1362 1 1080 4512 t
 10 S1 f
-(\261)1440 4512 w
+(\261)1440 4632 w
 10 B f
-(S speed)1 366 1 1505 4512 t
+(S speed)1 366 1 1505 4632 t
 10 R f
-( reduce read)2 514(allows to switch the cdrom drive to a certain level of speed in order to)14 2977 2 1909 4512 t
-( given completely freely, since there are often)7 1947(errors. The actual speed factor can generally be)7 2013 2 1440 4632 t
-( argu-)1 255( An)1 200( possible. Details depend very much on the cdrom drives.)9 2474(less settings than factors)3 1031 4 1440 4752 t
-( 1 often selects single)4 912(ment of 0 for example is often the default speed of the drive, a value of)15 3048 2 1440 4872 t
-(speed.)1440 4992 w
+( reduce read)2 514(allows to switch the cdrom drive to a certain level of speed in order to)14 2977 2 1909 4632 t
+( very much on the)4 817( depend)1 338( Details)1 366(errors. The argument is transfered verbatim to the drive.)8 2439 4 1440 4752 t
+( is often the default speed of the drive, a value of)11 2072( argument of 0 for example)5 1139( An)1 190(cdrom drives.)1 559 4 1440 4872 t
+(1 often selects single speed.)4 1144 1 1440 4992 t
 (Enable MD5 checksums)2 992 1 1080 5160 t
 10 S1 f
 (\261)1440 5280 w
@@ -1531,20 +1534,17 @@ mark
 ( given number of sectors for initial overlap sampling for jitter correction.)11 3110(sets the)1 314 2 1976 5688 t
 ( read twice to enable)4 893(Two cases are to be distinguished. For nonzero values, some sectors are)11 3067 2 1440 5808 t
 ( zero is given, no overlap sampling will be used.)9 2015( an argument of)3 653( If)1 132(cdda2wav's jitter correction.)2 1160 4 1440 5928 t
-10 B f
-(NEWS!)1440 6048 w
-10 R f
-( the setting during sampling)4 1161(For nonzero overlap sectors cdda2wav dynamically adjusts)6 2434 2 1805 6048 t
-( an increased)2 548( no match can be found, cdda2wav retries the read with)10 2338( If)1 137(\(like cdparanoia does\).)2 937 4 1440 6168 t
-( reduces)1 337( the amount of jitter is lower than the current overlapped samples, cdda2wav)12 3166(overlap. If)1 457 3 1440 6288 t
-( given has to be lower)5 974( argument)1 420( The)1 231(the overlap setting, resulting in a higher reading speed.)8 2335 4 1440 6408 t
-(than the total number of sectors per request \(see option)9 2337 1 1440 6528 t
+( sampling \(like)2 648(For nonzero overlap sectors cdda2wav dynamically adjusts the setting during)9 3312 2 1440 6048 t
+( read with an increased over-)5 1214( no match can be found, cdda2wav retries the)8 1897( If)1 135(cdparanoia does\).)1 714 4 1440 6168 t
+( is lower than the current overlapped samples, cdda2wav reduces the)10 2840( the amount of jitter)4 838(lap. If)1 282 3 1440 6288 t
+( argument given has to be lower than)7 1583( The)1 228(overlap setting, resulting in a higher reading speed.)7 2149 3 1440 6408 t
+(the total number of sectors per request \(see option)8 2076 1 1440 6528 t
 10 I f
-(-n)3818 6528 w
+(-n)3551 6528 w
 10 R f
-( this)1 185( will check)2 470(below\). Cdda2wav)1 803 3 3942 6528 t
-( case of zero sectors is nice on low load)9 1798( The)1 236(setting and issues a error message otherwise.)6 1926 3 1440 6648 t
-(situations or errorfree \(perfect\) cdrom drives and perfect \(not scratched\) audio cds.)11 3388 1 1440 6768 t
+( will check this setting)4 936(below\). Cdda2wav)1 796 2 3668 6528 t
+( case of zero sectors is nice on low load situations or)11 2198( The)1 222( a error message otherwise.)4 1124(and issues)1 416 4 1440 6648 t
+(errorfree \(perfect\) cdrom drives and perfect \(not scratched\) audio cds.)9 2855 1 1440 6768 t
 (Set the transfer size)3 808 1 1080 6936 t
 10 S1 f
 (\261)1440 7056 w
@@ -1865,55 +1865,92 @@ mark
 ( will be opened for the next)6 1164(option. When recording time exceeds the track limit a new \256le)10 2613 2 1623 3768 t
 (track.)1080 3888 w
 9 B f
-(WARNING)720 4056 w
-10 B f
-(IMPORTANT:)1080 4176 w
+(FILES)720 4056 w
 10 R f
-(it is prohibited to sell copies of copyrighted material by noncopyright holders. This pro-)13 3631 1 1769 4176 t
-( constraint when using the)4 1093( user acknowledges this)3 987( The)1 225(gram may not be used to circumvent copyrights.)7 2015 4 1080 4296 t
-(software.)1080 4416 w
-9 B f
-(BUGS)720 4584 w
-10 R f
-(Performance may not be optimal on slower systems.)7 2148 1 1080 4704 t
-(The index scanner may give timeouts.)5 1560 1 1080 4944 t
-(The resampling \(rate conversion code\) uses polynomial interpolation, which is not optimal.)11 3737 1 1080 5184 t
-(Cdda2wav should use threads.)3 1239 1 1080 5424 t
-(When using jitter correction with ATAPI cdrom drives, track endings are not handled correctly.)13 3927 1 1080 5664 t
-9 B f
-(ACKNOWLEDGEMENTS)720 5832 w
-10 R f
-( and Fraunhofer Institut f)4 1080(Thanks goto Project MODE \(http://www.mode.net/\))4 2165 2 1080 5952 t
+(Cdda2wav can generate a lot of \256les for various purposes.)9 2389 1 1080 4176 t
+(Audio \256les:)1 478 1 1080 4416 t
+(There are audio \256les containing samples with default extensions These \256les are not generated when)14 4320 1 1080 4656 t
+( Multiple \256les may be written when the bulk copy option \(-B\) is used. Individual)14 3453(option \(-N\) is given.)3 867 2 1080 4776 t
+( suf\256cient to cover all)4 983(\256le names can be given as arguments. If the number of \256le names given is)14 3337 2 1080 4896 t
+( if there are less \256le names than)7 1338( Otherwise,)1 504( used verbatim.)2 635(included audio tracks, the \256le names will be)7 1843 4 1080 5016 t
+( is extended with)3 719(\256les needed to write the included tracks, the part of the \256le name before the extension)15 3601 2 1080 5136 t
+(')1080 5256 w
 10 S f
-(\372)4325 5952 w
+(_)1113 5256 w
 10 R f
-(r integrierte Schaltungen)2 1025 1 4375 5952 t
-( Europe and Ricoh Japan provided)5 1558( Plextor)1 383(\(FhG-IIS\) \(http://www.iis.fhg.de/\) for \256nancial support.)4 2379 3 1080 6072 t
-( has helped a lot)4 701( Rammi)1 366( this software.)2 589(cdrom disk drives and cd burners which helped a lot to develop)11 2664 4 1080 6192 t
-( showed a lot of stamina when hearing 100 times the \256rst 16 seconds of the \256rst)16 3346(with the debugging and)3 974 2 1080 6312 t
-( patches contributed by Monty xiphmont)5 1670( Paranoia)1 415(track of the Krupps CD.)4 994 3 1080 6432 t
-10 S1 f
-(@)4159 6432 w
-10 R f
-(mit.edu.)4251 6432 w
-9 B f
-(AUTHOR)720 6600 w
-10 R f
-(Heiko Eissfeldt heiko)2 882 1 1080 6720 t
-10 S1 f
-(@)1962 6720 w
-10 R f
-(colossus.escape.de)2054 6720 w
-9 B f
-(DATE)720 6888 w
-10 R f
-(25 Mar 1999)2 532 1 1080 7008 t
+(dd' where dd represents the current track number.)7 2044 1 1163 5256 t
+(Cddb and Cdindex \256les:)3 994 1 1080 5496 t
+( \(album/track\) title information, then .cddb and .cdindex \256les are)9 2702(If cdda2wav detects cd-extra or cd-text)5 1618 2 1080 5736 t
+( entries for submission to)4 1059(generated unless suppressed by the option -H. They contain suitable formatted)10 3261 2 1080 5856 t
+( track title databases in the internet. The CDINDEX and CDDB\(tm\) systems are currently sup-)14 3967(audio cd)1 353 2 1080 5976 t
+(ported. For more information please visit www.cdindex.org and www.cddb.com.)8 3298 1 1080 6096 t
+(Inf \256les:)1 344 1 1080 6336 t
+( audio cd, it was taken from. They are)8 1609(The inf \256les are describing the sample \256les and the part from the)12 2711 2 1080 6576 t
+(a means to transfer information to a cd burning program like cdrecord. For example, if the original audio)17 4320 1 1080 6696 t
+( the pre-emphase, then the inf \256le has pre-)8 1818(cd had pre-emphasis enabled, and cdda2wav -T did remove)8 2502 2 1080 6816 t
+( .cddb and the .cdindex have)5 1199(emphasis not set \(since the audio \256le does not have it anymore\), while the)13 3121 2 1080 6936 t
+(pre-emphase set as the original does.)5 1509 1 1080 7056 t
 ( 6)1 2099( change:)1 343( Last)1 1796(SunOS 5.4)1 442 4 720 7680 t
 cleartomark
 showpage
 restore
 %%EndPage: 6 8
+%%Page: 7 9
+save
+mark
+9 pagesetup
+10 R f
+( \( 1 \))3 164( CDDA2WAV)1 1838( Commands)1 489( User)1 1454(CDDA2WAV \( 1 \))3 735 5 720 480 t
+9 B f
+(WARNING)720 960 w
+10 B f
+(IMPORTANT:)1080 1080 w
+10 R f
+(it is prohibited to sell copies of copyrighted material by noncopyright holders. This pro-)13 3631 1 1769 1080 t
+( constraint when using the)4 1093( user acknowledges this)3 987( The)1 225(gram may not be used to circumvent copyrights.)7 2015 4 1080 1200 t
+(software.)1080 1320 w
+9 B f
+(BUGS)720 1488 w
+10 R f
+(Performance may not be optimal on slower systems.)7 2148 1 1080 1608 t
+(The index scanner may give timeouts.)5 1560 1 1080 1848 t
+(The resampling \(rate conversion code\) uses polynomial interpolation, which is not optimal.)11 3737 1 1080 2088 t
+(Cdda2wav should use threads.)3 1239 1 1080 2328 t
+(Cdda2wav currently cannot sample hidden audio tracks \(track 1 index 0\).)10 3010 1 1080 2568 t
+9 B f
+(ACKNOWLEDGEMENTS)720 2736 w
+10 R f
+( and Fraunhofer Institut f)4 1080(Thanks goto Project MODE \(http://www.mode.net/\))4 2165 2 1080 2856 t
+10 S f
+(\372)4325 2856 w
+10 R f
+(r integrierte Schaltungen)2 1025 1 4375 2856 t
+( Europe and Ricoh Japan provided)5 1558( Plextor)1 383(\(FhG-IIS\) \(http://www.iis.fhg.de/\) for \256nancial support.)4 2379 3 1080 2976 t
+( has helped a lot)4 701( Rammi)1 366( this software.)2 589(cdrom disk drives and cd burners which helped a lot to develop)11 2664 4 1080 3096 t
+( showed a lot of stamina when hearing 100 times the \256rst 16 seconds of the \256rst)16 3346(with the debugging and)3 974 2 1080 3216 t
+( patches contributed by Monty xiphmont)5 1670( Paranoia)1 415(track of the Krupps CD.)4 994 3 1080 3336 t
+10 S1 f
+(@)4159 3336 w
+10 R f
+(mit.edu.)4251 3336 w
+9 B f
+(AUTHOR)720 3504 w
+10 R f
+(Heiko Eissfeldt heiko)2 882 1 1080 3624 t
+10 S1 f
+(@)1962 3624 w
+10 R f
+(colossus.escape.de)2054 3624 w
+9 B f
+(DATE)720 3792 w
+10 R f
+(11 Feb 2000)2 516 1 1080 3912 t
+( 7)1 2099( change:)1 343( Last)1 1796(SunOS 5.4)1 442 4 720 7680 t
+cleartomark
+showpage
+restore
+%%EndPage: 7 9
 %%Trailer
 done
 %%DocumentFonts: Times-Roman Times-Bold Times-Italic Symbol
-%%Pages: 8
+%%Pages: 9

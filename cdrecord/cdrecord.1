@@ -1,4 +1,4 @@
-.\" @(#)cdrecord.1	1.44 99/12/29 Copyright 1996 J. Schilling
+.\" @(#)cdrecord.1	1.48 00/04/27 Copyright 1996 J. Schilling
 .\" 
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -32,7 +32,7 @@
 .if n .ds o oe
 .if n .ds u ue
 .if n .ds s sz
-.TH CDRECORD 1 "Version 1.8" "J\*org Schilling" "Schily\'s USER COMMANDS"
+.TH CDRECORD 1 "Version 1.8.1" "J\*org Schilling" "Schily\'s USER COMMANDS"
 .SH NAME
 cdrecord \- record audio or data Compact Discs from a master
 .SH SYNOPSIS
@@ -265,6 +265,19 @@ to create an audio disk in steps. An un-fixated disk can usually not be used
 on a non CD-writer type drive but there are audio CD players that will
 be able to play such a disk.
 .TP
+.B \-waiti
+Wait for input to become available on standard input before trying to open
+the SCSI driver. This allows 
+.B cdrecord
+to read it's input from a pipe even
+when writing additional sessions to a multi session disk.
+When writing another session to a multi session disk,
+.B mkisofs 
+needs to read the old session from the device before writing output.
+This cannot be done if
+.B cdrecord 
+opens the SCSI driver at the same time.
+.TP
 .B \-load
 Load the media and exit. This only works with a tray loading mechanism
 but seems to be useful when using the Kodak disk transporter.
@@ -481,6 +494,18 @@ The simultaion driver correctly simulates even a buffer underrun condition.
 If the 
 .B \-dummy 
 option is present, the simultaion is not aborted in case of a buffer underrun.
+.TP
+.BI driveropts= "option list"
+Set driver specific options. The options are specified a comma separated list.
+To get a list of valid options use 
+.BI driveropts= help
+together with the 
+.I \-checkdrive
+option.
+Currently only the 
+.B burnproof 
+option is implemented to support Buffer Underrun Proof writing with
+drives that use the Sanyo BURN-Proof technology.
 
 .TP
 .B \-checkdrive
@@ -918,6 +943,15 @@ and then run
 where 
 .I XXX
 is replaced by the output of the previous run of mkisofs.
+.PP
+To copy an audio CD in the most accurate way, first run
+.PP
+    cdda2wav -v255 -D2,0 -B -Owav
+.PP
+and then run
+.PP
+    cdrecord -v dev=2,0 -dao -useinfo  *.wav
+.PP
 
 .SH ENVIRONMENT
 .TP
@@ -1310,7 +1344,7 @@ Germany
 .PP
 Additional information can be found on:
 .br
-http://www.fokus.gmd.de/nthp/employees/schilling/cdrecord.html
+http://www.fokus.gmd.de/usr/schilling/cdrecord.html
 .PP
 Mail bugs and suggestions to:
 .PP

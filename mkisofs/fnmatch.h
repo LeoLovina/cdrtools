@@ -1,3 +1,4 @@
+/* @(#)fnmatch.h	1.1 96/09/14 eric */
 /* Copyright (C) 1991, 1992, 1993 Free Software Foundation, Inc.
 
 NOTE: The canonical source of this file is maintained with the GNU C Library.
@@ -16,10 +17,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
-
-/*
- * 	$Id: fnmatch.h,v 1.1 1997/02/23 15:54:20 eric Rel $
- */
 
 #ifndef	_FNMATCH_H
 

@@ -1,4 +1,4 @@
-#ident "@(#)rules.lib	1.4 98/09/21 "
+#ident "@(#)rules.lib	1.5 00/03/19 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -25,6 +25,10 @@ include		$(SRCROOT)/$(RULESDIR)/rules.obj
 TARGET=		$(LIB_PREFIX)$(TARGETLIB)$(LIB_SUFFIX)
 TARGET_PATH=	$(OLIBSDIR)
 PTARGET=	$(OLIBSDIR)/$(TARGET)
+
+_INSMODEI=	$(_UNIQ)$(INSMODE)
+__INSMODEI=	$(_INSMODEI:$(_UNIQ)=$(INSMODEF))
+INSMODEI=	$(__INSMODEI:$(_UNIQ)%=%)
 
 all:		$(TARGET_PATH) $(PTARGET)
 

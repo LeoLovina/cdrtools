@@ -1,7 +1,7 @@
-/* @(#)avoffset.c	1.13 99/10/18 Copyright 1987 J. Schilling */
+/* @(#)avoffset.c	1.14 00/02/09 Copyright 1987 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)avoffset.c	1.13 99/10/18 Copyright 1987 J. Schilling";
+	"@(#)avoffset.c	1.14 00/02/09 Copyright 1987 J. Schilling";
 #endif
 /*
  * This program is a tool to generate the file "avoffset.h".
@@ -67,7 +67,8 @@ int main(ac, av)
 	register int	i = 0;
 #endif
 
-signal(SIGSEGV, handler);
+	signal(SIGBUS, handler);
+	signal(SIGSEGV, handler);
 
 	printf("/*\n");
 	printf(" * This file has been generated automatically\n");

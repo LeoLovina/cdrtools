@@ -1,14 +1,19 @@
+/* @(#)defaults.h	1.14 00/04/16 joerg */
 /*
  * Header file defaults.h - assorted default values for character strings in
  * the volume descriptor.
  *
- * 	$Id: defaults.h,v 1.8 1999/03/02 03:41:25 eric Exp $
+ * Copyright (c) 1999,2000 J. Schilling
  */
 
 #define  PREPARER_DEFAULT 	NULL
 #define  PUBLISHER_DEFAULT	NULL
 #ifndef	APPID_DEFAULT
+#ifdef APPLE_HYB
+#define  APPID_DEFAULT 		"MKISOFS ISO 9660/HFS FILESYSTEM BUILDER"
+#else
 #define  APPID_DEFAULT 		"MKISOFS ISO 9660 FILESYSTEM BUILDER"
+#endif /* APPLE_HYB */
 #endif
 #define  COPYRIGHT_DEFAULT 	NULL
 #define  BIBLIO_DEFAULT 	NULL
@@ -17,6 +22,11 @@
 #define  VOLUME_ID_DEFAULT 	"CDROM"
 #define  BOOT_CATALOG_DEFAULT   "boot.catalog"
 #define  BOOT_IMAGE_DEFAULT     NULL
+#ifdef APPLE_HYB
+#define  APPLE_TYPE_DEFAULT	"TEXT"
+#define  APPLE_CREATOR_DEFAULT	"unix"
+#endif /* APPLE_HYB */
+
 #ifdef __QNX__
 #define  SYSTEM_ID_DEFAULT 	"QNX"
 #endif
@@ -45,7 +55,7 @@
 #define  SYSTEM_ID_DEFAULT 	"AIX"
 #endif
 
-#if	defined(_WIN) || defined(__CYGWIN32__)
+#if	defined(_WIN) || defined(__CYGWIN32__) || defined(__CYGWIN__)
 #define	SYSTEM_ID_DEFAULT       "Win32"
 #endif /* _WIN */
 
@@ -71,6 +81,16 @@
 
 #ifdef __NeXT__
 #define	SYSTEM_ID_DEFAULT       "NeXT"
+#endif
+
+#if defined(__NeXT__) && defined(__TARGET_OSNAME) && __TARGET_OSNAME == rhapsody
+#undef	SYSTEM_ID_DEFAULT
+#define  SYSTEM_ID_DEFAULT      "Rhapsody"
+#endif
+
+#if defined(__APPLE__) && defined(__MACH__)
+#undef	SYSTEM_ID_DEFAULT
+#define  SYSTEM_ID_DEFAULT      "Mac OS X"
 #endif
 
 #ifdef __BEOS__

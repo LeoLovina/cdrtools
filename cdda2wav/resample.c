@@ -1,7 +1,7 @@
-/* @(#)resample.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)resample.c	1.7 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)resample.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)resample.c	1.7 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /* resampling module 
@@ -41,6 +41,7 @@ static char     sccsid[] =
 #include "byteorder.h"
 #include "ringbuff.h"
 #include "resample.h"
+#include "sndfile.h"
 #include "sndconfig.h"
 #include "global.h"
 
@@ -288,21 +289,23 @@ emit_sample( lsumval, rsumval, channels )
 	short sum;       /* mono section */
 	sum = ( lsumval + rsumval ) >> (global.sh_bits + 1);
 	if ( global.sh_bits == 8 ) {
-	    if ( ( (char) sum) != '\0' ) {
-		if ( any_signal == 0 ) {
+	    if ( waitforsignal == 1 ) {
+	      if ( any_signal == 0 ) {
+		if ( ( (char) sum) != '\0' ) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
-		}
-	    }
-	    *pDst++ = ( unsigned char ) sum + ( 1 << 7 );
+		    *pDst++ = ( unsigned char ) sum + ( 1 << 7 );
+		} else global.SkippedSamples++;
+	      } else *pDst++ = ( unsigned char ) sum + ( 1 << 7 );
+            } else *pDst++ = ( unsigned char ) sum + ( 1 << 7 );
 	} else {
 	    short * myptr = (short *) pDst;
-	    if ( sum != 0 ) {
+	    if ( waitforsignal == 1 && sum != 0 ) {
 		if ( any_signal == 0 ) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
 		}
-	    }
+	    } else global.SkippedSamples++;
 	    *myptr = sum;
 	    pDst += sizeof( short );
 	}
@@ -311,22 +314,22 @@ emit_sample( lsumval, rsumval, channels )
 	lsumval >>= global.sh_bits;
 	rsumval >>= global.sh_bits;
 	if ( global.sh_bits == 8 ) {
-	    if ( (( char ) lsumval != '\0') || (( char ) rsumval != '\0')) {
+	    if ( waitforsignal == 1 && ((( char ) lsumval != '\0') || (( char ) rsumval != '\0'))) {
 		if ( any_signal == 0 ) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
 		}
-	    }
+	    } else global.SkippedSamples++;
 	    *pDst++ = ( unsigned char )( short ) lsumval + ( 1 << 7 );
 	    *pDst++ = ( unsigned char )( short ) rsumval + ( 1 << 7 );
 	} else {
 	    short * myptr = (short *) pDst;
-	    if ( (( short ) lsumval != 0) || (( short ) rsumval != 0)) {
+	    if ( waitforsignal == 1 && ((( short ) lsumval != 0) || (( short ) rsumval != 0))) {
 		if ( any_signal == 0 ) {
 		    pStart = (unsigned char *) pDst;
 		    any_signal = 1;
 		}
-	    }
+	    } else global.SkippedSamples++;
 	    *myptr++ = ( short ) lsumval;
 	    *myptr   = ( short ) rsumval;
 	    pDst += 2*sizeof( short );
@@ -632,10 +635,13 @@ SaveBuffer (p, SamplesToDo, TotSamplesDone)
   UINT4 *pSrcStop;               /* end of cdrom buffer */
 
   /* in case of different endianness between host and output format,
+     or channel swaps, or deemphasizing
      copy in a seperate buffer and modify the local copy */
-  if ( ((!global.need_hostorder && global.need_big_endian == (*in_lendian)) ||
-	 (global.need_hostorder && global.need_big_endian != MY_BIG_ENDIAN))
-      && global.OutSampleSize > 1) {
+  if ( ((((!global.need_hostorder && global.need_big_endian == (*in_lendian)) ||
+	  (global.need_hostorder && global.need_big_endian != MY_BIG_ENDIAN)
+         ) || (global.deemphasize != 0)
+        ) && (global.OutSampleSize > 1)
+       ) || global.swapchannels != 0) {
      static UINT4 *localoutputbuffer;
      if (localoutputbuffer == NULL) {
        localoutputbuffer = (UINT4 *) malloc(global.nsectors*CD_FRAMESIZE_RAW);
@@ -679,11 +685,14 @@ SaveBuffer (p, SamplesToDo, TotSamplesDone)
       if ( (UINT4 *)pStart != pSrcStop ) {
 	/* first non null amplitude is found in buffer */
 	any_signal = 1;
+ 	global.SkippedSamples += ((UINT4 *)pStart - p);
+      } else {
+	global.SkippedSamples += (pSrcStop - p);
       }
     }
     pDst = (unsigned char *) pSrcStop;		/* set pDst to end */
 
-    if (global.deemphasize) {
+    if (global.deemphasize && (g_toc[get_current_track()-1].bFlags & 1) ) {
       /* this implements an attenuation treble shelving filter 
          to undo the effect of pre-emphasis. The filter is of
          a recursive first order */
@@ -896,12 +905,11 @@ none__missing:
   } /* if optimize else */
 
   if ( waitforsignal == 0 ) pStart = (unsigned char *)p;
-  else if (any_signal != 0) global.SkippedSamples += ((UINT4 *)pStart - p);
-  else global.SkippedSamples += (pSrcStop - p);
 
   if ( waitforsignal == 0 || any_signal != 0) {
     int retval = 0;
     unsigned outlen;
+    unsigned todo;
 
     assert(pDst >= pStart);
     outlen = (size_t) (pDst - pStart);
@@ -936,7 +944,20 @@ none__missing:
         change_endianness((UINT4 *)pStart, outlen/4);
       }
     }
-    if ((unsigned)(retval = write ( global.audio, pStart, outlen )) == outlen) {
+    {
+      char * p2 = (char *)pStart;
+
+      todo = outlen;
+      while (todo != 0) {
+	int retval_;
+	retval_ = global.audio_out->WriteSound ( global.audio, pStart, todo );
+	if (retval_ < 0) break;
+
+	p2 += retval_;
+	todo -= retval_;
+      }
+    }
+    if (todo == 0) {
         *TotSamplesDone += SamplesToDo;
 	return 0;
     } else {
@@ -946,5 +967,3 @@ none__missing:
     }
   } else return 0;
 }
-
-

@@ -1,4 +1,4 @@
-#ident %W% %E% %Q%
+#ident @(#)shlschily.mk	1.2 00/02/10 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -11,7 +11,7 @@ SUBARCHDIR=	/pic
 VPATH=		.:stdio:$(ARCHDIR)
 INSDIR=		lib
 TARGETLIB=	schily
-CPPOPTS +=	-Istdio -DNO_SCANSTACK
+CPPOPTS +=	-Istdio
 include		Targets
 LIBS=		
 

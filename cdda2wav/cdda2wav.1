@@ -1,5 +1,5 @@
 '\" t
-.\" @(#)cdda2wav.1	1.4 00/01/02 Copyright 1998,1999,2000 Heiko Eissfeldt
+.\" @(#)cdda2wav.1	1.5 00/02/13 Copyright 1998,1999,2000 Heiko Eissfeldt
 .TH CDDA2WAV 1
 .SH NAME
 cdda2wav \- a sampling utility that dumps CD audio data into wav sound
@@ -71,7 +71,6 @@ files
 can retrieve audio tracks from CDROM drives (see README for a list of drives) that are
 capable of reading audio data digitally to the host
 .RB ( CDDA ).
-Other drives may have been added as well when you read this.
 .SH OPTIONS
 .TP
 .BI \-D " device  --device"
@@ -82,7 +81,9 @@ For example /dev/cdrom for the
 .B cooked_ioctl
 interface and Bus,ID,Lun for the 
 .B generic_scsi
-interface. This has to correspond with the interface setting (see below).
+interface. The
+.B device
+has to correspond with the interface setting (see below).
 The setting of the environment variable
 .B CDDA_DEVICE
 is overridden by this option.
@@ -95,7 +96,7 @@ as CDROM drive for ioctl usage.
 .BI \-I " interface  --interface"
 specifies the interface for CDROM access:
 .B generic_scsi
-or (on Linux systems)
+or (on Linux, and FreeBSD systems)
 .BR cooked_ioctl .
 .TP
 .BI \-c " channels  --channels"
@@ -523,10 +524,12 @@ indicate stereo, otherwise when both channels are equal it will indicate mono.
 Some older audio CDs are recorded with a modified frequency response called
 pre-emphasis. This is found mostly in classical recordings. The correction
 can be seen in the flags of the Table Of Contents often. But there are
-recordings, that show this setting only in the subchannels. If you know you
-have a pre-emphasized recording and want cdda2wav to undo this, you have to
-specify this option. A reverse filtering is done before the samples are
-written into the audio file.
+recordings, that show this setting only in the subchannels. If this option
+is given, the index scanner will be started, which reads the q-subchannel
+of each track. If pre-emphasis is indicated in the q-subchannel of a track,
+but not in the TOC, pre-emphasis will be assumed to be present, and
+subsequently a reverse filtering is done for this track before the samples
+are written into the audio file.
 .IP "Set audio format"
 .B \-O " audiotype"
 can be 
@@ -557,9 +560,8 @@ on a soundcard or similiar. The default filename extension is '.cdr' or '.raw'.
 .IP "Select cdrom drive reading speed"
 .B \-S " speed"
 allows to switch the cdrom drive to a certain level of speed in order to
-reduce read errors. The actual speed
-factor can generally be given completely freely, since there are often less
-settings than factors possible. Details depend very much on the cdrom drives.
+reduce read errors. The argument is transfered verbatim to the drive.
+Details depend very much on the cdrom drives.
 An argument of 0 for example is often the default speed of the drive,
 a value of 1 often selects single speed.
 .IP "Enable MD5 checksums"
@@ -572,7 +574,6 @@ sets the given number of sectors for initial overlap sampling for jitter
 correction. Two cases are to be distinguished. For nonzero values,
 some sectors are read twice to enable cdda2wav's jitter correction.
 If an argument of zero is given, no overlap sampling will be used.
-.B NEWS!
 For nonzero overlap sectors cdda2wav dynamically adjusts the setting during
 sampling (like cdparanoia does).
 If no match can be found, cdda2wav retries the read with an increased overlap.
@@ -723,6 +724,38 @@ different files in one run, this is currently possible with the
 .B \-B
 option. When recording time exceeds the track limit a new file will
 be opened for the next track.
+.SH FILES
+Cdda2wav can generate a lot of files for various purposes.
+.sp
+Audio files:
+.sp
+There are audio files containing samples with default extensions
+.wav, .au, .aifc, .aiff, and .cdr according to the selected sound format.
+These files are not generated when option (-N) is given. Multiple files may
+be written when the bulk copy option (-B) is used. Individual file names
+can be given as arguments. If the number of file names given is sufficient
+to cover all included audio tracks, the file names will be used verbatim.
+Otherwise, if there are less file names than files needed to write the
+included tracks, the part of the file name before the extension is extended
+with '_dd' where dd represents the current track number.
+.sp
+Cddb and Cdindex files:
+.sp
+If cdda2wav detects cd-extra or cd-text (album/track) title information,
+then .cddb and .cdindex files are generated unless suppressed by the
+option -H. They contain suitable formatted entries for submission to
+audio cd track title databases in the internet. The CDINDEX and CDDB(tm)
+systems are currently supported. For more information please visit
+www.cdindex.org and www.cddb.com.
+.sp
+Inf files:
+.sp
+The inf files are describing the sample files and the part from the audio cd,
+it was taken from. They are a means to transfer information to a cd burning
+program like cdrecord. For example, if the original audio cd had pre-emphasis
+enabled, and cdda2wav -T did remove the pre-emphase, then the inf file has
+pre-emphasis not set (since the audio file does not have it anymore), while
+the .cddb and the .cdindex have pre-emphase set as the original does.
 .SH WARNING
 .B IMPORTANT:
 it is prohibited to sell copies of copyrighted material by noncopyright
@@ -738,8 +771,7 @@ is not optimal.
 .sp
 Cdda2wav should use threads.
 .sp
-When using jitter correction with ATAPI cdrom drives, track endings
-are not handled correctly.
+Cdda2wav currently cannot sample hidden audio tracks (track 1 index 0).
 .SH ACKNOWLEDGEMENTS
 Thanks goto Project MODE (http://www.mode.net/) and Fraunhofer Institut für
 integrierte Schaltungen (FhG-IIS) (http://www.iis.fhg.de/) for financial
@@ -752,4 +784,4 @@ Paranoia patches contributed by Monty xiphmont@mit.edu.
 .SH AUTHOR
 Heiko Eissfeldt heiko@colossus.escape.de
 .SH DATE
-25 Mar 1999
+11 Feb 2000

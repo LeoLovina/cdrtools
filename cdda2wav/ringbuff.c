@@ -1,7 +1,7 @@
-/* @(#)ringbuff.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)ringbuff.c	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)ringbuff.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)ringbuff.c	1.3 00/03/26 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 #include "config.h"
@@ -33,7 +33,7 @@ static char     sccsid[] =
 
 static void occupy_buffer	__PR((void));
 
-myringbuff **fill_buffer;
+myringbuff **he_fill_buffer;
 myringbuff **last_buffer;
 volatile unsigned long *total_segments_read;
 volatile unsigned long *total_segments_written;
@@ -74,24 +74,24 @@ void set_total_buffers(num_buffers, mysem_id)
   total_buffers = num_buffers;
 
   /* initialize pointers */
-  *fill_buffer = *last_buffer = previous_read_buffer = NULL;
+  *he_fill_buffer = *last_buffer = previous_read_buffer = NULL;
 #ifdef DEBUG_SHM
-fprintf(stderr, "init: fill_b = %p,  last_b = %p\n", *fill_buffer, *last_buffer);
+fprintf(stderr, "init: fill_b = %p,  last_b = %p\n", *he_fill_buffer, *last_buffer);
 #endif
 }
 
 const myringbuff *get_previous_read_buffer()
 {
   assert(previous_read_buffer != NULL);
-  assert(previous_read_buffer != *fill_buffer);
+  assert(previous_read_buffer != *he_fill_buffer);
   return previous_read_buffer;
 }
 
-const myringbuff *get_fill_buffer()
+const myringbuff *get_he_fill_buffer()
 {
-  assert(*fill_buffer != NULL);
-  assert(previous_read_buffer != *fill_buffer);
-  return *fill_buffer;
+  assert(*he_fill_buffer != NULL);
+  assert(previous_read_buffer != *he_fill_buffer);
+  return *he_fill_buffer;
 }
 
 void define_buffer()
@@ -101,14 +101,14 @@ void define_buffer()
 #ifdef _DEBUG
 #if 0
   fprintf(stderr,"stop  reading  %p - %p\n",
-                 *fill_buffer, (char *)(*fill_buffer) + ENTRY_SIZE -1);
+                 *he_fill_buffer, (char *)(*he_fill_buffer) + ENTRY_SIZE -1);
 #endif
 #endif
 
   if (*last_buffer == NULL)
-    *last_buffer = *fill_buffer;
+    *last_buffer = *he_fill_buffer;
 #ifdef DEBUG_SHM
-fprintf(stderr, "define: fill_b = %p,  last_b = %p\n", *fill_buffer, *last_buffer);
+fprintf(stderr, "define: fill_b = %p,  last_b = %p\n", *he_fill_buffer, *last_buffer);
 #endif
 
   (*total_segments_read)++;
@@ -128,11 +128,11 @@ void drop_buffer()
 #endif
 
   if (*last_buffer == NULL)
-    *last_buffer = *fill_buffer;
+    *last_buffer = *he_fill_buffer;
   else
     *last_buffer = INC(*last_buffer);
 #ifdef DEBUG_SHM
-fprintf(stderr, "drop: fill_b = %p,  last_b = %p\n", *fill_buffer, *last_buffer);
+fprintf(stderr, "drop: fill_b = %p,  last_b = %p\n", *he_fill_buffer, *last_buffer);
 #endif
   (*total_segments_written)++;
   semrelease(sem_id,FREE_SEM, 1);
@@ -148,12 +148,12 @@ static void occupy_buffer()
 {
   assert(occupied_buffers() <= total_buffers);
 
-  previous_read_buffer = *fill_buffer;
+  previous_read_buffer = *he_fill_buffer;
 
-  if (*fill_buffer == NULL) {
-    *fill_buffer = RB_BASE;
+  if (*he_fill_buffer == NULL) {
+    *he_fill_buffer = RB_BASE;
   } else {
-    *fill_buffer = INC(*fill_buffer);
+    *he_fill_buffer = INC(*he_fill_buffer);
   }
 }
 
@@ -177,15 +177,15 @@ myringbuff * get_next_buffer()
   }
 #if 0
   fprintf(stderr,"start reading  %p - %p\n",
-                 *fill_buffer, (char *)(*fill_buffer) + ENTRY_SIZE -1);
+                 *he_fill_buffer, (char *)(*fill_buffer) + ENTRY_SIZE -1);
 #endif
 
   occupy_buffer();
 
 #ifdef DEBUG_SHM
-fprintf(stderr, "next: fill_b = %p,  last_b = %p, @last = %p\n", *fill_buffer, *last_buffer, last_buffer);
+fprintf(stderr, "next: fill_b = %p,  last_b = %p, @last = %p\n", *he_fill_buffer, *last_buffer, last_buffer);
 #endif
-  return *fill_buffer;
+  return *he_fill_buffer;
 }
 
 myringbuff *get_oldest_buffer()
@@ -218,12 +218,12 @@ myringbuff *get_oldest_buffer()
 myringbuff * get_next_buffer()
 {
   occupy_buffer();
-  return *fill_buffer;
+  return *he_fill_buffer;
 }
 
 myringbuff * get_oldest_buffer()
 {
-  return *fill_buffer;
+  return *he_fill_buffer;
 }
 #endif /* HAVE_FORK_AND_SHAREDMEM */
 

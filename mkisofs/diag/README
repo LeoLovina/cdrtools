@@ -1,5 +1,4 @@
-#
-# $Id: README,v 1.1 1997/02/23 16:14:56 eric Rel $
+# @(#)README	1.1 97/02/23 eric
 #
 	I am enclosing 3 test programs that I use to verify the
 integrity of an iso9660 disc.  The first one (isodump) is pretty

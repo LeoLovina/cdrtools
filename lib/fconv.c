@@ -1,4 +1,4 @@
-/* @(#)fconv.c	1.22 00/01/22 Copyright 1985 J. Schilling */
+/* @(#)fconv.c	1.27 00/04/21 Copyright 1985 J. Schilling */
 /*
  *	Convert floating point numbers to strings for format.c
  *	Should rather use the MT-safe routines [efg]convert()
@@ -33,28 +33,53 @@ extern	char	*ecvt __PR((double, int, int *, int *));
 extern	char	*fcvt __PR((double, int, int *, int *));
 #endif
 
+#if	defined(HAVE_ISNAN) && defined(HAVE_ISINF)
+#define	FOUND_ISXX
+#endif
+
 #include <math.h>
 
-#if	defined(__hpux) || defined(VMS) || defined(_SCO_DS) || defined(__QNX__)
-#ifndef	isnan
-#define	isnan(val)	(0)
-#endif
-#ifndef	isinf
-#define	isinf(val)	(0)
-#endif
-#endif
-
-#ifdef	SVR4
+#if	defined(HAVE_IEEEFP_H) && !defined(FOUND_ISXX)
+/*
+ * SVR4
+ */
 #include <ieeefp.h>
 #define	isnan	isnand
 #define	isinf	!finite
+#define	FOUND_ISXX
 #endif
-#if	defined(__osf__) || defined(_IBMR2) || defined(_AIX)
+
+#if	defined(HAVE_FP_H)  && !defined(FOUND_ISXX)
+/*
+ * WAS:
+ * #if	defined(__osf__) || defined(_IBMR2) || defined(_AIX)
+ */
 #include <fp.h> 
+#ifndef	isnan
+#define	isnan	IS_NAN
+#endif
+#ifndef	isinf
 #define	isinf	!FINITE
 /*#define	isinf	IS_INF*/
-#define	isnan	IS_NAN
+#endif
+#define	FOUND_ISXX
 #endif 
+
+/*
+ * WAS:
+ * #if	defined(__hpux) || defined(VMS) || defined(_SCO_DS) || defined(__QNX__)
+ */
+#if	defined(__hpux)
+#undef	isnan
+#undef	isinf
+#endif
+
+#if	!defined(isnan) && !defined(HAVE_ISNAN)
+#define	isnan(val)	(0)
+#endif
+#if	!defined(isinf) && !defined(HAVE_ISINF)
+#define	isinf(val)	(0)
+#endif
 
 #if !defined(HAVE_ECVT) || !defined(HAVE_FCVT) || !defined(HAVE_GCVT)
 #include "cvt.c"
@@ -150,7 +175,16 @@ ftofs(s, val, fieldwidth, ndigits)
 		return len;
 	rs = s;
 #ifdef	USE_ECVT
+	/*
+	 * Needed on systems with broken fcvt() implementation
+	 * (e.g. Cygwin32)
+	 */
 	b = ecvt(val, ndigits, &decpt, &sign);
+	/*
+	 * The next call is needed to force higher precision.
+	 */
+	if (decpt > 0)
+		b = ecvt(val, ndigits+decpt, &decpt, &sign);
 #else
 	b = fcvt(val, ndigits, &decpt, &sign);
 #endif
@@ -169,6 +203,10 @@ ftofs(s, val, fieldwidth, ndigits)
 		len = rdecpt;
 		while (*b && len-- > 0)
 			*rs++ = *b++;
+#ifdef	USE_ECVT
+		while (len-- > 0)
+			*rs++ = '0';
+#endif
 	}
 #ifndef	V7_FLOATSTYLE
 	else {

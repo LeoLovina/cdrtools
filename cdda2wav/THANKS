@@ -11,10 +11,13 @@ http://www.iis.fhg.de/
 Code for extraction of ISRC and MCN codes as well as MD5 signatures
 has been made possible by their contributions, thanks very much.
 
-Thanks to Rik Swusten of Plextor Europe for borrowing a PX-R412C cd burner
+Thanks to Rik Swusten of Plextor Europe for supplying a cd burner
 for development.
 
-Thanks to Ricoh for borrowing a MP-7060S cd burner for development.
+Thanks to Ricoh for supplying a cd burner for development.
+
+Thanks to Sanyo for supplying a Burn-Proof cd burner with documentaion
+for development.
 
 More thanks goto
 Joerg Schilling (helped a lot to integrate his SCSI library)

@@ -1,7 +1,7 @@
-/* @(#)diskid.c	1.20 00/01/13 Copyright 1998 J. Schilling */
+/* @(#)diskid.c	1.23 00/04/27 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)diskid.c	1.20 00/01/13 Copyright 1998 J. Schilling";
+	"@(#)diskid.c	1.23 00/04/27 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Disk Idientification Method
@@ -46,7 +46,8 @@ struct disk_man {
 /*
  * Illegal (old) Manufacturer.
  */
-LOCAL	char	m_ill[] = "Unknown old Manufacturer code";
+LOCAL	char	m_ill[]   = "Unknown old Manufacturer code";
+LOCAL	char	m_illrw[] = "Illegal Manufacturer code";
 
 /*
  * Permanent codes.
@@ -79,6 +80,13 @@ LOCAL	char	m_ritek[]	= "Ritek Co.";
 /*
  * Tentative codes.
  */
+LOCAL	char	m_jvc[]		= "VICTOR COMPANY OF JAPAN, LIMITED";
+LOCAL	char	m_vivistar[]	= "VIVASTAR AG";
+LOCAL	char	m_taroko[]	= "TAROKO INTERNATIONAL CO.,LTD.";
+LOCAL	char	m_unidisc[]	= "UNIDISC TECHNOLOGY CO.,LTD";
+LOCAL	char	m_hokodig[]	= "Hong Kong Digital Technology Co., Ltd.";
+LOCAL	char	m_viva[]	= "VIVA MAGNETICS LIMITED";
+
 LOCAL	char	m_hile[]	= "Hile Optical Disc Technology Corp.";
 LOCAL	char	m_friendly[]	= "Friendly CD-Tek Co.";
 LOCAL	char	m_soundsound[]	= "Sound Sound Multi-Media Development Limited";
@@ -128,15 +136,15 @@ LOCAL	struct disk_man odman[] = {
 	/*
 	 * Illegal (old) codes.
 	 */
-	{{97, 25, 00}, 80, "ILLEGAL: TDK ???" },
+	{{97, 25, 00}, 80, "ILLEGAL OLD CODE: TDK ???" },
 	{{97, 25, 15},  0, m_ill },
-	{{97, 27, 00}, 81, "ILLEGAL: Old Ritek Co.???" },
+	{{97, 27, 00}, 81, "ILLEGAL OLD CODE: Old Ritek Co.???" },
 	{{97, 27, 25},  0, m_ill },
 	{{97, 30, 00},  0, m_ill },
-	{{97, 33, 00}, 82, "ILLEGAL: Old CDA Datenträger Albrechts GmbH." },
+	{{97, 33, 00}, 82, "ILLEGAL OLD CODE: Old CDA Datenträger Albrechts GmbH." },
 	{{97, 35, 44},  0, m_ill },
 	{{97, 39, 00},  0, m_ill },
-	{{97, 45, 36},  0, "ILLEGAL: Old Kodak Photo CD" },
+	{{97, 45, 36},  0, "ILLEGAL OLD CODE: Old Kodak Photo CD" },
 	{{97, 47, 00},  0, m_ill },
 	{{97, 47, 30},  0, m_ill },
 	{{97, 48, 14},  0, m_ill },
@@ -161,6 +169,11 @@ LOCAL	struct disk_man dman[] = {
 	/*
 	 * Permanent codes.
 	 */
+
+	{{97, 22, 10}, 53, m_seantram },
+	{{97, 15, 00}, 26, m_tdk },
+	{{97, 49, 30}, 47, m_optime },
+	{{97, 28, 00}, 47, m_optime },
 	{{97, 28, 40}, 36, m_kingpro },
 	{{97, 23, 60}, 49, m_custpo },
 	{{97, 29, 00}, 37, m_taeil },
@@ -168,7 +181,6 @@ LOCAL	struct disk_man dman[] = {
 	{{97, 47, 40}, 19, m_postech },
 	{{97, 24, 10}, 24, m_sony },
 /*	{{97, 46, 10}, 24, m_sony },*/
-
 	{{97, 23, 10}, 33, m_doremi },
 	{{97, 25, 60}, 30, m_xcitec },
 	{{97, 45, 60}, 30, m_xcitec },
@@ -215,27 +227,31 @@ LOCAL	struct disk_man dman[] = {
 	/*
 	 * Tentative codes.
 	 */
+	{{97, 49, 40}, 63, m_jvc },
+	{{97, 23, 40}, 63, m_jvc },
+	{{97, 25, 40}, 62, m_vivistar },
+
+	{{97, 18, 60}, 61, m_taroko },
+	{{97, 29, 20}, 60, m_unidisc },
+	{{97, 46, 10}, 59, m_hokodig },		/* XXX was m_sony */
+	{{97, 22, 50}, 59, m_hokodig },
+	{{97, 29, 40}, 58, m_viva },
 	{{97, 29, 30}, 57, m_hile },
 	{{97, 51, 50}, 57, m_hile },
 	{{97, 28, 60}, 56, m_friendly },
 	{{97, 21, 50}, 55, m_soundsound },
 	{{97, 24, 40}, 54, m_kdg },
-
-	{{97, 22, 10}, 53, m_seantram },
 	{{97, 22, 30}, 52, m_eximpo },
 	{{97, 28, 50}, 51, m_delphi },
 	{{97, 29, 00}, 50, m_harmonic },
 	{{97, 15, 10}, 22, m_ritek },
 	{{97, 45, 50}, 48, m_guannyinn },
 	{{97, 24, 50}, 48, m_guannyinn },
-	{{97, 49, 30}, 47, m_optime },
-	{{97, 28, 00}, 47, m_optime },
 	{{97, 23, 20}, 46, m_nacar },
 	{{97, 23, 50}, 45, m_optrom },
 	{{97, 23, 30}, 44, m_audiodis },
 	{{97, 22, 60}, 43, m_acer },
 	{{97, 45, 20}, 43, m_acer },
-	{{97, 15, 00}, 26, m_tdk },
 	{{97, 15, 20}, 11, m_mitsubishi },
 	{{97, 22, 00}, 39, m_woongjin },
 	{{97, 25, 30}, 40, m_infodisk },
@@ -283,6 +299,7 @@ pr_manufacturer(mp, rw, audio)
 	BOOL	audio;
 {
 	struct disk_man * dp;
+	struct disk_man xdman;
 	int	frame;
 	int	type;
 	char	*tname;
@@ -307,10 +324,15 @@ pr_manufacturer(mp, rw, audio)
 			 * down to 0 even for media that has 97:27/01 in the
 			 * official table.
 			 */
-			if (!rw)
+			if (!rw) {
 				printf("Disk type unknown\n");
-			else
+			} else {
 				printf("Disk type: phase change\n");
+				xdman = *dp;
+				dp = &xdman;
+				dp->mi_num = 0;
+				dp->mi_name = m_illrw;
+			}
 			printf("Manuf. index: %d\n", dp->mi_num);
 			printf("Manufacturer: %s\n", dp->mi_name);
 			return;

@@ -1,7 +1,7 @@
-/* @(#)drv_mmc.c	1.47 00/01/28 Copyright 1997 J. Schilling */
+/* @(#)drv_mmc.c	1.52 00/04/27 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_mmc.c	1.47 00/01/28 Copyright 1997 J. Schilling";
+	"@(#)drv_mmc.c	1.52 00/04/27 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -35,6 +35,7 @@ static	char sccsid[] =
 #include <fctldefs.h>
 #include <errno.h>
 #include <strdefs.h>
+#include <stdxlib.h>
 #include <unixstd.h>
 #include <timedefs.h>
 
@@ -50,6 +51,7 @@ static	char sccsid[] =
 #include "cdrecord.h"
 
 extern	BOOL	isgui;
+extern	char	*driveropts;
 
 extern	int	debug;
 extern	int	lverbose;
@@ -58,6 +60,7 @@ LOCAL	int	curspeed = 1;
 
 LOCAL	int	mmc_load		__PR((SCSI *scgp));
 LOCAL	int	mmc_unload		__PR((SCSI *scgp));
+LOCAL	void	mmc_opthelp		__PR((cdr_t *dp, int excode));
 LOCAL	cdr_t	*identify_mmc		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *));
 LOCAL	int	attach_mmc		__PR((SCSI *scgp, cdr_t *));
 LOCAL	int	get_diskinfo		__PR((SCSI *scgp, struct disk_info *dip));
@@ -70,11 +73,14 @@ LOCAL	int	speed_select_mmc	__PR((SCSI *scgp, int *speedp, int dummy));
 LOCAL	int	next_wr_addr_mmc	__PR((SCSI *scgp, int track, track_t *trackp, long *ap));
 LOCAL	int	open_track_mmc		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
 LOCAL	int	close_track_mmc		__PR((SCSI *scgp, int track, track_t *trackp));
-LOCAL	int	open_session_mmc	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	open_session_mmc	__PR((SCSI *scgp, cdr_t *dp, int tracks, track_t *trackp, int toctype, int multi));
 LOCAL	int	waitfix_mmc		__PR((SCSI *scgp, int secs));
 LOCAL	int	fixate_mmc		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
 LOCAL	int	blank_mmc		__PR((SCSI *scgp, long addr, int blanktype));
+LOCAL	int	send_opc_mmc		__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
 LOCAL	int	scsi_sony_write		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+
+LOCAL	int	send_cue	__PR((SCSI *scgp, int tracks, track_t *trackp));
 
 LOCAL int
 mmc_load(scgp)
@@ -118,6 +124,7 @@ cdr_t	cdr_mmc = {
 	read_session_offset,
 	fixate_mmc,
 	blank_mmc,
+	send_opc_mmc,
 };
 
 cdr_t	cdr_mmc_sony = {
@@ -148,6 +155,7 @@ cdr_t	cdr_mmc_sony = {
 	read_session_offset,
 	fixate_mmc,
 	blank_mmc,
+	send_opc_mmc,
 };
 
 /*
@@ -175,11 +183,12 @@ cdr_t	cdr_cd = {
 	no_sendcue,
 	open_track_mmc,
 	close_track_mmc,
-	(int(*)__PR((SCSI *scgp, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *scgp, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset,
 	(int(*)__PR((SCSI *scgp, int, int, int, int, track_t *)))cmd_dummy,	/* fixation */
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 /*
@@ -207,12 +216,28 @@ cdr_t	cdr_oldcd = {
 	no_sendcue,
 	open_track_mmc,
 	close_track_mmc,
-	(int(*)__PR((SCSI *scgp, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *scgp, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	(int(*)__PR((SCSI *scgp, int, int, int, int, track_t *)))cmd_dummy,	/* fixation */
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
+
+LOCAL void
+mmc_opthelp(dp, excode)
+	cdr_t	*dp;
+	int	excode;
+{
+	error("Driver options:\n");
+	if (dp->cdr_cdcap->res_4 != 0) {
+		error("burnproof	Prepare writer to use Sanyo BURN-Proof technology\n");
+		error("noburnproof	Disable using Sanyo BURN-Proof technology\n");
+	} else {
+		error("None supported for this drive.\n");
+	}
+	exit(excode);
+}
 
 LOCAL cdr_t *
 identify_mmc(scgp, dp, ip)
@@ -269,7 +294,6 @@ attach_mmc(scgp, dp)
 {
 	struct	cd_mode_page_2A *mp;
 
-
 	allow_atapi(scgp, TRUE);/* Try to switch to 10 byte mode cmds */
 
 	scgp->silent++;
@@ -284,6 +308,12 @@ attach_mmc(scgp, dp)
 		dp->cdr_flags |= CDR_TRAYLOAD;
 	else if (mp->loading_type == LT_CADDY)
 		dp->cdr_flags |= CDR_CADDYLOAD;
+
+	if (driveropts != NULL) {
+		if (strcmp(driveropts, "help") == 0) {
+			mmc_opthelp(dp, 0);
+		}
+	}
 
 	return (0);
 }
@@ -892,7 +922,7 @@ close_track_mmc(scgp, track, trackp)
 	wait_unit_ready(scgp, 300);		/* XXX Wait for ATAPI */
 	if (is_packet(trackp) && !is_noclose(trackp)) {
 			/* close the incomplete track */
-		ret = scsi_close_tr_session(scgp, 1, 0xFF);
+		ret = scsi_close_tr_session(scgp, 1, 0xFF, FALSE);
 		wait_unit_ready(scgp, 300);	/* XXX Wait for ATAPI */
 		return (ret);
 	}
@@ -910,8 +940,9 @@ int	toc2sess[] = {
 };
 
 LOCAL int
-open_session_mmc(scgp, tracks, trackp, toctype, multi)
+open_session_mmc(scgp, dp, tracks, trackp, toctype, multi)
 	SCSI	*scgp;
+	cdr_t	*dp;
 	int	tracks;
 	track_t	*trackp;
 	int	toctype;
@@ -938,6 +969,20 @@ open_session_mmc(scgp, tracks, trackp, toctype, multi)
 		mp->write_type = WT_SAO;
 		mp->track_mode = 0;
 		mp->dbtype = DB_RAW;
+	}
+	if (driveropts != NULL) {
+		if (strcmp(driveropts, "burnproof") == 0 && dp->cdr_cdcap->res_4 != 0) {
+			errmsgno(EX_BAD, "Turning BURN-Proof on\n");
+			mp->res_2 |= 2;
+		} else if (strcmp(driveropts, "noburnproof") == 0) {
+			errmsgno(EX_BAD, "Turning BURN-Proof off\n");
+			mp->res_2 &= ~2;
+		} else if (strcmp(driveropts, "help") == 0) {
+			mmc_opthelp(dp, 0);
+		} else {
+			errmsgno(EX_BAD, "Bad driver opts '%s'.\n", driveropts);
+			mmc_opthelp(dp, EX_BAD);
+		}
 	}
 
 	mp->multi_session = (multi != 0) ? MS_MULTI : MS_NONE;
@@ -1007,16 +1052,26 @@ fixate_mmc(scgp, onp, dummy, toctype, tracks, trackp)
 
 	if (dummy && lverbose)
 		printf("WARNING: Some drives don't like fixation in dummy mode.\n");
-	if (is_tao(trackp)) {
+
 	scgp->silent++;
-	ret = scsi_close_tr_session(scgp, 2, 0);
+	if (is_tao(trackp)) {
+		ret = scsi_close_tr_session(scgp, 2, 0, FALSE);
+	} else {
+		if (scsi_flush_cache(scgp) < 0) {
+			if (!scsi_in_progress(scgp))
+				printf("Trouble flushing the cache\n");
+		}
+	}
 	scgp->silent--;
 	key = scsi_sense_key(scgp);
 	code = scsi_sense_code(scgp);
-	} else {
-		if (scsi_flush_cache(scgp) < 0)
-			printf("Trouble flushing the cache\n");
+
+	scgp->silent++;
+	if (debug && !unit_ready(scgp)) {
+		error("Early return from fixating. Ret: %d Key: %d, Code: %d\n", ret, key, code);
 	}
+	scgp->silent--;
+
 	if (ret >= 0) {
 		wait_unit_ready(scgp, 420/curspeed);	/* XXX Wait for ATAPI */
 		waitfix_mmc(scgp, 420/curspeed);	/* XXX Wait for ATAPI */
@@ -1030,12 +1085,13 @@ fixate_mmc(scgp, onp, dummy, toctype, tracks, trackp)
 		 */
 	    ((dummy == 0) &&
 	     ( ((key != SC_UNIT_ATTENTION) && (key != SC_NOT_READY)) ||
-				((code != 0x2E) && (code != 0x04)) ||
-				(strncmp(scgp->inq->vendor_info, "MITSUMI", 7) != 0)))) {
+				((code != 0x2E) && (code != 0x04)) ))) {
 		/*
 		 * UNIT ATTENTION/2E seems to be a magic for old Mitsumi ATAPI drives
 		 * NOT READY/ code 4 qual 7 (logical unit not ready, operation in progress)
 		 * seems to be a magic for newer Mitsumi ATAPI drives
+		 * NOT READY/ code 4 qual 8 (logical unit not ready, long write in progress)
+		 * seems to be a magic for SONY drives
 		 * when returning early from fixating.
 		 * Try to supress the error message in this case to make
 		 * simple minded users less confused.
@@ -1043,6 +1099,11 @@ fixate_mmc(scgp, onp, dummy, toctype, tracks, trackp)
 		scsiprinterr(scgp);
 		scsiprintresult(scgp);	/* XXX restore key/code in future */
 	}
+
+	if (debug && !unit_ready(scgp)) {
+		error("Early return from fixating. Ret: %d Key: %d, Code: %d\n", ret, key, code);
+	}
+	scgp->silent--;
 
 	wait_unit_ready(scgp, 420);	/* XXX Wait for ATAPI */
 	waitfix_mmc(scgp, 420/curspeed);/* XXX Wait for ATAPI */
@@ -1106,7 +1167,34 @@ blank_mmc(scgp, addr, blanktype)
 		flush();
 	}
 
-	return (scsi_blank(scgp, addr, blanktype));
+	return (scsi_blank(scgp, addr, blanktype, FALSE));
+}
+
+LOCAL int
+send_opc_mmc(scgp, bp, cnt, doopc)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	cnt;
+	int	doopc;
+{
+	int	ret;
+
+	scgp->silent++;
+	ret = send_opc(scgp, bp, cnt, doopc);
+	scgp->silent--;
+
+	if (ret >= 0)
+		return (ret);
+
+	/*
+	 * Send OPC is optional.
+	 */
+	if (scsi_sense_key(scgp) != SC_ILLEGAL_REQUEST) {
+		if (scgp->silent <= 0)
+			scsiprinterr(scgp);
+		return (ret);
+	}
+	return (0);
 }
 
 LOCAL int
@@ -1140,11 +1228,9 @@ Uchar	db2df[] = {
 	0xFF,			/* 15 -    Vendor specific			*/
 };
 
-#include <stdxlib.h>
-
 LOCAL	void	fillcue		__PR((struct mmc_cue *cp, int ca, int tno, int idx, int dataform, int scms, msf_t *mp));
 EXPORT	int	do_cue		__PR((int tracks, track_t *trackp, struct mmc_cue **cuep));
-EXPORT	int	send_cue	__PR((SCSI *scgp, int tracks, track_t *trackp));
+LOCAL	int	send_cue	__PR((SCSI *scgp, int tracks, track_t *trackp));
 
 EXPORT int
 do_cue(tracks, trackp, cuep)
@@ -1274,7 +1360,7 @@ fillcue(cp, ca, tno, idx, dataform, scms, mp)
 	cp->cs_frame = mp->msf_frame;
 }
 
-EXPORT int
+LOCAL int
 send_cue(scgp, tracks, trackp)
 	SCSI	*scgp;
 	int	tracks;

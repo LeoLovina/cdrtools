@@ -1,3 +1,133 @@
+Thu Apr 27 14:22:19 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.52
+	  No error message for Sony & long write in progress while fixating
+
+Thu Apr 27 14:17:01 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* diskid.c 1.23
+	  Better printout with illegal ID for CD-RW, all old CD-R's now give ILLEGAL OLD CODE
+
+Wed Apr 26 11:50:19 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.100
+	* cdrecord.h 1.60
+	* scsi_cdr.c 1.89
+	* drv_jvc.c 1.49
+	* drv_dvd.c 1.45
+	  scsi_close_tr_session()/scsi_blank() with immed Parameter
+
+Mon Apr 24 12:32:14 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.99
+	  Version -> 1.8.1 final, exitcode == 0 only if fixating in Dummy Mode fails
+
+Sat Apr 22 15:37:05 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* diskid.c 1.22
+	  New manufacturer "VICTOR COMPANY OF JAPAN, LIMITED", "VIVASTAR AG"
+
+Sun Apr 16 17:07:55 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.47
+	  BURN-Proof Option for Sanyo
+
+Sun Apr 16 17:07:11 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.51
+	  BURN-Proof Support for Sanyo
+
+Sun Apr 16 17:06:30 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.98
+	  New Option driveropts=
+	  better -dao usage
+
+Sun Apr 16 03:11:26 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.88
+	  display BURN-Proof for cdrecord -prcap
+
+Sun Apr 16 03:08:58 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* defaults.c 1.3
+	* cdrecord.dfl 1.2
+	  driveropts new
+
+Sun Apr 16 02:16:29 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_sony.c 1.39
+	* cdrecord.h 1.59
+	* drv_simul.c 1.14
+	* drv_philips.c 1.36
+	* drv_jvc.c 1.48
+	* drv_dvd.c 1.44
+	  open_session() now with cdr_t * Parameter for BURN-Proof
+
+Mon Apr  3 21:05:37 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-pg.c 1.23
+	  #include <string.h> for strlen()
+
+Sat Apr  1 21:59:19 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* diskid.c 1.21
+	  New manufaturer: "TAROKO INTERNATIONAL CO.,LTD.", "UNIDISC TECHNOLOGY CO.,LTD", "Hong Kong Digital Technology Co., Ltd.", "VIVA MAGNETICS LIMITED"
+
+Sat Mar 11 12:31:09 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.87
+	  Sanyo CRD-R24S -> Philips CDD 521
+
+Sat Mar 11 12:30:06 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.50
+	  send_opc_mmc() now calls send_opc() and suppresses ILLEGAL_REQUEST
+
+Sat Mar 11 12:26:37 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.1 1.46
+	  WeB address changed
+
+Sun Feb 20 21:54:33 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.58
+	* cdrecord.c 1.97
+	* cdrecord.1 1.45
+	  New Option -waiti for multi session from Pipe from mkisofs
+
+Sun Feb 20 20:56:09 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.96
+	  scsi_in_progress() Test and usleep(100000) if Long Write in Progress
+
+Sun Feb 20 20:54:06 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* drv_mmc.c 1.49
+	  scsi_in_progress() test for scsi_flush_cache() in fixate, send_cue() -> LOCAL
+
+Sun Feb 20 20:52:49 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.57
+	  scsi_in_progress() new, send_cue() removed
+
+Sun Feb 20 20:52:15 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.86
+	  scsi_in_progress() new
+
+Sat Feb 19 00:38:35 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.c 1.95
+	  read Sectorsize from read_capacity too, for drivs without Blockdescriptor, dp->cdr_opc() new
+
+Sat Feb 19 00:33:54 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi_cdr.c 1.85
+	  send_opc() new
+
+Sat Feb 19 00:24:37 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* cdrecord.h 1.56
+	* drv_sony.c 1.38
+	* drv_simul.c 1.13
+	* drv_philips.c 1.35
+	* drv_mmc.c 1.48
+	* drv_jvc.c 1.47
+	* drv_dvd.c 1.43
+	  Separate OPC code in driver interface
+
+Sun Feb  6 08:27:21 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-sgi.c 1.20
+	* scsi-openserver.c 1.17
+	* scsi-linux-sg.c 1.41
+	* scsi-aix.c 1.20
+	* scsi-bsd-os.c 1.14
+	* scsi-hpux.c 1.18
+	* scsi-linux-pg.c 1.22
+	* scsi-bsd.c 1.27
+	  added missing brackets in scsi_close() to make sure that scsi_close() really closes files
+
+Sun Feb  6 08:25:14 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi-linux-sg.c 1.40
+	  Maxdma now is correcteven if only a prallel port is present
+
 *************** Release 1.8 *******************
 
 Fri Jan 28 10:01:48 2000 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>

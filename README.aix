@@ -24,3 +24,7 @@ If you like to create bootable CD's for AIX on the CHRP architecture:
 	AIX 4.3.3 back in Oct 99'. It's installed by default with the system.
 	There's more info about it in /usr/lpp/bos.sysmgt/mkcd.README.html.
 
+
+NOTE:	there is currently no real SCSI generic support for AIX.
+	/dev/rcd0 is mapped to dev=0,0,0
+	/dev/rcd1 is mapped to dev=0,1,0

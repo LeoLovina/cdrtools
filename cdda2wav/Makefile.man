@@ -1,4 +1,4 @@
-#ident %W% %E% %Q%
+#ident @(#)Makefile.man	1.1 00/03/21 
 ###########################################################################
 # Sample makefile for installing manual pages
 ###########################################################################
@@ -7,7 +7,6 @@ RULESDIR=	RULES
 include		$(SRCROOT)/$(RULESDIR)/rules.top
 ###########################################################################
 
-INSMODE=	0644
 MANDIR=		man
 TARGETMAN=	cdda2wav
 MANSECT=	$(MANSECT_CMD)

@@ -1,4 +1,4 @@
-/* @(#)fillbytes.c	1.9 98/02/15 Copyright 1987 J. Schilling */
+/* @(#)fillbytes.c	1.10 00/04/12 Copyright 1987 J. Schilling */
 /*
  *	fill memory with data
  *
@@ -40,7 +40,10 @@ char *fillbytes(tov, cnt, val)
 	register int	n;
 	register long	lval;
 
-	if ((n = cnt) == 0)
+	/*
+	 * If we change cnt to be unsigned, check for == instead of <=
+	 */
+	if ((n = cnt) <= 0)
 		return (to);
 
 	lval = val & 0xFF;
@@ -50,7 +53,7 @@ char *fillbytes(tov, cnt, val)
 		n--;
 	}
 
-	if (n >= 8 * sizeof(long)) {
+	if (n >= (int)(8 * sizeof(long))) {
 		register int rem = n % (8 * sizeof (long));
 
 		lval |= (lval<<8);

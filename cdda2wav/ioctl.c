@@ -1,7 +1,7 @@
-/* @(#)ioctl.c	1.4 00/01/25 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)ioctl.c	1.5 00/03/21 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)ioctl.c	1.4 00/01/25 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)ioctl.c	1.5 00/03/21 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /***
@@ -73,13 +73,16 @@ static void EnableCdda_cooked (scgp, fAudioMode)
 	SCSI *scgp;
 	int fAudioMode;
 {
+    if (scgp && scgp->verbose) {
+	fprintf(stderr, "EnableCdda_cooked (CDIOCSETCDDA)...\n");
+    }
+
 #if	defined	CDIOCSETCDDA
 	ioctl(global.cooked_fd, CDIOCSETCDDA, &fAudioMode);
 #else
 	PRETEND_TO_USE(fAudioMode);
 #endif
 
-	PRETEND_TO_USE(scgp);
 }
 
 
@@ -93,7 +96,9 @@ static unsigned ReadToc_cooked ( x, toc )
     unsigned i;
     unsigned tracks;
 
-    PRETEND_TO_USE(x);
+    if (x && x->verbose) {
+	fprintf(stderr, "ReadToc_cooked (CDROMREADTOCHDR)...\n");
+    }
 
     /* get TocHeader to find out how many entries there are */
     err = ioctl( global.cooked_fd, CDROMREADTOCHDR, &hdr );
@@ -170,7 +175,7 @@ static void trash_cache_cooked(p, lSector, SectorBurstVal)
 
       ioctl(global.cooked_fd, CDROMREADAUDIO, &arg2);
 #endif
-#if	defined __sun
+#if	defined __sun || defined HAVE_SYS_CDIO_H
       struct cdrom_cdda suncdda;
 
       suncdda.cdda_addr = lSector;
@@ -194,12 +199,15 @@ static void ReadCdRomData_cooked (x, p, lSector, SectorBurstVal )
 {
 	int	retval;
 
+    if (x && x->verbose) {
+	fprintf(stderr, "ReadCdRomData_cooked (lseek & read)...\n");
+    }
+
 	if ((retval = lseek(global.cooked_fd, lSector*CD_FRAMESIZE, SEEK_SET))
 		!= lSector*CD_FRAMESIZE) { perror("cannot seek sector"); }
 	if ((retval = read(global.cooked_fd, p, SectorBurstVal*CD_FRAMESIZE))
 		!= SectorBurstVal*CD_FRAMESIZE) { perror("cannot read sector"); }
 
-	PRETEND_TO_USE(x);
 	return;
 }
 
@@ -223,6 +231,10 @@ static void ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
   arg.nframes = SectorBurstVal;
   arg.buffer = (unsigned char *) &p[0];
 
+    if (x && x->verbose) {
+	fprintf(stderr, "ReadCdRom_cooked (CDROMREADAUDIO)...\n");
+    }
+
   do {
     err = ioctl(global.cooked_fd, CDROMREADAUDIO, &arg);
 #endif
@@ -232,10 +244,14 @@ static void ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
   arg.nframes = SectorBurstVal;
   arg.buf = (unsigned char *) &p[0];
 
+    if (x && x->verbose) {
+	fprintf(stderr, "ReadCdRom_cooked (CDROMREADAUDIO)...\n");
+    }
+
   do {
     err = ioctl(global.cooked_fd, CDROMREADAUDIO, &arg);
 #endif
-#if	defined sun	||	defined	__sun
+#if	defined	__sun || defined HAVE_SYS_CDIO_H
   struct cdrom_cdda suncdda;
 
   suncdda.cdda_addr = lSector;
@@ -243,6 +259,10 @@ static void ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
   suncdda.cdda_data = (char *) &p[0];
   suncdda.cdda_subcode = CDROM_DA_NO_SUBCODE;
  
+    if (x && x->verbose) {
+	fprintf(stderr, "ReadCdRom_cooked (CDROMCDDA)...\n");
+    }
+
   do {
     err = ioctl(global.cooked_fd, CDROMCDDA, &suncdda);
 #endif
@@ -268,14 +288,15 @@ static void ReadCdRom_cooked (x, p, lSector, SectorBurstVal )
     nothing_read = 0;
   }
 
-  PRETEND_TO_USE(x);
 }
 
 static int StopPlay_cooked __PR(( SCSI *x));
 static int StopPlay_cooked( x )
 	SCSI *x;
 {
-	PRETEND_TO_USE(x);
+    if (x && x->verbose) {
+	fprintf(stderr, "StopPlay_cooked (CDROMSTOP)...\n");
+    }
 
 	return ioctl( global.cooked_fd, CDROMSTOP, 0 ) ? 0 : -1; 
 }
@@ -287,8 +308,14 @@ static int Play_at_cooked( x, from_sector, sectors)
 	unsigned int sectors;
 {
 	struct cdrom_msf cmsf;
+	int retval;
 
-	PRETEND_TO_USE(x);
+    if (x && x->verbose) {
+	fprintf(stderr, "Play_at_cooked (CDROMSTART & CDROMPLAYMSF)... (%u-%u)",
+		from_sector, from_sector+sectors-1);
+	
+	fprintf(stderr, "\n");
+    }
 
 	cmsf.cdmsf_min0 = (from_sector + 150) / (60*75);
 	cmsf.cdmsf_sec0 = ((from_sector + 150) / 75) % 60;
@@ -297,8 +324,16 @@ static int Play_at_cooked( x, from_sector, sectors)
 	cmsf.cdmsf_sec1 = ((from_sector + 150 + sectors) / 75) % 60;
 	cmsf.cdmsf_frame1 = (from_sector + 150 + sectors) % 75;
 
-	ioctl( global.cooked_fd, CDROMSTART, 0 );
-	return ioctl( global.cooked_fd, CDROMPLAYMSF, &cmsf ) ? 0 : -1; 
+#if	0
+/* makes index scanning under FreeBSD too slow */
+	if (( retval = ioctl( global.cooked_fd, CDROMSTART, 0 )) != 0){
+		perror("");
+	}
+#endif
+	if (( retval = ioctl( global.cooked_fd, CDROMPLAYMSF, &cmsf )) != 0){
+		perror("");
+	}
+	return retval;
 }
 
 #if	defined	PROTOTYPES
@@ -318,7 +353,10 @@ static subq_chnl *ReadSubQ_cooked ( x, sq_format, track )
 #if	defined __FreeBSD__
     struct cd_sub_channel_info sub_ch_info;
 
-    PRETEND_TO_USE(x);
+    if (x && x->verbose) {
+	fprintf(stderr, "ReadSubQ_cooked (CDROM_GET_MCN or CDROMSUBCHNL)...\n");
+    }
+
     sub_ch.address_format = CD_MSF_FORMAT;
     sub_ch.track = track;
     sub_ch.data_len = sizeof(struct cd_sub_channel_info);
@@ -328,7 +366,10 @@ static subq_chnl *ReadSubQ_cooked ( x, sq_format, track )
       case GET_CATALOGNUMBER:
       sub_ch.data_format = CD_MEDIA_CATALOG;
 #else
-    PRETEND_TO_USE(x);
+    if (x && x->verbose) {
+	fprintf(stderr, "ReadSubQ_cooked (CDROM_GET_MCN or CDROMSUBCHNL)...\n");
+    }
+
     switch (sq_format) {
       case GET_CATALOGNUMBER:
 #endif
@@ -349,6 +390,9 @@ static subq_chnl *ReadSubQ_cooked ( x, sq_format, track )
       case GET_POSITIONDATA:
 #if	defined __FreeBSD__
       sub_ch.data_format = CD_CURRENT_POSITION;
+#endif
+#if defined (__linux__)
+      sub_ch.cdsc_format = CDROM_MSF;
 #endif
       if (!(err = ioctl(global.cooked_fd, CDROMSUBCHNL, &sub_ch))) {
 	  /* copy to SubQbuffer */
@@ -389,7 +433,9 @@ static void SpeedSelect_cooked( x, speed )
 	SCSI *x;
 	unsigned speed;
 {
-    PRETEND_TO_USE(x);
+    if (x && x->verbose) {
+	fprintf(stderr, "SpeedSelect_cooked (CDROM_SELECT_SPEED)...\n");
+    }
 
 #ifdef CDROM_SELECT_SPEED
     /* CAUTION!!!!! Non standard ioctl parameter types here!!!! */
@@ -438,6 +484,7 @@ void SetupCookedIoctl( pdev_name )
         global.nsectors = 13;
 	break;
 	default:
+	break;
     }
     err = ioctl(global.cooked_fd, CDROMAUDIOBUFSIZ, global.nsectors);
 

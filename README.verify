@@ -70,4 +70,10 @@ check hard links. Use
 
 in this case.
 
+NOTE: Some operating systems have a read ahead bug that causes I/O errors for
+the last file(s) on a CD. This seems at least to be true for all Linux versions
+and for Solaris 7 FCS. For Solaris 7 there is a patch (107465-02) that you should
+install. This I/O error problem does not occur with DAO disks and with TAO disks
+that have been written with cdrecord -pad.
+
 Joerg Schilling

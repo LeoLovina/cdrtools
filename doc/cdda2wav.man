@@ -21,24 +21,23 @@ SSSSYYYYNNNNOOOOPPPPSSSSIIIISSSS
 DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
      ccccddddddddaaaa2222wwwwaaaavvvv can retrieve audio tracks from  CDROM  drives  (see
      README  for  a  list  of drives) that are capable of reading
-     audio data digitally to the host (CCCCDDDDDDDDAAAA).  Other  drives  may
-     have been added as well when you read this.
+     audio data digitally to the host (CCCCDDDDDDDDAAAA).
 
 OOOOPPPPTTTTIIIIOOOONNNNSSSS
      ----DDDD _d_e_v_i_c_e  --_d_e_v_i_c_e
           uses ddddeeeevvvviiiicccceeee as the source for CDDA reading:  For  exam-
           ple  /dev/cdrom  for  the  ccccooooooookkkkeeeedddd____iiiiooooccccttttllll  interface  and
-          Bus,ID,Lun for the ggggeeeennnneeeerrrriiiicccc____ssssccccssssiiii interface. This has  to
-          correspond with the interface setting (see below).  The
-          setting of  the  environment  variable  CCCCDDDDDDDDAAAA____DDDDEEEEVVVVIIIICCCCEEEE  is
-          overridden by this option.
+          Bus,ID,Lun for the ggggeeeennnneeeerrrriiiicccc____ssssccccssssiiii interface.  The  ddddeeeevvvviiiicccceeee
+          has  to  correspond  with  the  interface  setting (see
+          below).   The  setting  of  the  environment   variable
+          CCCCDDDDDDDDAAAA____DDDDEEEEVVVVIIIICCCCEEEE is overridden by this option.
 
      ----AAAA _a_u_x_d_e_v_i_c_e  --_a_u_x_d_e_v_i_c_e
           uses aaaauuuuxxxxddddeeeevvvviiiicccceeee as CDROM drive for ioctl usage.
 
      ----IIII _i_n_t_e_r_f_a_c_e  --_i_n_t_e_r_f_a_c_e
           specifies the interface for CDROM access:  ggggeeeennnneeeerrrriiiicccc____ssssccccssssiiii
-          or (on Linux systems) ccccooooooookkkkeeeedddd____iiiiooooccccttttllll.
+          or (on Linux, and FreeBSD systems) ccccooooooookkkkeeeedddd____iiiiooooccccttttllll.
 
      ----cccc _c_h_a_n_n_e_l_s  --_c_h_a_n_n_e_l_s
           uses 1111 for mono, or 2222 for stereo recording,  or  ssss  for
@@ -57,6 +56,7 @@ OOOOPPPPTTTTIIIIOOOONNNNSSSS
           sets bits per sample per channel:  8888, 11112222 or 11116666.
 
      ----rrrr _r_a_t_e  --_r_a_t_e
+          sets rate in samples per second.  Possible  values  are
 
 
 
@@ -71,7 +71,6 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
 
 
 
-          sets rate in samples per second.  Possible  values  are
           listed with the ----RRRR option.
 
      ----aaaa _d_i_v_i_d_e_r  --_d_i_v_i_d_e_r
@@ -123,6 +122,7 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
      ----BBBB  --------bbbbuuuullllkkkk
           copies each track into a seperate file.
 
+     ----wwww  --------wwwwaaaaiiiitttt
 
 
 
@@ -137,7 +137,6 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
 
 
 
-     ----wwww  --------wwwwaaaaiiiitttt
           waits for signal, then start recording.
 
      ----FFFF  --------ffffiiiinnnndddd----eeeexxxxttttrrrreeeemmmmeeeessss
@@ -160,6 +159,7 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
           sum  of  powers  of  two  in the range 0 up to 63. Each
           power of two controls the type  of  information  to  be
           reported.  center box ; r| l|.
+
 
 
 
@@ -543,10 +543,13 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
           mostly in classical recordings. The correction  can  be
           seen  in  the flags of the Table Of Contents often. But
           there are recordings, that show this  setting  only  in
-          the  subchannels. If you know you have a pre-emphasized
-          recording and want cdda2wav to undo this, you  have  to
-          specify this option. A reverse filtering is done before
-          the samples are written into the audio file.
+          the  subchannels.  If  this  option is given, the index
+          scanner will be started, which reads  the  q-subchannel
+          of  each  track. If pre-emphasis is indicated in the q-
+          subchannel of a track, but not in the TOC, pre-emphasis
+          will  be  assumed  to  be  present,  and subsequently a
+          reverse filtering is done for  this  track  before  the
+          samples are written into the audio file.
 
      Set audio format
           ----OOOO  aaaauuuuddddiiiioooottttyyyyppppeeee can be _w_a_v (for wav files) or _a_u  or  _s_u_n
@@ -574,17 +577,14 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
      Select cdrom drive reading speed
           ----SSSS  ssssppppeeeeeeeedddd allows to switch the cdrom drive to a certain
           level  of  speed  in  order  to reduce read errors. The
-          actual speed factor can generally be  given  completely
-          freely,  since  there are often less settings than fac-
-          tors possible. Details depend very much  on  the  cdrom
-          drives.   An  argument  of  0  for example is often the
-          default speed of the drive, a value of 1 often  selects
-          single speed.
+          argument is transfered verbatim to the drive.   Details
+          depend very much on the cdrom drives.  An argument of 0
+          for example is often the default speed of the drive,  a
+          value of 1 often selects single speed.
 
      Enable MD5 checksums
           ----MMMM  ccccoooouuuunnnntttt enables  calculation  of  MD-5  checksum  for
           'count'  bytes  from the beginning of a track. This was
-          introduced for quick comparisons of tracks.
 
 
 
@@ -599,13 +599,15 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
 
 
 
+          introduced for quick comparisons of tracks.
+
      Do linear or overlapping reading of sectors
           ----PPPP  sssseeeeccccttttoooorrrrssss sets the given number of sectors  for  ini-
           tial  overlap sampling for jitter correction. Two cases
           are to be distinguished. For nonzero values, some  sec-
           tors are read twice to enable cdda2wav's jitter correc-
           tion.  If an argument of zero is given, no overlap sam-
-          pling  will be used.  NNNNEEEEWWWWSSSS!!!! For nonzero overlap sectors
+          pling  will  be  used.   For  nonzero  overlap  sectors
           cdda2wav dynamically adjusts the  setting  during  sam-
           pling  (like  cdparanoia  does).   If  no  match can be
           found, cdda2wav retries  the  read  with  an  increased
@@ -650,8 +652,6 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
           4444 invokes the index scanner and  displays  start  posi-
           tions of indices
 
-          8888 retrieves and displays a media catalog number
-
 
 
 SunOS 5.4                 Last change:                          7
@@ -664,6 +664,8 @@ SunOS 5.4                 Last change:                          7
 CDDA2WAV(1)               User Commands               CDDA2WAV(1)
 
 
+
+          8888 retrieves and displays a media catalog number
 
           11116666  retrieves  and  displays   international   standard
           recording codes
@@ -715,8 +717,6 @@ CDDA2WAV(1)               User Commands               CDDA2WAV(1)
           describe it here.
 
      Quiet option
-          ----qqqq suppresses all screen output except error  messages.
-          That reduces cpu time resources.
 
 
 
@@ -730,6 +730,9 @@ SunOS 5.4                 Last change:                          8
 CDDA2WAV(1)               User Commands               CDDA2WAV(1)
 
 
+
+          ----qqqq suppresses all screen output except error  messages.
+          That reduces cpu time resources.
 
      Just show information option
           ----JJJJ does not write a file, it  only  prints  information
@@ -766,6 +769,57 @@ HHHHIIIINNNNTTTTSSSS OOOONNNN UUUUSSSSAAAAGGGGE
      ----BBBB option. When recording time exceeds the track limit a new
      file will be opened for the next track.
 
+FFFFIIIILLLLEEEESSSS
+     Cdda2wav can generate a lot of files for various purposes.
+
+     Audio files:
+
+     There are audio files containing samples with default exten-
+     sions  These  files  are  not  generated when option (-N) is
+     given. Multiple files may be  written  when  the  bulk  copy
+     option  (-B)  is used. Individual file names can be given as
+     arguments. If the number of file names given  is  sufficient
+     to  cover  all included audio tracks, the file names will be
+     used verbatim.  Otherwise, if there are less file names than
+     files  needed  to write the included tracks, the part of the
+     file name before the extension is extended with '_dd'  where
+
+
+
+SunOS 5.4                 Last change:                          9
+
+
+
+
+
+
+CDDA2WAV(1)               User Commands               CDDA2WAV(1)
+
+
+
+     dd represents the current track number.
+
+     Cddb and Cdindex files:
+
+     If cdda2wav detects cd-extra or cd-text (album/track)  title
+     information,  then  .cddb  and  .cdindex files are generated
+     unless suppressed by the option -H.  They  contain  suitable
+     formatted  entries  for  submission  to audio cd track title
+     databases in the internet. The CDINDEX and CDDB(tm)  systems
+     are  currently  supported. For more information please visit
+     www.cdindex.org and www.cddb.com.
+
+     Inf files:
+
+     The inf files are describing the sample files and  the  part
+     from  the  audio  cd, it was taken from. They are a means to
+     transfer information to a cd burning program like  cdrecord.
+     For  example,  if  the  original  audio  cd had pre-emphasis
+     enabled, and cdda2wav -T did remove  the  pre-emphase,  then
+     the  inf file has pre-emphasis not set (since the audio file
+     does not have it anymore), while the .cddb and the  .cdindex
+     have pre-emphase set as the original does.
+
 WWWWAAAARRRRNNNNIIIINNNNGGGG
      IIIIMMMMPPPPOOOORRRRTTTTAAAANNNNTTTT:::: it is prohibited to sell  copies  of  copyrighted
      material  by  noncopyright  holders. This program may not be
@@ -782,22 +836,8 @@ BBBBUUUUGGGGSSSS
 
      Cdda2wav should use threads.
 
-     When using jitter correction with ATAPI cdrom drives,  track
-
-
-
-SunOS 5.4                 Last change:                          9
-
-
-
-
-
-
-CDDA2WAV(1)               User Commands               CDDA2WAV(1)
-
-
-
-     endings are not handled correctly.
+     Cdda2wav currently cannot sample hidden audio tracks  (track
+     1 index 0).
 
 AAAACCCCKKKKNNNNOOOOWWWWLLLLEEEEDDDDGGGGEEEEMMMMEEEENNNNTTTTSSSS
      Thanks  goto   Project   MODE   (http://www.mode.net/)   and
@@ -810,11 +850,24 @@ AAAACCCCKKKKNNNNOOOOWWWWLLLLEEEEDDDDGGGGEEEEMM
      first  track of the Krupps CD.  Paranoia patches contributed
      by Monty xiphmont@mit.edu.
 
+
+
+SunOS 5.4                 Last change:                         10
+
+
+
+
+
+
+CDDA2WAV(1)               User Commands               CDDA2WAV(1)
+
+
+
 AAAAUUUUTTTTHHHHOOOORRRR
      Heiko Eissfeldt heiko@colossus.escape.de
 
 DDDDAAAATTTTEEEE
-     25 Mar 1999
+     11 Feb 2000
 
 
 
@@ -852,7 +905,20 @@ DDDDAAAATTTTEEEE
 
 
 
-SunOS 5.4                 Last change:                         10
+
+
+
+
+
+
+
+
+
+
+
+
+
+SunOS 5.4                 Last change:                         11
 
 
 

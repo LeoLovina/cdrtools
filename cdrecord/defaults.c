@@ -1,7 +1,7 @@
-/* @(#)defaults.c	1.2 00/01/13 Copyright 1998 J. Schilling */
+/* @(#)defaults.c	1.3 00/04/16 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)defaults.c	1.2 00/01/13 Copyright 1998 J. Schilling";
+	"@(#)defaults.c	1.3 00/04/16 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -139,6 +139,19 @@ cdr_xdefaults(devp, speedp, fsp)
 				if (getnum(p, fsp) != 1)
 					comerrno(EX_BAD,
 					"Bad fifo size in defaults.\n");
+			}
+		}
+		if (x) {
+			p = ++x;
+			while (*p == '\t')
+				p++;
+			if ((x = strchr(p, '\t')) != NULL)
+				*x = '\0';
+			if (strcmp(p, "\"\"")) {
+				extern	char	*driveropts;
+
+				if (driveropts == NULL)
+					driveropts = strsv(p);
 			}
 		}
 	}

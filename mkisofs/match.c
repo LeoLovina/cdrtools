@@ -1,251 +1,265 @@
+/* @(#)match.c	1.9 00/04/16 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)match.c	1.9 00/04/16 joerg";
+#endif
 /*
  * 27-Mar-96: Jan-Piet Mens <jpm@mens.de>
  * added 'match' option (-m) to specify regular expressions NOT to be included
  * in the CD image.
+ *
+ * Re-written 13-Apr-2000 James Pearson
+ * now uses a generic set of routines
  */
-
-static char rcsid[] ="$Id: match.c,v 1.3 1999/03/02 03:41:25 eric Exp $";
 
 #include "config.h"
 #include <prototyp.h>
 #include <stdio.h>
-#ifndef VMS
-
-#ifdef ORIG_BUT_DOES_NOT_WORK
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#else
-#include <stdlib.h>
-#endif
-#else
 #include <stdxlib.h>
-#endif
-
-#endif
-#include <string.h>
+#include <strdefs.h>
 #include "match.h"
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
 #endif
 
-#define MAXMATCH 1000
-static char *mat[MAXMATCH];
+struct match {
+	struct match *next;
+	char	 *name;
+};
 
-int
-add_match(fn)
-char * fn;
+typedef struct match match;
+
+static match *mats[MAX_MAT];
+
+static char *mesg[MAX_MAT] = {
+	"excluded",
+	"excluded ISO-9660",
+	"excluded Joliet",
+	"hidden attribute ISO-9660",
+#ifdef APPLE_HYB
+	"excluded HFS",
+#endif /* APPLE_HYB */
+};
+
+#ifdef SORTING
+struct sort_match {
+	struct sort_match	*next;
+	char			*name;
+	int			val;
+};
+
+typedef struct sort_match sort_match;
+
+static sort_match	*s_mats;
+
+static int
+add_sort_match(fn, val)
+	char	*fn;
+	int	val;
 {
-  register int i;
+	sort_match *s_mat;
 
-  for (i=0; mat[i] && i<MAXMATCH; i++);
-  if (i == MAXMATCH) {
-    fprintf(stderr,"Can't exclude RE '%s' - too many entries in table\n",fn);
-    return 0;
-  }
-
- 
-  mat[i] = (char *) malloc(strlen(fn)+1);
-  if (mat[i] == NULL) {
+	s_mat = (sort_match *)malloc(sizeof(sort_match));
+	if (s_mat == NULL) {
 #ifdef	USE_LIBSCHILY
-    errmsg("Can't allocate memory for excluded filename\n");
+		errmsg("Can't allocate memory for sort filename\n");
 #else
-    fprintf(stderr,"Can't allocate memory for excluded filename\n");
+		fprintf(stderr,"Can't allocate memory for sort filename\n");
 #endif
-    return 0;
-  }
+		return (0);
+	}
 
-  strcpy(mat[i],fn);
-  return 1;
-}
-
-int matches(fn)
-char * fn;
-{
-  /* very dumb search method ... */
-  register int i;
-
-  for (i=0; mat[i] && i<MAXMATCH; i++) {
-    if (fnmatch(mat[i], fn, FNM_FILE_NAME) != FNM_NOMATCH) {
-      return 1; /* found -> excluded filename */
-    }
-  }
-  return 0; /* not found -> not excluded */
-}
-
-/* ISO9660/RR hide */
-
-static char *i_mat[MAXMATCH];
-
-int
-i_add_match(fn)
-char * fn;
-{
-  register int i;
-
-  for (i=0; i_mat[i] && i<MAXMATCH; i++);
-  if (i == MAXMATCH) {
-    fprintf(stderr,"Can't exclude RE '%s' - too many entries in table\n",fn);
-    return 0;
-  }
-
- 
-  i_mat[i] = (char *) malloc(strlen(fn)+1);
-  if (i_mat[i] == NULL) {
+	if ((s_mat->name = strdup(fn)) == NULL) {
 #ifdef	USE_LIBSCHILY
-    errmsg("Can't allocate memory for excluded filename\n");
+		errmsg("Can't allocate memory for sort filename\n");
 #else
-    fprintf(stderr,"Can't allocate memory for excluded filename\n");
+		fprintf(stderr,"Can't allocate memory for sort filename\n");
 #endif
-    return 0;
-  }
+		return (0);
+	}
 
-  strcpy(i_mat[i],fn);
-  return 1;
-}
+	/* need to reserve the minimum value for other uses */
+	if (val == NOT_SORTED)
+		val++;
 
-int i_matches(fn)
-char * fn;
-{
-  /* very dumb search method ... */
-  register int i;
+	s_mat->val = val;
+	s_mat->next = s_mats;
+	s_mats = s_mat;
 
-  for (i=0; i_mat[i] && i<MAXMATCH; i++) {
-    if (fnmatch(i_mat[i], fn, FNM_FILE_NAME) != FNM_NOMATCH) {
-      return 1; /* found -> excluded filename */
-    }
-  }
-  return 0; /* not found -> not excluded */
-}
-
-int i_ishidden()
-{
-  return((int)(i_mat[0] != 0));
-}
-
-/* Joliet hide */
-
-static char *j_mat[MAXMATCH];
-
-int
-j_add_match(fn)
-char * fn;
-{
-  register int i;
-
-  for (i=0; j_mat[i] && i<MAXMATCH; i++);
-  if (i == MAXMATCH) {
-    fprintf(stderr,"Can't exclude RE '%s' - too many entries in table\n",fn);
-    return 0;
-  }
-
- 
-  j_mat[i] = (char *) malloc(strlen(fn)+1);
-  if (j_mat[i] == NULL) {
-#ifdef	USE_LIBSCHILY
-    errmsg("Can't allocate memory for excluded filename\n");
-#else
-    fprintf(stderr,"Can't allocate memory for excluded filename\n");
-#endif
-    return 0;
-  }
-
-  strcpy(j_mat[i],fn);
-  return 1;
-}
-
-int j_matches(fn)
-char * fn;
-{
-  /* very dumb search method ... */
-  register int i;
-
-  for (i=0; j_mat[i] && i<MAXMATCH; i++) {
-    if (fnmatch(j_mat[i], fn, FNM_FILE_NAME) != FNM_NOMATCH) {
-      return 1; /* found -> excluded filename */
-    }
-  }
-  return 0; /* not found -> not excluded */
-}
-
-int j_ishidden()
-{
-  return((int)(j_mat[0] != 0));
+	return (1);
 }
 
 void
-add_list(file)
+add_sort_list(file)
 	char	*file;
 {
-  FILE *fp;
-  char name[1024];
+	FILE	*fp;
+	char	name[1024];
+	int	val;
 
-  if ((fp = fopen(file, "r")) == NULL) {
+	if ((fp = fopen(file, "r")) == NULL) {
 #ifdef	USE_LIBSCHILY
-    comerr("Can't open exclude file list %s\n", file);
+		comerr("Can't open sort file list %s\n", file);
 #else
-    fprintf(stderr,"Can't open exclude file list %s\n", file);
-    exit (1);
+		fprintf(stderr,"Can't open hidden/exclude file list %s\n", file);
+		exit (1);
 #endif
-  }
+	}
 
-  while (fscanf(fp, "%s", name) != EOF) {
-    if (!add_match(name)) {
-      fclose(fp);
-      return;
-    }
-  }
+	while (fscanf(fp, "%s%d", name, &val) != EOF) {
+		if (!add_sort_match(name, val)) {
+			fclose(fp);
+			return;
+		}
+	}
 
-  fclose(fp);
+	fclose(fp);
+}
+
+int
+sort_matches(fn, val)
+	char	*fn;
+	int	val;
+{
+	register sort_match	*s_mat;
+
+	for (s_mat=s_mats; s_mat; s_mat=s_mat->next) {
+		if (fnmatch(s_mat->name, fn, FNM_FILE_NAME) != FNM_NOMATCH) {
+		        return (s_mat->val); /* found sort value */
+		}
+	}
+	return (val); /* not found - default sort value */
 }
 
 void
-i_add_list(file)
-	char	*file;
+del_sort()
 {
-  FILE *fp;
-  char name[1024];
+	register sort_match * s_mat, *s_mat1;
 
-  if ((fp = fopen(file, "r")) == NULL) {
+	s_mat = s_mats;
+	while(s_mat) {
+		s_mat1 = s_mat->next;
+
+		free(s_mat->name);
+		free(s_mat);
+
+		s_mat = s_mat1;
+	}
+
+	s_mats = 0;
+}
+
+#endif /* SORTING */
+
+
+int
+gen_add_match(fn, n)
+	char	*fn;
+	int	n;
+{
+	match	*mat;
+
+	if (n >= MAX_MAT)
+		return (0);
+
+	mat = (match *)malloc(sizeof(match));
+	if (mat == NULL) {
 #ifdef	USE_LIBSCHILY
-    comerr("Can't open hidden file list %s\n", file);
+		errmsg("Can't allocate memory for %s filename\n", mesg[n]);
 #else
-    fprintf(stderr,"Can't open hidden file list %s\n", file);
-    exit (1);
+		fprintf(stderr,"Can't allocate memory for %s filename\n", mesg[n]);
 #endif
-  }
+		return (0);
+	}
 
-  while (fscanf(fp, "%s", name) != EOF) {
-    if (!i_add_match(name)) {
-      fclose(fp);
-      return;
-    }
-  }
+	if ((mat->name = strdup(fn)) == NULL) {
+#ifdef	USE_LIBSCHILY
+		errmsg("Can't allocate memory for %s filename\n", mesg[n]);
+#else
+		fprintf(stderr,"Can't allocate memory for %s filename\n", mesg[n]);
+#endif
+		return (0);
+	}
 
-  fclose(fp);
+	mat->next = mats[n];
+	mats[n] = mat;
+
+	return (1);
 }
 
 void
-j_add_list(file)
+gen_add_list(file, n)
 	char	*file;
+	int	n;
 {
-  FILE *fp;
-  char name[1024];
+	FILE	*fp;
+	char	name[1024];
 
-  if ((fp = fopen(file, "r")) == NULL) {
+	if ((fp = fopen(file, "r")) == NULL) {
 #ifdef	USE_LIBSCHILY
-    comerr("Can't open hidden Joliet file list %s\n", file);
+		comerr("Can't open %s file list %s\n", mesg[n], file);
 #else
-    fprintf(stderr,"Can't open hidden Joliet file list %s\n", file);
-    exit (1);
+		fprintf(stderr,"Can't open %s file list %s\n", mesg[n], file);
+		exit (1);
 #endif
-  }
+	}
 
-  while (fscanf(fp, "%s", name) != EOF) {
-    if (!j_add_match(name)) {
-      fclose(fp);
-      return;
-    }
-  }
+	while (fscanf(fp, "%s", name) != EOF) {
+		if (!gen_add_match(name, n)) {
+			fclose(fp);
+			return;
+		}
+	}
 
-  fclose(fp);
+	fclose(fp);
+}
+
+int gen_matches(fn, n)
+	char	*fn;
+	int	n;
+{
+	register match * mat;
+
+	if (n >= MAX_MAT)
+		return (0);
+
+	for (mat=mats[n]; mat; mat=mat->next) {
+		if (fnmatch(mat->name, fn, FNM_FILE_NAME) != FNM_NOMATCH) {
+			return (1);	/* found -> excluded filename */
+		}
+	}
+	return (0);			/* not found -> not excluded */
+}
+
+int gen_ishidden(n)
+	int	n;
+{
+	if (n >= MAX_MAT)
+		return (0);
+
+	return ((int)(mats[n] != 0));
+}
+
+void
+gen_del_match(n)
+	int	n;
+{
+	register match	*mat;
+	register match 	*mat1;
+
+	if (n >= MAX_MAT)
+		return;
+
+	mat = mats[n];
+
+	while (mat) {
+		mat1 = mat->next;
+
+		free(mat->name);
+		free(mat);
+
+		mat = mat1;
+	}
+
+	mats[n] = 0;
 }

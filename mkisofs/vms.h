@@ -1,10 +1,10 @@
+/* @(#)vms.h	1.1 94/01/23 eric */
 /*
  * Header file mkisofs.h - assorted structure definitions and typecasts.
 
    Written by Eric Youngdale (1993).
 
- * $Id: vms.h,v 1.1 1997/02/23 15:59:18 eric Rel $
- */
+  */
 
 #ifdef VMS
 #define stat(X,Y) VMS_stat(X,Y)

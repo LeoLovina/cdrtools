@@ -1,7 +1,7 @@
-/* @(#)scsi.c	1.12 00/01/08 Copyright 1997 J. Schilling */
+/* @(#)scsi.c	1.13 00/02/10 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi.c	1.12 00/01/08 Copyright 1997 J. Schilling";
+	"@(#)scsi.c	1.13 00/02/10 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1997 J. Schilling
@@ -50,7 +50,11 @@ static	char sccsid[] =
 LOCAL	SCSI	*scgp;
 LOCAL	long	bufsize;		/* The size of the transfer buffer */
 
-int
+EXPORT	int	readsecs	__PR((int startsecno, void *buffer, int sectorcount));
+EXPORT	int	scsidev_open	__PR((char *path));
+EXPORT	int	scsidev_close	__PR((void));
+
+EXPORT int
 readsecs(startsecno, buffer, sectorcount)
 	int	startsecno;
 	void	*buffer;
@@ -122,7 +126,7 @@ readsecs(startsecno, buffer, sectorcount)
 	return sectorcount * SECTOR_SIZE;
 }
 
-int
+EXPORT int
 scsidev_open(path)
 	char	*path;
 {
@@ -158,6 +162,16 @@ scsidev_open(path)
 	scgp->silent--;
 
 	return (1);
+}
+
+EXPORT int
+scsidev_close()
+{
+	if (in_image == NULL) {
+		return (close_scsi(scgp));
+	} else {
+		return (fclose(in_image));
+	}
 }
 
 #endif	/* USE_SCG */

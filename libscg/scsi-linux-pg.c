@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-pg.c	1.21 99/11/30 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-pg.c	1.23 00/04/03 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char ___sccsid[] =
-	"@(#)scsi-linux-pg.c	1.21 99/11/30 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-pg.c	1.23 00/04/03 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the Linux PARIDE implementation.
@@ -34,6 +34,7 @@ static	char ___sccsid[] =
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <string.h>
 #ifdef	HAVE_LINUX_PG_H
 #include <linux/pg.h>
 #else
@@ -47,7 +48,7 @@ static	char ___sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.21";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.23";	/* The version for this transport*/
 
 #ifdef	USE_PG_ONLY
 
@@ -253,11 +254,12 @@ scsi_close(scgp)
 	scglocal(scgp)->buscookies[b] = (short)-1;
 
 	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+		for (l=0; l < MAX_LUN ; l++) {
 			f = scglocal(scgp)->scgfiles[b][t][l];
 			if (f >= 0)
 				close(f);
 			scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
+		}
 	}
 	return (0);
 }

@@ -1,4 +1,4 @@
-/* @(#)xconfig.h.in	1.4 00/01/22 Copyright 1998 J. Schilling */
+/* @(#)xconfig.h.in	1.5 00/03/29 Copyright 1998 J. Schilling */
 /*
  *	Dynamic autoconf C-include code.
  *
@@ -151,6 +151,8 @@
 #undef HAVE_GCONVERT		/* gconvert() is present in libc */
 #undef HAVE_ISINF		/* isinf() is present in libc */
 #undef HAVE_ISNAN		/* isnan() is present in libc */
+#undef HAVE_RAND		/* rand() is present in libc */
+#undef HAVE_DRAND48		/* drand48() is present in libc */
 #undef HAVE_SETPRIORITY		/* setpriority() is present in libc */
 #undef HAVE_NICE		/* nice() is present in libc */
 #undef HAVE_DOSSETPRIORITY	/* DosSetPriority() is present in libc */

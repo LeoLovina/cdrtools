@@ -1,4 +1,4 @@
-#ident @(#)rules.inc	1.1 99/08/28 
+#ident @(#)rules.inc	1.2 00/03/19 
 ###########################################################################
 # Written 1999 by J. Schilling
 ###########################################################################
@@ -25,6 +25,10 @@ include		$(SRCROOT)/$(RULESDIR)/rules.obj
 
 PTARGET=	$(OINCSDIR)/$(TARGET)
 PTARGETC=	$(ARCHDIR)/$(TARGETC)
+
+_INSMODEI=	$(_UNIQ)$(INSMODE)
+__INSMODEI=	$(_INSMODEI:$(_UNIQ)=$(INSMODEF))
+INSMODEI=	$(__INSMODEI:$(_UNIQ)%=%)
 
 all:		$(PTARGETC) $(PTARGET)
 

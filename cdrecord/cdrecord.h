@@ -1,4 +1,4 @@
-/* @(#)cdrecord.h	1.55 00/01/28 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.h	1.60 00/04/26 Copyright 1995 J. Schilling */
 /*
  *	Definitions for cdrecord
  *
@@ -44,6 +44,7 @@
 #define	F_SAO		0x040000L	/* Session at once */
 #define	F_WRITE		0x080000L	/* Disk is going to be written */
 #define	F_FORCE		0x100000L	/* Force things (e.g. blank on dead disk)  */
+#define	F_WAITI		0x200000L	/* Wait until data is available on stdin */
 
 #ifdef	min
 #undef	min
@@ -375,11 +376,12 @@ struct cdr_cmd {
 	int	(*cdr_send_cue)		__PR((SCSI *scgp, int track, track_t *trackp));			/* send cue sheet */
 	int	(*cdr_open_track)	__PR((SCSI *scgp, cdr_t *, int track, track_t *trackp));	/* open new track */
 	int	(*cdr_close_track)	__PR((SCSI *scgp, int track, track_t *trackp));		/* close written track */
-	int	(*cdr_open_session)	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));		/* open new session */
+	int	(*cdr_open_session)	__PR((SCSI *scgp, cdr_t *, int tracks, track_t *trackp, int toctype, int multi));		/* open new session */
 	int	(*cdr_close_session)	__PR((SCSI *scgp));		/* really needed ??? */
 	int	(*cdr_session_offset)	__PR((SCSI *scgp, long *soff));		/* read session offset*/
 	int	(*cdr_fixate)		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));	/* write toc on disk */
 	int	(*cdr_blank)		__PR((SCSI *scgp, long addr, int blanktype));	/* blank something */
+	int	(*cdr_opc)		__PR((SCSI *scgp, caddr_t bp, int cnt, int doopc));	/* Do OPC */
 };
 #endif
 
@@ -482,6 +484,7 @@ extern	void	timevaldiff	__PR((struct timeval *start, struct timeval *stop));
 #ifdef	_SCSITRANSP_H
 extern	BOOL	unit_ready	__PR((SCSI *scgp));
 extern	BOOL	wait_unit_ready	__PR((SCSI *scgp, int secs));
+extern	BOOL	scsi_in_progress __PR((SCSI *scgp));
 extern	int	test_unit_ready	__PR((SCSI *scgp));
 extern	int	rezero_unit	__PR((SCSI *scgp));
 extern	int	request_sense	__PR((SCSI *scgp));
@@ -505,11 +508,12 @@ extern	int	read_toc_philips __PR((SCSI *scgp, caddr_t, int, int, int, int));
 extern	int	read_header	__PR((SCSI *scgp, caddr_t, long, int, int));
 extern	int	read_disk_info	__PR((SCSI *scgp, caddr_t, int));
 extern	int	read_track_info	__PR((SCSI *scgp, caddr_t, int, int));
-extern	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track));
+extern	int	send_opc	__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
+extern	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track, BOOL immed));
 extern	int	read_master_cue	__PR((SCSI *scgp, caddr_t bp, int sheet, int cnt));
 extern	int	send_cue_sheet	__PR((SCSI *scgp, caddr_t bp, long size));
 extern	int	read_buff_cap	__PR((SCSI *scgp, long *, long *));
-extern	int	scsi_blank	__PR((SCSI *scgp, long addr, int blanktype));
+extern	int	scsi_blank	__PR((SCSI *scgp, long addr, int blanktype, BOOL immed));
 extern	BOOL	allow_atapi	__PR((SCSI *scgp, BOOL new));
 extern	int	mode_select	__PR((SCSI *scgp, Uchar *, int, int, int));
 extern	int	mode_sense	__PR((SCSI *scgp, Uchar *dp, int cnt, int page, int pcf));
@@ -609,7 +613,3 @@ extern	long	disk_rcap		__PR((msf_t *mp, long maxblock, BOOL rw, BOOL audio));
 /* Test only								    */
 /*--------------------------------------------------------------------------*/
 /*extern	int	do_cue		__PR((int tracks, track_t *trackp, struct mmc_cue **cuep));*/
-
-#ifdef	_SCSITRANSP_H
-extern	int	send_cue	__PR((SCSI *scgp, int tracks, track_t *trackp));
-#endif

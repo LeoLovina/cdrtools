@@ -1,64 +1,72 @@
+/* @(#)exclude.c	1.7 00/04/03 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)exclude.c	1.7 00/04/03 joerg";
+#endif
 /*
  * 9-Dec-93 R.-D. Marzusch, marzusch@odiehh.hanse.de:
- * added 'exclude' option (-x) to specify pathnames NOT to be included in 
+ * added 'exclude' option (-x) to specify pathnames NOT to be included in
  * CD image.
  */
 
-static char rcsid[] ="$Id: exclude.c,v 1.2 1997/02/23 16:12:34 eric Rel $";
-
 #include <stdio.h>
-#ifndef VMS
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#else
 #include <stdlib.h>
-#endif
-#endif
-#include <string.h>
+#include <strdefs.h>
 
 #ifdef	USE_LIBSCHILY
 #include <standard.h>
 #endif
 
 /* this allows for 1000 entries to be excluded ... */
-#define MAXEXCL 1000
-static char * excl[MAXEXCL];
+#define MAXEXCL		1000
 
-void exclude(fn)
-char * fn;
+static char		*excl[MAXEXCL];
+
+void	exclude		__PR((char *fn));
+int	is_excluded	__PR((char *fn));
+
+
+void
+exclude(fn)
+	char		*fn;
 {
-  register int i;
+	register int	i;
 
-  for (i=0; excl[i] && i<MAXEXCL; i++);
-  if (i == MAXEXCL) {
-    fprintf(stderr,"Can't exclude '%s' - too many entries in table\n",fn);
-    return;
-  }
+	for (i = 0; excl[i] && i < MAXEXCL; i++)
+		;
 
- 
-  excl[i] = (char *) malloc(strlen(fn)+1);
-  if (excl[i] == NULL) {
+	if (i == MAXEXCL) {
+		fprintf(stderr,
+			"Can't exclude '%s' - too many entries in table\n",
+								fn);
+		return;
+	}
+	excl[i] = (char *) malloc(strlen(fn) + 1);
+	if (excl[i] == NULL) {
 #ifdef	USE_LIBSCHILY
-    errmsg("Can't allocate memory for excluded filename\n");
+		errmsg("Can't allocate memory for excluded filename\n");
 #else
-    fprintf(stderr,"Can't allocate memory for excluded filename\n");
+		fprintf(stderr,
+			"Can't allocate memory for excluded filename\n");
 #endif
-    return;
-  }
-
-  strcpy(excl[i],fn);
+		return;
+	}
+	strcpy(excl[i], fn);
 }
 
-int is_excluded(fn)
-char * fn;
+int
+is_excluded(fn)
+	char		*fn;
 {
-  /* very dumb search method ... */
-  register int i;
+	register int	i;
 
-  for (i=0; excl[i] && i<MAXEXCL; i++) {
-    if (strcmp(excl[i],fn) == 0) {
-      return 1; /* found -> excluded filenmae */
-    }
-  }
-  return 0; /* not found -> not excluded */
+	/*
+	 * very dumb search method ...
+	 */
+	for (i = 0; excl[i] && i < MAXEXCL; i++) {
+		if (strcmp(excl[i], fn) == 0) {
+			return 1;	/* found -> excluded filenmae */
+		}
+	}
+	return 0;	/* not found -> not excluded */
 }

@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd.c	1.26 99/09/17 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd.c	1.27 00/02/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd.c	1.26 99/09/17 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd.c	1.27 00/02/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the NetBSD/FreeBSD/OpenBSD generic SCSI implementation.
@@ -48,7 +48,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.26";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.27";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -233,11 +233,12 @@ scsi_close(scgp)
 
 	for (b=0; b < MAX_SCG; b++) {
 		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++)
+			for (l=0; l < MAX_LUN ; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
 				scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
+			}
 		}
 	}
 	return (0);
@@ -528,7 +529,7 @@ scsi_send(scgp, f, sp)
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.26";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.27";	/* The version for this transport*/
 
 #define CAM_MAXDEVS	128
 struct scg_local {

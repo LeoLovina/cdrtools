@@ -1,7 +1,7 @@
-/* @(#)setuid.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)setuid.c	1.3 00/04/22 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)setuid.c	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)setuid.c	1.3 00/04/22 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /* Security functions by zblaxell
@@ -157,14 +157,12 @@ void neverneedroot()
 	fprintf(stderr, "Fatal error:  initsecurity() not called.\n");
 	exit(1);
     }
-    if (geteuid() == 0) {
 #if defined (HAVE_SETUID)
-      if (setuid(real_uid)) {
-	  perror("setuid in neverneedroot()");
-	  exit(1);
-      }
-#endif
+    if (setuid(real_uid)) {
+	perror("setuid in neverneedroot()");
+	exit(1);
     }
+#endif
     if (geteuid() != real_uid || getuid() != real_uid) {
 	fprintf(stderr, "Fatal error:  did not drop root privilege.\n");
 	exit(1);

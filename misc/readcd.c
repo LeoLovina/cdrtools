@@ -1,7 +1,7 @@
-/* @(#)readcd.c	1.10 00/01/17 Copyright 1987 J. Schilling */
+/* @(#)readcd.c	1.14 00/04/24 Copyright 1987 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)readcd.c	1.10 00/01/17 Copyright 1987 J. Schilling";
+	"@(#)readcd.c	1.14 00/04/24 Copyright 1987 J. Schilling";
 #endif
 /*
  *	Skeleton for the use of the scg genearal SCSI - driver
@@ -39,7 +39,7 @@ static	char sccsid[] =
 
 #include "cdrecord.h"
 
-char	cdr_version[] = "1.8";
+char	cdr_version[] = "1.8.1";
 
 extern	BOOL	getlong		__PR((char *, long *, long, long));
 extern	BOOL	getint		__PR((char *, int *, int, int));
@@ -69,7 +69,7 @@ EXPORT	int	write_g1	__PR((SCSI *scgp, caddr_t bp, long addr, int cnt));
 #ifdef	used
 LOCAL	void	Xrequest_sense	__PR((SCSI *scgp));
 #endif
-LOCAL	int	rrr		__PR((SCSI *scgp, long addr, long cnt));
+LOCAL	int	rrr		__PR((SCSI *scgp, caddr_t bp, long addr, long cnt));
 LOCAL	void	read_disk	__PR((SCSI	*scgp, parm_t *parmp));
 LOCAL	void	write_disk	__PR((SCSI *scgp, parm_t *parmp));
 LOCAL	int	choice		__PR((int n));
@@ -109,12 +109,13 @@ usage(ret)
 	error("\tsectors=range	Range of sectors to read/write\n");
 	error("\t-w		Switch to write mode\n");
 	error("\tkdebug=#,kd=#\tdo Kernel debugging\n");
+	error("\t-v		increment general verbose level by one\n");
 	error("\t-V		increment SCSI command transport verbose level by one\n");
 	error("\t-silent,-s\tdo not print status of erreneous commands\n");
 	exit(ret);
 }	
 
-char	opts[]   = "kdebug#,kd#,Verbose,V+,silent,s,debug,help,h,version,dev*,f*,sectors*,w";
+char	opts[]   = "kdebug#,kd#,verbose+,v+,Verbose,V+,silent,s,debug,help,h,version,dev*,f*,sectors*,w";
 
 EXPORT int
 main(ac, av)
@@ -146,6 +147,7 @@ main(ac, av)
 	if(getallargs(&cac, &cav, opts,
 			&kdebug, &kdebug,
 			&verbose, &verbose,
+			&lverbose, &lverbose,
 			&silent, &silent, &debug,
 			&help, &help, &pversion,
 			&dev, &filename, &sectors, &do_write) < 0) {
@@ -495,8 +497,9 @@ Xrequest_sense(scgp)
 #define	MAX_RETRY	128
 
 LOCAL int
-rrr(scgp, addr, cnt)
+rrr(scgp, bp, addr, cnt)
 	SCSI	*scgp;
+	caddr_t	bp;
 	long	addr;
 	long	cnt;
 {
@@ -530,12 +533,10 @@ rrr(scgp, addr, cnt)
 			}
 
 			scgp->silent++;
-/*			err = read_scsi(scgp, Sbuf, addr, 1);*/
-			err = read_g1(scgp, Sbuf, addr, 1);
+			err = read_g1(scgp, bp, addr, 1);
 			scgp->silent--;
 
 			if (err < 0) {
-/*				err = geterrno();*/
 				err = scgp->scmd->ux_errno;
 /*				error("\n");*/
 /*				errmsgno(err, "Cannot read source disk\n");*/
@@ -545,16 +546,19 @@ rrr(scgp, addr, cnt)
 		} while (++try < MAX_RETRY);
 
 		if (try >= MAX_RETRY) {
+			error("\n");
 			errmsgno(err, "Error not corrected.\n");
 			return (-1);
 		} else {
-			if (try > 1)
+			if (try > 1) {
+				error("\n");
 				errmsgno(EX_BAD, "Error corrected after %d tries.\n", try);
+			}
 		}
 		try = 0;
 		cnt -= 1;
 		addr += 1;
-		Sbuf += secsize;
+		bp += secsize;
 	}
 	return (0);
 }
@@ -573,7 +577,6 @@ read_disk(scgp, parmp)
 	int	nsec;
 	long	start = 0L;
 	int	err = 0;
-/*int try;*/
 
 	if (is_suid) {
 		if (scgp->inq->type != INQ_ROMD)
@@ -632,29 +635,21 @@ else {
 	if (gettimeofday(&starttime, (struct timezone *)0) < 0)
 		comerr("Cannot get start time\n");
 
-	for(;addr < end; addr += cnt)                         {
+	for(;addr < end; addr += cnt) {
 
 		if ((addr + cnt) > end)
 			cnt = end - addr;
 
 		error("addr: %8d cnt: %d\r", addr, cnt);
 
-/*	try = 0;*/
-/*	do {*/
 /*		if (read_scsi(scgp, Sbuf, addr, cnt) < 0) {*/
 		if (read_g1(scgp, Sbuf, addr, cnt) < 0) {
-/*			err = geterrno();*/
 			err = scgp->scmd->ux_errno;
 			error("\n");
 			errmsgno(err, "Cannot read source disk\n");
-/*			break;*/
-			if (rrr(scgp, addr, cnt) < 0)
+			if (rrr(scgp, Sbuf, addr, cnt) < 0)
 				goto out;
 		}
-/*		else break;*/
-/*	} while (++try < 10);*/
-/*	if (try >= 10)*/
-/*		break;*/
 		if (filewrite(f, Sbuf, cnt * scgp->cap->c_bsize) < 0) {
 			err = geterrno();
 			error("\n");
@@ -771,12 +766,18 @@ LOCAL int
 choice(n)
 	int	n;
 {
-#if	!defined(__CYGWIN32__) && !defined(__EMX__)
+#if	defined(HAVE_DRAND48)
 	extern	double	drand48 __PR((void));
 
 	return drand48() * n;
 #else
+#	if	defined(HAVE_RAND)
+	extern	int	rand __PR((void));
+
+	return rand() % n;
+#	else
 	return (0);
+#	endif
 #endif
 }
 

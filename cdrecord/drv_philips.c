@@ -1,7 +1,7 @@
-/* @(#)drv_philips.c	1.34 00/01/28 Copyright 1997 J. Schilling */
+/* @(#)drv_philips.c	1.36 00/04/16 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_philips.c	1.34 00/01/28 Copyright 1997 J. Schilling";
+	"@(#)drv_philips.c	1.36 00/04/16 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -144,11 +144,12 @@ cdr_t	cdr_philips_cdd521O = {
 	no_sendcue,
 	open_track_oldphilips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_philips_dumb = {
@@ -173,11 +174,12 @@ cdr_t	cdr_philips_dumb = {
 	no_sendcue,
 	open_track_oldphilips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_philips_cdd521 = {
@@ -202,11 +204,12 @@ cdr_t	cdr_philips_cdd521 = {
 	no_sendcue,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_philips_cdd522 = {
@@ -231,11 +234,12 @@ cdr_t	cdr_philips_cdd522 = {
 	no_sendcue,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_kodak_pcd600 = {
@@ -260,11 +264,12 @@ cdr_t	cdr_kodak_pcd600 = {
 	no_sendcue,
 	open_track_oldphilips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_plasmon_rf4100 = {
@@ -289,11 +294,12 @@ cdr_t	cdr_plasmon_rf4100 = {
 	no_sendcue,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_pioneer_dw_s114x = {
@@ -319,11 +325,12 @@ cdr_t	cdr_pioneer_dw_s114x = {
 /*	open_track_yamaha,*/
 /*???*/	open_track_oldphilips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_yamaha_cdr100 = {
@@ -348,11 +355,12 @@ cdr_t	cdr_yamaha_cdr100 = {
 	no_sendcue,
 	open_track_yamaha,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_ricoh_ro1060 = {
@@ -377,11 +385,12 @@ cdr_t	cdr_ricoh_ro1060 = {
 	no_sendcue,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 cdr_t	cdr_ricoh_ro1420 = {
@@ -406,11 +415,12 @@ cdr_t	cdr_ricoh_ro1420 = {
 	no_sendcue,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((SCSI *, int, track_t *, int, int)))cmd_dummy,
+	(int(*)__PR((SCSI *, cdr_t *, int, track_t *, int, int)))cmd_dummy,
 	cmd_dummy,
 	read_session_offset_philips,
 	fixation_philips,
 	blank_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
 };
 
 

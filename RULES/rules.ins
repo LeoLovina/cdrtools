@@ -1,4 +1,4 @@
-#ident @(#)rules.ins	1.7 97/06/20 
+#ident @(#)rules.ins	1.8 00/03/19 
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -33,6 +33,10 @@ $(SRCROOT)/bins/$(OARCH)/$(TARGET):	$(PTARGET)
 
 PHARDLINKS=	$(HARDLINKS:%=$(INS_BASE)/$(INSDIR)/%)
 hardlinks:	$(PHARDLINKS)
+
+_INSMODEINS=	$(_UNIQ)$(INSMODEI)
+__INSMODEINS=	$(_INSMODEINS:$(_UNIQ)=$(INSMODEX))
+INSMODEINS=	$(__INSMODEINS:$(_UNIQ)%=%)
 
 dummy $(PHARDLINKS):	$(INS_BASE)/$(INSDIR)/$(TARGET)
 	@echo "	==> INSTALLING link \"$@\""; $(LN) $(INS_BASE)/$(INSDIR)/$(TARGET) $@

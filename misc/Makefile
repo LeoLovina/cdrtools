@@ -7,7 +7,7 @@ include		$(SRCROOT)/$(RULESDIR)/rules.top
 
 INSDIR=		bin
 TARGET=		readcd
-CPPOPTS +=	-DUSE_PG
+CPPOPTS +=	-I../cdrecord -DUSE_PG
 CFILES=		readcd.c cd_misc.c io.c \
 		scsi_cdr.c \
 		modes.c misc.c

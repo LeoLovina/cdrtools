@@ -1,7 +1,7 @@
-/* @(#)interface.c	1.3 00/01/25 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)interface.c	1.10 00/03/21 Copyright 1998,1999 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)interface.c	1.3 00/01/25 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)interface.c	1.10 00/03/21 Copyright 1998,1999 Heiko Eissfeldt";
 
 #endif
 /***
@@ -105,11 +105,14 @@ typedef struct string_len {
 } mystring;
 
 static mystring drv_is_not_mmc[] = {
-	{"SONY    CD-ROM CDU625    1.0",28},
+	{"DEC     RRD47   (C) DEC ",24},
+/*	{"SONY    CD-ROM CDU625    1.0",28}, */
 	{NULL,0}	/* must be last entry */
 };
 
 static mystring drv_has_mmc_cdda[] = {
+	{"HITACHI CDR-7930",16},
+/*	{"TOSHIBA CD-ROM XM-5402TA3605",28}, */
 	{NULL,0}	/* must be last entry */
 };
 
@@ -181,14 +184,22 @@ static void SetupSCSI( )
 	fprintf(stderr, "Inquiry command failed. Aborting...\n");
 	exit(1);
     }
+
     if ((*p != TYPE_ROM && *p != TYPE_WORM)) {
 	fprintf(stderr, "this is neither a scsi cdrom nor a worm device\n");
 	exit(1);
     }
 
+    if (global.quiet == 0) {
+	fprintf(stderr,
+		 "Type: %s, Vendor '%8.8s' Model '%16.16s' Revision '%4.4s' ",
+		 *p == TYPE_ROM ? "ROM" : "WORM"
+		 ,p+8
+		 ,p+16
+		 ,p+32);
+    }
     /* generic Sony type defaults */
     density = 0x0;
-    accepts_fua_bit = -1;
     accepts_fua_bit = -1;
     EnableCdda = (void (*) __PR((SCSI *, int)))Dummy;
     ReadCdRom = ReadCdda12;
@@ -205,25 +216,27 @@ static void SetupSCSI( )
     /* If your drive is not treated correctly, you can adjust some things
        here:
 
-       *in_leendian: should be to 1, if the CDROM drive or CD-Writer
+       global.in_lendian: should be to 1, if the CDROM drive or CD-Writer
 		  delivers the samples in the native byteorder of the audio cd
 		  (LSB first).
 		  HP CD-Writers need it set to 0.
        NOTE: If you get correct wav files when using sox with the '-x' option,
              the endianess is wrong. You can use the -C option to specify
-	     the value of (*in_lendian).
+	     the value of global.in_lendian.
 
      */
 
     {
       int mmc_code;
 
+      scgp->silent ++;
       allow_atapi(scgp, 1);
       if (*p == TYPE_ROM) {
         mmc_code = heiko_mmc(scgp);
       } else {
         mmc_code = 0;
       }
+      scgp->silent --;
 
       /* Exceptions for drives that report incorrect MMC capability */
       if (mmc_code != 0) {
@@ -252,40 +265,46 @@ static void SetupSCSI( )
 
       switch (mmc_code) {
        case 2:      /* SCSI-3 cdrom drive with accurate audio stream */
-         if ( (*in_lendian) == -1 )
-	   (*in_lendian) = 1;
-         global.overlap = 0;
+	/* fall through */
+       case 1:      /* SCSI-3 cdrom drive with no accurate audio stream */
+	/* fall through */
+lost_toshibas:
+	 global.in_lendian = 1;
+         if (mmc_code == 2)
+	   global.overlap = 0;
+	 else
+           global.overlap = 1;
          ReadCdRom = ReadCddaMMC12;
          ReadLastAudio = ReadFirstSessionTOCMMC;
-         global.speed = 0xffff;
          SelectSpeed = SpeedSelectSCSIMMC;
     	 ReadTocText = ReadTocTextSCSIMMC;
+	 if (!global.quiet) fprintf(stderr, "MMC+CDDA\n");
        break;
-       case 1:      /* SCSI-3 cdrom drive with no accurate audio stream */
-         if ( (*in_lendian) == -1 )
-	   (*in_lendian) = 1;
-         global.overlap = 1;
-         ReadCdRom = ReadCddaMMC12;
-         ReadLastAudio = ReadFirstSessionTOCMMC;
-         global.speed = 0xffff;
-         SelectSpeed = SpeedSelectSCSIMMC;
-         break;
        case -1: /* "MMC drive does not support cdda reading, sorry\n." */
 	/* fall through */
+	 if (!global.quiet) fprintf(stderr, "MMC-CDDA\n");
        case 0:      /* non SCSI-3 cdrom drive */
+	 if (!global.quiet) fprintf(stderr, "no MMC\n");
          ReadLastAudio = NULL;
     if (!memcmp(p+8,"TOSHIBA", 7) ||
         !memcmp(p+8,"IBM", 3) ||
         !memcmp(p+8,"DEC", 3)) {
+	    /*
+	     * older Toshiba ATAPI drives don't identify themselves as MMC.
+	     * The last digit of the model number is '2' for ATAPI drives.
+	     * These are treated as MMC.
+	     */
+	    if (!memcmp(p+15, " CD-ROM XM-", 11) && p[29] == '2') {
+         	goto lost_toshibas;
+	    }
 	density = 0x82;
 	EnableCdda = EnableCddaModeSelect;
  	ReadCdRom = ReadStandard;
         SelectSpeed = SpeedSelectSCSIToshiba;
-        if (!memcmp(p+16, "CD-ROM XM-3401",14)) {
+        if (!memcmp(p+15, " CD-ROM XM-3401",15)) {
 	   Is_a_Toshiba3401 = 1;
 	}
-	if ( (*in_lendian) == -1 )
-		(*in_lendian) = 1;
+	global.in_lendian = 1;
     } else if (!memcmp(p+8,"IMS",3) ||
                !memcmp(p+8,"KODAK",5) ||
                !memcmp(p+8,"RICOH",5) ||
@@ -299,8 +318,7 @@ static void SetupSCSI( )
         SelectSpeed = SpeedSelectSCSIPhilipsCDD2600;
 
 	/* treat all of these as bigendian */
-	if ( (*in_lendian) == -1 )
-		(*in_lendian) = 0;
+	global.in_lendian = 0;
 
 	/* no overlap reading for cd-writers */
 	global.overlap = 0;
@@ -312,17 +330,14 @@ static void SetupSCSI( )
 
 	/* no overlap reading for cd-writers */
 	global.overlap = 0;
-	if ( (*in_lendian) == -1 )
-		(*in_lendian) = 1;
+	global.in_lendian = 1;
     } else if (!memcmp(p+8,"PLEXTOR",7)) {
-	if ( (*in_lendian) == -1 )
-		(*in_lendian) = 1;
+	global.in_lendian = 1;
 	global.overlap = 0;
         ReadLastAudio = ReadFirstSessionTOCSony;
     	ReadTocText = ReadTocTextSCSIMMC;
     } else if (!memcmp(p+8,"SONY",4)) {
-	if ( (*in_lendian) == -1 )
-		(*in_lendian) = 1;
+	global.in_lendian = 1;
         if (!memcmp(p+16, "CD-ROM CDU55E",13)) {
 	   ReadCdRom = ReadCddaMMC12;
 	}
@@ -332,14 +347,12 @@ static void SetupSCSI( )
 	ReadCdRom = ReadCdda10;
         ReadTocText = NULL;
         SelectSpeed = SpeedSelectSCSINEC;
-	if ( (*in_lendian) == -1 )
-		(*in_lendian) = 1;
+	global.in_lendian = 1;
         if (!memcmp(p+29,"5022.0r",3)) /* I assume all versions of the 502 require this? */
                global.overlap = 0;           /* no overlap reading for NEC CD-ROM 502 */
     } else if (!memcmp(p+8,"MATSHITA",8)) {
 	ReadCdRom = ReadCdda12Matsushita;
-	if ( (*in_lendian) == -1 )
-		(*in_lendian) = 1;
+	global.in_lendian = 1;
     }
     } /* switch (get_mmc) */
     }
@@ -348,9 +361,13 @@ static void SetupSCSI( )
     ReadSubQ = ReadSubQSCSI;
 
     /* look if caddy is loaded */
-    if (interface == GENERIC_SCSI) while (!wait_unit_ready(scgp, 60)) {
-	fprintf(stderr,"load cdrom please and press enter");
-	getchar();
+    if (interface == GENERIC_SCSI) {
+	scgp->silent++;
+	while (!wait_unit_ready(scgp, 60)) {
+		fprintf(stderr,"load cdrom please and press enter");
+		getchar();
+	}
+	scgp->silent--;
     }
 }
 
@@ -487,7 +504,7 @@ static int OpenCdRom ( pdev_name )
         fprintf(stderr, "You can also define the default device in the Makefile.\n");
         exit(1);
       }
-	scsi_settimeout(scgp, 100);
+	scsi_settimeout(scgp, 300);
 	if (scgp) {
 		scgp->silent = global.scsi_silent;
 		scgp->verbose = global.scsi_verbose;
@@ -502,7 +519,11 @@ static int OpenCdRom ( pdev_name )
 	init_scsibuf(scgp, global.nsectors*CD_FRAMESIZE_RAW);
   } else {
       needgroup(0);
-      retval = open(pdev_name,O_RDONLY);
+      retval = open(pdev_name,O_RDONLY
+#ifdef	LINUX
+				| O_NONBLOCK
+#endif
+	);
       dontneedgroup();
 
       if (retval < 0) {
@@ -528,6 +549,14 @@ static int OpenCdRom ( pdev_name )
          exit(1);
       }
 #endif
+      if (global.scsi_verbose) {
+	scgp = (SCSI *) malloc(sizeof(* scgp));
+	if (scgp == NULL) {
+	  fprintf(stderr,"No memory for lowlevel debugging.\n");
+	} else {
+	  scgp->verbose = global.scsi_verbose;
+	}
+      }
   }
   return retval;
 }
@@ -607,7 +636,7 @@ static unsigned ReadToc_sim ( x, toc )
       {2,1,500}, 
       {2,2,500}, 
       {2,99,150*99},
-      {5,1,500}, 
+      {2,1,500}, 
       {5,2,500}, 
       {5,99,150*99}, 
       {99,1,1000}, 
@@ -624,7 +653,7 @@ static unsigned ReadToc_sim ( x, toc )
 	    "3 :  2 tracks with  1 index each\n"
 	    "4 :  2 tracks with  2 indices each\n"
 	    "5 :  2 tracks with 99 indices each\n"
-	    "6 :  5 tracks with  1 index each\n"
+	    "6 :  2 tracks (data and audio) with  1 index each\n"
 	    "7 :  5 tracks with  2 indices each\n"
 	    "8 :  5 tracks with 99 indices each\n"
 	    "9 : 99 tracks with  1 index each\n"
@@ -640,15 +669,34 @@ static unsigned ReadToc_sim ( x, toc )
 #endif
     /* build table of contents */
 
+#if 0
     trcks = scen[scenario][0] + 1;
     sim_indices = scen[scenario][1];
 
     for (i = 0; i < trcks; i++) {
-        toc[i].bFlags = 0x1b;
+        toc[i].bFlags = (scenario == 6 && i == 0) ? 0x4 : 0x1b;
         toc[i].bTrack = i + 1;
         toc[i].dwStartSector = i * scen[scenario][2];
     }
     toc[i].bTrack = 0xaa;
+    toc[i].dwStartSector = i * scen[scenario][2];
+#else
+    {
+      int starts[15] = { 23625, 30115, 39050, 51777, 67507, 
+		88612, 112962, 116840, 143387, 162662,
+		173990, 186427, 188077, 209757, 257120};
+      trcks = 14 + 1;
+      sim_indices = 1;
+
+      for (i = 0; i < trcks; i++) {
+        toc[i].bFlags = 0x0;
+        toc[i].bTrack = i + 1;
+        toc[i].dwStartSector = starts[i];
+      }
+      toc[i].bTrack = 0xaa;
+      toc[i].dwStartSector = starts[i];
+    }
+#endif
     return --trcks;           /* without lead-out */
 }
 
@@ -735,7 +783,6 @@ static void SetupSimCd()
 void SetupInterface( )
 {
 #if	defined SIM_CD
-    global.nsectors = 75;
     fprintf( stderr, "SIMULATION MODE !!!!!!!!!!!\n");
 #else
     /* ensure interface is setup correctly */
@@ -747,46 +794,6 @@ void SetupInterface( )
 #else
     global.pagesize = getpagesize();
 #endif
-
-    /* Value of 'nsectors' must be defined here */
-    assert(global.nsectors > 0);
-    assert(global.buffers > 0);
-
-    global.shmsize = HEADER_SIZE + ENTRY_SIZE_PAGE_AL * global.buffers;
-
-#if	defined (HAVE_FORK_AND_SHAREDMEM)
-#if	defined(HAVE_SMMAP) || defined(HAVE_USGSHM) || defined(HAVE_DOSALLOCSHAREDMEM)
-    fill_buffer = request_shm_sem(global.shmsize, (unsigned char **)&fill_buffer);
-    if (fill_buffer == NULL) {
-#else /* have shared memory */
-    if (1) {
-#endif
-	fprintf( stderr, "no shared memory available!\n");
-	exit(2);
-    }
-#else /* do not have fork() and shared memory */
-    fill_buffer = malloc(global.shmsize);
-    if (fill_buffer == NULL) {
-	fprintf( stderr, "no buffer memory available!\n");
-	exit(2);
-    }
-#endif
-
-    if (global.verbose != 0)
-   	 fprintf(stderr,
-   		 "%u bytes buffer memory requested, %d buffers, %d sectors\n",
-   		 global.shmsize, global.buffers, global.nsectors);
-
-    /* initialize pointer into shared memory segment */
-    last_buffer = fill_buffer + 1;
-    total_segments_read = (unsigned long *) (last_buffer + 1);
-    total_segments_written = total_segments_read + 1;
-    child_waits = (int *) (total_segments_written + 1);
-    parent_waits = child_waits + 1;
-    in_lendian = parent_waits + 1;
-    *in_lendian = -1;
-
-    set_total_buffers(global.buffers, sem_id);
 
     /* request one sector for table of contents */
     bufferTOC = (unsigned char *) malloc( CD_FRAMESIZE );      /* assumes sufficient aligned addresses */

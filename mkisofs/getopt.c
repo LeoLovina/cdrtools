@@ -1,3 +1,8 @@
+/* @(#)getopt.c	1.3 00/02/16 joerg */
+#ifndef lint
+static	char sccsid[] =
+	"@(#)getopt.c	1.3 00/02/16 joerg";
+#endif
 /* Getopt for GNU.
    NOTE: getopt is now part of the C library, so if you don't know what
    "Keep this file name-space clean" means, talk to roland@gnu.ai.mit.edu
@@ -91,6 +96,9 @@ the executable file might be covered by the GNU General Public License. */
    they can distinguish the relative order of options and other arguments.  */
 
 #include "getopt.h"
+
+static	void		exchange	__PR((char **argv));
+static	const char *	_getopt_initialize __PR((const char *optstring));
 
 /* For communication from `getopt' to the caller.
    When `getopt' finds an option that takes an argument,

@@ -1,3 +1,4 @@
+/* @(#)getopt.h	1.1 97/11/04 eric */
 /* Declarations for getopt.
    Copyright (C) 1989, 1990, 1991, 1992, 1993 Free Software Foundation, Inc.
 

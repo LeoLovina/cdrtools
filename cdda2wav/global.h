@@ -44,6 +44,7 @@ typedef struct global {
   unsigned buffers;
   unsigned shmsize;
   long pagesize;
+  int in_lendian;
   int outputendianess;
   int findminmax;
   int maxamp[2];

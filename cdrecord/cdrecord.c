@@ -1,7 +1,7 @@
-/* @(#)cdrecord.c	1.94 00/01/28 Copyright 1995-2000 J. Schilling */
+/* @(#)cdrecord.c	1.100 00/04/26 Copyright 1995-2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdrecord.c	1.94 00/01/28 Copyright 1995-2000 J. Schilling";
+	"@(#)cdrecord.c	1.100 00/04/26 Copyright 1995-2000 J. Schilling";
 #endif
 /*
  *	Record data on a CD/CVD-Recorder
@@ -54,7 +54,7 @@ static	char sccsid[] =
 #include "auheader.h"
 #include "cdrecord.h"
 
-char	cdr_version[] = "1.8";
+char	cdr_version[] = "1.8.1";
 
 /*
  * Map toc/track types into names.
@@ -131,6 +131,7 @@ int	audio_secs_per_tr;	/* # of audio secs per transfer */
 
 BOOL	isgui;
 int	didintr;
+char	*driveropts;
 
 struct timeval	starttime;
 struct timeval	stoptime;
@@ -182,6 +183,7 @@ LOCAL	void	prtimediff	__PR((const char *fmt,
 LOCAL	int	rt_raisepri	__PR((int));
 #endif
 EXPORT	void	raisepri	__PR((int));
+LOCAL	void	wait_input	__PR((void));
 LOCAL	void	checkgui	__PR((void));
 LOCAL	char *	astoll		__PR((const char *s, Llong *ll));
 LOCAL	Llong	number		__PR((char* arg, int* retp));
@@ -275,6 +277,12 @@ main(ac, av)
 		init_fifo(fs);
 	}
 
+	if ((flags & F_WAITI) != 0) {
+		if (lverbose)
+			printf("Waiting for data on stdin...\n");
+		wait_input();
+	}
+
 	if ((scgp = open_scsi(dev, errstr, sizeof(errstr),
 				debug, (flags & F_MSINFO) == 0 || lverbose)) == (SCSI *)0) {
 			errmsg("%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
@@ -312,8 +320,12 @@ main(ac, av)
 				auth, vers, scg_version(scgp, SCG_SCCS_ID));
 		}
 	}
+	if (lverbose && driveropts)
+		printf("Driveropts: '%s'\n", driveropts);
 
 	bufsize = scsi_bufsize(scgp, BUF_SIZE);
+	if (debug)
+		error("SCSI buffer size: %ld\n", bufsize);
 	if ((buf = scsi_getbuf(scgp, bufsize)) == NULL)
 		comerr("Cannot get SCSI I/O buffer.\n");
 
@@ -436,6 +448,17 @@ do_cue(tracks, track, 0);
 	exargs.old_secsize = sense_secsize(scgp, 1);
 	if (exargs.old_secsize < 0)
 		exargs.old_secsize = sense_secsize(scgp, 0);
+	if (debug)
+		printf("Current Secsize: %d\n", exargs.old_secsize);
+	scgp->silent++;
+	read_capacity(scgp);
+	scgp->silent--;
+	if (exargs.old_secsize < 0)
+		exargs.old_secsize = scgp->cap->c_bsize;
+	if (exargs.old_secsize != scgp->cap->c_bsize)
+		errmsgno(EX_BAD, "Warning: blockdesc secsize %d differs from cap secsize %d\n",
+				exargs.old_secsize, scgp->cap->c_bsize);
+
 	on_comerr(exscsi, &exargs);
 
 	if (lverbose)
@@ -533,7 +556,7 @@ do_cue(tracks, track, 0);
 	}
 	if ((flags & (F_BLANK|F_FORCE)) == (F_BLANK|F_FORCE)) {
 		wait_unit_ready(scgp, 120);
-		scsi_blank(scgp, 0L, blanktype);
+		scsi_blank(scgp, 0L, blanktype, FALSE);
 		excdr(0, &exargs);
 		exit(0);
 	}
@@ -621,10 +644,18 @@ do_cue(tracks, track, 0);
 	 * Now we actually start writing to the CD/DVD.
 	 * XXX Check total size of the tracks and remaining size of disk.
 	 */
-	if ((*dp->cdr_open_session)(scgp, tracks, track, toctype, flags & F_MULTI) < 0) {
+	if ((*dp->cdr_open_session)(scgp, dp, tracks, track, toctype, flags & F_MULTI) < 0) {
 		errmsgno(EX_BAD, "Cannot open new session.\n");
 		excdr(EX_BAD, &exargs);
 		exit(EX_BAD);
+	}
+	if ((flags & F_DUMMY) == 0 && dp->cdr_opc) {
+		if (debug || lverbose) {
+			printf("Performing OPC...\n");
+			flush();
+		}
+		if (dp->cdr_opc(scgp, NULL, 0, TRUE) < 0)
+			comerr("OPC failed.\n");
 	}
 
 	/*
@@ -728,9 +759,13 @@ fix_it:
 			flush();
 		}
 		if ((*dp->cdr_fixate)(scgp, flags & F_MULTI, flags & F_DUMMY,
-				toctype, tracks, track) < 0)
-			errs++;
-
+				toctype, tracks, track) < 0) {
+			/*
+			 * Ignore fixating errors in dummy mode.
+			 */
+			if ((flags & F_DUMMY) == 0)
+				errs++;
+		}
 		if (gettimeofday(&fixtime, (struct timezone *)0) < 0)
 			errmsg("Cannot get fix time\n");
 		if (lverbose)
@@ -761,6 +796,7 @@ usage(excode)
 	error("\tdev=target	SCSI target to use as CD/DVD-Recorder\n");
 	error("\ttimeout=#	set the default SCSI command timeout to #.\n");
 	error("\tdriver=name	user supplied driver name, use with extreme care\n");
+	error("\tdriveropts=opt	a comma separated list of driver specific options\n");
 	error("\t-checkdrive	check if a driver for the drive is present\n");
 	error("\t-prcap		print drive capabilities for MMC compliant drives\n");
 	error("\t-inq		do an inquiry for the drive end exit\n");
@@ -784,8 +820,9 @@ usage(excode)
 	error("\t		In this case default track type is CD-ROM XA2\n");
 	error("\t-fix		fixate a corrupt or unfixated disk (generate a TOC)\n");
 	error("\t-nofix		do not fixate disk after writing tracks\n");
+	error("\t-waiti		wait until input is available before opening SCSI\n");
 	error("\t-force		force to continue on some errors to allow blanking bad disks\n");
-	error("\t-dao		Write disk in DAO mode. This option will go away in the future.\n");
+	error("\t-dao		Write disk in DAO mode. This option will be replaced in the future.\n");
 	error("\ttsize=#		Length of valid data in next track\n");
 	error("\tpadsize=#	Amount of padding for next track\n");
 	error("\tpregap=#	Amount of pre-gap sectors before next track\n");
@@ -949,6 +986,7 @@ write_track_data(scgp, dp, track, trackp)
 	char	*bp	= buf;
 long bsize;
 long bfree;
+/*#define	BCAP*/
 #ifdef	BCAP
 int per;
 int oper = -1;
@@ -1032,8 +1070,16 @@ int oper = -1;
 				islast = TRUE;
 		}
 
+again:
+		scgp->silent++;
 		amount = (*dp->cdr_write_trackdata)(scgp, bp, startsec, bytespt, secspt, islast);
+		scgp->silent--;
 		if (amount < 0) {
+			if (scsi_in_progress(scgp)) {
+				usleep(100000);
+				goto again;
+			}
+
 			printf("%swrite track data: error after %ld bytes\n",
 							neednl?"\n":"", bytes);
 			return (-1);
@@ -1063,7 +1109,7 @@ int oper = -1;
 			read_buff_cap(scgp, 0, &bfree);
 			per = 100*(bsize - bfree) / bsize;
 			if (per != oper)
-				printf("[%3d] %3d %3d\b\b\b\b\b\b\b\b\b\b\b\b\b\b",
+				printf("[buf %3d%%] %3ld %3ld\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b",
 					per, bsize >> 10, bfree >> 10);
 			oper = per;
 			flush();
@@ -1138,9 +1184,17 @@ pad_track(scgp, dp, track, trackp, startsec, amt, dolast, bytesp)
 		if (dolast && (amt - bytespt) <= 0)
 			islast = TRUE;
 
+again:
+		scgp->silent++;
 		amount = (*dp->cdr_write_trackdata)(scgp, buf, startsec, bytespt, secspt, islast);
+		scgp->silent--;
 		if (amount < 0) {
-			printf("%swrite track data: error after %ld bytes\n",
+			if (scsi_in_progress(scgp)) {
+				usleep(100000);
+				goto again;
+			}
+
+			printf("%swrite track pad data: error after %ld bytes\n",
 							neednl?"\n":"", bytes);
 			if (bytesp)
 				*bytesp = bytes;
@@ -1549,7 +1603,7 @@ raise_fdlim()
 }
 
 char	*opts =
-"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,useinfo,dev*,timeout#,driver*,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,atip,multi,fix,nofix,debug,v+,V+,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose,force,dao,scms,isrc*,mcn*,index*";
+"help,version,checkdrive,prcap,inq,scanbus,reset,ignsize,useinfo,dev*,timeout#,driver*,driveropts*,tsize&,padsize&,pregap&,defpregap&,speed#,load,eject,dummy,msinfo,toc,atip,multi,fix,nofix,waiti,debug,v+,V+,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab,fs&,blank&,pktsize#,packet,noclose,force,dao,scms,isrc*,mcn*,index*";
 
 LOCAL void
 gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, blankp)
@@ -1598,6 +1652,7 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 	int	multi = 0;
 	int	fix = 0;
 	int	nofix = 0;
+	int	waiti = 0;
 	int	audio;
 	int	autoaudio = 0;
 	int	data;
@@ -1642,14 +1697,14 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 				&help, &version, &checkdrive, &prcap,
 				&inq, &scanbus, &reset, &ignsize,
 				&useinfo,
-				devp, timeoutp, &driver,
+				devp, timeoutp, &driver, &driveropts,
 				getllnum, &tracksize,
 				getllnum, &padsize,
 				getnum, &pregapsize,
 				getnum, &defpregap,
 				&speed,
 				&load, &eject, &dummy, &msinfo, &toc, &atip,
-				&multi, &fix, &nofix,
+				&multi, &fix, &nofix, &waiti,
 				&debug, &lverbose, &scsi_verbose,
 				&audio, &data, &mode2,
 				&xa1, &xa2, &cdi,
@@ -1708,6 +1763,8 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 				*flagsp |= F_FIX;
 			if (nofix)
 				*flagsp |= F_NOFIX;
+			if (waiti)
+				*flagsp |= F_WAITI;
 			if (force) 
 				*flagsp |= F_FORCE;
 
@@ -1730,9 +1787,11 @@ gargs(ac, av, tracksp, trackp, devp, timeoutp, dpp, speedp, flagsp, toctypep, bl
 				mcn = NULL;
 			}
 			version = checkdrive = prcap = inq = scanbus = reset = ignsize =
-			load = eject = dummy = msinfo = toc = atip = multi = fix = nofix = force = dao = 0;
+			load = eject = dummy = msinfo = toc = atip = multi = fix = nofix =
+			waiti = force = dao = 0;
 		} else if ((version + checkdrive + prcap + inq + scanbus + reset + ignsize +
-			    load + eject + dummy + msinfo + toc + atip + multi + fix + nofix + force + dao) > 0 ||
+			    load + eject + dummy + msinfo + toc + atip + multi + fix + nofix +
+			    waiti + force + dao) > 0 ||
 				mcn != NULL)
 			comerrno(EX_BAD, "Badly placed option. Global options must be before any track.\n");
 
@@ -2395,6 +2454,38 @@ raisepri(pri)
 }
 
 #endif	/* HAVE_SYS_PRIOCNTL_H */
+
+#ifdef	HAVE_SELECT
+/*
+ * sys/types.h and sys/time.h are already included.
+ */
+#else
+#	include	<stropts.h>
+#	include	<poll.h>
+
+#ifndef	INFTIM
+#define	INFTIM	(-1)
+#endif
+#endif
+
+LOCAL void
+wait_input()
+{
+#ifdef	HAVE_SELECT
+	fd_set	in;
+
+	FD_ZERO(&in);
+	FD_SET(STDIN_FILENO, &in);
+	select(1, &in, NULL, NULL, 0);
+#else
+	struct pollfd pfd;
+
+	pfd.fd = STDIN_FILENO;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
+	poll(&pfd, (unsigned long)1, INFTIM);
+#endif
+}
 
 LOCAL void
 checkgui()

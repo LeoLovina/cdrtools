@@ -7,7 +7,6 @@ RULESDIR=	RULES
 include		$(SRCROOT)/$(RULESDIR)/rules.top
 ###########################################################################
 
-INSMODE=	0644
 MANDIR=		man
 TARGETMAN=	test
 MANSECT=	$(MANSECT_LIB)

@@ -1,4 +1,4 @@
-/* @(#)mycdrom.h	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)mycdrom.h	1.3 00/03/29 Copyright 1998,1999 Heiko Eissfeldt */
 #if defined(__linux__)
 # include <linux/cdrom.h>
 #else
@@ -51,6 +51,8 @@ All subcode only
 */
 
 #   endif
+#  else
+#   undef HAVE_IOCTL_INTERFACE
 #  endif
 #  if defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
 #   if !defined CDIOCREADAUDIO
