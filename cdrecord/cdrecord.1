@@ -1,4 +1,4 @@
-.\" @(#)cdrecord.1	1.6 97/03/04 Copyright 1996 J. Schilling
+.\" @(#)cdrecord.1	1.7 97/05/21 Copyright 1996 J. Schilling
 .\" 
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -32,7 +32,7 @@
 .if n .ds o oe
 .if n .ds u ue
 .if n .ds s sz
-.TH CDRECORD 1 "Version 1.3" "J\*org Schilling" "Schily\'s USER COMMANDS"
+.TH CDRECORD 1 "Version 1.4" "J\*org Schilling" "Schily\'s USER COMMANDS"
 .SH NAME
 cdrecord \- record audio or data Compact Discs from a master
 .SH SYNOPSIS
@@ -95,10 +95,16 @@ Be verbose in respect of SCSI command transport. This helps to debug problems
 during the writing process, that occur in the CD-Recorder. 
 If you get incomprehensible error messages you should use this flag
 to get more detailed output.
+Using
+.B \-V
+slows down the process and may be the reason for a buffer underrun.
 .TP
 .B \-debug
 Print additional debug messages. This may help to find out problems
-with sector sizes and setor types.
+with sector sizes and sector types.
+Using
+.B \-debug
+slows down the process and may be the reason for a buffer underrun.
 .TP
 .B \-dummy
 The CD-Recorder will go through all steps of the recording process,
@@ -118,10 +124,18 @@ with a link to the next program area. The so generated media is not
 Use only for recording a multi session CD.
 If this option is present, the default track type is
 .BR "CD-ROM XA mode 2" .
+The 
+.I Sony 
+drives have no hardware support for 
+.BR "CD-ROM XA mode 2" .
+You have tp specify the 
+.B \-data 
+option in order to create multi session disks on these drives.
 .TP
 .B \-msinfo
 Retrieve multi session info in a form suitable for 
-.BR "mkisofs-1.10" .
+.B "mkisofs-1.10" 
+or later.
 .TP
 .B \-toc
 Retrieve and print out the table of content or PMA of a CD.
@@ -134,13 +148,39 @@ The disk will only be fixated (i.e. a TOC for a CD-Reader will be written).
 This may be used, if for some reason the disk has been written but not
 fixated.
 .TP
+.B \-eject
+Eject disk after doing the work.
+Some Devices (e.g. Philips) need to eject the medium before creating a new
+disk. Doing a \-dummy test and immediately creating a real disk would not
+work on these devices.
+.TP
 .B "speed=#
 Set the speed factor of the writing process to #.
 # is an integer, representing a multiple of the audio speed.
 This is about 151 KB/s for CD-ROM and about 175 KB/s for CD-Audio.
+If no 
+.I speed
+option is present, 
+.B cdrecord
+will try to get the speed value from the 
+.B CDR_SPEED
+environment.
+If you drive has problems with
+.I "speed=2 
+or 
+.IR "speed=4" , 
+you should try 
+.IR "speed=0" .
 .TP
 .BI dev= target
 Sets the SCSI target for the CD-Recorder, see notes above.
+If no 
+.I dev
+option is present, 
+.B cdrecord
+will try to get the device from the 
+.B CDR_DEVICE
+environment.
 
 .SH "TRACK OPTIONS
 .PP
@@ -160,7 +200,7 @@ data will be read in multiple of 2352 bytes during the recording process.
 .TP
 .B \-swab
 If this flag is present, audio data is swapped before writing to CD.
-This is needed on some types of CD-Writers e.g. Yamaha and probably Sony
+This is needed on some types of CD-Writers e.g. Yamaha and Sony
 because they are using the wrong byte order for audio data
 (they are ignoring the fact that the SCSI-protocol otherwise correctly
 uses network byte order). In a future release 
@@ -264,9 +304,15 @@ To create an image for a ISO 9660 filesystem with Rock Ridge extensions:
 .PP
     mkisofs \-R \-o cdimage.raw /home/joerg/master/tree
 .PP
-To check the resulting file before writing to CD:
+To check the resulting file before writing to CD on Solaris:
 .PP
     mount \-r \-F fbk \-o type=hsfs /dev/fbk0:cdimage.raw /mnt
+.PP
+On Linux:
+.PP
+    mount cdimage.raw \-r \-t iso9660 \-o loop /mnt
+.PP
+Go on with:
 .br
     ls \-lR /mnt
 .br
@@ -367,9 +413,12 @@ double speed on a SparcStation 20/502 with no problems, slower computer systems
 should work also. 
 The newer Philips/HP/Plasmon/Grundig
 drives as well as Yamaha CDR-100 and CDR-102 work also. The Plasmon RF-4100
-does not work. Although it uses the same drive mechanism as the Philips CDD-522,
-it has a different SCSI-processor and a different command set.
+work, but has not tested in multi session.
 A Philips CDD-521 that has not been upgraded will not work.
+The Sony CDU-924 has been tested, but does not support XA-mode2 in hardware.
+The sony therefore cannot create conforming multi session disks.
+The Ricoh RO-1420C works, but some people seem to have problems to 
+use them with speed=2, try speed=0 in this case.
 .PP
 You should run several tests in single and double speed with the
 .B \-dummy
@@ -392,7 +441,7 @@ needs to run as root to get access to the
 .B /dev/scg?
 device nodes and to be able to lock itself into memory.
 .PP
-If you don't want to allow users to become root on your systen,
+If you don't want to allow users to become root on your system,
 .B cdrecord
 may safely be installed suid root. This allows all users or a group of
 users with no root privileges to use 
@@ -444,6 +493,38 @@ The Philips CDD 521 CD-Recorder (even in the upgraded version)
 has several firmware bugs. Some of them will
 force you to power cycle the device or to reboot the machine.
 .PP
+When using 
+.B cdrecord
+with the broken 
+.B "Linux SCSI generic driver."
+You should note that 
+.B cdrecord
+uses a hack, that tries to emulate the functionality of the scg driver.
+Unfortunately, the sg driver on 
+.B Linux
+has several severe bugs:
+.TP
+\(bu
+It cannot see if SCSI command could not be sent at all.
+.TP
+\(bu
+It cannot get the SCSI status byte. 
+.B Cdrecord
+for that reason cannot report failing SCSI commands in some
+situations.
+.TP
+\(bu
+It cannot get real dma count of transfer. 
+.B Cdrecord
+cannot tell you if there is an dma residual count.
+.TP
+\(bu
+It cannot get number of bytes valid in auto sense data.
+.B Cdrecord
+cannot tell you if device transfers no sense data at all.
+.TP
+\(bu
+It fetches to few data in auto request sense (CCS/SCSI-2/SCSI-3 needs >= 18).
 
 .SH DIAGNOSTICS
 .PP

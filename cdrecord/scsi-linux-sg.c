@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.3 97/03/04 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.5 97/04/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.3 97/03/04 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.5 97/04/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -15,7 +15,7 @@ static	char __sccsid[] =
  *	-	cannot get SCSI status byte
  *	-	cannot get real dma count of tranfer
  *	-	cannot get number of bytes valid in auto sense data
- *	-	to few data in auto sense (CCD needs >= 18)
+ *	-	to few data in auto sense (CCS/SCSI-2/SCSI-3 needs >= 18)
  *
  *	Copyright (c) 1997 J. Schilling
  */
@@ -29,7 +29,7 @@ static	char __sccsid[] =
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -198,6 +198,15 @@ int scsi_fileno(busno, tgt, tlun)
 	int	tlun;
 {
 	return (busno < 0 || busno >= MAX_SCG) ? -1 : scgfiles[tgt][tlun];
+}
+
+EXPORT
+int scsireset()
+{
+	/*
+	 * Do we have a SCSI reset in the Linux sg driver?
+	 */
+	return (-1);
 }
 
 LOCAL void

@@ -1,4 +1,4 @@
-/* @(#)scsireg.h	1.12 96/12/31 Copyright 1987 J. Schilling */
+/* @(#)scsireg.h	1.13 97/04/13 Copyright 1987 J. Schilling */
 /*
  *	usefull definitions for dealing with CCS SCSI - devices
  *
@@ -14,7 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -148,6 +148,10 @@ struct	scsi_inquiry {
 #define	INQ_OMEM	0x07		/* Optical Memory device */
 #define	INQ_JUKE	0x08		/* Medium Changer device (jukebox) */
 #define	INQ_COMM	0x09		/* Communications device */
+#define	INQ_IT8_1	0x0A		/* IT8 */
+#define	INQ_IT8_2	0x0B		/* IT8 */
+#define	INQ_STARR	0x0C		/* Storage array device */
+#define	INQ_ENCL	0x0D		/* Enclosure services device */
 #define	INQ_NODEV	0x1F		/* Unknown or no device */
 #define	INQ_NOTPR	0x1F		/* Logical unit not present (SCSI-1) */
 

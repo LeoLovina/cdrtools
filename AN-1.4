@@ -1,7 +1,7 @@
 Newsgroups: comp.unix.solaris,comp.sys.sun.misc,comp.sys.sun.admin,alt.sys.sun,bln.comp.sun,comp.publish.cdrom.software,de.comp.periph.cdrom,de.alt.cdrom,alt.cd-rom
-Subject: cdrecord 1.3 has been released
+Subject: cdrecord 1.4 has been released
 
-Cdrecord 1.3 has been released.
+Cdrecord 1.4 has been released.
 
 Cdrecord allows you to create CD's on a CD-Recorder.
 Cdrecord runs on:
@@ -10,29 +10,25 @@ SunOS 4.1.3 or later:	sparc.
 Solaris 2.3 or later:	sparc and x86.
 Linux:			x86, sparc and alpha.
 
-NEW features of cdrecord-1.3:
+NEW features of cdrecord-1.4:
+
+	- Ful multi session support
 
 	- Mkisofs-1.11 included to allow Solaris users to read the
 	  old session from the CD-R device by using the scsi library.
+	  Needed for multi-session.
 
-	- Minor patch to cure hang with Philips CDD-2600 & HP-6020i
+	- Philips CDD-2600 & HP-6020i now fully supported
 
-NEW features of cdrecord-1.3b1 (outdated):
+	- Sony CDU-924 supported
 
-	- Self adjusting to the optimum buffer size for all systems
+	- Ricoh RO-1420S supported
 
-	- Linux support
+	- Plasmon RF-4100 supported
 
-	- Support for CD-ROM XA CDI .... (all types form1 only)
+	- New drive abstraction layer
 
-	- Multi session support
-
-	- Table of content printing for CD-R & CD drives
-
-	- isosize option to read the size of a ISO-9660 filesystem
-	  This allows direct copying of CD-R disks
-	  (omitting the problem with the two additional link blocks
-	  at the end of the disk)
+	- SCSI-3 conforming error messages
 
 Coming soon:
 	Sformat (see below)
@@ -92,33 +88,15 @@ It should run also on:
 	Philips CDD 2000
 	Philips CDD 2600
 	HP C4324/C4325	 (HP SureStore 4020i/6020i)
+	Plasmon	RF-41000
 	Plasmon CDR 4220 (not tested)
 	Grundig CDR-100  (not tested)
 	Mitsumi	CR-2401-TS (not tested)
-	Yamaha CDR-100
-	Yamaha CDR-102
+	Yamaha	CDR-100
+	Yamaha	CDR-102
+	Sony	CDU-924
 
-Multi-session has only been tested with the Philips CDD-2000
-
-Cdrecord-1.1 definitely does not run on a Plasmon RF-41000
-which has the same drive mechanism as the Philips CDD-522 but a different
-SCSI interface board.
-I am interested to hear if cdrecord-1.3 runs on the Plasmon RF-41000.
-NOTE: you have to switch off the warning and exit in the source 
-if you want test this.
-
-I currently have SCSI command reference manuals for:
-	
-	Philips CDD-522
-	Philips CDD-2000
-	Philips CDD-2600
-	HP C4324/C4325	 (HP SureStore 4020i)
-	Plasmon	RF-41000			*1
-	Sony	CDU-924				*2
-	Yamaha	CDR-100/102
-
-*1	Will get support if there is someone willing to test form me
-*2	Will get support within the next weeks (if I have time...).
+Multi-session has not been tested with the Plasmon RF-4100
 
 All companies that support me with SCSI command reference manuals and drives
 will get (continued) support in the following releases.
@@ -146,10 +124,8 @@ a special driver for it.
 
 If you need mkisofs, it is located on:
 
-ftp://tsx-11.mit.edu/BETA/cdrom/mkisofs-1.05.tar.gz
-ftp://ftp.fokus.gmd.de/pub/Linux/misc/cd/mkisofs-1.05.tar.gz
+ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/mkisofs-1.11.tar.gz
 
-or on:
-ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/mkisofs-1.05.tar.gz
+but it is also contained in cdrecord-1.4
 
 Joerg

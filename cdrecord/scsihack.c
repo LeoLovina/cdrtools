@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.1 97/03/04 Copyright 1997 J. Schilling */
+/* @(#)scsihack.c	1.2 97/04/06 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.1 97/03/04 Copyright 1997 J. Schilling";
+	"@(#)scsihack.c	1.2 97/04/06 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -27,7 +27,7 @@ static	char _sccsid[] =
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -85,6 +85,12 @@ int scsi_fileno(busno, tgt, tlun)
 	return (-1);
 }
 
+EXPORT
+int scsireset()
+{
+	return (-1);
+}
+
 EXPORT void *
 scsi_getbuf(amt)
 	long	amt;
@@ -93,7 +99,9 @@ scsi_getbuf(amt)
 }
 
 LOCAL int
-scsi_send(int f, struct scg_cmd *sp)
+scsi_send(f, sp)
+	int		f;
+	struct scg_cmd	*sp;
 {
 	return (-1);
 }

@@ -55,14 +55,9 @@ extern char * strdup(const char *);
  * Autoconf should be able to figure this one out for us and let us know
  * whether the system has memmove or not.
  */
-/*
- * Dont use bcopy() as default!!!!
- * SVR4 does not have bcopy() myt memmove seems to be on all new systems.
- * JS
- */
-/*# ifndef HAVE_MEMMOVE*/
-/*#  define memmove(d, s, n) bcopy ((s), (d), (n))*/
-/*# endif*/
+# ifndef HAVE_MEMMOVE
+#  define memmove(d, s, n) bcopy ((s), (d), (n))
+# endif
 
 #include "mkisofs.h"
 #include "iso9660.h"

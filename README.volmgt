@@ -1,0 +1,7 @@
+If you are on Solaris, you must disable volume management
+before creating a CD.
+
+This is needed because newer drives identify themselves correctly
+as CD-ROM drives. Unfortunately, the volume management daemon from
+Sun does not grok, that there may be a recordable medium in the drive.
+

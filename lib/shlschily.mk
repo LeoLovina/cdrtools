@@ -11,14 +11,14 @@ SUBARCHDIR=	/pic
 VPATH=		.:stdio:$(ARCHDIR)
 INSDIR=		lib
 TARGETLIB=	schily
-CPPOPTS +=	-DBSD4_2
+CPPOPTS +=	-DBSD4_2 -DNO_SCANSTACK
 include		Targets
 LIBS=		
 
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.shl
 ###########################################################################
-# Gmake has bug with the VPATH= option. Some of the macros are
+# Gmake has a bug with the VPATH= option. Some of the macros are
 # not correctly expanded. I had to remove all occurrences of
 # $@ $* and $^ on some places for this reason.
 ###########################################################################

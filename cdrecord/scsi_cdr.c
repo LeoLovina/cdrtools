@@ -1,7 +1,7 @@
-/* @(#)scsi_cdr.c	1.8 97/03/02 Copyright 1995 J. Schilling */
+/* @(#)scsi_cdr.c	1.10 97/05/20 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.8 97/03/02 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.10 97/05/20 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -18,7 +18,7 @@ static	char sccsid[] =
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -62,6 +62,49 @@ extern	int	verbose;
 EXPORT	int	open_scsi	__PR((char *scsidev, int timeout,
 								int be_verbose));
 EXPORT	void	scsi_settimeout	__PR((int timeout));
+
+EXPORT	BOOL	unit_ready	__PR((void));
+EXPORT	int	test_unit_ready	__PR((void));
+EXPORT	int	rezero_unit	__PR((void));
+EXPORT	int	request_sense	__PR((void));
+EXPORT	int	inquiry		__PR((caddr_t, int));
+EXPORT	int	load_unload_philips __PR((int));
+EXPORT	int	scsi_prevent_removal __PR((int));
+EXPORT	int	scsi_start_stop_unit __PR((int, int));
+EXPORT	int	qic02		__PR((int));
+EXPORT	int	write_xg0	__PR((caddr_t, long, long, int));
+EXPORT	int	write_track	__PR((long, int));
+EXPORT	int	scsi_flush_cache __PR((void));
+EXPORT	int	read_toc	__PR((caddr_t, int, int, int, int));
+EXPORT	int	read_header	__PR((caddr_t, long, int, int));
+EXPORT	int	read_track_info	__PR((caddr_t, int, int));
+EXPORT	int	close_track_philips __PR((int track));
+EXPORT	int	fixation	__PR((int, int, int));
+EXPORT	int	recover		__PR((int));
+EXPORT	long	first_writable_addr __PR((int, int, int, int));
+EXPORT	int	reserve_track	__PR((unsigned long));
+EXPORT	int	mode_select	__PR((unsigned char *, int, int, int));
+EXPORT	int	mode_sense	__PR((u_char *dp, int cnt, int page, int pcf));
+EXPORT	int	speed_select_yamaha	__PR((int speed, int dummy));
+EXPORT	int	speed_select_philips	__PR((int speed, int dummy));
+EXPORT	int	write_track_info __PR((int));
+EXPORT	int	read_tochdr	__PR((int *, int *));
+EXPORT	int	read_trackinfo	__PR((int, long *, struct msf *, int *, int *, int *));
+EXPORT	long	read_session_offset __PR((void));
+EXPORT	int	select_secsize	__PR((int));
+EXPORT	BOOL	is_cddrive	__PR((void));
+EXPORT	BOOL	is_cdrecorder	__PR((void));
+EXPORT	int	read_scsi	__PR((caddr_t, long, int));
+EXPORT	int	read_g0		__PR((caddr_t, long, int));
+EXPORT	int	read_g1		__PR((caddr_t, long, int));
+EXPORT	BOOL	getdev		__PR((BOOL));
+EXPORT	void	printdev	__PR((void));
+EXPORT	BOOL	do_inquiry	__PR((BOOL));
+EXPORT	BOOL	recovery_needed	__PR((void));
+EXPORT	int	scsi_load	__PR((void));
+EXPORT	int	scsi_unload	__PR((void));
+EXPORT	int	scsi_cdr_write	__PR((char *bufp, long sectaddr, long size, int blocks));
+
 
 EXPORT int
 open_scsi(scsidev, timeout, be_verbose)
@@ -208,7 +251,7 @@ inquiry(bp, cnt)
 }
 
 EXPORT int
-scsi_load_unload(load)
+load_unload_philips(load)
 	int	load;
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -246,8 +289,9 @@ scsi_prevent_removal(prevent)
 
 
 EXPORT int
-scsi_start_stop_unit(flg)
+scsi_start_stop_unit(flg, loej)
 	int	flg;
+	int	loej;
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
 	scmd.flags = SCG_DISRE_ENA;
@@ -256,7 +300,7 @@ scsi_start_stop_unit(flg)
 	scmd.target = target;
 	scmd.cdb.g0_cdb.cmd = 0x1B;	/* Start Stop Unit */
 	scmd.cdb.g0_cdb.lun = lun;
-	scmd.cdb.g0_cdb.count = flg & 0x1;
+	scmd.cdb.g0_cdb.count = (flg ? 1:0) | (loej ? 2:0);
 	
 	return (scsicmd("start/stop unit"));
 }
@@ -283,7 +327,7 @@ EXPORT int
 write_xg0(bp, addr, size, cnt)
 	caddr_t	bp;		/* address of buffer */
 	long	addr;		/* disk address (sector) to put */
-	int	size;		/* number of bytes to transfer */
+	long	size;		/* number of bytes to transfer */
 	int	cnt;		/* sectorcount */
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -422,9 +466,20 @@ read_track_info(bp, track, cnt)
 	return (0);
 }
 
+/*
+ * Needed for JVC too.
+ */
 EXPORT int
-fixation(onp, type)
+close_track_philips(track)
+	int	track;
+{
+	return (scsi_flush_cache());
+}
+
+EXPORT int
+fixation(onp, dummy, type)
 	int	onp;	/* open next program area */
+	int	dummy;
 	int	type;	/* TOC type 0: CD-DA, 1: CD-ROM, 2: CD-ROM/XA1, 3: CD-ROM/XA2, 4: CDI */
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
@@ -443,7 +498,8 @@ fixation(onp, type)
 }
 
 EXPORT int
-recover()
+recover(track)
+	int	track;
 {
 	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
 	scmd.flags = SCG_DISRE_ENA;
@@ -538,6 +594,36 @@ mode_select(dp, cnt, smp, pf)
 	return (scsicmd("mode select"));
 }
 
+EXPORT int
+mode_sense(dp, cnt, page, pcf)
+	u_char	*dp;
+	int	cnt;
+	int	page;
+	int	pcf;
+{
+	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
+	scmd.addr = (caddr_t)dp;
+	scmd.size = 0xFF;
+	scmd.size = cnt;
+	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd.cdb_len = SC_G0_CDBLEN;
+	scmd.sense_len = CCS_SENSE_LEN;
+	scmd.target = target;
+	scmd.cdb.g0_cdb.cmd = SC_MODE_SENSE;
+	scmd.cdb.g0_cdb.lun = lun;
+#ifdef	nonono
+	scmd.cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
+#endif
+	scmd.cdb.g0_cdb.mid_addr = (page&0x3F) | ((pcf<<6)&0xC0);
+	scmd.cdb.g0_cdb.count = page ? 0xFF : 24;
+	scmd.cdb.g0_cdb.count = cnt;
+
+	if (scsicmd("mode sense") < 0)
+		return (-1);
+	if (verbose) scsiprbytes("Mode Sense Data", dp, cnt - scmd.resid);
+	return (0);
+}
+
 struct cdd_52x_mode_page_21 {	/* write track information */
 	u_char	MP_P_CODE;		/* parsave & pagecode */
 	u_char	p_len;			/* 0x0E = 14 Bytes */
@@ -588,7 +674,7 @@ struct cdd_52x_mode_data {
 };
 
 EXPORT int
-speed_select(speed, dummy)
+speed_select_yamaha(speed, dummy)
 	int	speed;
 	int	dummy;
 {
@@ -597,26 +683,37 @@ speed_select(speed, dummy)
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
-	if (is_yamaha()) {
-		count  = sizeof(struct scsi_mode_header) +
-			sizeof(struct yamaha_mode_page_31);
+	count  = sizeof(struct scsi_mode_header) +
+		sizeof(struct yamaha_mode_page_31);
 
-		speed >>= 1;
-		md.pagex.page31.p_code = 0x31;
-		md.pagex.page31.p_len =  0x02;
-		md.pagex.page31.speed = speed;
-		md.pagex.page31.dummy = dummy?1:0;
-	} else {
-		count  = sizeof(struct scsi_mode_header) +
-			sizeof(struct cdd_52x_mode_page_23);
-
-		md.pagex.page23.p_code = 0x23;
-		md.pagex.page23.p_len =  0x06;
-		md.pagex.page23.speed = speed;
-		md.pagex.page23.dummy = dummy?1:0;
-	}
+	speed >>= 1;
+	md.pagex.page31.p_code = 0x31;
+	md.pagex.page31.p_len =  0x02;
+	md.pagex.page31.speed = speed;
+	md.pagex.page31.dummy = dummy?1:0;
 	
-	return (mode_select((u_char *)&md, count, 0, 1));
+	return (mode_select((u_char *)&md, count, 0, inq.ansi_version >= 2));
+}
+
+EXPORT int
+speed_select_philips(speed, dummy)
+	int	speed;
+	int	dummy;
+{
+	struct cdd_52x_mode_data md;
+	int	count;
+
+	fillbytes((caddr_t)&md, sizeof(md), '\0');
+
+	count  = sizeof(struct scsi_mode_header) +
+		sizeof(struct cdd_52x_mode_page_23);
+
+	md.pagex.page23.p_code = 0x23;
+	md.pagex.page23.p_len =  0x06;
+	md.pagex.page23.speed = speed;
+	md.pagex.page23.dummy = dummy?1:0;
+	
+	return (mode_select((u_char *)&md, count, 0, inq.ansi_version >= 2));
 }
 
 EXPORT int
@@ -634,7 +731,7 @@ write_track_info(sectype)
 	md.pagex.page21.sectype = sectype;
 	md.pagex.page21.track = 0;	/* 0 : create new track */
 	
-	return (mode_select((u_char *)&md, count, 0, 1));
+	return (mode_select((u_char *)&md, count, 0, inq.ansi_version >= 2));
 }
 
 struct tocheader {
@@ -809,11 +906,13 @@ select_secsize(secsize)
 	int	count = sizeof(struct scsi_mode_header) +
 			sizeof(struct scsi_mode_blockdesc);
 
+	(void)test_unit_ready();	/* clear any error situation */
+
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 	md.header.blockdesc_len = 8;
 	i_to_3_byte(md.blockdesc.lblen, secsize);
 	
-	return (mode_select((u_char *)&md, count, 0, 1));
+	return (mode_select((u_char *)&md, count, 0, inq.ansi_version >= 2));
 }
 
 int	dev = DEV_CDD_521;
@@ -828,21 +927,14 @@ EXPORT BOOL
 is_cdrecorder()
 {
 	return (dev == DEV_CDD_521 ||
-		dev == DEV_YAMAHA_CDR_100);
+		dev == DEV_CDD_522 ||
+		dev == DEV_YAMAHA_CDR_100 ||
+		dev == DEV_YAMAHA_CDR_400 ||
+		dev == DEV_PLASMON_RF_4100 ||
+		dev == DEV_RICOH_RO_1420C ||
+		dev == DEV_TEAC_CD_R50S ||
+		dev == DEV_SONY_CDU_924);
 }
-
-EXPORT BOOL
-is_yamaha()
-{
-	return (dev == DEV_YAMAHA_CDR_100);
-}
-
-EXPORT BOOL
-is_unsupported()
-{
-	return (dev == DEV_PLASMON_RF_4100);
-}
-
 
 #define	DEBUG
 #ifdef	DEBUG
@@ -1048,8 +1140,24 @@ getdev(print)
 				strindex("MITSUMI", inq.info) ||
 				strindex("HP", inq.info))
 			dev = DEV_CDD_521;
-		if (strindex("YAMAHA", inq.info))
-			dev = DEV_YAMAHA_CDR_100;
+		if (strindex("YAMAHA", inq.info)) {
+			if (strindex("CDR10", inq.ident))
+				dev = DEV_YAMAHA_CDR_100;
+			if (strindex("CDR40", inq.ident))
+				dev = DEV_YAMAHA_CDR_400;
+		}
+		if (strindex("SONY", inq.info)) {
+			if (strindex("CD-R   CDU92", inq.ident))
+				dev = DEV_SONY_CDU_924;
+		}
+		if (strindex("RICOH", inq.info)) {
+			if (strindex("RO-1420C", inq.ident))
+				dev = DEV_RICOH_RO_1420C;
+		}
+		if (strindex("TEAC", inq.info)) {
+			if (strindex("CD-R50S", inq.ident))
+				dev = DEV_TEAC_CD_R50S;
+		}
 
 	case INQ_PROCD:
 		if (strindex("BERTHOLD", inq.info)) {
@@ -1133,7 +1241,11 @@ printdev()
 
 	case DEV_CDD_521:	printf("Philips CDD521");	break;
 	case DEV_YAMAHA_CDR_100:printf("Yamaha CDR-100");	break;
+	case DEV_YAMAHA_CDR_400:printf("Yamaha CDR-400");	break;
 	case DEV_PLASMON_RF_4100:printf("Plasmon RF-4100");	break;
+	case DEV_SONY_CDU_924:	printf("Sony CDU924S");		break;
+	case DEV_RICOH_RO_1420C:printf("Ricoh RO-1420C");	break;
+	case DEV_TEAC_CD_R50S:	printf("Teac CD-R50S");		break;
 
 	default:		printf("Missing Entry");	break;
 
@@ -1171,5 +1283,27 @@ recovery_needed()
 
 	if (scmd.sense.code < 0x70)		/* non extended Sense */
 		return (FALSE);
-	return (((struct scsi_ext_sense *)&scmd.sense)->error_code == 0xD0);
+	return (((struct scsi_ext_sense *)&scmd.sense)->sense_code == 0xD0);
+}
+
+EXPORT int
+scsi_load()
+{
+	return (scsi_start_stop_unit(1, 0));
+}
+
+EXPORT int
+scsi_unload()
+{
+	return (scsi_start_stop_unit(0, 1));
+}
+
+EXPORT int
+scsi_cdr_write(bufp, sectaddr, size, blocks)
+	char	*bufp;
+	long	sectaddr;
+	long	size;
+	int	blocks;
+{
+	return (write_xg0(bufp, 0, size, blocks));
 }

@@ -1,4 +1,4 @@
-/* @(#)scgio.h	2.6 97/03/02 Copyright 1986 J. Schilling */
+/* @(#)scgio.h	2.7 97/04/06 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI general driver 'scg'
  *
@@ -14,7 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -157,8 +157,16 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	u_char	optional_9;	/* CCS search and copy only */
 	u_char	optional_10;	/* CCS search and copy only */
 	u_char	optional_11;	/* CCS search and copy only */
-	u_char 	error_code;	/* error class & code */
-	u_char	:8;		/* reserved */
+	u_char 	sense_code;	/* sense code */
+	u_char	qual_code;	/* sense code qualifier */
+	u_char	fru_code;	/* Field replacable unit code */
+	u_char	bptr:3;		/* bit pointer for failure (if bpv) */
+	u_char	bpv:1;		/* bit pointer is valid */
+	u_char	:2;
+	u_char	cd:1;		/* pointers refer to command not data */
+	u_char	sksv:1;		/* sense key specific valid */
+	u_char	field_ptr[2];	/* field pointer for failure */
+	u_char	add_info[2];	/* round up to 20 bytes */
 };
 
 #else	/* Motorola byteorder */
@@ -186,10 +194,19 @@ struct	scsi_ext_sense {	/* scsi extended sense for error class 7 */
 	u_char	optional_9;	/* CCS search and copy only */
 	u_char	optional_10;	/* CCS search and copy only */
 	u_char	optional_11;	/* CCS search and copy only */
-	u_char 	error_code;	/* error class & code */
-	u_char	:8;		/* reserved */
+	u_char 	sense_code;	/* sense code */
+	u_char	qual_code;	/* sense code qualifier */
+	u_char	fru_code;	/* Field replacable unit code */
+	u_char	sksv:1;		/* sense key specific valid */
+	u_char	cd:1;		/* pointers refer to command not data */
+	u_char	:2;
+	u_char	bpv:1;		/* bit pointer is valid */
+	u_char	bptr:3;		/* bit pointer for failure (if bpv) */
+	u_char	field_ptr[2];	/* field pointer for failure */
+	u_char	add_info[2];	/* round up to 20 bytes */
 };
 #endif
+
 /*
  * SCSI Operation codes. 
  */

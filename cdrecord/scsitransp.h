@@ -1,4 +1,4 @@
-/* @(#)scsitransp.h	1.9 97/03/02 Copyright 1995 J. Schilling */
+/* @(#)scsitransp.h	1.10 97/04/13 Copyright 1995 J. Schilling */
 /*
  *	Definitions for commands that use functions from scsitransp.c
  *
@@ -14,7 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -26,9 +26,10 @@
 extern	int	scsi_open	__PR((void));
 extern	BOOL	scsi_havebus	__PR((int));
 extern	int	scsi_fileno	__PR((int, int, int));
+extern	int	scsireset	__PR((void));
 extern	void	*scsi_getbuf	__PR((long));
 extern	long	scsi_bufsize	__PR((long));
-extern	int	scsireset	__PR((void));
+extern	void	scsi_setnonstderrs __PR((const char **));
 extern	int	scsicmd		__PR((char *));
 extern	int	scsigetresid	__PR((void));
 extern	void	scsiprinterr	__PR((char *));
@@ -44,8 +45,10 @@ extern	void	scsiprintdev	__PR((struct scsi_inquiry *));
 /*
  * From scsierrmsg.c:
  */
-extern	char	*scsisensemsg	__PR((int, int, int));
+extern	const char	*scsisensemsg	__PR((int, int, int,
+						const char **, char *));
 #ifdef	_SCGIO_H
-extern	void	scsierrmsg	__PR((struct scsi_sense *,
-						struct scsi_status *, int));
+extern	void		scsierrmsg	__PR((struct scsi_sense *,
+						struct scsi_status *,
+						int, const char **));
 #endif

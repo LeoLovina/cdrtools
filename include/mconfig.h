@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.12 97/05/02 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.13 97/05/21 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -19,7 +19,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -137,6 +137,8 @@ extern "C" {
  *			_flsbuf(unsigned char *, FILE * f) ... flush buffer
  *
  * define HAVE_STRERROR	may use strerror() instead of sys_errlist[] and sys_nerr
+ *
+ * define HAVE_MEMMOVE	should use memmove() instead of bcopy()
  *
  * define HAVE_MMAP	may map memory (sys/types.h + sys/mman.h)
  * define HAVE_SMMAP	may map anonymous memory to get shared mem
@@ -325,6 +327,7 @@ extern "C" {
 #	define	MAJOR_IN_SYSMACROS
 /*#	define	HAVE_USG_STDIO*/
 #	define	HAVE_STRERROR
+/*#	define	HAVE_MEMMOVE*/
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -374,6 +377,7 @@ extern "C" {
 #	define	MAJOR_IN_MKDEV
 #	define	HAVE_USG_STDIO
 #	define	HAVE_STRERROR
+#	define	HAVE_MEMMOVE
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -485,6 +489,7 @@ extern "C" {
 #	define	HAVE_SYS_MTIO_H
 #	define	MAJOR_IN_SYSMACROS
 #	define	HAVE_STRERROR
+#	define	HAVE_MEMMOVE
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -527,6 +532,7 @@ extern "C" {
 #	define	mt_dsreg	mt_status1
 #	define	mt_erreg	mt_status2
 #	define	HAVE_STRERROR
+#	define	HAVE_MEMMOVE
 #	define	HAVE_USGSEM
 #	if defined(__i386_) || defined(i386)
 #		define	HAVE_XCHG
@@ -624,6 +630,7 @@ extern "C" {
 #	define	HAVE_MTGET_BLKNO
 #	define	MAJOR_IN_SYSMACROS
 #	define	HAVE_STRERROR
+#	define	HAVE_MEMMOVE
 #	define	HAVE_MMAP
 /*#	define	HAVE_SMMAP*/
 #	define	HAVE_USGSHM
@@ -700,6 +707,7 @@ extern "C" {
 #	define	HAVE_MTGET_BLKNO
 /*#	define	HAVE_USG_STDIO*/
 #	define	HAVE_STRERROR
+#	define	HAVE_MEMMOVE
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -765,6 +773,7 @@ extern "C" {
 #	define	MAJOR_IN_MKDEV
 #	define	HAVE_USG_STDIO
 #	define	HAVE_STRERROR
+#	define	HAVE_MEMMOVE
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM
@@ -834,6 +843,7 @@ extern "C" {
 #	define	MAJOR_IN_SYSMACROS
 #	define	HAVE_USG_STDIO
 #	define	HAVE_STRERROR
+#	define	HAVE_MEMMOVE
 #	define	HAVE_MMAP
 #	define	HAVE_SMMAP
 #	define	HAVE_USGSHM

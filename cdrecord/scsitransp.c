@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.12 97/03/02 Copyright 1988,1995 J. Schilling */
+/* @(#)scsitransp.c	1.14 97/04/23 Copyright 1988,1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.12 97/03/02 Copyright 1988,1995 J. Schilling";
+	"@(#)scsitransp.c	1.14 97/04/23 Copyright 1988,1995 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -19,7 +19,7 @@ static	char sccsid[] =
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -81,9 +81,10 @@ int	noparity;
 
 struct	scg_cmd scmd;
 
-LOCAL	long	scg_maxdma;
-LOCAL	BOOL	scsi_running = FALSE;
-LOCAL	char	*scsi_command;
+LOCAL		long	scg_maxdma;
+LOCAL		BOOL	scsi_running = FALSE;
+LOCAL		char	*scsi_command;
+LOCAL	const	char	**scsi_nonstderrs;
 LOCAL	struct timeval	cmdstart;
 LOCAL	struct timeval	cmdstop;
 
@@ -91,11 +92,12 @@ EXPORT	int	scsi_open	__PR((void));
 LOCAL	long	scsi_maxdma	__PR((void));
 EXPORT	BOOL	scsi_havebus	__PR((int));
 EXPORT	int	scsi_fileno	__PR((int, int, int));
+EXPORT	int	scsireset	__PR((void));
 EXPORT	void	*scsi_getbuf	__PR((long));
 EXPORT	long	scsi_bufsize	__PR((long));
+EXPORT	void	scsi_setnonstderrs __PR((const char **));
 LOCAL	BOOL	scsi_yes	__PR((char *));
 LOCAL	void	scsi_sighandler	__PR((int));
-EXPORT	int	scsireset	__PR((void));
 EXPORT	int	scsicmd		__PR((char *));
 EXPORT	int	scsigetresid	__PR((void));
 LOCAL	void	scsitimes	__PR((void));
@@ -156,6 +158,9 @@ scsi_maxdma()
 	long	maxdma = 0L;
 
 #ifdef	sun
+#if	defined(__i386_) || defined(i386)
+		return (MAX_DMA_SUN386);
+#else
 	extern	long	gethostid __PR((void));
 	int	cpu_type = gethostid() >> 24;
 
@@ -171,13 +176,10 @@ scsi_maxdma()
 		maxdma = MAX_DMA_SUN4M;
 		break;
 
-	case ARCH_SUN386:
-		maxdma = MAX_DMA_SUN386;
-		break;
-
 	default:
 		maxdma = MAX_DMA_SUN3;
 	}
+#endif	/* sun */
 #else
 	maxdma = MAX_DMA_OTHER;
 #endif
@@ -198,6 +200,14 @@ int scsi_fileno(busno, tgt, tlun)
 	int	tlun;
 {
 	return (busno < 0 || busno >= MAX_SCG) ? -1 : scgfiles[busno];
+}
+
+EXPORT
+int scsireset()
+{
+	int	f = scsi_fileno(scsibus, target, lun);
+
+	return (ioctl(f, SCGIORESET, 0));
 }
 
 EXPORT void *
@@ -224,6 +234,13 @@ scsi_bufsize(amt)
 	if (amt <= 0 || amt > scg_maxdma)
 		return (scg_maxdma);
 	return (amt);
+}
+
+EXPORT void
+scsi_setnonstderrs(vec)
+	const char **vec;
+{
+	scsi_nonstderrs = vec;
 }
 
 LOCAL
@@ -259,14 +276,6 @@ scsi_sighandler(sig)
 }
 
 EXPORT
-int scsireset()
-{
-	int	f = scsi_fileno(scsibus, target, lun);
-
-	return (ioctl(f, SCGIORESET, 0));
-}
-
-EXPORT
 int scsicmd(name)
 	char	*name;
 {
@@ -291,7 +300,7 @@ int scsicmd(name)
 
 	if (scsi_running)
 		raisecond("SCSI ALREADY RUNNING !!", 0L);
-	gettimeofday(&cmdstart, (struct timeval *)0);
+	gettimeofday(&cmdstart, (struct timezone *)0);
 	scsi_command = name;
 	scsi_running = TRUE;
 	ret = scsi_send(f, &scmd);
@@ -311,7 +320,7 @@ int scsigetresid()
 LOCAL
 void scsitimes()
 {
-	gettimeofday(&cmdstop, (struct timeval *)0);
+	gettimeofday(&cmdstop, (struct timezone *)0);
 	cmdstop.tv_sec -= cmdstart.tv_sec;
 	cmdstop.tv_usec -= cmdstart.tv_usec;
 	while (cmdstop.tv_usec < 0) {
@@ -381,7 +390,7 @@ void scsiprinterr(cmd)
 
 	if (cp->scb.chk) {
 		scsiprsense((u_char *)&cp->sense, cp->sense_count);
-		scsierrmsg(&cp->sense, &cp->scb, -1); 
+		scsierrmsg(&cp->sense, &cp->scb, -1, scsi_nonstderrs);
 	}
 }
 
@@ -455,7 +464,7 @@ scsi_sense_code()
 	int	code = -1;
 
 	if (cp->sense.code >= 0x70)
-		code = ((struct scsi_ext_sense*)&(cp->sense))->error_code;
+		code = ((struct scsi_ext_sense*)&(cp->sense))->sense_code;
 	else
 		code = cp->sense.code;
 	return(code);
@@ -506,6 +515,15 @@ void scsiprintdev(ip)
 		printf("Juke Box");		break;
 	case INQ_COMM:
 		printf("Communication");	break;
+	case INQ_IT8_1:
+		printf("IT8 1");		break;
+	case INQ_IT8_2:
+		printf("IT8 2");		break;
+	case INQ_STARR:
+		printf("Storage array");	break;
+	case INQ_ENCL:
+		printf("Enclosure services");	break;
+
 	case INQ_NODEV:
 		if (ip->data_format >= 2) {
 			printf("unknown/no device");

@@ -1,7 +1,7 @@
-/* @(#)scsi.c	1.1 97/05/16 Copyright 1997 J. Schilling */
+/* @(#)scsi.c	1.2 97/05/21 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi.c	1.1 97/05/16 Copyright 1997 J. Schilling";
+	"@(#)scsi.c	1.2 97/05/21 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1997 J. Schilling
@@ -16,7 +16,7 @@ static	char sccsid[] =
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -29,6 +29,7 @@ static	char sccsid[] =
 #include <unistd.h>
 
 #include "mkisofs.h"
+#include "scsireg.h"
 #include "cdrecord.h"
 
 int
