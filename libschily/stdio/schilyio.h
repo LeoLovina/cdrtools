@@ -1,6 +1,6 @@
-/* @(#)io.h	2.18 03/03/09 Copyright 1986, 1995 J. Schilling */
+/* @(#)schilyio.h	2.22 04/09/04 Copyright 1986, 1995-2003 J. Schilling */
 /*
- *	Copyright (c) 1986, 1995 J. Schilling
+ *	Copyright (c) 1986, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -18,8 +18,8 @@
  * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef	_STDIO_IO_H
-#define	_STDIO_IO_H
+#ifndef	_STDIO_SCHILYIO_H
+#define	_STDIO_SCHILYIO_H
 
 #include <mconfig.h>
 #include <stdio.h>
@@ -136,8 +136,8 @@ extern	int	_fl_max;	/* max fd currently in _io_myfl */
 #define	my_flag(p)	_io_get_my_flag(p)
 #endif
 
-#define	set_my_flag(p,v) _io_set_my_flag(p, v)
-#define	add_my_flag(p,v) _io_add_my_flag(p, v)
+#define	set_my_flag(p, v) _io_set_my_flag(p, v)
+#define	add_my_flag(p, v) _io_add_my_flag(p, v)
 
 extern	int	_io_get_my_flag __PR((FILE *));
 extern	void	_io_set_my_flag __PR((FILE *, int));
@@ -146,8 +146,8 @@ extern	void	_io_add_my_flag __PR((FILE *, int));
 #else	/* DO_MYFLAG */
 
 #define	my_flag(p)		_IONORAISE	/* Always noraise */
-#define	set_my_flag(p,v)			/* Ignore */
-#define	add_my_flag(p,v)			/* Ignore */
+#define	set_my_flag(p, v)			/* Ignore */
+#define	add_my_flag(p, v)			/* Ignore */
 
 #endif	/* DO_MYFLAG */
 
@@ -180,7 +180,7 @@ extern	int	_filbuf			__PR((FILE *));
 #	endif
 #endif
 /*
- * Do not check this because flsbuf()'s 1st parameter may be 
+ * Do not check this because flsbuf()'s 1st parameter may be
  * int			SunOS
  * unsigned int		Apollo
  * unsigned char	HP-UX-11
@@ -200,8 +200,8 @@ extern	int	_filbuf			__PR((FILE *));
  *	No stream checking
  */
 #define	down(f)
-#define	down1(f,fl1)
-#define	down2(f,fl1,fl2)
+#define	down1(f, fl1)
+#define	down2(f, fl1, fl2)
 #else
 /*
  *	Do stream checking (works only on USG stdio)
@@ -213,20 +213,20 @@ extern	int	_filbuf			__PR((FILE *));
  *	and if iop->_flag refers to a stream with appropriate modes.
  *	If _iob[] gets expanded by malloc() we cannot check upper bound.
  */
-#define down(f)		((f) == 0 || (f)->_flag==0 ? \
-				(raisecond(_badfile, 0L),(FILE *)0) : (f))
+#define	down(f)		((f) == 0 || (f)->_flag == 0 ? \
+				(raisecond(_badfile, 0L), (FILE *)0) : (f))
 
-#define down1(f,fl1)	((f) == 0 || (f)->_flag==0 ? \
-					(raisecond(_badfile, 0L),(FILE *)0) : \
+#define	down1(f, fl1)	((f) == 0 || (f)->_flag == 0 ? \
+					(raisecond(_badfile, 0L), (FILE *)0) : \
 				(((f)->_flag & fl1) != fl1 ? \
-					(raisecond(_badop, 0L),FILE *)0) : \
+					(raisecond(_badop, 0L), (FILE *)0) : \
 					(f)))
 
-#define down2(f,fl1,fl2)((f) == 0 || (f)->_flag==0 ? \
-				(raisecond(_badfile, 0L),(FILE *)0) : \
-			(((f)->_flag & fl1) != fl1 && \
-			 ((f)->_flag & fl2) != fl2 ? \
-				(raisecond(_badop, 0L),(FILE *)0) : \
+#define	down2(f, fl1, fl2)	((f) == 0 || (f)->_flag == 0 ? \
+				(raisecond(_badfile, 0L), (FILE *)0) : \
+				    (((f)->_flag & fl1) != fl1 && \
+				    ((f)->_flag & fl2)  != fl2 ? \
+				(raisecond(_badop, 0L), (FILE *)0) : \
 				(f)))
 #endif	/* DO_DOWN */
 
@@ -234,4 +234,4 @@ extern	char	_badfile[];
 extern	char	_badmode[];
 extern	char	_badop[];
 
-#endif	/* _STDIO_IO_H */
+#endif	/* _STDIO_SCHILYIO_H */

@@ -1,7 +1,7 @@
-/* @(#)crc16.c	1.5 02/03/04 Copyright 1998-2002 J. Schilling */
+/* @(#)crc16.c	1.6 04/03/02 Copyright 1998-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)crc16.c	1.5 02/03/04 Copyright 1998-2002 J. Schilling";
+	"@(#)crc16.c	1.6 04/03/02 Copyright 1998-2004 J. Schilling";
 #endif
 /*
  *	Q-subchannel CRC subroutines
@@ -10,7 +10,7 @@ static	char sccsid[] =
  *	If computed over 12 bytes, the result must be zero.
  *	On the disk the CRC bits are inverted.
  *
- *	Copyright (c) 1998-2002 J. Schilling
+ *	Copyright (c) 1998-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -40,11 +40,11 @@ EXPORT	UInt16_t	fillcrc		__PR((Uchar *buf, Uint bsize));
 EXPORT	UInt16_t	flip_crc_error_corr	__PR((Uchar *b, Uint bsize, Uint p_crc));
 
 
-    /* number of bits in CRC: don't change it. */
-#define BPW 16
+	/* number of bits in CRC: don't change it. */
+#define	BPW	16
 
-    /* this the number of bits per char: don't change it. */
-#define BPB 8
+	/* this the number of bits per char: don't change it. */
+#define	BPB	8
 
 LOCAL UInt16_t crctab[1<<BPB] = {
     0x0000,  0x1021,  0x2042,  0x3063,  0x4084,  0x50a5,  0x60c6,  0x70e7,
@@ -81,13 +81,13 @@ LOCAL UInt16_t crctab[1<<BPB] = {
     0x6e17,  0x7e36,  0x4e55,  0x5e74,  0x2e93,  0x3eb2,  0x0ed1,  0x1ef0,
 };
 
-#define SUBSIZE	96	/* 12 bytes with 8 bits */
+#define	SUBSIZE	96	/* 12 bytes with 8 bits */
 
-LOCAL UInt16_t 
+LOCAL UInt16_t
 updcrc(p_crc, cp, cnt)
 	Uint			p_crc;
-        register UInt8_t	*cp;
-        register Uint		cnt;
+	register UInt8_t	*cp;
+	register Uint		cnt;
 {
 	register UInt16_t	crc = p_crc;
 
@@ -103,7 +103,7 @@ calcCRC(buf, bsize)
 	Uchar	*buf;
 	Uint	bsize;
 {
-	return updcrc(0x0000, (UInt8_t *)buf, bsize);
+	return (updcrc(0x0000, (UInt8_t *)buf, bsize));
 }
 
 /*
@@ -127,14 +127,14 @@ fillcrc(buf, bsize)
 }
 
 LOCAL UInt8_t fliptab[BPB] = {
-        0x01,
-        0x02,
-        0x04,
-        0x08,
-        0x10,
-        0x20,
-        0x40,
-        0x80,
+	0x01,
+	0x02,
+	0x04,
+	0x08,
+	0x10,
+	0x20,
+	0x40,
+	0x80,
 };
 
 EXPORT UInt16_t
@@ -155,7 +155,7 @@ flip_crc_error_corr(b, bsize, p_crc)
 			c = fliptab[i % BPB];
 			b[i / BPB] ^= c;
 			if ((crc = calcCRC(b, bsize)) == 0) {
-				return crc;
+				return (crc);
 			}
 			b[i / BPB] ^= c;
 		}

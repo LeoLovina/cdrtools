@@ -1,7 +1,7 @@
-/* @(#)scsi-mac-iokit.c	1.4 02/10/19 Copyright 1997,2001 J. Schilling */
+/* @(#)scsi-mac-iokit.c	1.9 04/01/15 Copyright 1997,2001-2004 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-mac-iokit.c	1.4 02/10/19 Copyright 1997,2001 J. Schilling";
+	"@(#)scsi-mac-iokit.c	1.9 04/01/15 Copyright 1997,2001-2004 J. Schilling";
 #endif
 /*
  *	Interface to the Darwin IOKit SCSI drivers
@@ -19,7 +19,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1997,2001 J. Schilling
+ *	Copyright (c) 1997,2001-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -32,9 +32,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 /*
@@ -44,7 +44,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-mac-iokit.c-1.4";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-mac-iokit.c-1.9";	/* The version for this transport */
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -59,11 +59,11 @@ LOCAL	char	_scg_trans_version[] = "scsi-mac-iokit.c-1.4";	/* The version for thi
 #include <mach/mach_error.h>
 
 struct scg_local {
-        MMCDeviceInterface **mmcDeviceInterface;
-        SCSITaskDeviceInterface **scsiTaskDeviceInterface;
-	mach_port_t  masterPort;
+	MMCDeviceInterface	**mmcDeviceInterface;
+	SCSITaskDeviceInterface	**scsiTaskDeviceInterface;
+	mach_port_t		masterPort;
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 #define	MAX_DMA_NEXT	(32*1024)
 #if 0
@@ -90,7 +90,7 @@ scgo_version(scgp, what)
 		 * return "schily" for the SCG_AUTHOR request.
 		 */
 		case SCG_AUTHOR:
-			return ("csapuntz");
+			return (_scg_auth_schily);
 		case SCG_SCCS_ID:
 			return (__sccsid);
 		}
@@ -104,7 +104,8 @@ scgo_help(scgp, f)
 	FILE	*f;
 {
 	__scg_help(f, "SCSITaskDeviceInterface", "Apple SCSI",
-		"", "Mac Prom device name", "IOCompactDiscServices/0", FALSE, FALSE);
+		"", "Mac Prom device name", "IOCompactDiscServices/0",
+								FALSE, FALSE);
 	return (0);
 }
 
@@ -114,7 +115,7 @@ scgo_help(scgp, f)
  *    IOCompactDiscServices
  *    IODVDServices
  *    IOSCSIPeripheralDeviceNub
- * 
+ *
  * Also a / and a number can be appended to refer to something
  * more than the first device (e.g. IOCompactDiscServices/5 for the 5th
  * compact disc attached)
@@ -137,10 +138,10 @@ scgo_open(scgp, device)
 	int err = -1;
 	char *realdevice = NULL, *tmp;
 	int driveidx = 1, idx = 1;
-	
+
 	if (device == NULL) {
 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-			    "Please specify a device name (e.g. IOCompactDiscServices,0)");
+		"Please specify a device name (e.g. IOCompactDiscServices,0)");
 		goto out;
 	}
 
@@ -152,9 +153,9 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-	        scgp->local = malloc(sizeof(struct scg_local));
-	        if (scgp->local == NULL)
-	                goto out;
+		scgp->local = malloc(sizeof (struct scg_local));
+		if (scgp->local == NULL)
+			goto out;
 	}
 
 	ioReturnValue = IOMasterPort(bootstrap_port, &masterPort);
@@ -174,7 +175,7 @@ scgo_open(scgp, device)
 	}
 
 	ioReturnValue = IOServiceGetMatchingServices(masterPort, dict,
-						     &scsiObjectIterator);
+						    &scsiObjectIterator);
 	dict = NULL;
 
 	if (scsiObjectIterator == NULL ||
@@ -185,7 +186,7 @@ scgo_open(scgp, device)
 	}
 
 	if (driveidx <= 0)
-	        driveidx = 1;
+		driveidx = 1;
 
 	idx = 1;
 	while ((scsiDevice = IOIteratorNext(scsiObjectIterator)) != NULL) {
@@ -203,16 +204,17 @@ scgo_open(scgp, device)
 	}
 
 	ioReturnValue = IOCreatePlugInInterfaceForService(scsiDevice,
-		        kIOMMCDeviceUserClientTypeID,
-		        kIOCFPlugInInterfaceID,
+			kIOMMCDeviceUserClientTypeID,
+			kIOCFPlugInInterfaceID,
 			&plugInInterface, &score);
 	if (ioReturnValue != kIOReturnSuccess) {
 		goto try_generic;
 	}
 
 	plugInResult = (*plugInInterface)->QueryInterface(plugInInterface,
-					    CFUUIDGetUUIDBytes(kIOMMCDeviceInterfaceID),
-							  (LPVOID)&mmcDeviceInterface);
+				CFUUIDGetUUIDBytes(kIOMMCDeviceInterfaceID),
+				(LPVOID)&mmcDeviceInterface);
+
 	if (plugInResult != KERN_SUCCESS) {
 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 			    "Unable to get MMC Interface: 0x%lX",
@@ -221,7 +223,9 @@ scgo_open(scgp, device)
 		goto out;
 	}
 
-	scsiTaskDeviceInterface = (*mmcDeviceInterface)->GetSCSITaskDeviceInterface(mmcDeviceInterface);
+	scsiTaskDeviceInterface =
+		(*mmcDeviceInterface)->GetSCSITaskDeviceInterface(mmcDeviceInterface);
+
 	if (scsiTaskDeviceInterface == NULL) {
 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 			    "Failed to get taskDeviceInterface");
@@ -230,21 +234,21 @@ scgo_open(scgp, device)
 
 	goto init;
 
- try_generic:	
+try_generic:
 	ioReturnValue = IOCreatePlugInInterfaceForService(scsiDevice,
-		        kIOSCSITaskDeviceUserClientTypeID,
-		        kIOCFPlugInInterfaceID,
-			&plugInInterface, &score);
+					kIOSCSITaskDeviceUserClientTypeID,
+					kIOCFPlugInInterfaceID,
+					&plugInInterface, &score);
 	if (ioReturnValue != kIOReturnSuccess) {
 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-			    "Unable to get plugin Interface: %x", 
+			    "Unable to get plugin Interface: %x",
 			    ioReturnValue);
 		goto out;
 	}
 
 	plugInResult = (*plugInInterface)->QueryInterface(plugInInterface,
 			    CFUUIDGetUUIDBytes(kIOSCSITaskDeviceInterfaceID),
-					   (LPVOID)&scsiTaskDeviceInterface);
+					(LPVOID)&scsiTaskDeviceInterface);
 
 	if (plugInResult != KERN_SUCCESS) {
 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -254,13 +258,14 @@ scgo_open(scgp, device)
 		goto out;
 	}
 
-	
- init:
-	ioReturnValue = (*scsiTaskDeviceInterface)->ObtainExclusiveAccess(scsiTaskDeviceInterface);
+init:
+	ioReturnValue =
+		(*scsiTaskDeviceInterface)->ObtainExclusiveAccess(scsiTaskDeviceInterface);
+
 	if (ioReturnValue != kIOReturnSuccess) {
 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 			    "Unable to get exclusive access to device");
-		goto out;	  
+		goto out;
 	}
 
 	if (mmcDeviceInterface) {
@@ -281,7 +286,7 @@ out:
 	if (plugInInterface != NULL) {
 		(*plugInInterface)->Release(plugInInterface);
 	}
-	
+
 	if (scsiDevice != NULL) {
 		IOObjectRelease(scsiDevice);
 	}
@@ -315,8 +320,8 @@ LOCAL int
 scgo_close(scgp)
 	SCSI	*scgp;
 {
-        SCSITaskDeviceInterface **sc;
-	MMCDeviceInterface **mmc;
+	SCSITaskDeviceInterface	**sc;
+	MMCDeviceInterface	**mmc;
 
 	if (scgp->local == NULL)
 		return (-1);
@@ -331,8 +336,8 @@ scgo_close(scgp)
 		(*mmc)->Release(mmc);
 
 	mach_port_deallocate(mach_task_self(), scglocal(scgp)->masterPort);
-			
-	free (scgp->local);
+
+	free(scgp->local);
 	scgp->local = NULL;
 
 	return (0);
@@ -385,7 +390,9 @@ scgo_havebus(scgp, busno)
 	SCSI	*scgp;
 	int	busno;
 {
-        return (FALSE);
+	if (busno == 0)
+		return (TRUE);
+	return (FALSE);
 }
 
 LOCAL int
@@ -395,7 +402,7 @@ scgo_fileno(scgp, busno, tgt, tlun)
 	int	tgt;
 	int	tlun;
 {
-        return (-1);
+	return (-1);
 }
 
 LOCAL int
@@ -424,7 +431,7 @@ scgo_reset(scgp, what)
 		errno = EINVAL;
 		return (-1);
 	}
-	
+
 	errno = 0;
 	return (-1);
 }
@@ -433,15 +440,15 @@ LOCAL int
 scgo_send(scgp)
 	SCSI		*scgp;
 {
-        struct scg_cmd	*sp = scgp->scmd;
-        SCSITaskDeviceInterface **sc = NULL;
-	SCSITaskInterface **cmd = NULL;
-	IOVirtualRange iov;
-	SCSI_Sense_Data senseData;
-	SCSITaskStatus status;
-	UInt64 bytesTransferred;
-	IOReturn ioReturnValue;
-	int ret = 0;
+	struct scg_cmd		*sp = scgp->scmd;
+	SCSITaskDeviceInterface	**sc = NULL;
+	SCSITaskInterface	**cmd = NULL;
+	IOVirtualRange		iov;
+	SCSI_Sense_Data		senseData;
+	SCSITaskStatus		status;
+	UInt64			bytesTransferred;
+	IOReturn		ioReturnValue;
+	int			ret = 0;
 
 	if (scgp->local == NULL) {
 		return (-1);
@@ -451,84 +458,99 @@ scgo_send(scgp)
 
 	cmd = (*sc)->CreateSCSITask(sc);
 	if (cmd == NULL) {
-	       js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-			   "Failed to create SCSI task");
-	       ret = -1;
+		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+			    "Failed to create SCSI task");
+		ret = -1;
 
-  	     sp->error = SCG_FATAL;
-	     sp->ux_errno = EIO;
-	     goto out;
+		sp->error = SCG_FATAL;
+		sp->ux_errno = EIO;
+		goto out;
 	}
 
 
 	iov.address = (IOVirtualAddress) sp->addr;
 	iov.length = sp->size;
 
-	ioReturnValue = (*cmd)->SetCommandDescriptorBlock(cmd, sp->cdb.cmd_cdb, sp->cdb_len);
+	ioReturnValue = (*cmd)->SetCommandDescriptorBlock(cmd,
+						sp->cdb.cmd_cdb, sp->cdb_len);
+
 	if (ioReturnValue != kIOReturnSuccess) {
-	       js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-			   "SetCommandDescriptorBlock failed with status %x", ioReturnValue);
-	       ret = -1;
-	       goto out;
+		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+			    "SetCommandDescriptorBlock failed with status %x",
+			    ioReturnValue);
+		ret = -1;
+		goto out;
 	}
 
 	ioReturnValue = (*cmd)->SetScatterGatherEntries(cmd, &iov, 1, sp->size,
-					(sp->flags & SCG_RECV_DATA) ? 
-					kSCSIDataTransfer_FromTargetToInitiator :
-					kSCSIDataTransfer_FromInitiatorToTarget);
+				(sp->flags & SCG_RECV_DATA) ?
+				kSCSIDataTransfer_FromTargetToInitiator :
+				kSCSIDataTransfer_FromInitiatorToTarget);
 	if (ioReturnValue != kIOReturnSuccess) {
-	       js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-			   "SetScatterGatherEntries failed with status %x", ioReturnValue);
-	       ret = -1;
-	       goto out;
+		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+			    "SetScatterGatherEntries failed with status %x",
+			    ioReturnValue);
+		ret = -1;
+		goto out;
 	}
 
 	ioReturnValue = (*cmd)->SetTimeoutDuration(cmd, sp->timeout * 1000);
 	if (ioReturnValue != kIOReturnSuccess) {
-	       js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-			   "SetTimeoutDuration failed with status %x", ioReturnValue);
-	       ret = -1;
-	       goto out;
+		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+			    "SetTimeoutDuration failed with status %x",
+			    ioReturnValue);
+		ret = -1;
+		goto out;
 	}
 
-	memset(&senseData, 0, sizeof(senseData));
+	memset(&senseData, 0, sizeof (senseData));
 
+	seterrno(0);
 	ioReturnValue = (*cmd)->ExecuteTaskSync(cmd,
 				&senseData, &status, &bytesTransferred);
 
 	sp->resid = sp->size - bytesTransferred;
 	sp->error = SCG_NO_ERROR;
+	sp->ux_errno = geterrno();
 
-	if (ioReturnValue != kIOReturnSuccess) {	
-	       js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-			   "Command execution failed with status %x", ioReturnValue);
-	       sp->error = SCG_RETRYABLE;
-	       ret = -1;
-	       goto out;	  
+	if (ioReturnValue != kIOReturnSuccess) {
+		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+			    "Command execution failed with status %x",
+			    ioReturnValue);
+		sp->error = SCG_RETRYABLE;
+		ret = -1;
+		goto out;
 	}
 
-	memset(&sp->scb, 0, sizeof(sp->scb));
-	memset(&sp->u_sense.cmd_sense, 0, sizeof(sp->u_sense.cmd_sense));
-	if (senseData.VALID_RESPONSE_CODE != 0) {
-	  sp->sense_count = kSenseDefaultSize;
-	  memmove(&sp->u_sense.cmd_sense, &senseData, kSenseDefaultSize);
+	memset(&sp->scb, 0, sizeof (sp->scb));
+	memset(&sp->u_sense.cmd_sense, 0, sizeof (sp->u_sense.cmd_sense));
+	if (senseData.VALID_RESPONSE_CODE != 0 || status == 0x02) {
+		/*
+		 * There is no sense length - we need to asume that
+		 * we always get 18 bytes.
+		 */
+		sp->sense_count = kSenseDefaultSize;
+		memmove(&sp->u_sense.cmd_sense, &senseData, kSenseDefaultSize);
+		if (sp->ux_errno == 0)
+			sp->ux_errno = EIO;
 	}
 
 	sp->u_scb.cmd_scb[0] = status;
 
 	/* ??? */
 	if (status == kSCSITaskStatus_No_Status) {
-	  sp->error = SCG_RETRYABLE;
-	  ret = -1;
-	  goto out;
+		sp->error = SCG_RETRYABLE;
+		ret = -1;
+		goto out;
 	}
+	/*
+	 * XXX Is it possible to have other senseful SCSI transport error codes?
+	 */
 
- out:
+out:
 	if (cmd != NULL) {
-   	      (*cmd)->Release(cmd);
+		(*cmd)->Release(cmd);
 	}
 
 	return (ret);
 }
-
-

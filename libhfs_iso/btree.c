@@ -1,7 +1,7 @@
-/* @(#)btree.c	1.2 00/11/30 joerg */
+/* @(#)btree.c	1.3 04/06/17 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)btree.c	1.2 00/11/30 joerg";
+	"@(#)btree.c	1.3 04/06/17 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -421,7 +421,7 @@ int bt_space(bt, nrecs)
 	  n.bt   = bt;
 	  n.nnum = bt->hdrnd.nd.ndFLink;
 
-	  while (1)
+	  for (;;)
 	    {
 	      if (bt_getnode(&n) < 0)
 		return -1;
@@ -716,7 +716,7 @@ int bt_search(bt, key, np)
       return 0;
     }
 
-  while (1)
+  for (;;)
     {
       int found;
       unsigned char *rec;

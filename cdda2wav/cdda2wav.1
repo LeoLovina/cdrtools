@@ -1,5 +1,19 @@
 '\" t
-.\" @(#)cdda2wav.1	1.13 02/11/26 Copyright 1998,1999,2000 Heiko Eissfeldt
+.\" @(#)cdda2wav.1	1.14 02/12/09 Copyright 1998,1999,2000 Heiko Eissfeldt
+.if t .ds a \v'-0.55m'\h'0.00n'\z.\h'0.40n'\z.\v'0.55m'\h'-0.40n'a
+.if t .ds o \v'-0.55m'\h'0.00n'\z.\h'0.45n'\z.\v'0.55m'\h'-0.45n'o
+.if t .ds u \v'-0.55m'\h'0.00n'\z.\h'0.40n'\z.\v'0.55m'\h'-0.40n'u
+.if t .ds A \v'-0.77m'\h'0.25n'\z.\h'0.45n'\z.\v'0.77m'\h'-0.70n'A
+.if t .ds O \v'-0.77m'\h'0.25n'\z.\h'0.45n'\z.\v'0.77m'\h'-0.70n'O
+.if t .ds U \v'-0.77m'\h'0.30n'\z.\h'0.45n'\z.\v'0.77m'\h'-0.75n'U
+.if t .ds s \\(*b
+.if t .ds S SS
+.if n .ds a ae
+.if n .ds o oe
+.if n .ds u ue
+.if n .ds s sz
+.if t .ds m \\(*m
+.if n .ds m micro
 .TH CDDA2WAV 1
 .SH NAME
 cdda2wav \- a sampling utility that dumps CD audio data into wav sound
@@ -81,7 +95,11 @@ capable of reading audio data digitally to the host
 .RB ( CDDA ).
 .SH OPTIONS
 .TP
-.BI \-D " device  --dev --device"
+.BI dev= device
+.TP
+.BI \-D " device
+.TP
+.BI \-device " device
 uses
 .B device
 as the source for CDDA reading.
@@ -92,16 +110,28 @@ interface and Bus,ID,Lun for the
 interface. The
 .B device
 has to correspond with the interface setting (see below).
+.sp
+Using the
+.B cooked_ioctl
+is not recommended as this makes
+.B cdda2wav
+mainly depend on the audio extraction quality of the operating system
+which is usually extremely bad.
+.sp
 The setting of the environment variable
 .B CDDA_DEVICE
 is overridden by this option.
 .TP
-.BI \-A " auxdevice  --auxdevice"
+.BI \-A " auxdevice
+.TP
+.BI \-auxdevice " auxdevice
 uses
 .B auxdevice
 as CDROM drive for ioctl usage.
 .TP
-.BI \-I " interface  --interface"
+.BI \-I " interface
+.TP
+.BI \-interface " interface
 specifies the interface for CDROM access:
 .B generic_scsi
 or (on Linux, and FreeBSD systems)
@@ -252,6 +282,14 @@ does not write to a file, it just gives information about the disc.
 .B \-L " cddb mode --cddb"
 does a cddbp album- and track title lookup based on the cddb id.
 The parameter cddb mode defines how multiple entries shall be handled.
+.TS H
+center box;
+r | l.
+Parameter	Description
+_
+0	interactive mode. The user selects the entry to use.
+1	first fit mode. The first entry is taken unconditionally.
+.TE
 .TP
 .B " cddbp-server=servername"
 sets the server to be contacted for title lookups.
@@ -281,6 +319,13 @@ enable SCSI command logging to the console. This is mainly used for debugging.
 .B \-Q " --silent-SCSI"
 suppress SCSI command error reports to the console. This is mainly used for guis.
 .TP
+.B \-scanbus
+Scan all SCSI devices on all SCSI busses and print the inquiry
+strings. This option may be used to find SCSI address of the 
+CD/DVD-Recorder on a system.
+The numbers printed out as labels are computed by: 
+.B "bus * 100 + target
+.TP
 .B \-paranoia
 use the paranoia library instead of cdda2wav's routines for reading.
 .TP
@@ -296,7 +341,7 @@ settings (currently
 ).
 .SH "ENVIRONMENT VARIABLES"
 .B CDDA_DEVICE
-is used to set the device name. The device naming is compatible with Jörg
+is used to set the device name. The device naming is compatible with J\*org
 Schilling's cdrecord package.
 .TP
 .B CDDBP_SERVER
@@ -775,7 +820,7 @@ gui frontends (like xcd-roast).
 this option switches on logging of SCSI commands. This will produce
 a lot of output (when SCSI devices are being used).
 This is needed for debugging purposes. The format
-is the same as being used with the cdrecord program from Jörg Schilling.
+is the same as being used with the cdrecord program from J\*org Schilling.
 I will not describe it here.
 .IP "Quiet option"
 .B \-q
@@ -896,7 +941,7 @@ Cdda2wav should use threads.
 .sp
 Cdda2wav currently cannot sample hidden audio tracks (track 1 index 0).
 .SH ACKNOWLEDGEMENTS
-Thanks goto Project MODE (http://www.mode.net/) and Fraunhofer Institut für
+Thanks goto Project MODE (http://www.mode.net/) and Fraunhofer Institut f\*ur
 integrierte Schaltungen (FhG-IIS) (http://www.iis.fhg.de/) for financial
 support.
 Plextor Europe and Ricoh Japan provided cdrom disk drives and cd burners

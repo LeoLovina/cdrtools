@@ -1,7 +1,7 @@
-/* @(#)udf.c	1.7 02/12/07 Copyright 2001 J. Schilling */
+/* @(#)udf.c	1.14 04/04/15 Copyright 2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)udf.c	1.7 02/12/07 Copyright 2001 J. Schilling";
+	"@(#)udf.c	1.14 04/04/15 Copyright 2001 J. Schilling";
 #endif
 /*
  * udf.c - UDF support for mkisofs
@@ -28,6 +28,9 @@ static	char sccsid[] =
 
 /*
  * Some remaining issues:
+ *
+ * - Do not forget to edit joliet.c and remove the VIDEO_TS lines after
+ *   we did implement a decent own file name handling for UDF.
  *
  * - UDF supports UNIX-style file permissions and uid/gid, but currently
  *   this code just sets them to default values and ignores their Rock
@@ -83,7 +86,10 @@ static	char sccsid[] =
 #include "udf.h"
 #include "udf_fs.h"
 
+extern	int	use_sparcboot;
+
 extern struct directory *root;
+extern time_t		begun;
 
 static unsigned lba_main_seq;
 static unsigned lba_main_seq_copy;
@@ -97,13 +103,13 @@ static unsigned num_udf_directories;
 
 static unsigned volume_set_id[2];
 
-#define UDF_MAIN_SEQ_LENGTH (16)
-#define UDF_INTEG_SEQ_LENGTH (2)
+#define	UDF_MAIN_SEQ_LENGTH (16)
+#define	UDF_INTEG_SEQ_LENGTH (2)
 
 /* only works for granularity a power of 2! */
-#define PAD(val,granularity) (((val)+(granularity)-1)&~((granularity)-1))
+#define	PAD(val, granularity)	(((val)+(granularity)-1)&~((granularity)-1))
 
-#define read_733(field) ((0[field]&255)+(1[field]&255)*256+(2[field]&255)*65536+(3[field]&255)*16777216)
+#define	read_733(field) ((0[field]&255)+(1[field]&255)*256+(2[field]&255)*65536+(3[field]&255)*16777216)
 
 
 /**************** SIZE ****************/
@@ -135,7 +141,7 @@ directory_size(dpnt)
 			size_in_bytes += set_file_ident_desc(dummy_buf, 0, name, 0, 0, 0);
 		}
 	}
-	return size_in_bytes;
+	return (size_in_bytes);
 }
 
 static void
@@ -169,8 +175,8 @@ assign_udf_file_entry_addresses(dpnt)
 	if (!(dpnt->dir_flags & INHIBIT_JOLIET_ENTRY)) {
 		struct directory_entry *de;
 		for (de = dpnt->jcontents; de; de = de->jnext) {
-			if (!(de->de_flags & RELOCATED_DIRECTORY)
-			 && !(de->isorec.flags[0] & ISO_DIRECTORY)) {
+			if (!(de->de_flags & RELOCATED_DIRECTORY) &&
+			    !(de->isorec.flags[0] & ISO_DIRECTORY)) {
 				de->udf_file_entry_sector = last_extent++;
 				++num_udf_files;
 			}
@@ -194,7 +200,7 @@ udf_vol_recognition_area_size(starting_extent)
 #endif
 {
 	last_extent = starting_extent+3;
-	return 0;
+	return (0);
 }
 
 static int
@@ -207,7 +213,7 @@ udf_main_seq_size(starting_extent)
 {
 	lba_main_seq = starting_extent;
 	last_extent = starting_extent + UDF_MAIN_SEQ_LENGTH;
-	return 0;
+	return (0);
 }
 
 static int
@@ -220,7 +226,7 @@ udf_main_seq_copy_size(starting_extent)
 {
 	lba_main_seq_copy = starting_extent;
 	last_extent = starting_extent + UDF_MAIN_SEQ_LENGTH;
-	return 0;
+	return (0);
 }
 
 static int
@@ -233,7 +239,7 @@ udf_integ_seq_size(starting_extent)
 {
 	lba_integ_seq = starting_extent;
 	last_extent = starting_extent + UDF_INTEG_SEQ_LENGTH;
-	return 0;
+	return (0);
 }
 
 static int
@@ -246,7 +252,7 @@ udf_end_anchor_vol_desc_size(starting_extent)
 {
 	lba_end_anchor_vol_desc = starting_extent;
 	last_extent = starting_extent+1;
-	return 0;
+	return (0);
 }
 
 static int
@@ -259,7 +265,7 @@ udf_file_set_desc_size(starting_extent)
 {
 	lba_udf_partition_start = starting_extent;
 	last_extent = starting_extent+2;
-	return 0;
+	return (0);
 }
 
 static int
@@ -272,7 +278,7 @@ udf_dirtree_size(starting_extent)
 {
 	num_udf_directories = 0;
 	assign_udf_directory_addresses(root);
-	return 0;
+	return (0);
 }
 
 static int
@@ -286,7 +292,7 @@ udf_file_entries_size(starting_extent)
 	num_udf_files = 0;
 	assign_udf_file_entry_addresses(root);
 	lba_last_file_entry = last_extent-1;
-	return 0;
+	return (0);
 }
 
 static int
@@ -299,7 +305,7 @@ udf_pad_to_sector_32_size(starting_extent)
 {
 	if (last_extent < session_start+32)
 		last_extent = session_start+32;
-	return 0;
+	return (0);
 }
 
 static int
@@ -312,7 +318,7 @@ udf_pad_to_sector_256_size(starting_extent)
 {
 	if (last_extent < session_start+256)
 		last_extent = session_start+256;
-	return 0;
+	return (0);
 }
 
 static int
@@ -327,7 +333,9 @@ udf_padend_avdp_size(starting_extent)
 
 	/* add at least 16 and at most 31 sectors, ending at a mult. of 16 */
 	last_extent = (starting_extent+31) & ~15;
-	return 0;
+	if (!use_sparcboot)
+		last_extent = starting_extent + 150;
+	return (0);
 }
 
 extern int oneblock_size __PR((int));
@@ -338,7 +346,7 @@ static unsigned
 #ifdef PROTOTYPES
 crc_ccitt(unsigned char *buf, unsigned len)
 #else
-crc_ccitt(buf,len)
+crc_ccitt(buf, len)
 	unsigned char	*buf;
 	unsigned	len;
 #endif
@@ -349,7 +357,7 @@ crc_ccitt(buf,len)
 	unsigned int i;
 
 	if (lookup[1] == 0) {
-		unsigned int j,k;
+		unsigned int j, k;
 		for (j = 0; j < 256; ++j) {
 			unsigned int temp = j << 8;
 			for (k = 0; k < 8; ++k) {
@@ -367,16 +375,16 @@ crc_ccitt(buf,len)
 		r = (r << 8) ^ lookup[((r >> 8) ^ buf[i]) & 255];
 	}
 
-	return r & 65535;
+	return (r & 65535);
 }
 
-#define set8(dst,src) do{*(dst)=(src);}while(0)
+#define	set8(dst, src)	do { *(dst) = (src); } while (0)
 
 static void
 #ifdef PROTOTYPES
 set16(udf_Uint16 *dst, unsigned int src)
 #else
-set16(dst,src)
+set16(dst, src)
 	udf_Uint16	*dst;
 	unsigned int	src;
 #endif
@@ -389,7 +397,7 @@ static void
 #ifdef PROTOTYPES
 set32(udf_Uint32 *dst, unsigned src)
 #else
-set32(dst,src)
+set32(dst, src)
 	udf_Uint32	*dst;
 	unsigned	src;
 #endif
@@ -404,7 +412,7 @@ static void
 #ifdef PROTOTYPES
 set64(udf_Uint64 *dst, unsigned src)
 #else
-set64(dst,src)
+set64(dst, src)
 	udf_Uint64	*dst;
 	unsigned	src;
 #endif
@@ -424,7 +432,7 @@ static int
 #ifdef PROTOTYPES
 set_ostaunicode(unsigned char *dst, int dst_size, char *src)
 #else
-set_ostaunicode(dst,dst_size,src)
+set_ostaunicode(dst, dst_size, src)
 	unsigned char	*dst;
 	int		dst_size;
 	char		*src;
@@ -454,17 +462,17 @@ set_ostaunicode(dst,dst_size,src)
 				length_to_copy = expanded_length;
 			dst[0] = 16;
 			memcpy(dst+1, buf, length_to_copy);
-			return length_to_copy+1;
+			return (length_to_copy + 1);
 		}
 	}
-	return (expanded_length>>1) + 1;
+	return ((expanded_length>>1) + 1);
 }
 
 static void
 #ifdef PROTOTYPES
 set_extent(udf_extent_ad *ext, unsigned lba, unsigned length_bytes)
 #else
-set_extent(ext,lba,length_bytes)
+set_extent(ext, lba, length_bytes)
 	udf_extent_ad	*ext;
 	unsigned	lba;
 	unsigned	length_bytes;
@@ -478,7 +486,7 @@ static void
 #ifdef PROTOTYPES
 set_dstring(udf_dstring *dst, char *src, int n)
 #else
-set_dstring(dst,src,n)
+set_dstring(dst, src, n)
 	udf_dstring	*dst;
 	char		*src;
 	int		n;
@@ -507,14 +515,14 @@ set_impl_ident(ent)
 	udf_EntityID	*ent;
 #endif
 {
-	strcpy((char*)ent->ident, "*mkisofs");
+	strcpy((char *)ent->ident, "*mkisofs");
 }
 
 static void
 #ifdef PROTOTYPES
 set_tag(udf_tag *t, unsigned tid, unsigned lba, int crc_length)
 #else
-set_tag(t,tid,lba,crc_length)
+set_tag(t, tid, lba, crc_length)
 	udf_tag	*t;
 	unsigned	tid;
 	unsigned	lba;
@@ -526,13 +534,13 @@ set_tag(t,tid,lba,crc_length)
 
 	set16(&t->tag_ident, tid);
 	set16(&t->desc_version, 2);
-	set16(&t->desc_crc, crc_ccitt((unsigned char*)t+16, crc_length-16));
+	set16(&t->desc_crc, crc_ccitt((unsigned char *)t+16, crc_length-16));
 	set16(&t->desc_crc_length, crc_length-16);
 	set32(&t->tag_location, lba);
 	set8(&t->tag_checksum, 0);
 	checksum = 0;
-	for (i=0; i<16; ++i)
-		checksum += ((unsigned char*)t)[i];
+	for (i = 0; i < 16; ++i)
+		checksum += ((unsigned char *)t)[i];
 	set8(&t->tag_checksum, checksum);
 }
 
@@ -540,7 +548,7 @@ static void
 #ifdef PROTOTYPES
 set_timestamp_from_iso_date(udf_timestamp *ts, const char *iso_date_raw)
 #else
-set_timestamp_from_iso_date(ts,iso_date_raw)
+set_timestamp_from_iso_date(ts, iso_date_raw)
 	udf_timestamp	*ts;
 	const char	*iso_date_raw;
 #endif
@@ -569,7 +577,7 @@ static void
 #ifdef PROTOTYPES
 set_timestamp_from_time_t(udf_timestamp *ts, time_t t)
 #else
-set_timestamp_from_time_t(ts,t)
+set_timestamp_from_time_t(ts, t)
 	udf_timestamp	*ts;
 	time_t		t;
 #endif
@@ -584,7 +592,7 @@ static void
 #ifdef PROTOTYPES
 set_anchor_volume_desc_pointer(unsigned char *buf, unsigned lba)
 #else
-set_anchor_volume_desc_pointer(buf,lba)
+set_anchor_volume_desc_pointer(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
@@ -601,18 +609,17 @@ static void
 #ifdef PROTOTYPES
 set_primary_vol_desc(unsigned char *buf, unsigned lba)
 #else
-set_primary_vol_desc(buf,lba)
+set_primary_vol_desc(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
 {
 	char temp[17];
-	time_t now;
 
 	udf_primary_volume_desc *pvd = (udf_primary_volume_desc *)buf;
 	/*set32(&pvd->volume_desc_seq_number, 0);*/
 	/*set32(&pvd->primary_volume_desc_number, 0);*/
-	set_dstring(pvd->volume_ident, volume_id, sizeof(pvd->volume_ident));
+	set_dstring(pvd->volume_ident, volume_id, sizeof (pvd->volume_ident));
 	set16(&pvd->volume_seq_number, 1);
 	set16(&pvd->maximum_volume_seq_number, 1);
 	set16(&pvd->interchange_level, 2);
@@ -620,14 +627,14 @@ set_primary_vol_desc(buf,lba)
 	set32(&pvd->character_set_list, 1);
 	set32(&pvd->maximum_character_set_list, 1);
 	sprintf(temp, "%08X%08X", volume_set_id[0], volume_set_id[1]);
-	set_dstring(pvd->volume_set_ident, temp, sizeof(pvd->volume_set_ident));
+	set_dstring(pvd->volume_set_ident, temp,
+					sizeof (pvd->volume_set_ident));
 	set_charspec(&pvd->desc_character_set);
 	set_charspec(&pvd->explanatory_character_set);
 	/*pvd->volume_abstract;*/
 	/*pvd->volume_copyright_notice;*/
 	/*pvd->application_ident;*/
-	time(&now);
-	set_timestamp_from_time_t(&pvd->recording_date_and_time, now);
+	set_timestamp_from_time_t(&pvd->recording_date_and_time, begun);
 	set_impl_ident(&pvd->impl_ident);
 	set_tag(&pvd->desc_tag, UDF_TAGID_PRIMARY_VOLUME_DESC, lba, 512);
 }
@@ -636,22 +643,22 @@ static void
 #ifdef PROTOTYPES
 set_impl_use_vol_desc(unsigned char *buf, unsigned lba)
 #else
-set_impl_use_vol_desc(buf,lba)
+set_impl_use_vol_desc(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
 {
 	udf_impl_use_volume_desc *iuvd = (udf_impl_use_volume_desc *)buf;
 	set32(&iuvd->volume_desc_seq_number, 1);
-	strcpy((char*)iuvd->impl_ident.ident, "*UDF LV Info");
+	strcpy((char *)iuvd->impl_ident.ident, "*UDF LV Info");
 	iuvd->impl_ident.ident_suffix[0] = 2;
 	iuvd->impl_ident.ident_suffix[1] = 1;
 	set_charspec(&iuvd->impl_use.lvi_charset);
 	set_dstring(iuvd->impl_use.logical_volume_ident, volume_id,
-		sizeof(iuvd->impl_use.logical_volume_ident));
-	/*set_dstring(iuvd->impl_use.lv_info1, "", sizeof(iuvd->impl_use.lv_info1));*/
-	/*set_dstring(iuvd->impl_use.lv_info2, "", sizeof(iuvd->impl_use.lv_info2));*/
-	/*set_dstring(iuvd->impl_use.lv_info3, "", sizeof(iuvd->impl_use.lv_info3));*/
+		sizeof (iuvd->impl_use.logical_volume_ident));
+	/*set_dstring(iuvd->impl_use.lv_info1, "", sizeof (iuvd->impl_use.lv_info1));*/
+	/*set_dstring(iuvd->impl_use.lv_info2, "", sizeof (iuvd->impl_use.lv_info2));*/
+	/*set_dstring(iuvd->impl_use.lv_info3, "", sizeof (iuvd->impl_use.lv_info3));*/
 	set_impl_ident(&iuvd->impl_use.impl_id);
 	set_tag(&iuvd->desc_tag, UDF_TAGID_IMPL_USE_VOLUME_DESC, lba, 512);
 }
@@ -660,7 +667,7 @@ static void
 #ifdef PROTOTYPES
 set_partition_desc(unsigned char *buf, unsigned lba)
 #else
-set_partition_desc(buf,lba)
+set_partition_desc(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
@@ -669,11 +676,12 @@ set_partition_desc(buf,lba)
 	set32(&pd->volume_desc_seq_number, 2);
 	set16(&pd->partition_flags, UDF_PARTITION_FLAG_ALLOCATED);
 	/*set16(&pd->partition_number, 0);*/
-	set8(&pd->partition_contents.flags, UDF_ENTITYID_FLAG_PROTECTED);/*???*/
-	strcpy((char*)pd->partition_contents.ident, "+NSR02");
+	set8(&pd->partition_contents.flags, UDF_ENTITYID_FLAG_PROTECTED);	/*???*/
+	strcpy((char *)pd->partition_contents.ident, "+NSR02");
 	set32(&pd->access_type, UDF_ACCESSTYPE_READONLY);
 	set32(&pd->partition_starting_location, lba_udf_partition_start);
-	set32(&pd->partition_length, lba_end_anchor_vol_desc - lba_udf_partition_start);
+	set32(&pd->partition_length,
+			lba_end_anchor_vol_desc - lba_udf_partition_start);
 	set_impl_ident(&pd->impl_ident);
 	set_tag(&pd->desc_tag, UDF_TAGID_PARTITION_DESC, lba, 512);
 }
@@ -686,7 +694,7 @@ set_domain_ident(ent)
 	udf_EntityID	*ent;
 #endif
 {
-	strcpy((char*)ent->ident, "*OSTA UDF Compliant");
+	strcpy((char *)ent->ident, "*OSTA UDF Compliant");
 	memcpy(ent->ident_suffix, "\002\001\003", 3);
 }
 
@@ -694,7 +702,7 @@ static void
 #ifdef PROTOTYPES
 set_logical_vol_desc(unsigned char *buf, unsigned lba)
 #else
-set_logical_vol_desc(buf,lba)
+set_logical_vol_desc(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
@@ -702,7 +710,8 @@ set_logical_vol_desc(buf,lba)
 	udf_logical_volume_desc *lvd = (udf_logical_volume_desc *)buf;
 	set32(&lvd->volume_desc_seq_number, 3);
 	set_charspec(&lvd->desc_character_set);
-	set_dstring(lvd->logical_volume_ident, volume_id, sizeof(lvd->logical_volume_ident));
+	set_dstring(lvd->logical_volume_ident, volume_id,
+					sizeof (lvd->logical_volume_ident));
 	set32(&lvd->logical_block_size, SECTOR_SIZE);
 	set_domain_ident(&lvd->domain_ident);
 	set32(&lvd->logical_volume_contents_use.extent_length, 2*SECTOR_SIZE);
@@ -711,8 +720,10 @@ set_logical_vol_desc(buf,lba)
 	set32(&lvd->map_table_length, 6);
 	set32(&lvd->number_of_partition_maps, 1);
 	set_impl_ident(&lvd->impl_ident);
-	set_extent(&lvd->integrity_seq_extent, lba_integ_seq, SECTOR_SIZE*UDF_INTEG_SEQ_LENGTH);
-	set8(&lvd->partition_map[0].partition_map_type, UDF_PARTITION_MAP_TYPE_1);
+	set_extent(&lvd->integrity_seq_extent, lba_integ_seq,
+					SECTOR_SIZE*UDF_INTEG_SEQ_LENGTH);
+	set8(&lvd->partition_map[0].partition_map_type,
+					UDF_PARTITION_MAP_TYPE_1);
 	set8(&lvd->partition_map[0].partition_map_length, 6);
 	set16(&lvd->partition_map[0].volume_seq_number, 1);
 	/*set16(&lvd->partition_map[0].partition_number, 0);*/
@@ -723,7 +734,7 @@ static void
 #ifdef PROTOTYPES
 set_unallocated_space_desc(unsigned char *buf, unsigned lba)
 #else
-set_unallocated_space_desc(buf,lba)
+set_unallocated_space_desc(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
@@ -738,7 +749,7 @@ static void
 #ifdef PROTOTYPES
 set_terminating_desc(unsigned char *buf, unsigned lba)
 #else
-set_terminating_desc(buf,lba)
+set_terminating_desc(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
@@ -751,46 +762,46 @@ static void
 #ifdef PROTOTYPES
 set_logical_vol_integrity_desc(unsigned char *buf, unsigned lba)
 #else
-set_logical_vol_integrity_desc(buf,lba)
+set_logical_vol_integrity_desc(buf, lba)
 	unsigned char	*buf;
 	unsigned	lba;
 #endif
 {
-	udf_logical_volume_integrity_desc *lvid = (udf_logical_volume_integrity_desc *)buf;
-	time_t now;
+	udf_logical_volume_integrity_desc *lvid =
+				(udf_logical_volume_integrity_desc *)buf;
 
-	time(&now);
-	set_timestamp_from_time_t(&lvid->recording_date, now);
+	set_timestamp_from_time_t(&lvid->recording_date, begun);
 	set32(&lvid->integrity_type, UDF_INTEGRITY_TYPE_CLOSE);
 	/*lvid->next_integrity_extent;*/
-	set64(&lvid->logical_volume_contents_use.unique_id, lba_last_file_entry+1);
+	set64(&lvid->logical_volume_contents_use.unique_id,
+						lba_last_file_entry+1);
 	set32(&lvid->number_of_partitions, 1);
 	set32(&lvid->length_of_impl_use, 46);
 	/*set32(&lvid->free_space_table, 0);*/
-	set32(&lvid->size_table, lba_end_anchor_vol_desc - lba_udf_partition_start);
+	set32(&lvid->size_table,
+			lba_end_anchor_vol_desc - lba_udf_partition_start);
 	set_impl_ident(&lvid->impl_use.impl_id);
 	set32(&lvid->impl_use.number_of_files, num_udf_files);
 	set32(&lvid->impl_use.number_of_directories, num_udf_directories);
 	set16(&lvid->impl_use.minimum_udf_read_revision, 0x102);
 	set16(&lvid->impl_use.minimum_udf_write_revision, 0x102);
 	set16(&lvid->impl_use.maximum_udf_write_revision, 0x102);
-	set_tag(&lvid->desc_tag, UDF_TAGID_LOGICAL_VOLUME_INTEGRITY_DESC, lba, 88+46);
+	set_tag(&lvid->desc_tag, UDF_TAGID_LOGICAL_VOLUME_INTEGRITY_DESC,
+								lba, 88+46);
 }
 
 static void
 #ifdef PROTOTYPES
 set_file_set_desc(unsigned char *buf, unsigned rba)
 #else
-set_file_set_desc(buf,rba)
+set_file_set_desc(buf, rba)
 	unsigned char	*buf;
 	unsigned	rba;
 #endif
 {
 	udf_file_set_desc *fsd = (udf_file_set_desc *)buf;
-	time_t now;
 
-	time(&now);
-	set_timestamp_from_time_t(&fsd->recording_date_and_time, now);
+	set_timestamp_from_time_t(&fsd->recording_date_and_time, begun);
 	set16(&fsd->interchange_level, 3);
 	set16(&fsd->maximum_interchange_level, 3);
 	set32(&fsd->character_set_list, 1);
@@ -798,9 +809,11 @@ set_file_set_desc(buf,rba)
 	/*set32(&fsd->file_set_number, 0);*/
 	/*set32(&fsd->file_set_desc_number, 0);*/
 	set_charspec(&fsd->logical_volume_ident_character_set);
-	set_dstring(fsd->logical_volume_ident, volume_id, sizeof(fsd->logical_volume_ident));
+	set_dstring(fsd->logical_volume_ident, volume_id,
+					sizeof (fsd->logical_volume_ident));
 	set_charspec(&fsd->file_set_character_set);
-	set_dstring(fsd->file_set_ident, volume_id, sizeof(fsd->file_set_ident));
+	set_dstring(fsd->file_set_ident, volume_id,
+					sizeof (fsd->file_set_ident));
 	/*fsd->copyright_file_ident;*/
 	/*fsd->abstract_file_ident;*/
 	set32(&fsd->root_directory_icb.extent_length, SECTOR_SIZE);
@@ -815,7 +828,7 @@ static int
 #ifdef PROTOTYPES
 set_file_ident_desc(unsigned char *buf, unsigned rba, char *name, int is_directory, unsigned file_entry_rba, unsigned unique_id)
 #else
-set_file_ident_desc(buf,rba,name,is_directory,file_entry_rba,unique_id)
+set_file_ident_desc(buf, rba, name, is_directory, file_entry_rba, unique_id)
 	unsigned char	*buf;
 	unsigned	rba;
 	char		*name;
@@ -829,14 +842,15 @@ set_file_ident_desc(buf,rba,name,is_directory,file_entry_rba,unique_id)
 	set16(&fid->file_version_number, 1);
 	set8(&fid->file_characteristics,
 		(is_directory ? UDF_FILE_CHARACTERISTIC_DIRECTORY : 0)
-		+ (name==0) * UDF_FILE_CHARACTERISTIC_PARENT);
+		+ (name == 0) * UDF_FILE_CHARACTERISTIC_PARENT);
 	set32(&fid->icb.extent_length, SECTOR_SIZE);
 	set32(&fid->icb.extent_location.logical_block_number, file_entry_rba);
 	set16(&fid->icb.extent_location.partition_reference_number, 0);
 	set32(&fid->icb.impl_use.unique_id, unique_id);
 	set16(&fid->length_of_impl_use, 0);
 	if (name) {
-		length_of_file_ident = set_ostaunicode((Uchar *)fid->file_ident, 512, name);
+		length_of_file_ident =
+			set_ostaunicode((Uchar *)fid->file_ident, 512, name);
 	} else {
 		length_of_file_ident = 0;
 	}
@@ -847,14 +861,21 @@ set_file_ident_desc(buf,rba,name,is_directory,file_entry_rba,unique_id)
 		buf[length++] = 0;
 	}
 	set_tag(&fid->desc_tag, UDF_TAGID_FILE_IDENT_DESC, rba, length);
-	return length;
+	return (length);
 }
 
 static void
 #ifdef PROTOTYPES
-set_file_entry(unsigned char *buf, unsigned rba, unsigned file_rba, unsigned length, const char *iso_date, int is_directory, unsigned link_count, unsigned unique_id)
+set_file_entry(unsigned char *buf,
+	unsigned rba,
+	unsigned file_rba,
+	unsigned length,
+	const char *iso_date,
+	int is_directory,
+	unsigned link_count,
+	unsigned unique_id)
 #else
-set_file_entry(buf,rba,file_rba,length,iso_date,is_directory,link_count,unique_id)
+set_file_entry(buf, rba, file_rba, length, iso_date, is_directory, link_count, unique_id)
 	unsigned char	*buf;
 	unsigned	rba;
 	unsigned	file_rba;
@@ -879,13 +900,19 @@ set_file_entry(buf,rba,file_rba,length,iso_date,is_directory,link_count,unique_i
 	/*fe->icb_tag.parent_icb_location;*/
 	set16(&fe->icb_tag.flags, UDF_ICBTAG_FLAG_NONRELOCATABLE
 		| UDF_ICBTAG_FLAG_ARCHIVE | UDF_ICBTAG_FLAG_CONTIGUOUS);
-	set32(&fe->uid, -1);
-	set32(&fe->gid, -1);
+	if (rationalize_uid)
+		set32(&fe->uid, uid_to_use);
+	else
+		set32(&fe->uid, -1);
+	if (rationalize_gid)
+		set32(&fe->gid, gid_to_use);
+	else
+		set32(&fe->gid, -1);
 	if (is_directory) {
-		set32(&fe->permissions, 
-		  UDF_FILEENTRY_PERMISSION_OR | UDF_FILEENTRY_PERMISSION_OX 
-		| UDF_FILEENTRY_PERMISSION_GR | UDF_FILEENTRY_PERMISSION_GX 
-		| UDF_FILEENTRY_PERMISSION_UR | UDF_FILEENTRY_PERMISSION_UX);
+		set32(&fe->permissions,
+		    UDF_FILEENTRY_PERMISSION_OR | UDF_FILEENTRY_PERMISSION_OX |
+		    UDF_FILEENTRY_PERMISSION_GR | UDF_FILEENTRY_PERMISSION_GX |
+		    UDF_FILEENTRY_PERMISSION_UR | UDF_FILEENTRY_PERMISSION_UX);
 	} else {
 		set32(&fe->permissions, UDF_FILEENTRY_PERMISSION_OR
 		| UDF_FILEENTRY_PERMISSION_GR | UDF_FILEENTRY_PERMISSION_UR);
@@ -912,18 +939,22 @@ set_file_entry(buf,rba,file_rba,length,iso_date,is_directory,link_count,unique_i
 #if 0
 	set32(&fe->length_of_ext_attributes, 24+52+56);
 	set32(&fe->ext_attribute_header.impl_attributes_location, 24);
-	set32(&fe->ext_attribute_header.application_attributes_location, 24+52+56);
-	set_tag(&fe->ext_attribute_header.desc_tag, UDF_TAGID_EXT_ATTRIBUTE_HEADER_DESC, rba, 24/*???*/);
+	set32(&fe->ext_attribute_header.application_attributes_location,
+								24+52+56);
+	set_tag(&fe->ext_attribute_header.desc_tag,
+			UDF_TAGID_EXT_ATTRIBUTE_HEADER_DESC, rba, 24 /*???*/);
 	set32(&fe->ext_attribute_free_ea_space.attribute_type, SECTOR_SIZE);
 	set8(&fe->ext_attribute_free_ea_space.attribute_subtype, 1);
 	set32(&fe->ext_attribute_free_ea_space.attribute_length, 52);
 	set32(&fe->ext_attribute_free_ea_space.impl_use_length, 4);
-	strcpy((char *)fe->ext_attribute_free_ea_space.impl_ident.ident, "*UDF FreeAppEASpace");
+	strcpy((char *)fe->ext_attribute_free_ea_space.impl_ident.ident,
+							"*UDF FreeAppEASpace");
 	set32(&fe->ext_attribute_dvd_cgms_info.attribute_type, SECTOR_SIZE);
 	set8(&fe->ext_attribute_dvd_cgms_info.attribute_subtype, 1);
 	set32(&fe->ext_attribute_dvd_cgms_info.attribute_length, 56);
 	set32(&fe->ext_attribute_dvd_cgms_info.impl_use_length, 8);
-	strcpy((char *)fe->ext_attribute_free_ea_space.impl_ident.ident, "*UDF DVD CGMS Info");
+	strcpy((char *)fe->ext_attribute_free_ea_space.impl_ident.ident,
+							"*UDF DVD CGMS Info");
 	fe->ext_attribute_free_ea_space.impl_ident.ident_suffix[0] = 2;
 	fe->ext_attribute_free_ea_space.impl_ident.ident_suffix[1] = 1;
 #else
@@ -950,9 +981,9 @@ set_file_entry(buf,rba,file_rba,length,iso_date,is_directory,link_count,unique_i
 		allocation_desc++;
 	}
 	set32(&fe->length_of_allocation_descs,
-	      (unsigned char *) allocation_desc -
+				(unsigned char *) allocation_desc -
 				(unsigned char *) &fe->allocation_desc);
-	set_tag(&fe->desc_tag, UDF_TAGID_FILE_ENTRY, rba, 
+	set_tag(&fe->desc_tag, UDF_TAGID_FILE_ENTRY, rba,
 		(unsigned char *) allocation_desc - buf);
 }
 
@@ -973,7 +1004,9 @@ directory_link_count(dpnt)
 
 	/* count relocated subdirectories */
 	for (de = dpnt->jcontents; de; de = de->jnext) {
-		if ((de->de_flags & (INHIBIT_JOLIET_ENTRY | RELOCATED_DIRECTORY)) == RELOCATED_DIRECTORY) {
+		if ((de->de_flags &
+		    (INHIBIT_JOLIET_ENTRY | RELOCATED_DIRECTORY)) ==
+							RELOCATED_DIRECTORY) {
 			link_count++;
 		}
 	}
@@ -983,14 +1016,14 @@ directory_link_count(dpnt)
 			link_count++;
 		}
 	}
-	return link_count;
+	return (link_count);
 }
 
 static void
 #ifdef PROTOTYPES
 write_one_udf_directory(struct directory *dpnt, FILE *outfile)
 #else
-write_one_udf_directory(dpnt,outfile)
+write_one_udf_directory(dpnt, outfile)
 	struct directory	*dpnt;
 	FILE			*outfile;
 #endif
@@ -1012,7 +1045,7 @@ write_one_udf_directory(dpnt,outfile)
 		1,	/* is_directory */
 		directory_link_count(dpnt),
 		(dpnt == root) ? 0 : dpnt->self->udf_file_entry_sector);
-	xfwrite(buf, SECTOR_SIZE, 1, outfile);
+	xfwrite(buf, SECTOR_SIZE, 1, outfile, 0, FALSE);
 	last_extent_written++;
 
 	base_sector = last_extent_written - lba_udf_partition_start;
@@ -1029,7 +1062,7 @@ write_one_udf_directory(dpnt,outfile)
 		1,
 		parent->self->udf_file_entry_sector - lba_udf_partition_start,
 		(parent == root) ? 0 : parent->self->udf_file_entry_sector);
-	xfwrite(buf, ident_size, 1, outfile);
+	xfwrite(buf, ident_size, 1, outfile, 0, FALSE);
 	size_in_bytes = ident_size;
 
 	/* directory contents */
@@ -1043,7 +1076,8 @@ write_one_udf_directory(dpnt,outfile)
 		name = USE_MAC_NAME(de) ? de->hfs_ent->name : de->name;
 
 		/* skip . and .. */
-		if (name[0] == '.' && (name[1] == 0 || (name[1] == '.' && name[2] == 0)))
+		if (name[0] == '.' && (name[1] == 0 ||
+		    (name[1] == '.' && name[2] == 0)))
 			continue;
 
 		/* look in RR_MOVED for relocated directories */
@@ -1073,14 +1107,14 @@ write_one_udf_directory(dpnt,outfile)
 			!!(de1->isorec.flags[0] & ISO_DIRECTORY),
 			de1->udf_file_entry_sector - lba_udf_partition_start,
 			de1->udf_file_entry_sector);
-		xfwrite(buf, ident_size, 1, outfile);
+		xfwrite(buf, ident_size, 1, outfile, 0, FALSE);
 		size_in_bytes += ident_size;
 	}
 
 	padded_size_in_bytes = PAD(size_in_bytes, SECTOR_SIZE);
 	if (size_in_bytes < padded_size_in_bytes) {
 		memset(buf, 0, padded_size_in_bytes - size_in_bytes);
-		xfwrite(buf, padded_size_in_bytes - size_in_bytes, 1, outfile);
+		xfwrite(buf, padded_size_in_bytes - size_in_bytes, 1, outfile, 0, FALSE);
 	}
 
 	last_extent_written += padded_size_in_bytes / SECTOR_SIZE;
@@ -1090,7 +1124,7 @@ static void
 #ifdef PROTOTYPES
 write_udf_directories(struct directory *dpnt, FILE *outfile)
 #else
-write_udf_directories(dpnt,outfile)
+write_udf_directories(dpnt, outfile)
 	struct directory	*dpnt;
 	FILE			*outfile;
 #endif
@@ -1109,7 +1143,7 @@ static void
 #ifdef PROTOTYPES
 write_udf_file_entries(struct directory *dpnt, FILE *outfile)
 #else
-write_udf_file_entries(dpnt,outfile)
+write_udf_file_entries(dpnt, outfile)
 	struct directory	*dpnt;
 	FILE			*outfile;
 #endif
@@ -1121,8 +1155,8 @@ write_udf_file_entries(dpnt,outfile)
 	if (!(dpnt->dir_flags & INHIBIT_JOLIET_ENTRY)) {
 		struct directory_entry *de;
 		for (de = dpnt->jcontents; de; de = de->jnext) {
-			if (!(de->de_flags & RELOCATED_DIRECTORY)
-			 && !(de->isorec.flags[0] & ISO_DIRECTORY)) {
+			if (!(de->de_flags & RELOCATED_DIRECTORY) &&
+			    !(de->isorec.flags[0] & ISO_DIRECTORY)) {
 
 				memset(buf, 0, 512);
 				set_file_entry(
@@ -1134,7 +1168,7 @@ write_udf_file_entries(dpnt,outfile)
 					0,	/* is_directory */
 					1,	/* link_count */
 					de->udf_file_entry_sector);
-				xfwrite(buf, SECTOR_SIZE, 1, outfile);
+				xfwrite(buf, SECTOR_SIZE, 1, outfile, 0, FALSE);
 			}
 		}
 	}
@@ -1160,15 +1194,15 @@ udf_vol_recognition_area_write(out)
 	char buf[SECTOR_SIZE];
 	udf_volume_recognition_desc *vsd = (udf_volume_recognition_desc *)buf;
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	/*set8(&vsd->structure_type, 0);*/
 	set8(&vsd->structure_version, 1);
 	for (i = 0; i < 3; ++i) {
 		memcpy(vsd->standard_identifier, identifiers[i], 5);
-		xfwrite(buf, 1, SECTOR_SIZE, out);
+		xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 	}
 	last_extent_written += 3;
-	return 0;
+	return (0);
 }
 
 static int
@@ -1186,40 +1220,40 @@ udf_main_seq_write(out)
 	 * volume_set_id needs to be set to a (64-bit) "unique" number.
 	 * This will have to do for now.
 	 */
-	time((time_t *)&volume_set_id[0]);
+	volume_set_id[0] = begun;
 	volume_set_id[1] = (unsigned)clock();	/* XXX Maybe non-portable */
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	set_primary_vol_desc(buf, last_extent_written++);
-	xfwrite(buf, SECTOR_SIZE, 1, out);
+	xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	set_impl_use_vol_desc(buf, last_extent_written++);
-	xfwrite(buf, SECTOR_SIZE, 1, out);
+	xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	set_partition_desc(buf, last_extent_written++);
-	xfwrite(buf, SECTOR_SIZE, 1, out);
+	xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	set_logical_vol_desc(buf, last_extent_written++);
-	xfwrite(buf, SECTOR_SIZE, 1, out);
+	xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	set_unallocated_space_desc(buf, last_extent_written++);
-	xfwrite(buf, SECTOR_SIZE, 1, out);
+	xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	set_terminating_desc(buf, last_extent_written++);
-	xfwrite(buf, SECTOR_SIZE, 1, out);
+	xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	for (i = 6; i < UDF_MAIN_SEQ_LENGTH; ++i) {
-		xfwrite(buf, SECTOR_SIZE, 1, out);
+		xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 		last_extent_written++;
 	}
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -1232,13 +1266,14 @@ udf_integ_seq_write(out)
 {
 	Uchar buf[SECTOR_SIZE*UDF_INTEG_SEQ_LENGTH];
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 
-	set_logical_vol_integrity_desc(buf+0*SECTOR_SIZE, last_extent_written++);
+	set_logical_vol_integrity_desc(buf+0*SECTOR_SIZE,
+						last_extent_written++);
 	set_terminating_desc(buf+1*SECTOR_SIZE, last_extent_written++);
 
-	xfwrite(buf, UDF_INTEG_SEQ_LENGTH, SECTOR_SIZE, out);
-	return 0;
+	xfwrite(buf, SECTOR_SIZE, UDF_INTEG_SEQ_LENGTH, out, 0, FALSE);
+	return (0);
 }
 
 static int
@@ -1251,10 +1286,10 @@ udf_anchor_vol_desc_write(out)
 {
 	Uchar buf[SECTOR_SIZE];
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	set_anchor_volume_desc_pointer(buf, last_extent_written++);
-	xfwrite(buf, 1, SECTOR_SIZE, out);
-	return 0;
+	xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
+	return (0);
 }
 
 static int
@@ -1267,14 +1302,16 @@ udf_file_set_desc_write(out)
 {
 	Uchar buf[SECTOR_SIZE*2];
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 
-	set_file_set_desc(buf+0*SECTOR_SIZE, (last_extent_written++) - lba_udf_partition_start);
-	set_terminating_desc(buf+1*SECTOR_SIZE, (last_extent_written++) - lba_udf_partition_start);
+	set_file_set_desc(buf+0*SECTOR_SIZE,
+			(last_extent_written++) - lba_udf_partition_start);
+	set_terminating_desc(buf+1*SECTOR_SIZE,
+			(last_extent_written++) - lba_udf_partition_start);
 
-	xfwrite(buf, 2, SECTOR_SIZE, out);
+	xfwrite(buf, SECTOR_SIZE, 2, out, 0, FALSE);
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -1286,7 +1323,7 @@ udf_dirtree_write(out)
 #endif
 {
 	write_udf_directories(root, out);
-	return 0;
+	return (0);
 }
 
 static int
@@ -1298,25 +1335,25 @@ udf_file_entries_write(out)
 #endif
 {
 	write_udf_file_entries(root, out);
-	return 0;
+	return (0);
 }
 
 static int
 #ifdef PROTOTYPES
 pad_to(unsigned last_extent_to_write, FILE *out)
 #else
-pad_to(last_extent_to_write,out)
+pad_to(last_extent_to_write, out)
 	unsigned	last_extent_to_write;
 	FILE		*out;
 #endif
 {
 	char buf[SECTOR_SIZE];
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, sizeof (buf));
 	while (last_extent_written < last_extent_to_write) {
-		xfwrite(buf, 1, SECTOR_SIZE, out);
+		xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 		++last_extent_written;
 	}
-	return 0;
+	return (0);
 }
 
 static int
@@ -1327,7 +1364,7 @@ udf_pad_to_sector_32_write(out)
 	FILE	*out;
 #endif
 {
-	return pad_to(session_start+32, out);
+	return (pad_to(session_start+32, out));
 }
 
 static int
@@ -1338,7 +1375,7 @@ udf_pad_to_sector_256_write(out)
 	FILE	*out;
 #endif
 {
-	return pad_to(session_start+256, out);
+	return (pad_to(session_start+256, out));
 }
 
 static int
@@ -1352,12 +1389,15 @@ udf_padend_avdp_write(out)
 	Uchar buf[SECTOR_SIZE];
 	unsigned last_extent_to_write = (last_extent_written+31) & ~15;
 
-	memset(buf, 0, sizeof(buf));
+	if (!use_sparcboot)
+		last_extent_to_write = last_extent_written + 150;
+
+	memset(buf, 0, sizeof (buf));
 	while (last_extent_written < last_extent_to_write) {
 		set_anchor_volume_desc_pointer(buf, last_extent_written++);
-		xfwrite(buf, 1, SECTOR_SIZE, out);
+		xfwrite(buf, SECTOR_SIZE, 1, out, 0, FALSE);
 	}
-	return 0;
+	return (0);
 }
 
 
@@ -1371,7 +1411,7 @@ struct output_fragment udf_dirtree_frag = { NULL, udf_dirtree_size, NULL, udf_di
 struct output_fragment udf_file_entries_frag = { NULL, udf_file_entries_size, NULL, udf_file_entries_write, "UDF file entries" };
 struct output_fragment udf_end_anchor_vol_desc_frag = { NULL, udf_end_anchor_vol_desc_size, NULL, udf_anchor_vol_desc_write, "UDF Anchor end volume" };
 
-struct output_fragment udf_pad_to_sector_32_frag = { NULL, udf_pad_to_sector_32_size, NULL, udf_pad_to_sector_32_write, "UDF pad to sector 32 write" };
+struct output_fragment udf_pad_to_sector_32_frag = { NULL, udf_pad_to_sector_32_size, NULL, udf_pad_to_sector_32_write, "UDF pad to sector 32" };
 struct output_fragment udf_pad_to_sector_256_frag = { NULL, udf_pad_to_sector_256_size, NULL, udf_pad_to_sector_256_write, "UDF pad to sector 256" };
 struct output_fragment udf_padend_avdp_frag = { NULL, udf_padend_avdp_size, NULL, udf_padend_avdp_write, "UDF Pad end" };
 
@@ -1408,7 +1448,7 @@ int
 #ifdef PROTOTYPES
 assign_dvd_weights(char *name, struct directory *this_dir, int val)
 #else
-assign_dvd_weights(name,this_dir,val)
+assign_dvd_weights(name, this_dir, val)
 	char			*name;
 	struct directory	*this_dir;
 	int			val;
@@ -1419,7 +1459,7 @@ assign_dvd_weights(name,this_dir,val)
 	int audio;
 
 	if (name[0] != 'A' && name[0] != 'V')
-		return val;
+		return (val);
 
 	if (memcmp(name, "VIDEO_TS", 8) == 0) {
 		ts_number = 0;
@@ -1434,35 +1474,35 @@ assign_dvd_weights(name,this_dir,val)
 		ts_number = 1;
 		audio = 1;
 	} else {
-		return val;
+		return (val);
 	}
 
-	if (this_dir->parent != root || strcmp(this_dir->de_name, "VIDEO_TS") != 0)
-		return val;
+	if (this_dir->parent != root ||
+	    strcmp(this_dir->de_name, "VIDEO_TS") != 0)
+		return (val);
 
 	if (ts_number == 0) {
 		segment = 0;
 	} else {
-		if (name[4] >= '0' && name[4] <= '9'
-		 && name[5] >= '0' && name[5] <= '9'
-		 && name[6] == '_'
-		 && name[7] >= '0' && name[7] <= '9')
-		{
+		if (name[4] >= '0' && name[4] <= '9' &&
+		    name[5] >= '0' && name[5] <= '9' &&
+		    name[6] == '_' &&
+		    name[7] >= '0' && name[7] <= '9') {
 			ts_number = name[4] * 10 + name[5] - ('0' * 11);
 			segment = name[7] - '0';
 		} else {
-			return val;
+			return (val);
 		}
 	}
 
 	if (strcmp(name+8, audio ? ".AOB" : ".VOB") == 0) {
-		return audio * 10000 - ts_number * 12 - segment + 11198;
+		return (audio * 10000 - ts_number * 12 - segment + 11198);
 	} else if (strcmp(name+8, ".IFO") == 0) {
-		return audio * 10000 - ts_number * 12 + 11199;
+		return (audio * 10000 - ts_number * 12 + 11199);
 	} else if (strcmp(name+8, ".BUP") == 0) {
-		return audio * 10000 - ts_number * 12 + 11188;
+		return (audio * 10000 - ts_number * 12 + 11188);
 	} else {
-		return val;
+		return (val);
 	}
 }
 

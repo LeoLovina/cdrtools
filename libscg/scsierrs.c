@@ -1,7 +1,7 @@
-/* @(#)scsierrs.c	2.28 02/04/16 Copyright 1987-1996 J. Schilling */
+/* @(#)scsierrs.c	2.29 04/06/17 Copyright 1987-1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsierrs.c	2.28 02/04/16 Copyright 1987-1996 J. Schilling";
+	"@(#)scsierrs.c	2.29 04/06/17 Copyright 1987-1996 J. Schilling";
 #endif
 /*
  *	Error printing for scsitransp.c
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -891,7 +891,7 @@ scg__errmsg(scgp, obuf, maxcnt, sense, status, sense_code)
 	case SC_ILLEGAL_REQUEST:
 		n = js_snprintf(obuf, sizeleft, "error refers to %s part, bit ptr %d %s field ptr %d",
 			ext_sense->cd? "command":"data",
-			ext_sense->bptr,
+			(int)ext_sense->bptr,
 			ext_sense->bpv? "(valid)":"(not valid)",
 			ext_sense->field_ptr[0] << 8 |
 			ext_sense->field_ptr[1]);

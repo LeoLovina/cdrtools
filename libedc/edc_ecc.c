@@ -1,7 +1,7 @@
-/* @(#)edc_ecc.c	1.20 02/10/19 Copyright 1998-2002 Heiko Eissfeldt, Joerg Schilling */
+/* @(#)edc_ecc.c	1.21 03/04/04 Copyright 1998-2002 Heiko Eissfeldt, Joerg Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)edc_ecc.c	1.20 02/10/19 Copyright 1998-2002 Heiko Eissfeldt, Joerg Schilling";
+	"@(#)edc_ecc.c	1.21 03/04/04 Copyright 1998-2002 Heiko Eissfeldt, Joerg Schilling";
 #endif
 
 /*
@@ -24,9 +24,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -346,10 +346,10 @@ encode_L1_Q(inout)
 		if (data != 0) {
 			unsigned char base = rs_l12_log[data];
 
-			Q[0] ^= rs_l12_alog[(base+AQ[0][i]) % ((1 << RS_L12_BITS)-1)];
-			Q[1] ^= rs_l12_alog[(base+AQ[1][i]) % ((1 << RS_L12_BITS)-1)];
-			Q[2] ^= rs_l12_alog[(base+AQ[2][i]) % ((1 << RS_L12_BITS)-1)];
-			Q[3] ^= rs_l12_alog[(base+AQ[3][i]) % ((1 << RS_L12_BITS)-1)];
+			Q[0] ^= rs_l12_alog[(base+AQ[0][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
+			Q[1] ^= rs_l12_alog[(base+AQ[1][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
+			Q[2] ^= rs_l12_alog[(base+AQ[2][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
+			Q[3] ^= rs_l12_alog[(base+AQ[3][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
 		}
 	}
 	return (0);
@@ -374,10 +374,10 @@ encode_L1_P(inout)
 		if (data != 0) {
 			unsigned char base = rs_l12_log[data];
 
-			P[0] ^= rs_l12_alog[(base+AP[0][i]) % ((1 << RS_L12_BITS)-1)];
-			P[1] ^= rs_l12_alog[(base+AP[1][i]) % ((1 << RS_L12_BITS)-1)];
-			P[2] ^= rs_l12_alog[(base+AP[2][i]) % ((1 << RS_L12_BITS)-1)];
-			P[3] ^= rs_l12_alog[(base+AP[3][i]) % ((1 << RS_L12_BITS)-1)];
+			P[0] ^= rs_l12_alog[(base+AP[0][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
+			P[1] ^= rs_l12_alog[(base+AP[1][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
+			P[2] ^= rs_l12_alog[(base+AP[2][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
+			P[3] ^= rs_l12_alog[(base+AP[3][i]) % (unsigned)((1 << RS_L12_BITS)-1)];
 		}
 	}
 	return (0);
@@ -440,8 +440,8 @@ encode_LSUB_Q(inout)
 		if (data != 0) {
 			unsigned char base = rs_sub_rw_log[data];
 
-			Q[0] ^= rs_sub_rw_alog[(base+SQ[0][i]) % ((1 << RS_SUB_RW_BITS)-1)];
-			Q[1] ^= rs_sub_rw_alog[(base+SQ[1][i]) % ((1 << RS_SUB_RW_BITS)-1)];
+			Q[0] ^= rs_sub_rw_alog[(base+SQ[0][i]) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			Q[1] ^= rs_sub_rw_alog[(base+SQ[1][i]) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
 		}
 	}
 	return (0);
@@ -467,10 +467,10 @@ encode_LSUB_P(inout)
 		if (data != 0) {
 			unsigned char base = rs_sub_rw_log[data];
 
-			P[0] ^= rs_sub_rw_alog[(base+SP[0][i]) % ((1 << RS_SUB_RW_BITS)-1)];
-			P[1] ^= rs_sub_rw_alog[(base+SP[1][i]) % ((1 << RS_SUB_RW_BITS)-1)];
-			P[2] ^= rs_sub_rw_alog[(base+SP[2][i]) % ((1 << RS_SUB_RW_BITS)-1)];
-			P[3] ^= rs_sub_rw_alog[(base+SP[3][i]) % ((1 << RS_SUB_RW_BITS)-1)];
+			P[0] ^= rs_sub_rw_alog[(base+SP[0][i]) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			P[1] ^= rs_sub_rw_alog[(base+SP[1][i]) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			P[2] ^= rs_sub_rw_alog[(base+SP[2][i]) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			P[3] ^= rs_sub_rw_alog[(base+SP[3][i]) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
 		}
 	}
 	return (0);
@@ -493,8 +493,8 @@ decode_LSUB_Q(inout)
 		if (data != 0) {
 			unsigned char base = rs_sub_rw_log[data];
 
-			Q[0] ^= rs_sub_rw_alog[(base+0*i) % ((1 << RS_SUB_RW_BITS)-1)];
-			Q[1] ^= rs_sub_rw_alog[(base+1*i) % ((1 << RS_SUB_RW_BITS)-1)];
+			Q[0] ^= rs_sub_rw_alog[(base+0*i) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			Q[1] ^= rs_sub_rw_alog[(base+1*i) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
 		}
 	}
 	return (Q[0] != 0 || Q[1] != 0);
@@ -517,10 +517,10 @@ decode_LSUB_P(inout)
 		if (data != 0) {
 			unsigned char base = rs_sub_rw_log[data];
 
-			P[0] ^= rs_sub_rw_alog[(base+0*i) % ((1 << RS_SUB_RW_BITS)-1)];
-			P[1] ^= rs_sub_rw_alog[(base+1*i) % ((1 << RS_SUB_RW_BITS)-1)];
-			P[2] ^= rs_sub_rw_alog[(base+2*i) % ((1 << RS_SUB_RW_BITS)-1)];
-			P[3] ^= rs_sub_rw_alog[(base+3*i) % ((1 << RS_SUB_RW_BITS)-1)];
+			P[0] ^= rs_sub_rw_alog[(base+0*i) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			P[1] ^= rs_sub_rw_alog[(base+1*i) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			P[2] ^= rs_sub_rw_alog[(base+2*i) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
+			P[3] ^= rs_sub_rw_alog[(base+3*i) % (unsigned)((1 << RS_SUB_RW_BITS)-1)];
 		}
 	}
 	return (P[0] != 0 || P[1] != 0 || P[2] != 0 || P[3] != 0);

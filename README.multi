@@ -35,7 +35,7 @@ Next step is to check if cdrecord is able to retrieve the following data:
 
 	   For the first additional session this is 11250 sectors lead-out/lead-in
 	   overhead + 150 sectors for the pre-gap of the first track after the
-	   lead-in = 11400 sectos.
+	   lead-in = 11400 sectors.
 
 	   For all further session this is 6750 sectors lead-out/lead-in
 	   overhead + 150 sectors for the pre-gap of the first track after the
@@ -166,7 +166,7 @@ Joliet is a really bad idea in general:
 		(00)(3F) '?' (Question Mark)
 		(00)(5C) '\' (Backslash) 
 
-	While '/' is not a real problem ;-) other characters may cause troube.
+	While '/' is not a real problem ;-) other characters may cause trouble.
  
 All notes above prevent you from doing reliable multi-session if the CD does
 only contain Joliet but des not contain Rock Ridge attributes.

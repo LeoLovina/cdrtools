@@ -1,12 +1,12 @@
-/* @(#)diskid.c	1.36 02/11/10 Copyright 1998-2002 J. Schilling */
+/* @(#)diskid.c	1.37 04/03/02 Copyright 1998-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)diskid.c	1.36 02/11/10 Copyright 1998-2002 J. Schilling";
+	"@(#)diskid.c	1.37 04/03/02 Copyright 1998-2004 J. Schilling";
 #endif
 /*
  *	Disk Idientification Method
  *
- *	Copyright (c) 1998-2002 J. Schilling
+ *	Copyright (c) 1998-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -168,7 +168,7 @@ LOCAL	struct disk_man odman[] = {
 	{{00, 00, 00}, 0, NULL },
 };
 
-#define	noman	(sizeof(oman)/sizeof(oman[0]))
+#define	noman	(sizeof (oman)/sizeof (oman[0]))
 
 /*
  * Actual code table. It lists code ranges (97:xx:y0 - 97:xx:y9).
@@ -318,7 +318,7 @@ LOCAL	struct disk_man dman[] = {
 	{{00, 00, 00},  0, NULL },
 };
 
-#define	ndman	(sizeof(dman)/sizeof(dman[0]))
+#define	ndman	(sizeof (dman)/sizeof (dman[0]))
 
 LOCAL struct disk_man *
 man_ptr(mp)
@@ -403,7 +403,7 @@ pr_manufacturer(mp, rw, audio)
 	if (mp->msf_min != 97)	/* This may be garbage ATIP from a DVD */
 		return;
 
-	if (dp >= &dman[I_GUESS] && dp <&dman[ndman]) {
+	if (dp >= &dman[I_GUESS] && dp < &dman[ndman]) {
 		printf("Manufacturer is guessed because of the orange forum embargo.\n");
 		printf("The orange forum likes to get money for recent information.\n");
 		printf("The information for this media may not be correct.\n");
@@ -428,9 +428,9 @@ manufacturer_id(mp)
 }
 
 struct disk_rcap {
-	msf_t	ci_msf;				/* Lead in start time	     */
-	long	ci_cap;				/* Lead out start time	     */
-	long	ci_rcap;			/* Abs max lead out start    */
+	msf_t	ci_msf;				/* Lead in start time	    */
+	long	ci_cap;				/* Lead out start time	    */
+	long	ci_rcap;			/* Abs max lead out start   */
 };
 
 LOCAL	struct disk_rcap rcap[] = {
@@ -438,64 +438,64 @@ LOCAL	struct disk_rcap rcap[] = {
 #ifdef	__redbook_only__
 	{{97, 35, 44}, 359849, 404700 },	/*! Unknown 99 min (89:58/00)*/
 #endif
-	{{97, 35, 44}, 359849, 449700 },	/*! Unknown 99 min (99:58/00)*/
-	{{97, 31, 00}, 359849, 368923 },	/*! Arita CD-R 80	     */
-	{{97, 26, 50}, 359849, 369096 },	/*! Lead Data CD-R 80	     */
-	{{97, 26, 12}, 359849, 368000 },	/*X POSTECH 80 Min	     */
-	{{97, 25, 00}, 359849, 374002 },	/* TDK 80 Minuten	     */
-	{{97, 20, 14}, 359700, 376386 },	/*! Albrechts DataFile Plus  */
+	{{97, 35, 44}, 359849, 449700 },	/*! Unknown 99 min (99:58/00) */
+	{{97, 31, 00}, 359849, 368923 },	/*! Arita CD-R 80	    */
+	{{97, 26, 50}, 359849, 369096 },	/*! Lead Data CD-R 80	    */
+	{{97, 26, 12}, 359849, 368000 },	/*X POSTECH 80 Min	    */
+	{{97, 25, 00}, 359849, 374002 },	/* TDK 80 Minuten	    */
+	{{97, 20, 14}, 359700, 376386 },	/*! Albrechts DataFile Plus */
 	{{97, 35, 44}, 359100, 368791 },	/*! NoName BC-1 700 Mb/80 Min */
 
-	{{97, 26, 60}, 337350, 349030 },	/* Koch grün CD-R74PRO	     */
-	{{97, 26, 50}, 337050, 351205 },	/* Saba			     */
-	{{97, 26, 00}, 337050, 351411 },	/*!DGN (FORNET)		     */
-	{{97, 22, 40}, 336631, 349971 },	/* Targa grün CD-R74	     */
-	{{97, 26, 50}, 336631, 351727 },	/*! Sunstar (Lead Data)	     */
-	{{97, 26, 55}, 336631, 350474 },	/*! NoName ZAP (Lead Data)   */
+	{{97, 26, 60}, 337350, 349030 },	/* Koch grün CD-R74PRO	    */
+	{{97, 26, 50}, 337050, 351205 },	/* Saba			    */
+	{{97, 26, 00}, 337050, 351411 },	/*!DGN (FORNET)		    */
+	{{97, 22, 40}, 336631, 349971 },	/* Targa grün CD-R74	    */
+	{{97, 26, 50}, 336631, 351727 },	/*! Sunstar (Lead Data)	    */
+	{{97, 26, 55}, 336631, 350474 },	/*! NoName ZAP (Lead Data)  */
 
-	{{97, 27, 28}, 336601, 346489 },	/*! BTC CD-R (Princo)	     */
-	{{97, 27, 30}, 336601, 351646 },	/*! Pioneer blau CDM-W74S     */
-	{{97, 27, 31}, 336601, 351379 },	/* Pioneer blau CDM-W74S     */
-	{{97, 27, 33}, 336601, 347029 },	/*! Pioneer braun CDM-V74S   */
-	{{97, 26, 40}, 336225, 346210 },	/* Fuji Silver Disk	     */
-	{{97, 28, 10}, 336225, 348757 },	/*!GigaStorage Cursor CD-R   */
-	{{97, 31, 00}, 336225, 345460 },	/* Arita grün		     */
-	{{97, 25, 28}, 336075, 352879 },	/* Maxell gold CD-R74G	     */
-	{{97, 24, 01}, 336075, 346856 },	/*!Philips Premium Silver    */
-	{{97, 24, 00}, 336075, 346741 },	/* Philips grün CD-R74	     */
+	{{97, 27, 28}, 336601, 346489 },	/*! BTC CD-R (Princo)	    */
+	{{97, 27, 30}, 336601, 351646 },	/*! Pioneer blau CDM-W74S   */
+	{{97, 27, 31}, 336601, 351379 },	/* Pioneer blau CDM-W74S    */
+	{{97, 27, 33}, 336601, 347029 },	/*! Pioneer braun CDM-V74S  */
+	{{97, 26, 40}, 336225, 346210 },	/* Fuji Silver Disk	    */
+	{{97, 28, 10}, 336225, 348757 },	/*!GigaStorage Cursor CD-R  */
+	{{97, 31, 00}, 336225, 345460 },	/* Arita grün		    */
+	{{97, 25, 28}, 336075, 352879 },	/* Maxell gold CD-R74G	    */
+	{{97, 24, 01}, 336075, 346856 },	/*!Philips Premium Silver   */
+	{{97, 24, 00}, 336075, 346741 },	/* Philips grün CD-R74	    */
 
-	{{97, 22, 41}, 335206, 349385 },	/* Octek grün		     */
-	{{97, 34, 20}, 335100, 342460 },	/* Verbatim DataLifePlus     */
-	{{97, 33, 00}, 335100, 344634 },	/*!ITS Singapore (braun/grün)*/
-	{{97, 32, 19}, 335100, 343921 },	/*!Prodisc silber/silber     */
-	{{97, 25, 21}, 335100, 346013 },	/* Maxell grün CD-R74XL	     */
-	{{97, 27, 00}, 335100, 353448 },	/* TDK grün CD-RXG74	     */
-	{{97, 27, 31}, 335100, 351862 },	/*!Maxell CD-R74MU (Musik)   */
-	{{97, 27, 33}, 335100, 351336 },	/* Pioneer RDD-74A	     */
+	{{97, 22, 41}, 335206, 349385 },	/* Octek grün		    */
+	{{97, 34, 20}, 335100, 342460 },	/* Verbatim DataLifePlus    */
+	{{97, 33, 00}, 335100, 344634 },	/*!ITS Singapore (braun/grün) */
+	{{97, 32, 19}, 335100, 343921 },	/*!Prodisc silber/silber    */
+	{{97, 25, 21}, 335100, 346013 },	/* Maxell grün CD-R74XL	    */
+	{{97, 27, 00}, 335100, 353448 },	/* TDK grün CD-RXG74	    */
+	{{97, 27, 31}, 335100, 351862 },	/*!Maxell CD-R74MU (Musik)  */
+	{{97, 27, 33}, 335100, 351336 },	/* Pioneer RDD-74A	    */
 
-	{{97, 26, 60}, 334259, 349036 },	/* BASF grün		     */
-	{{97, 28, 21}, 333976, 348217 },	/*! Noname-B (MMMM)	     */
-	{{97, 28, 20}, 333976, 346485 },	/* Koch  grün  CD-R74 PRO    */
-	{{97, 32, 00}, 333975, 345736 },	/* Imation 3M		     */
-	{{97, 32, 00}, 333975, 348835 },	/* TDK Reflex X     CD-R74   */
-	{{97, 30, 18}, 333899, 344857 },	/* HiSpace  grün	     */
-	{{97, 27, 66}, 333750, 352726 },	/*!Philips Megalife (Musik)  */
-	{{97, 28, 43}, 333750, 345344 },	/*!MMore CD-R		     */
-	{{97, 27, 65}, 333750, 348343 },	/* Ricoh gold		     */
+	{{97, 26, 60}, 334259, 349036 },	/* BASF grün		    */
+	{{97, 28, 21}, 333976, 348217 },	/*! Noname-B (MMMM)	    */
+	{{97, 28, 20}, 333976, 346485 },	/* Koch  grün  CD-R74 PRO   */
+	{{97, 32, 00}, 333975, 345736 },	/* Imation 3M		    */
+	{{97, 32, 00}, 333975, 348835 },	/* TDK Reflex X	    CD-R74  */
+	{{97, 30, 18}, 333899, 344857 },	/* HiSpace  grün	    */
+	{{97, 27, 66}, 333750, 352726 },	/*!Philips Megalife (Musik) */
+	{{97, 28, 43}, 333750, 345344 },	/*!MMore CD-R		    */
+	{{97, 27, 65}, 333750, 348343 },	/* Ricoh gold		    */
 
-	{{97, 27, 00}, 333750, 336246 },	/* BestMedia grün   CD-R74   */
-	{{97, 27, 28}, 333491, 347473 },	/* Fuji grün (alt)	     */
-	{{97, 24, 48}, 333491, 343519 },	/* BASF (alt)		     */
-	{{97, 27, 55}, 333235, 343270 },	/* Teac gold CD-R74	     */
-	{{97, 27, 45}, 333226, 343358 },	/* Kodak gold		     */
-	{{97, 28, 20}, 333226, 346483 },	/* SAST grün		     */
-	{{97, 27, 45}, 333226, 343357 },	/* Mitsumi gold		     */
-	{{97, 28, 25}, 333226, 346481 },	/* Cedar Grün		     */
-	{{97, 23, 00}, 333226, 346206 },	/* Fuji grün (alt)	     */
-	{{97, 33, 00}, 333225, 349623 },	/* DataFile Albrechts	     */
-	{{97, 24, 24}, 333198, 342536 },	/*!SUN CD Recordable	     */
+	{{97, 27, 00}, 333750, 336246 },	/* BestMedia grün   CD-R74  */
+	{{97, 27, 28}, 333491, 347473 },	/* Fuji grün (alt)	    */
+	{{97, 24, 48}, 333491, 343519 },	/* BASF (alt)		    */
+	{{97, 27, 55}, 333235, 343270 },	/* Teac gold CD-R74	    */
+	{{97, 27, 45}, 333226, 343358 },	/* Kodak gold		    */
+	{{97, 28, 20}, 333226, 346483 },	/* SAST grün		    */
+	{{97, 27, 45}, 333226, 343357 },	/* Mitsumi gold		    */
+	{{97, 28, 25}, 333226, 346481 },	/* Cedar Grün		    */
+	{{97, 23, 00}, 333226, 346206 },	/* Fuji grün (alt)	    */
+	{{97, 33, 00}, 333225, 349623 },	/* DataFile Albrechts	    */
+	{{97, 24, 24}, 333198, 342536 },	/*!SUN CD Recordable	    */
 
-	{{97, 27, 19}, 332850, 348442 },	/* Plasmon gold PCD-R74	     */
+	{{97, 27, 19}, 332850, 348442 },	/* Plasmon gold PCD-R74	    */
 	{{97, 32, 00}, 96600,  106502 },	/* TDK 80mm (for music only) */
 
 	/*

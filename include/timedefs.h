@@ -1,4 +1,4 @@
-/* @(#)timedefs.h	1.10 02/06/16 Copyright 1996 J. Schilling */
+/* @(#)timedefs.h	1.11 03/11/24 Copyright 1996 J. Schilling */
 /*
  *	Generic header for users of time(), gettimeofday() ...
  *
@@ -17,9 +17,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_TIMEDEFS_H
@@ -61,7 +61,7 @@
 extern "C" {
 #endif
 
-#if	defined(__CYGWIN32__) || defined(__EMX__) || defined(__linux__)
+#if	defined(__CYGWIN32__) || defined(__EMX__) || defined(__linux__) || defined(__DJGPP__)
 /*
  * Cygnus defines struct timeval in sys/time.h but not timerclear
  * timerclear is defined in windows32/Sockets.h ???

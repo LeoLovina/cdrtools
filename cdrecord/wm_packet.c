@@ -1,13 +1,13 @@
-/* @(#)wm_packet.c	1.20 02/10/27 Copyright 1995, 1997, 2001 J. Schilling */
+/* @(#)wm_packet.c	1.25 04/03/01 Copyright 1995, 1997, 2001-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)wm_packet.c	1.20 02/10/27 Copyright 1995, 1997, 2001 J. Schilling";
+	"@(#)wm_packet.c	1.25 04/03/01 Copyright 1995, 1997, 2001-2004 J. Schilling";
 #endif
 /*
  *	CDR write method abtraction layer
  *	packet writing intercace routines
  *
- *	Copyright (c) 1995, 1997, 2001 J. Schilling
+ *	Copyright (c) 1995, 1997, 2001-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -20,9 +20,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -36,6 +36,7 @@ static	char sccsid[] =
 
 #include <scg/scsitransp.h>
 #include "cdrecord.h"
+#include "xio.h"
 
 extern	int	debug;
 extern	int	verbose;
@@ -52,7 +53,7 @@ write_packet_data(scgp, dp, trackp)
 	track_t	*trackp;
 {
 	int	track = trackp->trackno;
-	int	f;
+	int	f = -1;
 	int	isaudio;
 	long	startsec;
 	Llong	bytes_read = 0;
@@ -96,7 +97,9 @@ int oper = -1;
 		dp->cdr_dstat->ds_buflow = 0;
 	scgp->silent--;
 
-	f = trackp->f;
+	if (trackp->xfp != NULL)
+		f = xfileno(trackp->xfp);
+
 	isaudio = is_audio(trackp);
 	tracksize = trackp->tracksize;
 	startsec = trackp->trackstart;
@@ -104,7 +107,7 @@ int oper = -1;
 	secsize = trackp->secsize;
 	secspt = trackp->secspt;
 	bytespt = secsize * secspt;
-	
+
 	pad = !isaudio && is_pad(trackp);	/* Pad only data tracks */
 
 	if (debug) {
@@ -115,7 +118,7 @@ int oper = -1;
 	if (lverbose) {
 		if (tracksize > 0)
 			printf("\rTrack %02d:    0 of %4lld MB written.",
-			       track, tracksize >> 20);
+				track, tracksize >> 20);
 		else
 			printf("\rTrack %02d:    0 MB written.", track);
 		flush();
@@ -129,7 +132,7 @@ int oper = -1;
 			if ((tracksize - bytes_read) > bytespt)
 				bytes_to_read = bytespt;
 			else
-				bytes_to_read = tracksize - bytes_read;				
+				bytes_to_read = tracksize - bytes_read;
 		}
 					/* XXX next wr addr ??? */
 		count = get_buf(f, trackp, startsec, &bp, bytes_to_read);
@@ -233,7 +236,7 @@ int oper = -1;
 					per = 100*(bsize - bfree) / bsize;
 					if (per < 5)
 						dp->cdr_dstat->ds_buflow++;
-					if (per < dp->cdr_dstat->ds_minbuf &&
+					if (per < (int)dp->cdr_dstat->ds_minbuf &&
 					    (startsec*secsize) > bsize) {
 						dp->cdr_dstat->ds_minbuf = per;
 					}
@@ -275,7 +278,7 @@ int oper = -1;
 		 * pad_track() is based on secsize. Compute the amount of bytes
 		 * assumed by pad_track().
 		 */
-		padbytes = trackp->padsecs * secsize;
+		padbytes = (Llong)trackp->padsecs * secsize;
 
 		if (neednl) {
 			printf("\n");
@@ -294,7 +297,6 @@ int oper = -1;
 		startsec += savbytes / secsize;
 	}
 	printf("%sTrack %02d: Total bytes read/written: %lld/%lld (%lld sectors).\n",
-	       neednl?"\n":"", track, bytes_read, bytes, bytes/secsize);
-	return 0;
+		neednl?"\n":"", track, bytes_read, bytes, bytes/secsize);
+	return (0);
 }
-

@@ -1,4 +1,4 @@
-/* @(#)rmtio.h	1.4 02/08/26 Copyright 1995,2000 J. Schilling */
+/* @(#)rmtio.h	1.5 03/06/15 Copyright 1995,2000 J. Schilling */
 /*
  *	Definition for enhanced remote tape IO
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_RMTIO_H
@@ -95,21 +95,21 @@
  * structure for remote MTIOCGET - mag tape get status command
  */
 struct rmtget	{
-	Llong		mt_type;	/* type of magtape device	     */
-	/* the following two registers are grossly device dependent	     */
-	Llong		mt_dsreg;	/* ``drive status'' register	     */
-	Int32_t		mt_dsreg1;	/* ``drive status'' register	     */
-	Int32_t		mt_dsreg2;	/* ``drive status'' register	     */
-	Llong		mt_gstat;	/* ``generic status'' register	     */
-	Llong		mt_erreg;	/* ``error'' register		     */
-	/* optional error info.						     */
-	Llong		mt_resid;	/* residual count		     */
-	Llong		mt_fileno;	/* file number of current position   */
-	Llong		mt_blkno;	/* block number of current position  */
+	Llong		mt_type;	/* type of magtape device	    */
+	/* the following two registers are grossly device dependent	    */
+	Llong		mt_dsreg;	/* ``drive status'' register	    */
+	Int32_t		mt_dsreg1;	/* ``drive status'' register	    */
+	Int32_t		mt_dsreg2;	/* ``drive status'' register	    */
+	Llong		mt_gstat;	/* ``generic status'' register	    */
+	Llong		mt_erreg;	/* ``error'' register		    */
+	/* optional error info.						    */
+	Llong		mt_resid;	/* residual count		    */
+	Llong		mt_fileno;	/* file number of current position  */
+	Llong		mt_blkno;	/* block number of current position */
 	Llong		mt_flags;
-	Llong		mt_gflags;	/* generic flags		     */
-	long		mt_bf;		/* optimum blocking factor	     */
-	int		mt_xflags;	/* eXistence flags for struct members*/
+	Llong		mt_gflags;	/* generic flags		    */
+	long		mt_bf;		/* optimum blocking factor	    */
+	int		mt_xflags;	/* eXistence flags for struct members */
 };
 
 /*
@@ -117,7 +117,7 @@ struct rmtget	{
  */
 #define	RMT_TYPE		0x0001	/* mt_type/mt_model present	*/
 #define	RMT_DSREG		0x0002	/* mt_dsreg present		*/
-#define	RMT_DSREG1		0x0004	/* mt_dsreg1 present		*/ 
+#define	RMT_DSREG1		0x0004	/* mt_dsreg1 present		*/
 #define	RMT_DSREG2		0x0008	/* mt_dsreg2 present		*/
 #define	RMT_GSTAT		0x0010	/* mt_gstat present		*/
 #define	RMT_ERREG		0x0020	/* mt_erreg present		*/

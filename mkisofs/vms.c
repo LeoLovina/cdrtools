@@ -1,7 +1,7 @@
-/* @(#)vms.c	1.6 00/12/05 joerg */
+/* @(#)vms.c	1.9 04/03/04 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)vms.c	1.6 00/12/05 joerg";
+	"@(#)vms.c	1.9 04/03/04 joerg";
 
 #endif
 /*
@@ -13,7 +13,7 @@ static	char sccsid[] =
 
 #include <mconfig.h>
 #ifdef VMS
-#define opendir fake_opendir
+#define	opendir	fake_opendir
 #include "mkisofs.h"
 #undef opendir
 #include <rms.h>
@@ -31,17 +31,7 @@ error_exit(char *text)
 }
 
 
-char           *strrchr(const char *, char);
-
-char *
-strdup(char *source)
-{
-	char		*pnt;
-
-	pnt = (char *) e_malloc(strlen(source) + 1);
-	strcpy(pnt, source);
-	return pnt;
-}
+char *strrchr(const char *, char);
 
 int
 VMS_stat(char *path, struct stat * spnt)
@@ -66,7 +56,7 @@ VMS_stat(char *path, struct stat * spnt)
 		/* Find end of actual name */
 		pnt = strrchr(sbuffer, ']');
 		if (!pnt)
-			return 0;
+			return (0);
 
 		pnt1 = pnt;
 		while (*pnt1 != '[' && *pnt1 != '.')
@@ -104,15 +94,15 @@ VMS_stat(char *path, struct stat * spnt)
 
 		spath = sbuffer;
 	};
-	return stat_filter(spath, spnt);
+	return (stat_filter(spath, spnt));
 }
 
-static int      dircontext[32] = {0,};
-static char    *searchpath[32];
-static struct direct d_entry[32];
+static int		dircontext[32] = {0, };
+static char		*searchpath[32];
+static struct direct	d_entry[32];
 
-int             optind = 0;
-char           *optarg;
+int			optind = 0;
+char			*optarg;
 
 int
 getopt(int argc, char *argv[], char *flags)
@@ -122,18 +112,18 @@ getopt(int argc, char *argv[], char *flags)
 
 	optind++;
 	if (*argv[optind] != '-')
-		return EOF;
+		return (EOF);
 	optarg = 0;
 
 	c = *(argv[optind] + 1);
 	pnt = (char *) strchr(flags, c);
 	if (!pnt)
-		return c;	/* Not found */
+		return (c);	/* Not found */
 	if (pnt[1] == ':') {
 		optind++;
 		optarg = argv[optind];
 	};
-	return c;
+	return (c);
 }
 
 void
@@ -177,7 +167,7 @@ opendir(char *path)
 			strcpy(searchpath[i], path);
 			vms_path_fixup(searchpath[i]);
 			strcat(searchpath[i], "*.*.*");
-			return i;
+			return (i);
 		};
 	};
 	exit(0);
@@ -197,13 +187,13 @@ readdir(int context)
 	if (dircontext[context] == -1) {
 		dircontext[context] = -2;
 		strcpy(d_entry[context].d_name, ".");
-		return &d_entry[context];
+		return (&d_entry[context]);
 	};
 
 	if (dircontext[context] == -2) {
 		dircontext[context] = -3;
 		strcpy(d_entry[context].d_name, "..");
-		return &d_entry[context];
+		return (&d_entry[context]);
 	};
 
 	if (dircontext[context] == -3)
@@ -214,7 +204,7 @@ readdir(int context)
 		0, 0, &status, 0);
 
 	if (status == SS$_NOMOREFILES)
-		return 0;
+		return (0);
 
 	/* Now trim trailing spaces from the name */
 	i = result.dsc$w_length - 1;
@@ -231,7 +221,7 @@ readdir(int context)
 		pnt = cresult;
 
 	strcpy(d_entry[context].d_name, pnt);
-	return &d_entry[context];
+	return (&d_entry[context]);
 }
 
 void
@@ -246,12 +236,14 @@ closedir(int context)
 static
 open_file(char *fn)
 {
-/* this routine initializes a rab and  fab required to get the
-   correct definition of the external data file used by mail */
+	/*
+	 * this routine initializes a rab and  fab required to get the
+	 * correct definition of the external data file used by mail
+	 */
 	struct FAB	*fab;
 
-	rab = (struct RAB *) e_malloc(sizeof(struct RAB));
-	fab = (struct FAB *) e_malloc(sizeof(struct FAB));
+	rab = (struct RAB *) e_malloc(sizeof (struct RAB));
+	fab = (struct FAB *) e_malloc(sizeof (struct FAB));
 
 	*rab = cc$rms_rab;	/* initialize RAB */
 	rab->rab$l_fab = fab;
@@ -271,7 +263,7 @@ open_file(char *fn)
 	rms_status = sys$connect(rab);
 	if (rms_status != RMS$_NORMAL)
 		error_exit("$CONNECT");
-	return 1;
+	return (1);
 }
 
 static
@@ -284,18 +276,18 @@ close_file(struct RAB * prab)
 		error_exit("$CLOSE");
 }
 
-#define NSECT 16
+#define	NSECT 16
 extern unsigned int last_extent_written;
 
 int
-vms_write_one_file(char *filename, int size, FILE * outfile)
+vms_write_one_file(char *filename, off_t size, FILE * outfile)
 {
 	int		status,
 			i;
 	char		buffer[SECTOR_SIZE * NSECT];
 	int		count;
 	int		use;
-	int		remain;
+	off_t		remain;
 
 	open_file(filename);
 
@@ -306,7 +298,7 @@ vms_write_one_file(char *filename, int size, FILE * outfile)
 		use = ROUND_UP(use);	/* Round up to nearest sector boundary */
 		memset(buffer, 0, use);
 		rab->rab$l_ubf = buffer;
-		rab->rab$w_usz = sizeof(buffer);
+		rab->rab$w_usz = sizeof (buffer);
 		status = sys$read(rab);
 		fwrite(buffer, 1, use, outfile);
 		last_extent_written += use / SECTOR_SIZE;

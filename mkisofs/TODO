@@ -1,4 +1,4 @@
-/* @(#)TODO	1.5 02/12/14 eric */
+/* @(#)TODO	1.6 03/04/27 joerg */
 	1) Finish multiple paths.  Update nlink count on directories if it is
 	different than what stat returned.  Save the nlink count that we store in
 	the rock ridge attributes so know when we don't have to adjust it.
@@ -49,3 +49,9 @@ g) The length of File Identifier is limited to 207;
      Long file name can be expressed. 
 h) The length of a Directory Identifier is limited to 207; 
      Long directory name can be expressed. 
+/*--------------------------------------------------------------------------*/
+
+Extent # auch als off_t statt int
+
+Wenn HFS, dann max File size == 2 GB?
+

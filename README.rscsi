@@ -14,7 +14,7 @@ There are three possible ways to control access to the remote users:
 
 	-	Create one or more special user(s) that have /opt/schily/sbin/rscsi
 		as login shell with their own home directory.
-		You then may create special .rhost files for each user.
+		You then may create special .rhosts files for each user.
 		NOTE: In this case, rscsi must be installed suid root. 
 		**** This is the preferred method ****
 
@@ -45,7 +45,7 @@ RSCSI Security:
 -	If rscsi is not called by a user listed in /etc/default/rscsi
 	it dies.
 
--	To acess a SCSI target there must be an entry that lists the user
+-	To access a SCSI target there must be an entry that lists the user
 	rcsi hast been started from, the hostname and the SCSI target.
 
 	rscsi compares the hostname field in /etc/default/rscsi 
@@ -58,12 +58,12 @@ RSCSI Security:
 RSCSI Security hints:
 
 -	Do not generally allow other users to see your boot disk via RSCSI.
-	All people who see this disk may edit yhour passwd file.
+	All people who see this disk may edit your passwd file.
 
 -	If you are in doubt, only export CD-ROM drives, scanners and similar
 	devices that are not directly security sensitive.
 
-If anybody sees a security hole in my security precautions, plese send me a mail!
+If anybody sees a security hole in my security precautions, please send me a mail!
 
 RSCSI usage:
 
@@ -96,7 +96,7 @@ RSCSI usage:
 		information about the remote libscg version used for the connection.
 
 -	To be able to use the remote SCSI client code from win32 you need to create
-	a file /etc/passwd with a corect entry for the user you are on win32.
+	a file /etc/passwd with a correct entry for the user you are on win32.
 	Call 'id' to get the right user id.
 	Note that remote SCSI has not yet been tested on Win32.
 
@@ -104,7 +104,7 @@ RSCSI speed:
 
 -	On a Ultra-10 running Solaris 8, the command overhead time is 400 usec.
 	You may achieve up to 9900 kB/s via a 100MB/s ethernet connection
-	bewteen two of such machines.
+	between two of such machines.
 
 -	With 100 MB/s, 12x recording should be no problem.
 

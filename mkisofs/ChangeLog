@@ -1,3 +1,807 @@
+****** Version 2.01 ******
+
+Wed Sep  8 20:28:58 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.47
+	* isovfy.c 1.23
+	* dump.c 1.21
+	* isodebug.c 1.9
+	* isodump.c 1.24
+	* mkisofs.c 1.161
+	  Version -> 2.01
+
+Thu Sep  2 13:05:11 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.108
+	  -D Hinweis auf ISO9660:1999
+
+Mon Aug 30 12:24:17 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.107
+	  ISO-9690 -> ISO-9660
+
+Tue Aug 24 19:21:54 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.85
+	  Intermediate Cast auf (void *) damit GCC nicht wegen "strict-aliasing rules" meckert
+
+Tue Aug  3 21:21:54 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.106
+	  Hinweis auf Bugfix fuer -no-split-symlink-components / -no-split-symlink-fields
+
+Sat Jul 31 17:11:30 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.105
+	  Schreibfehler beseitigt
+
+Sat Jul 17 23:42:14 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.104
+	* mkisofs.c 1.160
+	  Version -> 2.01a34
+	  -volset-size ist nun auf 1 begrenzt
+
+Sun Jul 11 18:30:27 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.159
+	  Fehlermeldung bei -L/-H/-P weis nun korrekt auf 2.02 hin
+
+Sun Jul 11 02:03:26 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.158
+	  -> NEED_O_BINARY
+
+Fri Jul  9 17:34:41 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.157
+	  Version -> 2.01a33
+
+Fri Jul  9 16:06:36 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* volume.c 1.14
+	* write.c 1.84
+	  static -> LOCAL + EXPORT
+
+Fri Jul  9 15:32:26 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.83
+	  'VIDEO_TS' wird jetzt immer gefunden und mkisofs bricht ab wenn es nicht gefunden werden konnte und -dvd-video
+
+Fri Jun 18 11:17:08 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* hash.c 1.18
+	  Nachdenken ueber Speedup
+
+Thu Jun 17 12:25:43 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.156
+	  Version -> 2.01a32
+
+Thu Jun 17 11:22:11 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dump.c 1.20
+	* isodump.c 1.23
+	  For Schleife ohne strlen() in Ende Bedingung
+
+Sat Jun 12 16:15:16 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.82
+	  sprintf() zur besseren Geschwindigkeit beim Erzeugen von 8.3 Filenamen in sort_n_finish() vermeiden
+
+Mon Jun  7 13:02:01 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.103
+	  Dokumentation der maximalen Stringlaenge der Eintraege im PVD nun auch bei den Optionen
+
+Sat Jun  5 16:48:02 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.102
+	* mkisofs.c 1.155
+	  Optionen -H/-L/-P sind veraltet und werden mit 2.02 POSIX.1-2001 konform
+
+Tue Jun  1 18:27:04 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.154
+	  Version -> 2.01a31
+
+Tue Jun  1 16:53:24 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.81
+	  Bei DJGPP auch alle Files eXecutable machen.
+
+Tue Jun  1 16:52:47 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.153
+	  load_nls("cp437") per Default auch fuer DJGPP
+
+Tue Jun  1 16:51:47 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* defaults.h 1.18
+	  SYSTEM_ID -> DOS fuer DJGPP
+
+Tue Jun  1 16:50:58 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.46
+	  setmode(fileno(stdout), O_BINARY) beim Extrahieren von Dateien nach STDOUT
+
+Tue Jun  1 14:07:06 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isodebug.c 1.8
+	  Funktionen moeglichst LOCAL 
+
+Tue Jun  1 13:50:50 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dump.mk 1.4
+	* dump.c 1.19
+	* isoinfo.8 1.7
+	* isodump.c 1.22
+	* isoinfo.mk 1.5
+	* isodump.mk 1.4
+	* isovfy.mk 1.4
+	* isovfy.c 1.22
+	* isodebug.mk 1.2
+	* isodebug.c 1.7
+	  Umstellung auf libscg
+
+Sat May 29 17:46:26 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.45
+	  cdr_defaults() nur mit libscg rufen
+
+Sat May 29 16:55:08 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isodebug.c 1.6
+	  Version -> 2.01a31
+	  Cstyle
+
+Fri May 28 13:51:13 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.44
+	  Support fuer cdr_defaults() (/etc/default/cdrecord) neu
+
+Fri May 28 13:39:35 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.43
+	  Cstyle
+
+Fri May 28 13:37:39 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.42
+	  Version -> 2.01a31
+	  Umbau auf libscg
+
+Fri May 28 13:36:25 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isodump.c 1.21
+	* isovfy.c 1.21
+	  Version -> 2.01a31
+	  Cstyle
+
+Fri May 28 01:09:55 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dump.c 1.18
+	  Version -> 2.01a31
+	  Cstyle
+
+Thu May 27 01:54:59 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.94
+	  scsi.c Prototypen -> scsi.h
+
+Thu May 27 01:54:31 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi.h 1.1
+	  date and time created 04/05/27 00:54:31 by joerg
+
+Sun May 23 23:46:05 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.32
+	  Debug Messages beseitigt
+
+Sun May 23 23:23:27 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.101
+	* tree.c 1.80
+	* eltorito.c 1.31
+	* match.h 1.9
+	* mkisofs.c 1.152
+	* match.c 1.18
+	  Version -> 2.01a30
+	  Eltorito Boot Images per Default nach Vorne Sortieren
+
+Thu May 20 13:38:31 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.30
+	  Copyright J. Schilling neu
+
+Thu May 20 13:33:59 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.29
+	  Keine Ausgabe der Bootmethode bei mkisofs -quiet
+
+Sat May 15 22:25:17 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.151
+	  Version -> 2.01a29
+	  Hinweis auf unerwuenschte SILO Optionen
+
+Sat May 15 21:48:26 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.82
+	  Neuer Kommentar damit SuSE keine sinnlosen Patches anbringt
+
+Sat May 15 21:05:49 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.41
+	  Version -> 2.01a29
+
+Sat May 15 19:59:40 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.66
+	* mkisofs.c 1.150
+	* isoinfo.c 1.40
+	  GCC shadowed Variblen beseitigt
+
+Thu Apr 15 16:33:41 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.149
+	  Version -> 2.01a28
+
+Thu Apr 15 16:30:40 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* hash.c 1.17
+	  isoname_endsok() neu zum besseren Vergleich von ISO-9660 namen
+
+Thu Apr 15 14:51:22 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* hash.c 1.16
+	* udf.c 1.14
+	  Cstyle
+
+Wed Apr 14 12:55:56 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.81
+	  Schreibfehler beseitigt (Initial Padbock)
+
+Tue Apr  6 12:30:26 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.79
+	  Fix fuer doppeltes Free von Juergen Keil
+	  Absturz durch:
+	  echo bar >/tmp/bar
+	  echo foo/bar=/tmp/bar > /tmp/pathlist
+	  env LD_PRELOAD=libumem.so.1 UMEM_DEBUG=default UMEM_LOGGING=transaction mkisofs -hfs -graft-points -o /tmp/foo.raw -path-list=/tmp/pathlist
+
+Tue Apr  6 11:57:30 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.78
+	  beruecksichtigung des Null Bytes beim malloc() fuer die Datei TRANS_TBL
+
+Sun Apr  4 20:24:38 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.65
+	  Bessere Fehlermeldung bei multi Session mit volset size > 1
+
+Mon Mar 15 15:43:58 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* defaults.h 1.17
+	  "SCO-OPENSERVER"/"SCO-UNIXWARE", Default ist nun "UNIX" statt "LINUX"
+
+Fri Mar  5 00:22:28 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.148
+	  Version -> 2.01a27
+
+Fri Mar  5 00:12:50 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mac_label.c 1.9
+	* match.c 1.17
+	* name.c 1.28
+	* scsi.c 1.19
+	* stream.c 1.3
+	* files.c 1.12
+	* exclude.c 1.9
+	* dvd_reader.c 1.3
+	* eltorito.c 1.28
+	* ifo_read.c 1.5
+	* dvd_file.c 1.3
+	* desktop.c 1.6
+	* apple_driver.c 1.6
+	* vms.c 1.9
+	* volume.c 1.13
+	  Cstyle
+
+Thu Mar  4 22:47:39 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.64
+	* mkisofs.h 1.93
+	* mkisofs.c 1.147
+	* mkisofs.8 1.100
+	  Neue Optionen -root & -old-root von Patrik Ohly
+
+Thu Mar  4 22:40:24 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mac_label.c 1.8
+	  Korrektur fuer PREP/CHRP Erweiterung
+
+Tue Mar  2 00:54:16 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* fnmatch.h 1.4
+	* exclude.h 1.3
+	* diskmbr.h 1.2
+	* defaults.h 1.16
+	* bootinfo.h 1.3
+	* apple.h 1.7
+	* apple.c 1.19
+	* ifo_read.h 1.2
+	* ifo_types.h 1.2
+	* iso9660.h 1.19
+	* mac_label.h 1.3
+	* mactypes.h 1.3
+	* match.h 1.8
+	  Cstyle
+
+Tue Mar  2 00:50:27 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dvd_reader.h 1.2
+	  Cstyle 
+
+Mon Mar  1 12:05:40 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* vms.h 1.3
+	* udf.h 1.2
+	* udf_fs.h 1.2
+	  Cstyle
+
+Sun Feb 29 17:53:16 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.39
+	  Eltorito Boot mit -d anzeigen
+	  Extension Records fuer lange RR Namen korrekt anzeigen
+
+Sun Feb 29 17:20:47 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mac_label.h 1.2
+	* write.c 1.80
+	* mkisofs.c 1.146
+	* mkisofs.h 1.92
+	* mac_label.c 1.7
+	  CHRP Support von "Leigh Brown" <leigh@solinno.co.uk>
+
+Sun Feb 29 16:49:18 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.42
+	* multi.c 1.63
+	  }; in Funktionen -> }
+
+Sun Feb 29 16:43:37 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.62
+	  Korrekte Behandlung von CE Extension Records fuer RR NM & fue rTime Stamps
+
+Wed Feb 25 00:16:47 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.13
+	  Support fuer rationalize_uid/rationalize_gid
+
+Sun Feb 22 16:27:28 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.145
+	  Version -> 2.01a26
+	  Mb -> MB
+
+Sun Feb 22 16:26:26 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.41
+	  gen_xa_attr(mode_t attr) ANSI C Variante wegen aelteren UNIX Versionen mit mode_t == short
+
+Sun Feb 22 16:25:09 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* boot.c 1.13
+	  Total extents including sparc boot -> Total extents including %s boot
+
+Sun Feb 22 16:13:43 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* scsi.c 1.18
+	  cdr_defaults() wird nun fuer das SCSI dev= gerufen (/etc/default/cdrecord)
+
+Wed Jan  7 00:23:46 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.144
+	  Copyright -> 2004
+
+Tue Jan  6 23:53:42 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.143
+	  Version -> 2.01a24
+
+Tue Jan  6 22:37:55 2004 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.77
+	  Rock Ridge Laengenbehandlung in update_nlink()/increment_nlink() korrigiert (Bugfix)
+
+Mon Dec 29 14:46:02 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.142
+	* boot.c 1.12
+	  Cstyle Anpassungen
+
+Mon Dec 29 14:36:10 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* boot.c 1.11
+	  Neue Optionen -sunx86-boot & -sunx86-label
+
+Mon Dec 29 14:35:05 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.141
+	  Version -> 2.01a22
+	  Neue Optionen -sunx86-boot & -sunx86-label
+
+Mon Dec 29 14:34:16 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.99
+	  Neue Optionen -sunx86-boot & -sunx86-label
+	  -sparc-label war vergessen - nun dokumentiert
+
+Mon Dec 29 13:31:28 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.98
+	  Kommentar zu SILO in den NOTES
+	  Fehlende backslashes for diversen - Zeichen eingefuegt
+
+Sun Dec 28 14:46:10 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* sunlabel.h 1.5
+	  Cstyle Aenderungen
+
+Sun Dec 28 14:44:50 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* sunlabel.h 1.4
+	  Erweiterungen fuer Solaris x86 Disk Label und fdisk
+
+Sun Dec 28 14:38:51 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.91
+	  Cstyle Anpassungen
+
+Sun Dec 28 14:37:09 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.90
+	  make_sunx86_label()/scan_sunx86_boot()/sunx86_boot_label() neu
+
+Sat Nov 29 23:58:30 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.140
+	  #include <io.h> fuer setmode(fileno, OBINARY)
+	  #include <io.h> auch fuer DJGPP
+
+Sat Nov 29 23:11:14 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.139
+	  Version -> 2.01a20
+	  setmode(fileno, O_BINARY) auch fuer DJGPP
+
+Sun Jul 13 15:42:15 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.79
+	* mkisofs.h 1.89
+	* mkisofs.c 1.138
+	  secsize -> osecsize, Version -> 2.01a17
+
+Fri Jul 11 11:42:32 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.97
+	  Schreibfehler
+
+Thu Jul 10 01:26:47 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.76
+	  Bessere Meldung bei Stat Buffer Overflow
+
+Sat Jun 21 14:28:25 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.137
+	  Eltorito PVD muss vor direkt nach dem Primaeren PVD kommen -> also vor Enhanced PVD
+
+Sat Jun 21 14:16:30 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* match.c 1.16
+	  Wenn ein TAB nach einem Space im Sort File kommt, dann wird dieses genommen
+
+Sat Jun 21 14:11:05 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.96
+	  Schreibfehler und Formulierungen korrigiert
+
+Sat Jun 21 14:10:13 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* eltorito.c 1.27
+	  Schreibfehler bei 'is not the an allowable size' beseitigt
+
+Tue May  6 19:04:03 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.40
+	  Fix fuer defekte CE Signaturen bei ../../../ in Symlinks
+
+Wed Apr 30 01:19:33 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.136
+	  no_rr nur dann automatisch setzen wenn keine XA Signaturen gefunden wurden
+
+Wed Apr 30 01:18:10 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.61
+	  find_rr() nun mit XA Flag
+
+Wed Apr 30 01:15:59 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.88
+	  Rock Ridge Defines neu
+
+Tue Apr 29 21:22:52 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.78
+	  Variable secsize neu, struct xa_subhdr neu
+
+Tue Apr 29 21:20:40 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.87
+	  Neue Variable secsize
+
+Tue Apr 29 21:19:13 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.135
+	  Neue Option -sectype
+
+Tue Apr 29 01:39:14 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.134
+	  -apple bedeutet nicht mehr -r
+
+Tue Apr 29 01:17:55 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.75
+	  insert_file_entry() erzeugt auch XA oder RockRidge Signaturen fuer rsrc Files
+
+Tue Apr 29 01:06:32 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.77
+	  Umbau von xfwrite() fuer XA subheader
+
+Mon Apr 28 01:44:30 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.95
+	  Hinwies, dasz -apple nicht mehr -R beinhaltet
+
+Mon Apr 28 01:36:07 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.37
+	* eltorito.c 1.26
+	* boot.c 1.10
+	* stream.c 1.2
+	* udf.c 1.12
+	* mkisofs.h 1.86
+	  Umbau von xfwrite() fuer XA subheader
+
+Mon Apr 28 01:06:38 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* iso9660.h 1.18
+	  XA Sektor Subheader Definitionen neu
+
+Sun Apr 27 15:46:18 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.74
+	* eltorito.c 1.25
+	  generate_rock_ridge_attributes() -> generate_xa_rr_attributes(), if (use_RockRidge) -> if (use_XA || use_RockRidge)
+
+Sun Apr 27 15:38:59 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.39
+	  generate_rock_ridge_attributes() -> generate_xa_rr_attributes(), if (!use_RockRidge) goto xa_only;
+
+Sun Apr 27 15:36:45 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.85
+	  generate_rock_ridge_attributes() -> generate_xa_rr_attributes()
+
+Sun Apr 27 15:35:49 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.133
+	  Version -> 2.01a12
+
+Sun Apr 27 14:09:25 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* TODO 1.6
+	  13.4.2003 HFS > 2 GB
+
+Tue Apr 15 18:47:55 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.76
+	  CD-XA001 Signatur hinzufuegen
+
+Sun Apr 13 19:05:06 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.38
+	  Version -> 2.01a10
+	  st_size ist unsigned bei ISO-9660, map auf Llong
+
+Sun Apr 13 01:36:22 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.75
+	* tree.c 1.73
+	* mkisofs.h 1.84
+	  Erster Versuch Files bis zu 4 GB zu unterstuetzen
+
+Sun Apr 13 01:32:15 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* vms.h 1.2
+	* vms.c 1.8
+	  vms_write_one_file() mit off_t size
+
+Fri Apr 11 19:19:24 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.38
+	  gen_xa()/gen_xa_attr() neu
+
+Thu Apr 10 15:38:04 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* iso9660.h 1.17
+	  Kommentar fuer XA Flags korrigiert
+
+Thu Apr 10 15:37:25 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.132
+	  Version -> 2.01a10, Optionen -XA/-xa neu, Schreibfehler bei -iso-level beseitigt
+
+Thu Apr 10 15:36:03 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.83
+	  use_XA neu
+
+Thu Apr 10 15:34:30 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.74
+	  Skip XA Record neu
+
+Sat Apr  5 13:39:51 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.37
+	  Usage Schreibfehler beseitigt
+
+Fri Apr  4 23:42:02 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* name.c 1.27
+	  conv_charset() bei -iso-level 4 fuer 8 Bit Zeichen
+
+Fri Apr  4 23:41:05 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.37
+	  statis -> LOCAL, unsigned char -> Uchar
+
+Fri Apr  4 23:40:06 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ifo_read.c 1.4
+	  Umbau um ANSI C Warnungen zu vermeiden
+
+Sat Mar 29 13:01:43 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.11
+	  Hinweis auf VIDEO_TS in joliet.c
+
+Sat Mar 29 12:59:14 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.36
+	* write.c 1.73
+	  #ifdef __STDC__ -> PROTOTYPES, Eingerueckt nach cstyle
+
+Sat Mar 29 12:43:35 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.60
+	* rock.c 1.36
+	  #ifdef __STDC__ -> PROTOTYPES
+
+Thu Mar 27 00:19:50 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.35
+	  Anpassungen fuer cstyle
+
+Thu Mar 27 00:05:17 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* rock.c 1.34
+	  Bessere Debug Ausgaben fuer add_CE_entry & Bug Fix fuer Split Symplinks (2 Byte Offsetfehler)
+
+Tue Mar 25 21:31:29 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* bswap.h 1.2
+	* mkisofs.h 1.82
+	  Eingerueckt nach cstyle
+
+Tue Mar 25 20:51:55 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.59
+	  Eingerückt nach cstyle
+
+Tue Mar 25 20:48:56 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.131
+	  Version -> 2.01a07, Eingerueckt nach cstyle
+
+Sun Mar  9 13:38:18 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* getopt.c 1.6
+	  FSF Junk Code (#define _NO_PROTO) beseitigt der #include strings.h verhinderte; stattdessen #define getopt __nothing_
+
+Thu Mar  6 22:11:16 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* getopt.h 1.3
+	* fnmatch.h 1.3
+	  mconfig.h statt (internem) protoyp.h
+
+Thu Mar  6 22:03:51 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* getopt.h 1.2
+	* fnmatch.h 1.2
+	  Umbau auf prototyp.h & PROTOTYPES statt __STDC__ damit Prototypen korrekt auch bei SCO Unixware gehen
+
+Thu Mar  6 22:01:40 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dvd_reader.c 1.2
+	  DVDOpenFile() mit Prototype implementierung wegen SCO cc (enum)
+
+Sun Mar  2 17:33:16 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.72
+	  strdup() -> libport
+
+Sat Mar  1 21:19:56 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* match.c 1.15
+	  #include match.h nach #include libport.h wegen MAX define in param.h bei Linux
+
+Sat Mar  1 19:25:08 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* match.c 1.14
+	  #includ <libport.h> fuer strdup()
+
+Sat Mar  1 18:56:35 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.58
+	  *nent -> *nentp & nent
+
+Sat Mar  1 18:41:25 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.57
+	  pnt->assoc schon direkt nach dem Einlesen der direcory zuweisen damit es zuverlaessig funktioniert
+
+Sat Mar  1 13:00:37 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.36
+	  Ausgabe der ISO-9660 directory flags
+
+Sat Mar  1 12:54:45 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* iso9660.h 1.16
+	  Definitionen fuer XA attributes neu
+
+Fri Feb 28 01:32:10 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.72
+	* vms.c 1.7
+	* mkisofs.c 1.130
+	* mkisofs.h 1.81
+	  strdup() -> libport.h
+
+Fri Feb 28 01:23:34 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isodump.c 1.20
+	* dump.c 1.17
+	  Umbau auf ttydefs.h und Portabilitaet fuer alte UNIX Versionen ohne termio*
+
+Sun Feb 23 19:34:23 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.71
+	  LOCAL statt static & Umbau wegen cstyle
+
+Sun Feb 23 14:25:55 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* multi.c 1.56
+	* mkisofs.h 1.80
+	  Einige Funktionen in multi.c -> LOCAL, Eingerueckt nach cstyle
+
+Sat Feb 22 21:57:34 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* joliet.c 1.35
+	  sort_goof -> jsort_goof
+
+Sun Feb 16 01:17:25 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* apple_driver.c 1.5
+	  Unsinniger Parameter aus comerr() Aufruf beseitigt
+
+Sat Feb 15 22:05:58 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.35
+	  Bei -debug wird nun auch der root directory extent ausgegeben
+
+Sat Feb 15 22:03:43 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.94
+	  Padding neu beschrieben (150 Sektoren)
+
+Sat Feb 15 22:00:28 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.71
+	  Interpad rundet nur noch auf ein Vielfaches von 16 Sektoren auf
+
+Sat Feb 15 21:50:27 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* stream.c 1.1
+	  date and time created 03/02/15 21:50:27 by joerg
+
+Sat Feb 15 21:01:49 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.79
+	* mkisofs.c 1.129
+	* udf.c 1.10
+	* write.c 1.70
+	  Umbau auf 150 Sektoren Padding am Ende des FS Images
+
+Sat Feb 15 13:59:11 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.93
+	* mkisofs.c 1.128
+	  Neue Option -stream-media-size
+
+Thu Feb 13 09:37:52 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.69
+	  time_t begun -> EXTERN Freigeben fuer UDF & Stream.c
+
+Thu Feb 13 09:34:41 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.h 1.78
+	  Definitionen fuer stream.c
+
+Thu Feb 13 09:33:19 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.9
+	  Externe time_t begun aus write.c uebernehmen fuer: PDV, LVDESC, File Set Desc, Main Seq
+
+Mon Feb 10 01:47:19 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.34
+	  Eingerueckt nach cstyle
+
+Sun Feb  9 21:49:45 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* udf.c 1.8
+	  Umformatier fuer cstyle
+
+Fri Feb  7 11:15:06 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.127
+	  Version -> 2.01a03, Graft-point nodename ist nun [2*PATH_MAX + 1 + 1] grosz
+
+Tue Jan 28 01:28:37 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* isoinfo.c 1.33
+	  Erkennung von ISO-9660:1999
+
+Tue Jan 28 01:27:23 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.126
+	  Version -> 2.01a02
+
+Tue Jan 28 01:25:58 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.c 1.125
+	  ISO-9660:1998 -> ISO-9660:1999, Schreibfehler bei -pad help beseitigt
+
+Tue Jan 28 01:25:04 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.68
+	  Bei ISO-9660:1999 ist der 2. VD ein ISO_VD_SUPPLEMENTARY (war vorher wie PVD)
+
+Tue Jan 28 01:24:09 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.92
+	* iso9660.h 1.15
+	  ISO-9660:1998 -> ISO-9660:1999
+
+Sun Jan 19 20:18:08 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.91
+	  Warnung vor Suns Eltorito Patch bei -iso-level 4
+
+Sun Jan 19 16:19:29 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* name.c 1.26
+	  Bei relaxed Filenames wird '/' verboten.
+
+Sun Jan 19 16:00:57 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.90
+	* iso9660.h 1.14
+	* mkisofs.h 1.77
+	* rock.c 1.33
+	* mkisofs.c 1.124
+	* multi.c 1.55
+	* write.c 1.67
+	  Version -> 2.01a01, Erweiterungen fuer ISO-9660:1998
+
+Sun Jan 19 15:55:18 2003 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* tree.c 1.70
+	  Bessere RR overflow Meldung
+
+Wed Dec 25 15:16:49 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* name.c 1.25
+	* files.c 1.11
+	* multi.c 1.54
+	  ctype.h nach schily.h wegen OpenBSD #define EOF Bug
+
+Tue Dec 24 16:39:28 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.89
+	* isoinfo.8 1.6
+	  Version -> 2.0
+
+Mon Dec 23 18:25:55 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* dvd_file.c 1.2
+	  Support fuer 0 Byte VIDEO_TS/VTS_xx_0.VOB Files
+
+Mon Dec 16 22:37:04 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* mkisofs.8 1.88
+	  Umbau auf Berlios & fhg.de
+
+Sun Dec 15 02:03:20 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* write.c 1.66
+	  DVD-Video Pad Ausgaben auch ohne DEBUG
+
+Sat Dec 14 19:03:33 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* ChangeLog 1.22
+	  -> Version 2.0
+
+Sat Dec 14 19:03:09 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
+	* TODO 1.5
+	  Hints for ISO 9660:1988
+
 Thu Dec 12 01:25:27 2002 Joerg Schilling <joerg@schily.isdn.cs.tu-berlin.de>
 	* write.c 1.65
 	  Consistency check for DVD-Video Pad (<0)

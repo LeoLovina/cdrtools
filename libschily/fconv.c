@@ -1,9 +1,9 @@
-/* @(#)fconv.c	1.31 01/11/11 Copyright 1985 J. Schilling */
+/* @(#)fconv.c	1.33 03/11/23 Copyright 1985, 1995-2003 J. Schilling */
 /*
  *	Convert floating point numbers to strings for format.c
  *	Should rather use the MT-safe routines [efg]convert()
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -16,9 +16,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>	/* <- may define NO_FLOATINGPOINT */
@@ -43,7 +43,7 @@ extern	char	*fcvt __PR((double, int, int *, int *));
 
 #include <math.h>
 
-#if	defined(HAVE_FP_H)  && !defined(FOUND_ISXX)
+#if	defined(HAVE_FP_H) && !defined(FOUND_ISXX)
 /*
  * WAS:
  * #if	defined(__osf__) || defined(_IBMR2) || defined(_AIX)
@@ -57,7 +57,7 @@ extern	char	*fcvt __PR((double, int, int *, int *));
  * as a macro and the function lives in libm.
  * Let's hope that we will not get problems with the new order.
  */
-#include <fp.h> 
+#include <fp.h>
 #ifndef	isnan
 #define	isnan	IS_NAN
 #endif
@@ -66,7 +66,7 @@ extern	char	*fcvt __PR((double, int, int *, int *));
 /*#define	isinf	IS_INF*/
 #endif
 #define	FOUND_ISXX
-#endif 
+#endif
 
 #if	defined(HAVE_IEEEFP_H) && !defined(FOUND_ISXX)
 /*
@@ -86,7 +86,7 @@ extern	char	*fcvt __PR((double, int, int *, int *));
  * WAS:
  * #if	defined(__hpux) || defined(VMS) || defined(_SCO_DS) || defined(__QNX__)
  */
-#if	defined(__hpux) || defined(__QNX__)
+#if	defined(__hpux) || defined(__QNX__) || defined(__DJGPP__)
 #undef	isnan
 #undef	isinf
 #endif
@@ -127,7 +127,7 @@ ftoes(s, val, fieldwidth, ndigits)
 			int	sign;
 
 	if ((len = _ferr(s, val)) > 0)
-		return len;
+		return (len);
 	rs = s;
 #ifdef	V7_FLOATSTYLE
 	b = ecvt(val, ndigits, &decpt, &sign);
@@ -164,7 +164,7 @@ ftoes(s, val, fieldwidth, ndigits)
 	*rs++ = rdecpt / 10 + '0';
 	*rs++ = rdecpt % 10 + '0';
 	*rs = '\0';
-	return rs - s;
+	return (rs - s);
 }
 
 /*
@@ -189,7 +189,7 @@ ftofs(s, val, fieldwidth, ndigits)
 			int	sign;
 
 	if ((len = _ferr(s, val)) > 0)
-		return len;
+		return (len);
 	rs = s;
 #ifdef	USE_ECVT
 	/*
@@ -243,7 +243,7 @@ ftofs(s, val, fieldwidth, ndigits)
 		*rs++ = '0';
 #endif
 	*rs = '\0';
-	return rs - s;
+	return (rs - s);
 }
 
 LOCAL int
@@ -251,7 +251,7 @@ _ferr(s, val)
 	char	*s;
 	double	val;
 {
-	if (isnan(val)){
+	if (isnan(val)) {
 		strcpy(s, _js_nan);
 		return (sizeof (_js_nan) - 1);
 	}
@@ -259,10 +259,10 @@ _ferr(s, val)
 	/*
 	 * Check first for NaN because finite() will return 1 on Nan too.
 	 */
-	if (isinf(val)){
+	if (isinf(val)) {
 		strcpy(s, _js_inf);
 		return (sizeof (_js_inf) - 1);
 	}
-	return 0;
+	return (0);
 }
 #endif	/* NO_FLOATINGPOINT */

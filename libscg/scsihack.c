@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.41 02/10/19 Copyright 1997,2000,2001 J. Schilling */
+/* @(#)scsihack.c	1.43 03/11/28 Copyright 1997,2000,2001 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.41 02/10/19 Copyright 1997,2000,2001 J. Schilling";
+	"@(#)scsihack.c	1.43 03/11/28 Copyright 1997,2000,2001 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -37,9 +37,9 @@ static	char _sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -240,6 +240,16 @@ EXPORT scg_ops_t scg_std_ops = {
 #include "scsi-amigaos.c"
 #endif
 
+#if	defined(__QNXNTO__) || defined(__QNX__)
+#define	SCSI_IMPL		/* We have a SCSI implementation for QNX */
+#include "scsi-qnx.c"
+#endif	/* QNX */
+
+#ifdef	__DJGPP__		/* We have a SCSI implementation for MS-DOS/DJGPP */
+#define	SCSI_IMPL
+#include "scsi-dos.c"
+#endif
+
 #ifdef	__NEW_ARCHITECTURE
 #define	SCSI_IMPL		/* We have a SCSI implementation for XXX */
 /*
@@ -325,7 +335,7 @@ EXPORT scg_ops_t scg_dummy_ops = {
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_dversion[] = "scsihack.c-1.41";	/* The version for this transport*/
+LOCAL	char	_scg_trans_dversion[] = "scsihack.c-1.43";	/* The version for this transport*/
 
 /*
  * Return version information for the low level SCSI transport code.

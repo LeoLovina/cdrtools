@@ -1,8 +1,6 @@
-/* @(#)config.h	1.4 01/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)config.h	1.7 03/10/06 Copyright 1998-2003 Heiko Eissfeldt */
 /*
- *	Adaption for mconfig.h from make file system.
- *
- *	Copyright (c) 1997 J. Schilling
+ *	a central configuration file
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -35,7 +33,13 @@
 #endif
 
 #include "lconfig.h"
-#if defined HAVE_FORK && (defined (HAVE_SMMAP) || defined(HAVE_USGSHM) || defined(HAVE_DOSALLOCSHAREDMEM))
+
+/* temporary until a autoconf check is present */
+#ifdef	__BEOS__
+#define	HAVE_AREAS	1
+#endif
+
+#if defined HAVE_FORK && (defined (HAVE_SMMAP) || defined(HAVE_USGSHM) || defined(HAVE_DOSALLOCSHAREDMEM) || defined (HAVE_AREAS))
 #define HAVE_FORK_AND_SHAREDMEM
 #undef FIFO
 #define FIFO

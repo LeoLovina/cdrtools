@@ -1,8 +1,8 @@
-/* @(#)serrmsg.c	1.2 01/11/09 Copyright 1985,2000 J. Schilling */
+/* @(#)serrmsg.c	1.3 03/06/15 Copyright 1985, 2000-2003 J. Schilling */
 /*
  *	Routines for printing command errors
  *
- *	Copyright (c) 1985,2000 J. Schilling
+ *	Copyright (c) 1985, 2000-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -101,13 +101,13 @@ _serrmsg(err, buf, maxcnt, msg, args)
 	char	errbuf[20];
 	char	*errnam;
 	char	*prognam = get_progname();
-	
+
 	if (err < 0) {
 		ret = js_snprintf(buf, maxcnt, "%s: %r", prognam, msg, args);
 	} else {
 		errnam = errmsgstr(err);
 		if (errnam == NULL) {
-			(void)js_snprintf(errbuf, sizeof (errbuf),
+			(void) js_snprintf(errbuf, sizeof (errbuf),
 						"Error %d", err);
 			errnam = errbuf;
 		}

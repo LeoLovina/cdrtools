@@ -21,7 +21,7 @@ This package contains the following software:
 
 	-	isoinfo analyze or list an ISO-9660 image
 
-	-	isovrfy verify an ISO-9660 image
+	-	isovfy verify an ISO-9660 image
 
 -	readcd (a stripped down version of scgskeleton)
 	By Jörg Schilling schilling@fokus.fhg.de and

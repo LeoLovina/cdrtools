@@ -1,8 +1,8 @@
-/* @(#)scsimmc.h	1.7 02/03/29 Copyright 1997 J. Schilling */
+/* @(#)scsimmc.h	1.11 04/03/01 Copyright 1997-2004 J. Schilling */
 /*
  *	Definitions for SCSI/mmc compliant drives
  *
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_SCSIMMC_H
@@ -43,7 +43,9 @@ struct disk_info {
 	Uchar	numsess;		/* # of sessions		*/
 	Uchar	first_track_ls;		/* First track in last sessaion	*/
 	Uchar	last_track_ls;		/* Last track in last sessaion	*/
-	Ucbit	res7_04		: 5;	/* Reserved			*/
+	Ucbit	bg_format_stat	: 2;	/* Background format status	*/
+	Ucbit	dbit		: 1;	/* Dirty Bit of defect table	*/
+	Ucbit	res7_34		: 2;	/* Reserved			*/
 	Ucbit	uru		: 1;	/* This is an unrestricted disk	*/
 	Ucbit	dbc_v		: 1;	/* Disk bar code valid		*/
 	Ucbit	did_v		: 1;	/* Disk id valid		*/
@@ -73,7 +75,9 @@ struct disk_info {
 	Ucbit	did_v		: 1;	/* Disk id valid		*/
 	Ucbit	dbc_v		: 1;	/* Disk bar code valid		*/
 	Ucbit	uru		: 1;	/* This is an unrestricted disk	*/
-	Ucbit	res7_04		: 5;	/* Reserved			*/
+	Ucbit	res7_34		: 2;	/* Reserved			*/
+	Ucbit	dbit		: 1;	/* Dirty Bit of defect table	*/
+	Ucbit	bg_format_stat	: 2;	/* Background format status	*/
 	Uchar	disk_type;		/* Disk type			*/
 	Uchar	res9[3];		/* Reserved			*/
 	Uchar	disk_id[4];		/* Disk identification		*/
@@ -212,6 +216,9 @@ struct atipinfo {
 	struct atipdesc		desc;
 };
 
+/*
+ * XXX Check how we may merge Track_info & Rzone_info
+ */
 #if defined(_BIT_FIELDS_LTOH)	/* Intel bitorder */
 
 struct track_info {
@@ -264,6 +271,9 @@ struct track_info {
 
 #endif
 
+/*
+ * XXX Check how we may merge Track_info & Rzone_info
+ */
 #if defined(_BIT_FIELDS_LTOH)	/* Intel bitorder */
 
 struct rzone_info {
@@ -279,9 +289,10 @@ struct rzone_info {
 	Ucbit	blank		: 1;	/* RZone is blank		*/
 	Ucbit	rt		: 1;	/* RZone is reserved		*/
 	Ucbit	nwa_v		: 1;	/* Next WR address is valid	*/
-	Ucbit	res7_17		: 7;	/* Reserved			*/
+	Ucbit	lra_v		: 1;	/* Last rec address is valid	*/
+	Ucbit	res7_27		: 6;	/* Reserved			*/
 	Uchar	rzone_start[4];		/* RZone start address		*/
-	Uchar	next_recordable_addr[4];/* Next recordable address	*/
+	Uchar	next_recordable_addr[4]; /* Next recordable address	*/
 	Uchar	free_blocks[4];		/* Free blocks in RZone		*/
 	Uchar	block_factor[4];	/* # of sectors of disc acc unit */
 	Uchar	rzone_size[4];		/* RZone size			*/
@@ -305,10 +316,11 @@ struct rzone_info {
 	Ucbit	blank		: 1;	/* RZone is blank		*/
 	Ucbit	incremental	: 1;	/* RZone is to be written incremental */
 	Ucbit	res6_04		: 5;	/* Reserved			*/
-	Ucbit	res7_17		: 7;	/* Reserved			*/
+	Ucbit	res7_27		: 6;	/* Reserved			*/
+	Ucbit	lra_v		: 1;	/* Last rec address is valid	*/
 	Ucbit	nwa_v		: 1;	/* Next WR address is valid	*/
 	Uchar	rzone_start[4];		/* RZone start address		*/
-	Uchar	next_recordable_addr[4];/* Next recordable address	*/
+	Uchar	next_recordable_addr[4]; /* Next recordable address	*/
 	Uchar	free_blocks[4];		/* Free blocks in RZone		*/
 	Uchar	block_factor[4];	/* # of sectors of disc acc unit */
 	Uchar	rzone_size[4];		/* RZone size			*/
@@ -442,7 +454,7 @@ struct dvd_structure_0E {
 	Uchar	field_id;		/* Field ID (1)			*/
 	Uchar	application_code;	/* Disc Application code	*/
 	Uchar	phys_data;		/* Disc Phisical Data		*/
-	Uchar	last_recordable_addr[3];/* Last addr of recordable area	*/
+	Uchar	last_recordable_addr[3]; /* Last addr of recordable area */
 	Uchar	res_a[2];		/* Reserved			*/
 	Uchar	field_id_2;		/* Field ID (2)			*/
 	Uchar	ind_wr_power;		/* Recommended writing power	*/
@@ -467,7 +479,7 @@ struct dvd_structure_0F {
 	Uchar	day[2];			/* Day (ascii)			*/
 	Uchar	hour[2];		/* Hour (ascii)			*/
 	Uchar	minute[2];		/* Minute (ascii)		*/
-	Uchar	second[2];		/* Second (ascii)		*/	
+	Uchar	second[2];		/* Second (ascii)		*/
 };
 
 struct dvd_structure_0F_w {
@@ -479,7 +491,7 @@ struct dvd_structure_0F_w {
 	Uchar	day[2];			/* Day (ascii)			*/
 	Uchar	hour[2];		/* Hour (ascii)			*/
 	Uchar	minute[2];		/* Minute (ascii)		*/
-	Uchar	second[2];		/* Second (ascii)		*/	
+	Uchar	second[2];		/* Second (ascii)		*/
 };
 
 struct mmc_cue {
@@ -491,6 +503,80 @@ struct mmc_cue {
 	Uchar	cs_min;			/* Absolute time minutes	*/
 	Uchar	cs_sec;			/* Absolute time seconds	*/
 	Uchar	cs_frame;		/* Absolute time frames		*/
+};
+
+struct mmc_performance_header {
+	Uchar	p_datalen[4];		/* Performance Data length	*/
+#if defined(_BIT_FIELDS_LTOH)	/* Intel bitorder */
+	Ucbit	p_exept		:1;	/* Nominal vs. Exept. conditions*/
+	Ucbit	p_write		:1;	/* Write vs. Read performance	*/
+	Ucbit	p_res_4		:6;	/* Reserved bits...		*/
+#else				/* Motorola bitorder */
+	Ucbit	p_res_4		:6;	/* Reserved bits...		*/
+	Ucbit	p_write		:1;	/* Write vs. Read performance	*/
+	Ucbit	p_exept		:1;	/* Nominal vs. Exept. conditions*/
+#endif
+	Uchar	p_res[3];		/* Reserved bytes		*/
+};
+
+
+struct mmc_performance {		/* Type == 00 (nominal)		*/
+	Uchar	start_lba[4];		/* Starting LBA			*/
+	Uchar	start_perf[4];		/* Start Performance		*/
+	Uchar	end_lba[4];		/* Ending LBA			*/
+	Uchar	end_perf[4];		/* Ending Performance		*/
+};
+
+struct mmc_exceptions {			/* Type == 00 (execptions)	*/
+	Uchar	lba[4];			/* LBA				*/
+	Uchar	time[2];		/* Time				*/
+};
+
+struct mmc_write_speed {		/* Type == 00 (write speed)	*/
+#if defined(_BIT_FIELDS_LTOH)	/* Intel bitorder */
+	Ucbit	p_mrw		:1;	/* Suitable for mixed read/write*/
+	Ucbit	p_exact		:1;	/* Speed count for whole media	*/
+	Ucbit	p_rdd		:1;	/* Media rotational control	*/
+	Ucbit	p_wrc		:2;	/* Write rotational control	*/
+	Ucbit	p_res		:3;	/* Reserved bits...		*/
+#else				/* Motorola bitorder */
+	Ucbit	p_res		:3;	/* Reserved bits...		*/
+	Ucbit	p_wrc		:2;	/* Write rotational control	*/
+	Ucbit	p_rdd		:1;	/* Media rotational control	*/
+	Ucbit	p_exact		:1;	/* Speed count for whole media	*/
+	Ucbit	p_mrw		:1;	/* Suitable for mixed read/write*/
+#endif
+	Uchar	res[3];			/* Reserved Bytes		*/
+	Uchar	end_lba[4];		/* Ending LBA			*/
+	Uchar	read_speed[4];		/* Read Speed			*/
+	Uchar	write_speed[4];		/* Write Speed			*/
+};
+
+#define	WRC_DEF_RC	0		/* Media default rotational control */
+#define	WRC_CAV		1		/* CAV				    */
+
+
+struct mmc_streaming {			/* Performance for set streaming*/
+#if defined(_BIT_FIELDS_LTOH)	/* Intel bitorder */
+	Ucbit	p_ra		:1;	/* Random Acess			*/
+	Ucbit	p_exact		:1;	/* Set values exactly		*/
+	Ucbit	p_rdd		:1;	/* Restore unit defaults	*/
+	Ucbit	p_wrc		:2;	/* Write rotational control	*/
+	Ucbit	p_res		:3;	/* Reserved bits...		*/
+#else				/* Motorola bitorder */
+	Ucbit	p_res		:3;	/* Reserved bits...		*/
+	Ucbit	p_wrc		:2;	/* Write rotational control	*/
+	Ucbit	p_rdd		:1;	/* Restore unit defaults	*/
+	Ucbit	p_exact		:1;	/* Set values exactly		*/
+	Ucbit	p_ra		:1;	/* Random Acess			*/
+#endif
+	Uchar	res[3];			/* Reserved Bytes		*/
+	Uchar	start_lba[4];		/* Starting LBA			*/
+	Uchar	end_lba[4];		/* Ending LBA			*/
+	Uchar	read_size[4];		/* Read Size			*/
+	Uchar	read_time[4];		/* Read Time			*/
+	Uchar	write_size[4];		/* Write Size			*/
+	Uchar	write_time[4];		/* Write Time			*/
 };
 
 #endif	/* _SCSIMMC_H */

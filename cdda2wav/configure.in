@@ -1,4 +1,4 @@
-dnl @(#)configure.in	1.2 00/06/02	Copyright 1998-2000 Heiko Eiﬂfeldt
+dnl @(#)configure.in	1.7 03/09/04	Copyright 1998-2003 Heiko Eiﬂfeldt
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(cdda2wav.c)
 AC_CONFIG_HEADER(lconfig.h)
@@ -7,8 +7,11 @@ dnl get canonical host
 AC_CANONICAL_HOST
 
 dnl extract cdrtools version from the cdrecord.c file
-CDRTOOLS_VERSION=`sed -nf ../../version.sed <../../../cdrecord/cdrecord.c`
+CDRTOOLS_VERSION=`sed -n -f ../../version.sed <../../../cdrecord/cdrecord.c`
 AC_SUBST(CDRTOOLS_VERSION)
+
+dnl set object extension needed for AC_CHECK_HEADERS by autoconf 2.57
+dnl _AC_COMPILER_OBJEXT
 
 dnl check for posix4 library on Solaris or SunOS
 case "$host_os" in
@@ -23,14 +26,10 @@ EXTRALIBS="$LIBS"
 AC_SUBST(EXTRALIBS)
 
 dnl check header files
-AC_CHECK_HEADERS(sys/cdio.h)
-AC_CHECK_HEADERS(sundev/srreg.h)
-AC_CHECK_HEADERS(sys/audioio.h)
-AC_CHECK_HEADERS(sun/audioio.h)
-AC_CHECK_HEADERS(soundcard.h)
-AC_CHECK_HEADERS(sys/soundcard.h)
-AC_CHECK_HEADERS(linux/soundcard.h)
-AC_CHECK_HEADERS(machine/soundcard.h)
+AC_CHECK_HEADERS(sys/cdio.h sundev/srreg.h sys/audioio.h sun/audioio.h)
+AC_CHECK_HEADERS(soundcard.h sys/soundcard.h linux/soundcard.h machine/soundcard.h)
+AC_CHECK_HEADERS(sys/asoundlib.h windows.h mmsystem.h)
+AC_CHECK_HEADERS(os2.h os2me.h)
 
 case "${ac_cv_header_sys_cdio_h}""${ac_cv_header_sundev_srreg_h}" in
    *yes*)
@@ -61,6 +60,28 @@ HAVE_OSS=
 ;;
 esac
 AC_SUBST(HAVE_OSS)
+
+AC_SUBST(HAVE_SYS_ASOUNDLIB_H)
+
+case "${ac_cv_header_windows_h}""${ac_cv_header_mmsystem_h}" in
+   *yesyes*)
+HAVE_WINSOUND=1
+;;
+   *)
+HAVE_WINSOUND=
+;;
+esac
+AC_SUBST(HAVE_WINSOUND)
+
+case "${ac_cv_header_os2_h}""${ac_cv_header_os2me_h}" in
+   *yesyes*)
+HAVE_OS2SOUND=1
+;;
+   *)
+HAVE_OS2SOUND=
+;;
+esac
+AC_SUBST(HAVE_OS2SOUND)
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(strtoul)

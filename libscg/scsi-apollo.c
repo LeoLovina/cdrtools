@@ -1,7 +1,7 @@
-/* @(#)scsi-apollo.c	1.4 02/10/19 Copyright 1997,2000 J. Schilling */
+/* @(#)scsi-apollo.c	1.5 04/01/14 Copyright 1997,2000 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-apollo.c	1.4 02/10/19 Copyright 1997,2000 J. Schilling";
+	"@(#)scsi-apollo.c	1.5 04/01/14 Copyright 1997,2000 J. Schilling";
 #endif
 /*
  *	Code to support Apollo Domain/OS 10.4.1
@@ -20,15 +20,15 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <apollo/base.h>
 #include <apollo/scsi.h>
 #include <assert.h>
-#define DomainScsiTimeout 100000
+#define	DomainScsiTimeout	100000
 
 /*
  *	Warning: you may change this source, but if you do that
@@ -37,7 +37,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-apollo.c-1.4";	/* The version for this transport */
+LOCAL	char	_scg_trans_version[] = "scsi-apollo.c-1.5";	/* The version for this transport */
 
 
 #define	MAX_SCG		1	/* Max # of SCSI controllers */
@@ -45,12 +45,12 @@ LOCAL	char	_scg_trans_version[] = "scsi-apollo.c-1.4";	/* The version for this t
 #define	MAX_LUN		1	/* Max # of SCSI logical units */
 
 struct scg_local {
-	scsi_$handle_t  handle;
-	unsigned char  *DomainSensePointer;
-	short           scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
+	scsi_$handle_t	handle;
+	unsigned char	*DomainSensePointer;
+	short		scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
 
-#define scglocal(p)	((struct scg_local *)((p)->local))
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 #ifndef	SG_MAX_SENSE
 #define	SG_MAX_SENSE	16	/* Too small for CCS / SCSI-2	 */
@@ -99,13 +99,13 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-	register int    nopen = 0;
-	status_$t       status;
+	register int	nopen = 0;
+	status_$t	status;
 
 	if (scgp->debug > 1)
 		printf("Entered scsi_open, scgp=%p, device='%s'\n", scgp, device);
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 	}
@@ -141,7 +141,7 @@ LOCAL int
 scgo_close(scgp)
 	SCSI	*scgp;
 {
-	status_$t       status;
+	status_$t	status;
 
 	if (scgp->debug > 1)
 		printf("Entering scsi_close\n");
@@ -158,18 +158,18 @@ scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	status_$t       status;
-	scsi_$info_t    info;
+	status_$t	status;
+	scsi_$info_t	info;
 
-	scsi_$get_info(scglocal(scgp)->handle, sizeof(info), &info, &status);
+	scsi_$get_info(scglocal(scgp)->handle, sizeof (info), &info, &status);
 	if (status.all) {
 		/*
 		 * Should have some better error handling here
 		 */
 		printf("scsi_$get_info returned %08x\n", status.all);
-		return 0;
+		return (0);
 	}
-	return info.max_xfer;
+	return (info.max_xfer);
 }
 
 
@@ -189,7 +189,7 @@ scgo_getbuf(scgp, amt)
 	return (ret);
 }
 
-LOCAL void 
+LOCAL void
 scgo_freebuf(scgp)
 	SCSI	*scgp;
 {
@@ -269,7 +269,7 @@ scgo_reset(scgp, what)
 	SCSI	*scgp;
 	int	what;
 {
-	status_$t       status;
+	status_$t	status;
 
 	if (scgp->debug > 0)
 		printf("Entering scsi_reset\n");
@@ -282,7 +282,7 @@ scgo_reset(scgp, what)
 		if (status.all)
 			printf("Error - scsi_$reset_device failed, status is 0x%08x\n", status.all);
 		return (status.all);
-	} else { 
+	} else {
 		errno = EINVAL;
 		return (-1);
 	}
@@ -293,23 +293,23 @@ scsi_do_sense(scgp, sp)
 	SCSI		*scgp;
 	struct scg_cmd	*sp;
 {
-	scsi_$op_status_t op_status;
-	static scsi_$cdb_t sense_cdb;
-	static linteger sense_cdb_size,
-	                sense_buffer_size;
+	scsi_$op_status_t	op_status;
+	static scsi_$cdb_t	sense_cdb;
+	static linteger		sense_cdb_size;
+	static linteger		sense_buffer_size;
 	static scsi_$operation_id_t sense_op_id;
-	static status_$t sense_status;
-	static pinteger sense_return_count;
-		int	i;
+	static status_$t	sense_status;
+	static pinteger		sense_return_count;
+		int		i;
 
 	/*
 	 * Issue the sense command (wire, issue, wait, unwire
 	 */
 	sense_buffer_size = sp->sense_len;
 	sense_cdb_size = SC_G0_CDBLEN;
-	memset(sense_cdb.all, 0, sense_cdb_size);	/* Assuming Apollo sense
-							   structure is correct
-							   size */
+	memset(sense_cdb.all, 0, sense_cdb_size);	/* Assuming Apollo sense */
+							/* structure is correct */
+							/* size */
 	sense_cdb.g0.cmd = SC_REQUEST_SENSE;
 	sense_cdb.g0.lun = sp->cdb.g0_cdb.lun;
 	sense_cdb.g0.len = sp->sense_len;
@@ -419,7 +419,7 @@ scgo_send(scgp)
 		printf("scsi_$do_command failed, 0x%08x\n", status.all);
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EIO;
-		return 0;
+		return (0);
 	} else if (scgp->debug > 0) {
 		printf("Command submitted, operation=0x%x\n", operation);
 	}
@@ -438,7 +438,7 @@ scgo_send(scgp)
 		printf("scsi_$wait failed, 0x%08x\n", status.all);
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EIO;
-		return 0;
+		return (0);
 	} else {
 		if (scgp->debug > 0) {
 			printf("wait_index=%d, return_count=%d, op_status: op=0x%x, cmd_status=0x%x, op_status=0x%x\n",
@@ -466,7 +466,7 @@ scgo_send(scgp)
 			printf("scsi_$wait terminated abnormally, status='%s'\n", ascii_wait_status);
 			sp->error = SCG_FATAL;
 			sp->ux_errno = EIO;
-			return 0;
+			return (0);
 		}
 		/*
 		 * Normal termination, what's the scoop?
@@ -561,8 +561,8 @@ scgo_send(scgp)
 			printf("scsi_$unwire failed, 0x%08x\n", status.all);
 			sp->error = SCG_FATAL;
 			sp->ux_errno = EIO;
-			return 0;
+			return (0);
 		}
 	}
-	return 0;
+	return (0);
 }

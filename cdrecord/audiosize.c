@@ -1,10 +1,10 @@
-/* @(#)audiosize.c	1.18 01/10/09 Copyright 1998 J. Schilling */
+/* @(#)audiosize.c	1.19 04/03/01 Copyright 1998-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)audiosize.c	1.18 01/10/09 Copyright 1998 J. Schilling";
+	"@(#)audiosize.c	1.19 04/03/01 Copyright 1998-2004 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1998 J. Schilling
+ *	Copyright (c) 1998-2004 J. Schilling
  *
  *	First .vaw implementation made by Dave Platt <dplatt@iq.nc.com>
  *	Current .wav implementation with additional help from Heiko Eiﬂfeld.
@@ -20,9 +20,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -48,18 +48,18 @@ typedef struct {
 
 #define	SUN_AU_MAGIC		".snd"
 #define	SUN_AU_UNKNOWN_LEN	((Uint)~0)
-#define	SUN_AU_ULAW8		1		/* American ISDN Telephonie  */
+#define	SUN_AU_ULAW8		1		/* American ISDN Telephonie */
 #define	SUN_AU_LINEAR8		2		/* Linear PCM 8 bit/channel  */
 #define	SUN_AU_LINEAR16		3		/* Linear PCM 16 bit/channel */
 #define	SUN_AU_LINEAR24		4		/* Linear PCM 24 bit/channel */
 #define	SUN_AU_LINEAR32		5		/* Linear PCM 32 bit/channel */
 #define	SUN_AU_FLOAT		6		/* 32 bit IEEE floatingpoint */
 #define	SUN_AU_DOUBLE		7		/* 64 bit IEEE floatingpoint */
-#define	SUN_AU_G721		23		/* 4 bit CCITT G.721 ADPCM   */
-#define	SUN_AU_G722		24		/* CCITT G.722 ADPCM	     */
-#define	SUN_AU_G723_3		25		/* 3 bit CCITT G.723 ADPCM   */
-#define	SUN_AU_G723_5		26		/* 5 bit CCITT G.723 ADPCM   */
-#define	SUN_AU_ALAW8		27		/* International ISDN Tel.   */
+#define	SUN_AU_G721		23		/* 4 bit CCITT G.721 ADPCM  */
+#define	SUN_AU_G722		24		/* CCITT G.722 ADPCM	    */
+#define	SUN_AU_G723_3		25		/* 3 bit CCITT G.723 ADPCM  */
+#define	SUN_AU_G723_5		26		/* 5 bit CCITT G.723 ADPCM  */
+#define	SUN_AU_ALAW8		27		/* International ISDN Tel.  */
 
 typedef struct {
 	Uchar	ckid[4];
@@ -79,31 +79,31 @@ typedef struct {
 	Uchar	bits_per_sample[2];
 } fmt_chunk;
 
-#define	WAV_RIFF_MAGIC		"RIFF"		/* Magic for file format     */
-#define	WAV_WAVE_MAGIC		"WAVE"		/* Magic for Waveform Audio  */
-#define	WAV_FMT_MAGIC		"fmt "		/* Start of Waveform format  */
-#define	WAV_DATA_MAGIC		"data"		/* Start of data chunk	     */
-#define	WAV_FORMAT_PCM		0x0001		/* Linear PCM format	     */
-#define	WAV_FORMAT_ULAW		0x0101		/* American ISDN Telephonie  */
-#define	WAV_FORMAT_ALAW		0x0102		/* International ISDN Tel.   */
-#define	WAV_FORMAT_ADPCM	0x0103		/* ADPCM format		     */
+#define	WAV_RIFF_MAGIC		"RIFF"		/* Magic for file format    */
+#define	WAV_WAVE_MAGIC		"WAVE"		/* Magic for Waveform Audio */
+#define	WAV_FMT_MAGIC		"fmt "		/* Start of Waveform format */
+#define	WAV_DATA_MAGIC		"data"		/* Start of data chunk	    */
+#define	WAV_FORMAT_PCM		0x0001		/* Linear PCM format	    */
+#define	WAV_FORMAT_ULAW		0x0101		/* American ISDN Telephonie */
+#define	WAV_FORMAT_ALAW		0x0102		/* International ISDN Tel.  */
+#define	WAV_FORMAT_ADPCM	0x0103		/* ADPCM format		    */
 
 #define	le_a_to_u_short(a)	((unsigned short) \
-				((((unsigned char*) a)[0]       & 0xFF) | \
-				 (((unsigned char*) a)[1] << 8  & 0xFF00)))
+				((((unsigned char *)a)[0]	& 0xFF) | \
+				(((unsigned char *)a)[1] << 8	& 0xFF00)))
 
 #ifdef	__STDC__
 #define	le_a_to_u_long(a)	((unsigned long) \
-				((((unsigned char*) a)[0]       & 0xFF) | \
-				 (((unsigned char*) a)[1] << 8  & 0xFF00) | \
-				 (((unsigned char*) a)[2] << 16 & 0xFF0000) | \
-				 (((unsigned char*) a)[3] << 24 & 0xFF000000UL)))
+				((((unsigned char *)a)[0]	& 0xFF) | \
+				(((unsigned  char *)a)[1] << 8	& 0xFF00) | \
+				(((unsigned  char *)a)[2] << 16	& 0xFF0000) | \
+				(((unsigned  char *)a)[3] << 24	& 0xFF000000UL)))
 #else
 #define	le_a_to_u_long(a)	((unsigned long) \
-				((((unsigned char*) a)[0]       & 0xFF) | \
-				 (((unsigned char*) a)[1] << 8  & 0xFF00) | \
-				 (((unsigned char*) a)[2] << 16 & 0xFF0000) | \
-				 (((unsigned char*) a)[3] << 24 & 0xFF000000)))
+				((((unsigned char *)a)[0]	& 0xFF) | \
+				(((unsigned  char *)a)[1] << 8	& 0xFF00) | \
+				(((unsigned  char *)a)[2] << 16	& 0xFF0000) | \
+				(((unsigned  char *)a)[3] << 24	& 0xFF000000)))
 #endif
 
 EXPORT	BOOL	is_auname	__PR((const char *name));
@@ -111,7 +111,8 @@ EXPORT	off_t	ausize		__PR((int f));
 EXPORT	BOOL	is_wavname	__PR((const char *name));
 EXPORT	off_t	wavsize		__PR((int f));
 
-EXPORT	BOOL	is_auname(name)
+EXPORT	BOOL
+is_auname(name)
 	const	char	*name;
 {
 	const	char	*p;
@@ -148,7 +149,7 @@ ausize(f)
 	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
 
-	if (read(f, &hdr, sizeof(hdr)) != sizeof(hdr))
+	if (read(f, &hdr, sizeof (hdr)) != sizeof (hdr))
 		goto err;
 
 	if (strncmp((char *)hdr.magic, SUN_AU_MAGIC, 4) != 0)
@@ -169,7 +170,7 @@ ausize(f)
 		goto err;
 
 	size = (off_t)a_to_u_4_byte(hdr.hdr_size);
-	if (size < (off_t)sizeof(hdr) || size > 512)
+	if (size < (off_t)sizeof (hdr) || size > 512)
 		goto err;
 	lseek(f, size, SEEK_SET);
 
@@ -185,7 +186,8 @@ err:
 	return ((off_t)ret);
 }
 
-EXPORT	BOOL	is_wavname(name)
+EXPORT	BOOL
+is_wavname(name)
 	const	char	*name;
 {
 	const	char	*p;
@@ -250,7 +252,7 @@ wavsize(f)
 			/*
 			 * We found WAVE "fmt " header. Check size (if it is
 			 * valid for a WAVE file) and coding whether it is
-			 * useable for a CD. 
+			 * useable for a CD.
 			 */
 			if (size < (off_t)sizeof (fmt)) goto err;
 			if (sizeof (fmt) != read(f, &fmt, sizeof (fmt))) goto err;

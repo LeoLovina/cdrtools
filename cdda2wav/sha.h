@@ -1,4 +1,4 @@
-/* @(#)sha.h	1.3 01/10/27 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)sha.h	1.4 03/06/28 Copyright 1998,1999 Heiko Eissfeldt */
 /*____________________________________________________________________________
 //
 //   CD Index - The Internet CD Index
@@ -66,14 +66,18 @@ char *sha_version __PR((void));
 #ifdef WORDS_BIGENDIAN
 #  if SIZEOF_UNSIGNED_LONG_INT == 4
 #    define SHA_BYTE_ORDER  4321
-#  elif SIZEOF_UNSIGNED_LONG_INT == 8
-#    define SHA_BYTE_ORDER  87654321
+#  else
+#    if SIZEOF_UNSIGNED_LONG_INT == 8
+#      define SHA_BYTE_ORDER  87654321
+#    endif
 #  endif
 #else
 #  if SIZEOF_UNSIGNED_LONG_INT == 4
 #    define SHA_BYTE_ORDER  1234
-#  elif SIZEOF_UNSIGNED_LONG_INT == 8
-#    define SHA_BYTE_ORDER  12345678
+#  else
+#    if SIZEOF_UNSIGNED_LONG_INT == 8
+#      define SHA_BYTE_ORDER  12345678
+#    endif
 #  endif
 #endif
 

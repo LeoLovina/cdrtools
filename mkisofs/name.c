@@ -1,34 +1,34 @@
-/* @(#)name.c	1.25 02/12/25 joerg */
+/* @(#)name.c	1.28 04/03/05 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)name.c	1.25 02/12/25 joerg";
+	"@(#)name.c	1.28 04/03/05 joerg";
 
 #endif
 /*
  * File name.c - map full Unix file names to unique 8.3 names that
  * would be valid on DOS.
  *
-
-   Written by Eric Youngdale (1993).
-   Almost totally rewritten by J. Schilling (2000).
-
-   Copyright 1993 Yggdrasil Computing, Incorporated
-   Copyright (c) 1999,2000 J. Schilling
-
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ * Written by Eric Youngdale (1993).
+ * Almost totally rewritten by J. Schilling (2000).
+ *
+ * Copyright 1993 Yggdrasil Computing, Incorporated
+ * Copyright (c) 1999,2000 J. Schilling
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #include <mconfig.h>
 #include "mkisofs.h"
@@ -38,8 +38,8 @@ static	char sccsid[] =
 
 void	iso9660_check		__PR((struct iso_directory_record *idr,	struct directory_entry *ndr));
 int	iso9660_file_length	__PR((const char *name,
-			                struct directory_entry *sresult,
-			                int dirflag));
+					struct directory_entry *sresult,
+					int dirflag));
 
 void
 iso9660_check(idr, ndr)
@@ -137,7 +137,7 @@ iso9660_file_length(name, sresult, dirflag)
 	 */
 	if (strcmp(name, ".") == 0) {
 		*result = 0;
-		return 1;
+		return (1);
 	}
 	/*
 	 * For the '..' entry, generate the correct record, and return 1
@@ -146,7 +146,7 @@ iso9660_file_length(name, sresult, dirflag)
 	if (strcmp(name, "..") == 0) {
 		*result++ = 1;
 		*result++ = 0;
-		return 1;
+		return (1);
 	}
 	/*
 	 * Now scan the directory one character at a time, and figure out
@@ -202,7 +202,7 @@ iso9660_file_length(name, sresult, dirflag)
 				before_dot = iso9660_namelen/2;
 				after_dot = ochars_after_dot;
 			} else {
-				before_dot -= ochars_after_dot;/* dot counts */
+				before_dot -= ochars_after_dot; /* dot counts */
 				after_dot = ochars_after_dot;
 			}
 		}
@@ -253,7 +253,7 @@ iso9660_file_length(name, sresult, dirflag)
 			 * Check if a valid version number follows.
 			 * The maximum valid version number is 32767.
 			 */
-			for (c = 1, cp = (char *)&pnt[1]; c < 6 && *cp; c++,cp++) {
+			for (c = 1, cp = (char *)&pnt[1]; c < 6 && *cp; c++, cp++) {
 				if (*cp < '0' || *cp > '9')
 					break;
 			}
@@ -335,13 +335,25 @@ iso9660_file_length(name, sresult, dirflag)
 			}
 		} else {
 			if ((seen_dot && (chars_after_dot < after_dot) &&
-						++chars_after_dot)
-			    || (!seen_dot && (chars_before_dot < before_dot) &&
+						++chars_after_dot) ||
+			    (!seen_dot && (chars_before_dot < before_dot) &&
 			    ++chars_before_dot)) {
 
 				c = *pnt;
 				if (c & 0x80) {
-					c = '_';
+					/*
+					 * We allow 8 bit chars if -iso-level
+					 * is at least 4
+					 *
+					 * XXX We should check if the output
+					 * XXX character set is a 7 Bit ASCI
+					 * extension.
+					 */
+					if (iso9660_level >= 4) {
+						c = conv_charset(c, in_nls, out_nls);
+					} else {
+						c = '_';
+					}
 				} else if (!allow_lowercase) {
 					c = islower((unsigned char)c) ?
 						toupper((unsigned char)c) : c;
@@ -350,6 +362,8 @@ iso9660_file_length(name, sresult, dirflag)
 					/*
 					 * Here we allow a more relaxed syntax.
 					 */
+					if (c == '/')
+						c = '_';
 					*result++ = c;
 				} else switch (c) {
 					/*
@@ -372,8 +386,8 @@ iso9660_file_length(name, sresult, dirflag)
 				/* separators */
 				case '+':
 				case '=':
-				case '%': /* not legal DOS
-					   filename */
+				case '%': /* not legal DOS */
+						/* filename */
 				case ':':
 				case ';': /* already handled */
 				case '.': /* already handled */
@@ -465,7 +479,7 @@ iso9660_file_length(name, sresult, dirflag)
 	 * the 'extension'.
 	 */
 	if (tildes == 2) {
-		int             prio1 = 0;
+		int	prio1 = 0;
 
 		pnt = name;
 		while (*pnt && *pnt != '~') {

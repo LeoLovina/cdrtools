@@ -1,10 +1,10 @@
-/* @(#)scgsettarget.c	1.1 00/08/25 Copyright 2000 J. Schilling */
+/* @(#)scgsettarget.c	1.2 04/01/14 Copyright 2000 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scgsettarget.c	1.1 00/08/25 Copyright 2000 J. Schilling";
+	"@(#)scgsettarget.c	1.2 04/01/14 Copyright 2000 J. Schilling";
 #endif
 /*
- *	scg Library 
+ *	scg Library
  *	set target SCSI address
  *
  *	This is the only place in libscg that is allowed to assign
@@ -23,9 +23,9 @@ static	char _sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -50,6 +50,6 @@ scg_settarget(scgp, busno, tgt, tlun)
 	scgp->fd = fd;
 	scg_scsibus(scgp) = busno;
 	scg_target(scgp)  = tgt;
-	scg_lun(scgp)     = tlun;
+	scg_lun(scgp)	  = tlun;
 	return (fd);
 }

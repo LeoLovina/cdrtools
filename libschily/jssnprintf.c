@@ -1,6 +1,6 @@
-/* @(#)jssnprintf.c	1.7 01/10/29 Copyright 1985 J. Schilling */
+/* @(#)jssnprintf.c	1.10 04/05/09 Copyright 1985, 1995-2004 J. Schilling */
 /*
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1995-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -55,9 +55,11 @@ static void _cput(c, l)
 
 /* VARARGS2 */
 #ifdef	PROTOTYPES
-int js_snprintf(char *buf, size_t maxcnt, const char *form, ...)
+EXPORT int
+js_snprintf(char *buf, size_t maxcnt, const char *form, ...)
 #else
-int js_snprintf(buf, maxcnt, form, va_alist)
+EXPORT int
+js_snprintf(buf, maxcnt, form, va_alist)
 	char	*buf;
 	unsigned maxcnt;
 	char	*form;
@@ -78,8 +80,9 @@ int js_snprintf(buf, maxcnt, form, va_alist)
 #endif
 	cnt = format(_cput, (long)&bb, form,  args);
 	va_end(args);
-	*(bb.ptr) = '\0';
-	if (bb.count <= 0)
+	if (maxcnt > 0)
+		*(bb.ptr) = '\0';
+	if (bb.count < 0)
 		return (-1);
 
 	return (cnt);

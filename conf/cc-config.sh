@@ -1,5 +1,5 @@
 #!/bin/sh
-# @(#)cc-config.sh	1.3 02/08/16 Copyright 2002 J. Schilling
+# @(#)cc-config.sh	1.4 03/05/31 Copyright 2002 J. Schilling
 ###########################################################################
 # Written 2002 by J. Schilling
 ###########################################################################
@@ -16,13 +16,49 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; see the file COPYING.  If not, write to
-# the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+# You should have received a copy of the GNU General Public License along with
+# this program; see the file COPYING.  If not, write to the Free Software
+# Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ###########################################################################
+
+#
+# Usage:
+#	sh ./conf/cc-config.sh cc incs/Dcc.<platform>
+#
 
 CC=$1
 echo "Trying to find $CC"
+
+#
+# Check if we are on SunOS-5.x and /usr/ucb is in PATH before /opt/SUNWspro/bin
+# /usr/ucb/cc will not work correctly to compile things on Solaris.
+#
+# This check will also catch the case where no Sun C-compiler is installed and
+# calling cc results in the message:
+#	/usr/ucb/cc:  language optional software package not installed
+#
+xos=`echo "$2" | grep sunos5 `
+if [ -n "$xos" ]; then
+	#
+	# On Solaris, the type builtin is working.
+	#
+	xcc=`type "$CC" | grep /usr/ucb/cc`
+	if [ -n "$xcc" ]; then
+		#
+		# We did find /usr/ucb/cc
+		#
+		echo
+		echo 'Warning:' "$xcc"
+		echo '         You should not have "/usr/ucb" in your PATH if you like to compile.'
+		echo '         If you did install a C-compiler in /opt/SUNWspro/bin, abort'
+		echo '         fix your PATH and start again.'
+		echo '         Otherwise GCC will be used.'
+		echo
+		sleep 60
+		CC=do-no-use-ucb-cc
+	fi
+fi
+
 #
 # There are old shells that don't support the 'type' builtin.
 # For this reason it is not a simple task to find out whether

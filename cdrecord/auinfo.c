@@ -1,10 +1,10 @@
-/* @(#)auinfo.c	1.17 02/09/20 Copyright 1998-2002 J. Schilling */
+/* @(#)auinfo.c	1.23 04/03/01 Copyright 1998-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)auinfo.c	1.17 02/09/20 Copyright 1998-2002 J. Schilling";
+	"@(#)auinfo.c	1.23 04/03/01 Copyright 1998-2004 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1998-2002 J. Schilling
+ *	Copyright (c) 1998-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -17,14 +17,15 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
 #include <stdxlib.h>
 #include <unixstd.h>
+#include <statdefs.h>
 #include <stdio.h>
 #include <standard.h>
 #include <strdefs.h>
@@ -32,13 +33,15 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <schily.h>
 
-#include "cdrecord.h"
 #include "cdtext.h"
+#include "cdrecord.h"
 
 extern	int	debug;
+extern	int	xdebug;
 
+EXPORT	BOOL	auinfosize	__PR((char *name, track_t *trackp));
 EXPORT	void	auinfo		__PR((char *name, int track, track_t *trackp));
-LOCAL	textptr_t *gettextptr	__PR((int track, track_t *trackp));
+EXPORT	textptr_t *gettextptr	__PR((int track, track_t *trackp));
 LOCAL	char 	*savestr	__PR((char *name));
 LOCAL	char 	*readtag	__PR((char *name));
 LOCAL	char 	*readtstr	__PR((char *name));
@@ -58,6 +61,85 @@ main(ac, av)
 }
 #endif
 
+EXPORT BOOL
+auinfosize(name, trackp)
+	char	*name;
+	track_t	*trackp;
+{
+	const	char	*p;
+	const	char	*tlp;
+	struct stat	sb;
+	long		secs;
+	long		nsamples;
+	Llong		tracksize;
+
+	if (!is_audio(trackp))
+		return (FALSE);
+
+	if ((trackp->flags & TI_USEINFO) == 0)
+		return (FALSE);
+
+	if ((p = strrchr(name, '.')) == NULL)
+		return (FALSE);
+	if (!streql(p, ".inf") && !streql(p, ".INF"))
+		return (FALSE);
+
+	/*
+	 * First check if a bad guy tries to call auinfosize()
+	 * while STDIN_FILENO is a TTY.
+	 */
+	if (isatty(STDIN_FILENO)) {
+		errmsgno(EX_BAD,
+			"WARNING: Stdin is connected to a terminal.\n");
+		return (FALSE);
+	}
+
+	if (stat(name, &sb) < 0)	/* *.inf file not found		*/
+		return (FALSE);
+
+	if (sb.st_size > 10000)		/* Too large for a *.inf file	*/
+		return (FALSE);
+
+	if (defltopen(name) < 0)	/* Cannot open *.inf file	*/
+		return (FALSE);
+
+	tlp = p = readtag("Tracklength=");
+	if (p == NULL) {		/* Tracklength= Tag not found	*/
+		errmsgno(EX_BAD,
+			"WARNING: %s does not contain a 'Tracklength=' tag.\n",
+			name);
+		defltclose();
+		return (FALSE);
+	}
+
+	p = astol(p, &secs);
+	if (*p != '\0' && *p != ',') {
+		errmsgno(EX_BAD,
+			"WARNING: %s: 'Tracklength=' contains illegal parameter '%s'.\n",
+			name, tlp);
+		defltclose();
+		return (FALSE);
+	}
+	if (*p == ',')
+		p++;
+	p = astol(p, &nsamples);
+	if (*p != '\0') {
+		errmsgno(EX_BAD,
+			"WARNING: %s: 'Tracklength=' contains illegal parameter '%s'.\n",
+			name, tlp);
+		defltclose();
+		return (FALSE);
+	}
+	tracksize = (secs * 2352) + (nsamples * 4);
+	if (xdebug > 0) {
+		error("%s: Tracksize %lld bytes (%ld sectors, %ld samples)\n",
+			name, tracksize, secs, nsamples);
+	}
+	trackp->itracksize = tracksize;
+	defltclose();
+	return (TRUE);
+}
+
 EXPORT void
 auinfo(name, track, trackp)
 	char	*name;
@@ -72,10 +154,10 @@ auinfo(name, track, trackp)
 	long	tno = -1;
 	BOOL	isdao = !is_tao(&trackp[0]);
 
-	strncpy(infname, name, sizeof(infname)-1);
-	infname[sizeof(infname)-1] = '\0';
+	strncpy(infname, name, sizeof (infname)-1);
+	infname[sizeof (infname)-1] = '\0';
 	p = strrchr(infname, '.');
-	if (p != 0 && &p[4] < &name[sizeof(infname)]) {
+	if (p != 0 && &p[4] < &name[sizeof (infname)]) {
 		strcpy(&p[1], "inf");
 	}
 
@@ -169,12 +251,12 @@ auinfo(name, track, trackp)
 		if (p && *p) {
 			if (strncmp(p, "yes", 3) == 0) {
 				tp->flags |= TI_PREEMP;
-				if (tp->tracktype == TOC_DA)
+				if ((tp->tracktype & TOC_MASK) == TOC_DA)
 					tp->sectype = SECT_AUDIO_PRE;
 
 			} else if (strncmp(p, "no", 2) == 0) {
 				tp->flags &= ~TI_PREEMP;
-				if (tp->tracktype == TOC_DA)
+				if ((tp->tracktype & TOC_MASK) == TOC_DA)
 					tp->sectype = SECT_AUDIO_NOPRE;
 			}
 		}
@@ -219,7 +301,7 @@ auinfo(name, track, trackp)
 
 }
 
-LOCAL textptr_t *
+EXPORT textptr_t *
 gettextptr(track, trackp)
 	int	track;
 	track_t	*trackp;
@@ -228,10 +310,10 @@ gettextptr(track, trackp)
 
 	txp = (textptr_t *)trackp[track].text;
 	if (txp == NULL) {
-		txp = malloc(sizeof(textptr_t));
+		txp = malloc(sizeof (textptr_t));
 		if (txp == NULL)
 			comerr("Cannot malloc CD-Text structure.\n");
-		fillbytes(txp, sizeof(textptr_t), '\0');
+		fillbytes(txp, sizeof (textptr_t), '\0');
 		trackp[track].text = txp;
 	}
 	return (txp);
@@ -306,7 +388,7 @@ setmcn(mcn, trackp)
 			comerrno(EX_BAD, "MCN '%s' contains illegal character '%c'.\n", mcn, *p);
 	}
 	p = malloc(14);
-	strcpy (p, mcn);
+	strcpy(p, mcn);
 	trackp->isrc = p;
 
 	if (debug)
@@ -402,7 +484,7 @@ setisrc(isrc, trackp)
 	}
 	*ip = '\0';
 	p = malloc(13);
-	strcpy (p, ibuf);
+	strcpy(p, ibuf);
 	trackp->isrc = p;
 
 	if (debug)
@@ -424,7 +506,7 @@ setindex(tindex, trackp)
 	long	idx;
 	long	*idxlist;
 
-	idxlist = malloc(100*sizeof(long));
+	idxlist = malloc(100*sizeof (long));
 	p = tindex;
 	idxlist[0] = 0;
 	i = 0;
@@ -446,8 +528,10 @@ setindex(tindex, trackp)
 	if (debug)
 		printf("Track %d %d Index: '%s'\n", (int)trackp->trackno, i, tindex);
 
-	if (debug) for (i=0; i <= nindex; i++)
-		printf("%d: %ld\n", i, idxlist[i]);
+	if (debug) {
+		for (i = 0; i <= nindex; i++)
+			printf("%d: %ld\n", i, idxlist[i]);
+	}
 
 	trackp->nindex = nindex;
 	trackp->tindex = idxlist;

@@ -19,7 +19,7 @@ All Sony drives that have CDUxxx type names are _old_ non MMC drives.
 	Here I expect that no XA support is in the firmware.
 
 All Sony drives that have CRXxxx type names are MMC compliant.
-	These drives should support XA-mode2-form1 as it is mandatury with MMC.
+	These drives should support XA-mode2-form1 as it is mandatory with MMC.
 
 NOTE: many HP CD-writers are nased on Sony OEM drives.
 

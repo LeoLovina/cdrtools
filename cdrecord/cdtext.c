@@ -1,12 +1,12 @@
-/* @(#)cdtext.c	1.8 02/05/28 Copyright 1999-2002 J. Schilling */
+/* @(#)cdtext.c	1.10 04/03/01 Copyright 1999-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdtext.c	1.8 02/05/28 Copyright 1999-2002 J. Schilling";
+	"@(#)cdtext.c	1.10 04/03/01 Copyright 1999-2004 J. Schilling";
 #endif
 /*
  *	Generic CD-Text support functions
  *
- *	Copyright (c) 1999-2002 J. Schilling
+ *	Copyright (c) 1999-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -35,8 +35,8 @@ static	char sccsid[] =
 
 #include <scg/scsitransp.h>	/* For write_leadin() */
 
-#include "cdrecord.h"
 #include "cdtext.h"
+#include "cdrecord.h"
 #include "crc16.h"
 
 #define	PTI_TITLE	0x80	/* Album name and Track titles */
@@ -75,7 +75,7 @@ typedef struct textpack {
  *
  *	0  1  2  3  00 01 02 03 04 05 06 07 08 09 10 11 CRC16
  *
- *	8F 00 2B 00 01 01 0D 03 0C 0C 00 00 00 00 01 00 7B 3D 
+ *	8F 00 2B 00 01 01 0D 03 0C 0C 00 00 00 00 01 00 7B 3D
  *	8F 01 2C 00 00 00 00 00 00 00 12 03 2D 00 00 00 DA B7
  *	8F 02 2D 00 00 00 00 00 09 00 00 00 00 00 00 00 6A 24
  *
@@ -140,7 +140,7 @@ checktextfile(fname)
 		return (FALSE);
 	}
 	fs = filesize(f);
-	j = fs % sizeof(struct textpack);
+	j = fs % sizeof (struct textpack);
 	if (j == 4) {
 		n = fileread(f, hbuf, 4);
 		if (n != 4) {
@@ -173,26 +173,26 @@ checktextfile(fname)
 	}
 	n = fileread(f, bp, len);
 
-	tp = (struct textpack*)bp;
-	for (n=0; n < len; n += sizeof(struct textpack), tp++) {
+	tp = (struct textpack *)bp;
+	for (n = 0; n < len; n += sizeof (struct textpack), tp++) {
 		if (tp->pack_type < 0x80 || tp->pack_type > 0x8F) {
 			errmsgno(EX_BAD, "Illegal pack type 0x%02X pack #%ld in CD-Text file '%s'.\n",
-				tp->pack_type, (long)(n/sizeof(struct textpack)), fname);
+				tp->pack_type, (long)(n/sizeof (struct textpack)), fname);
 			return (FALSE);
 		}
 		crc = (tp->crc[0] & 0xFF) << 8 | (tp->crc[1] & 0xFF);
 		crc ^= 0xFFFF;
-		if (crc != calcCRC((Uchar *)tp, sizeof(*tp)-2)) {
+		if (crc != calcCRC((Uchar *)tp, sizeof (*tp)-2)) {
 			if (cdtext_crc_ok(tp)) {
 				errmsgno(EX_BAD,
 				"Corrected CRC ERROR in pack #%ld (offset %d-%ld) in CD-Text file '%s'.\n",
-				(long)(n/sizeof(struct textpack)),
-				n+j, (long)(n+j+sizeof(struct textpack)),
+				(long)(n/sizeof (struct textpack)),
+				n+j, (long)(n+j+sizeof (struct textpack)),
 				fname);
 			} else {
 			errmsgno(EX_BAD, "CRC ERROR in pack #%ld (offset %d-%ld) in CD-Text file '%s'.\n",
-				(long)(n/sizeof(struct textpack)),
-				n+j, (long)(n+j+sizeof(struct textpack)),
+				(long)(n/sizeof (struct textpack)),
+				n+j, (long)(n+j+sizeof (struct textpack)),
 				fname);
 			return (FALSE);
 			}
@@ -216,10 +216,10 @@ setuptextdata(bp, len)
 
 	if (xdebug) {
 		printf("%ld packs %% 4 = %ld\n",
-			(long)(len/sizeof(struct textpack)),
-			(long)(len/sizeof(struct textpack)) % 4);
+			(long)(len/sizeof (struct textpack)),
+			(long)(len/sizeof (struct textpack)) % 4);
 	}
-	i = (len/sizeof(struct textpack)) % 4;
+	i = (len/sizeof (struct textpack)) % 4;
 	if (i == 0) {
 		n = len;
 	} else if (i == 2) {
@@ -232,7 +232,7 @@ setuptextdata(bp, len)
 	if (p == NULL) {
 		errmsg("Cannot malloc CD-Text write buffer.\n");
 	}
-	for (i=0, j=0; j < n;) {
+	for (i = 0, j = 0; j < n; ) {
 		eight2six(&bp[i%len], &p[j]);
 		i += 3;
 		j += 4;
@@ -247,18 +247,18 @@ setuptextdata(bp, len)
 	FILE		*f;
 	int		crc;
 
-	tp = (struct textpack*)bp;
+	tp = (struct textpack *)bp;
 	p = sbuf;
-	for (n=0; n < len; n += sizeof(struct textpack), tp++) {
+	for (n = 0; n < len; n += sizeof (struct textpack), tp++) {
 		crc = (tp->crc[0] & 0xFF) << 8 | (tp->crc[1] & 0xFF);
 		crc ^= 0xFFFF;
 
-		printf("Pack:%3d ", n/ sizeof(struct textpack));
+		printf("Pack:%3d ", n/ sizeof (struct textpack));
 		printf("Pack type: %02X ", tp->pack_type & 0xFF);
 		printf("Track #: %2d ", tp->track_no & 0xFF);
 		printf("Sequence #:%3d ", tp->seq_number & 0xFF);
 		printf("Block #:%3d ", tp->block_number & 0xFF);
-		printf("CRC: %04X (%04X) ", crc, calcCRC((Uchar *)tp, sizeof(*tp)-2));
+		printf("CRC: %04X (%04X) ", crc, calcCRC((Uchar *)tp, sizeof (*tp)-2));
 		printf("Text: '%.12s'\n", tp->text);
 		movebytes(tp->text, p, 12);
 		p += 12;
@@ -281,11 +281,11 @@ cdtext_crc_ok(p)
 	int		crc;
 	struct textpack	new;
 
-	movebytes(p, &new, sizeof(struct textpack));
+	movebytes(p, &new, sizeof (struct textpack));
 	new.crc[0] ^= 0xFF;
 	new.crc[1] ^= 0xFF;
-	crc = calcCRC((Uchar *)&new, sizeof(struct textpack));
-	crc = flip_crc_error_corr((Uchar *)&new, sizeof(struct textpack), crc);
+	crc = calcCRC((Uchar *)&new, sizeof (struct textpack));
+	crc = flip_crc_error_corr((Uchar *)&new, sizeof (struct textpack), crc);
 	new.crc[0] ^= 0xFF;
 	new.crc[1] ^= 0xFF;
 	if (crc == 0)
@@ -307,20 +307,20 @@ packtext(tracks, trackp)
 	txtarg_t targ;
 	char	sbuf[256*18];
 
-	fillbytes(sbuf, sizeof(sbuf), 0);
-	fillbytes(&tsize, sizeof(tsize), 0);
+	fillbytes(sbuf, sizeof (sbuf), 0);
+	fillbytes(&tsize, sizeof (tsize), 0);
 
-	tsize.charcode		= CC_8859_1;		/* ISO-8859-1	     */
+	tsize.charcode		= CC_8859_1;		/* ISO-8859-1	    */
 	tsize.first_track	= trackp[1].trackno;
 	tsize.last_track	= trackp[1].trackno + tracks - 1;
 #ifdef	__FOUND_ON_COMMERCIAL_CD__
 	tsize.copyr_flags	= 3;			/* for titles/names */
 #else
-	tsize.copyr_flags	= 0;			/* no Copyr. limitat.*/
+	tsize.copyr_flags	= 0;			/* no Copyr. limitat. */
 #endif
-	tsize.pack_count[0x0F]	= 3;			/* 3 size packs	     */
-	tsize.last_seqnum[0]	= 0;			/* Start value only  */
-	tsize.language_codes[0]	= LANG_ENGLISH;		/* English	     */
+	tsize.pack_count[0x0F]	= 3;			/* 3 size packs	    */
+	tsize.last_seqnum[0]	= 0;			/* Start value only */
+	tsize.language_codes[0]	= LANG_ENGLISH;		/* English	    */
 
 	tp = (struct textpack *)sbuf;
 
@@ -329,7 +329,7 @@ packtext(tracks, trackp)
 	targ.tsize = &tsize;
 	targ.seqno = 0;
 
-	for (type=0; type <= 0x0E; type++) {
+	for (type = 0; type <= 0x0E; type++) {
 		register int	maxtrk;
 		register char	*s;
 
@@ -339,7 +339,7 @@ packtext(tracks, trackp)
 		if (type == 6) {
 			maxtrk = 0;
 		}
-		for (i=0; i <= maxtrk; i++) {
+		for (i = 0; i <= maxtrk; i++) {
 			s = trackp[i].text;
 			if (s)
 				s = ((textptr_t *)s)->textcodes[type];
@@ -357,7 +357,7 @@ packtext(tracks, trackp)
 	 */
 	tsize.last_seqnum[0] = targ.seqno + 2;
 
-	for (i=0; i < 3; i++) {
+	for (i = 0; i < 3; i++) {
 		fillpacks(&targ, &((char *)(&tsize))[i*12], 12, i, 0x8f);
 	}
 
@@ -385,7 +385,7 @@ anytext(pack_type, tracks, trackp)
 	register int	i;
 	register char	*p;
 
-	for (i=0; i <= tracks; i++) {
+	for (i = 0; i <= tracks; i++) {
 		if (trackp[i].text == NULL)
 			continue;
 		p = ((textptr_t *)(trackp[i].text))->textcodes[pack_type];
@@ -401,7 +401,7 @@ fillup_pack(ap)
 {
 	if (ap->p) {
 		fillbytes(ap->p, &ap->tp->text[12] - ap->p, '\0');
-		fillcrc((Uchar *)ap->tp, sizeof(*ap->tp));
+		fillcrc((Uchar *)ap->tp, sizeof (*ap->tp));
 		ap->p  = 0;
 		ap->tp++;
 	}
@@ -441,7 +441,7 @@ fillpacks(ap, from, len, track_no, pack_type)
 		len++;	/* Overshoot compensation */
 
 		if (p >= &tp->text[12]) {
-			fillcrc((Uchar *)tp, sizeof(*tp));
+			fillcrc((Uchar *)tp, sizeof (*tp));
 			p = 0;
 			tp++;
 		}

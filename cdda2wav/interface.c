@@ -1,7 +1,7 @@
-/* @(#)interface.c	1.30 02/11/21 Copyright 1998-2002 Heiko Eissfeldt */
+/* @(#)interface.c	1.32 03/12/27 Copyright 1998-2002 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)interface.c	1.30 02/11/21 Copyright 1998-2002 Heiko Eissfeldt";
+"@(#)interface.c	1.32 03/12/27 Copyright 1998-2002 Heiko Eissfeldt";
 
 #endif
 /***
@@ -43,6 +43,7 @@ static char     sccsid[] =
 #include <fctldefs.h>
 #include <assert.h>
 #include <schily.h>
+#include <device.h>
 
 #include <sys/ioctl.h>
 #include <statdefs.h>
@@ -80,6 +81,7 @@ static char     sccsid[] =
 
 #include <utypes.h>
 #include <cdrecord.h>
+#include "scsi_scan.h"
 
 unsigned interface;
 
@@ -218,7 +220,7 @@ static void SetupSCSI( )
     EnableCdda = (void (*) __PR((SCSI *, int, unsigned)))Dummy;
     ReadCdRom = ReadCdda12;
     ReadCdRomSub = ReadCddaSubSony;
-    ReadCdRomData = (int (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadStandard;
+    ReadCdRomData = (int (*) __PR((SCSI *, unsigned char *, unsigned, unsigned ))) ReadStandardData;
     ReadLastAudio = ReadFirstSessionTOCSony;
     SelectSpeed = SpeedSelectSCSISony;
     Play_at = Play_atSCSI;
@@ -417,7 +419,7 @@ static void Check_interface_for_device( statstruct, pdev_name)
 #endif
 
 #if defined (HAVE_ST_RDEV) && (HAVE_ST_RDEV == 1)
-    switch ((int) (statstruct->st_rdev >> 8L)) {
+    switch (major(statstruct->st_rdev)) {
 #if defined (__linux__)
     case SCSI_GENERIC_MAJOR:	/* generic */
 #else
@@ -492,8 +494,11 @@ static int OpenCdRom ( pdev_name )
   struct stat statstruct;
   int have_named_device = 0;
 
-  have_named_device = strchr(pdev_name, ':') == NULL
-			 && memcmp(pdev_name, "/dev/", 5) == 0;
+	have_named_device = FALSE;
+	if (pdev_name) {
+		have_named_device = strchr(pdev_name, ':') == NULL
+					&& memcmp(pdev_name, "/dev/", 5) == 0;
+	}
 
   if (have_named_device) {
     if (stat(pdev_name, &statstruct)) {
@@ -527,30 +532,29 @@ static int OpenCdRom ( pdev_name )
 	scgp = scg_open(pdev_name, errstr, sizeof(errstr), 0, 0);
 
 	if (scgp == NULL) {
-		errmsg("%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
+		int	err = geterrno();
 
-        fprintf(stderr, "open(%s) in file %s, line %d\n",pdev_name, __FILE__, __LINE__);
-
-        dontneedgroup();
-        dontneedroot();
+		errmsgno(err, "%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
+		errmsgno(EX_BAD, "For possible targets try 'cdda2wav -scanbus'.%s\n",
+					geteuid() ? " Make sure you are root.":"");
+        	dontneedgroup();
+        	dontneedroot();
 #if defined(sun) || defined(__sun)
-        fprintf(stderr, "On SunOS/Solaris make sure you have Joerg Schillings scg SCSI driver installed.\n");
+		fprintf(stderr, "On SunOS/Solaris make sure you have Joerg Schillings scg SCSI driver installed.\n");
 #endif
 #if defined (__linux__)
-        fprintf(stderr, "Use the script scan_scsi.linux to find out more.\n");
+	        fprintf(stderr, "Use the script scan_scsi.linux to find out more.\n");
 #endif
-        fprintf(stderr, "Probably you did not define your SCSI device.\n");
-	fprintf(stderr, "You can scan the SCSI bus(es) with 'cdrecord -scanbus'.\n");
-        fprintf(stderr, "Set the CDDA_DEVICE environment variable or use the -D option.\n");
-        fprintf(stderr, "You can also define the default device in the Makefile.\n");
-	fprintf(stderr, "For possible transport specifiers try 'cdda2wav dev=help'.\n");
-        exit(SYNTAX_ERROR);
-      }
-	scg_settimeout(scgp, 300);
-	if (scgp) {
-		scgp->silent = global.scsi_silent;
-		scgp->verbose = global.scsi_verbose;
+	        fprintf(stderr, "Probably you did not define your SCSI device.\n");
+	        fprintf(stderr, "Set the CDDA_DEVICE environment variable or use the -D option.\n");
+	        fprintf(stderr, "You can also define the default device in the Makefile.\n");
+		fprintf(stderr, "For possible transport specifiers try 'cdda2wav dev=help'.\n");
+	        exit(SYNTAX_ERROR);
 	}
+	scg_settimeout(scgp, 300);
+	scg_settimeout(scgp, 60);
+	scgp->silent = global.scsi_silent;
+	scgp->verbose = global.scsi_verbose;
       dontneedgroup();
       dontneedroot();
       if (global.nsectors > (unsigned) scg_bufsize(scgp, 3*1024*1024)/CD_FRAMESIZE_RAW)
@@ -559,6 +563,10 @@ static int OpenCdRom ( pdev_name )
         global.overlap = global.nsectors-1;
 
 	init_scsibuf(scgp, global.nsectors*CD_FRAMESIZE_RAW);
+	if (global.scanbus) {
+		select_target(scgp, stdout);
+		exit(0);
+	}
   } else {
       needgroup(0);
       retval = open(pdev_name,O_RDONLY
@@ -591,7 +599,12 @@ static int OpenCdRom ( pdev_name )
          exit(RACE_ERROR);
       }
 #endif
-	if (scgp != NULL && global.scsi_verbose) {
+	/*
+	 * The structure looks like a desaster :-(
+	 * We do this more than once as it is impossible to understand where
+	 * the right place would be to do this....
+	 */
+	if (scgp != NULL) {
 		scgp->verbose = global.scsi_verbose;
 	}
   }
@@ -892,4 +905,12 @@ void SetupInterface( )
 #endif
     }
 #endif	/* if def SIM_CD */
+	/*
+	 * The structure looks like a desaster :-(
+	 * We do this more than once as it is impossible to understand where
+	 * the right place would be to do this....
+	 */
+	if (scgp != NULL) {
+		scgp->verbose = global.scsi_verbose;
+	}
 }

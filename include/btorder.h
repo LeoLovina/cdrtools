@@ -1,4 +1,4 @@
-/* @(#)btorder.h	1.15 01/12/09 Copyright 1996 J. Schilling */
+/* @(#)btorder.h	1.16 03/06/15 Copyright 1996 J. Schilling */
 /*
  *	Definitions for Bit and Byte ordering
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 
@@ -47,8 +47,8 @@
 #define	_BIT_FIELDS_HTOL
 #endif
 
-#if defined(HAVE_C_BITFIELDS)	&& \
-   !defined(BITFIELDS_HTOL)
+#if defined(HAVE_C_BITFIELDS) && \
+	!defined(BITFIELDS_HTOL)
 #define	BITFIELDS_LTOH
 #define	_BIT_FIELDS_LTOH
 #endif
@@ -69,8 +69,8 @@ error  Only one of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL may be defined
  * Note that we cannot use the definitions _LITTLE_ENDIAN and _BIG_ENDIAN
  * because they are used on IRIX-6.5 with different meaning.
  */
-#if defined(HAVE_C_BIGENDIAN)	&& \
-   !defined(WORDS_BIGENDIAN)
+#if defined(HAVE_C_BIGENDIAN) && \
+	!defined(WORDS_BIGENDIAN)
 #define	WORDS_LITTLEENDIAN
 /*#define	_LITTLE_ENDIAN*/
 #endif
@@ -90,8 +90,8 @@ error  Only one of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL may be defined
  * Bitorder not yet known.
  */
 #	if defined(sun3) || defined(mc68000) || \
-	   defined(sun4) || defined(__sparc) || defined(sparc) || \
-	   defined(__hppa) || defined(_ARCH_PPC) || defined(_IBMR2)
+	    defined(sun4) || defined(__sparc) || defined(sparc) || \
+	    defined(__hppa) || defined(_ARCH_PPC) || defined(_IBMR2)
 #		define _BIT_FIELDS_HTOL
 #	endif
 
@@ -100,13 +100,13 @@ error  Only one of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL may be defined
 #	endif
 
 #	if defined(__i386__) || defined(__i386) || defined(i386) || \
-	   defined(__alpha__) || defined(__alpha) || defined(alpha) || \
-	   defined(__arm__) || defined(__arm) || defined(arm)
+	    defined(__alpha__) || defined(__alpha) || defined(alpha) || \
+	    defined(__arm__) || defined(__arm) || defined(arm)
 #		define _BIT_FIELDS_LTOH
 #	endif
 
 #	if defined(__ppc__) || defined(ppc) || defined(__ppc) || \
-	   defined(__PPC) || defined(powerpc) || defined(__powerpc__)
+	    defined(__PPC) || defined(powerpc) || defined(__powerpc__)
 
 #		if	defined(__BIG_ENDIAN__)
 #			define _BIT_FIELDS_HTOL

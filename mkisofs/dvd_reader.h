@@ -1,7 +1,7 @@
-/* @(#)dvd_reader.h	1.1 02/07/20 joerg */
+/* @(#)dvd_reader.h	1.2 04/03/02 joerg */
 
-#ifndef _DVD_READER_H
-#define _DVD_READER_H
+#ifndef	_DVD_READER_H
+#define	_DVD_READER_H
 
 /*
  * Copyright (C) 2001, 2002 Billy Biggs <vektor@dumbterm.net>,
@@ -39,15 +39,15 @@
 
 #include <unixstd.h>	/* Make sure <sys/types.h> is included */
 
-/**
+/*
  * Maximum length of filenames for UDF.
  */
-#define MAX_UDF_FILE_NAME_LEN 2048
+#define	MAX_UDF_FILE_NAME_LEN 2048
 
-/**
+/*
  * The length of one Logical Block of a DVD Video.
  */
-#define DVD_VIDEO_LB_LEN 2048
+#define	DVD_VIDEO_LB_LEN 2048
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,7 +64,7 @@ typedef struct dvd_reader_s	dvd_reader_t;
 typedef struct dvd_file_s	dvd_file_t;
 
 
-/**
+/*
  * dvd = DVDOpen(path);
  * Opens a directory name of a DVD-Video structure on HD.
  * Returns zero if it fails.
@@ -76,7 +76,7 @@ typedef struct dvd_file_s	dvd_file_t;
 extern	dvd_reader_t *DVDOpen	__PR((const char *));
 
 
-/**
+/*
  * DVDClose(dvd);
  *
  * Closes and cleans up the DVD reader object.  You must close all open files
@@ -86,7 +86,7 @@ extern	dvd_reader_t *DVDOpen	__PR((const char *));
 
 extern	void DVDClose		__PR((dvd_reader_t *));
 
-/**
+/*
  * INFO_FILE       : VIDEO_TS.IFO     (manager)
  *                   VTS_XX_0.IFO     (title)
  *
@@ -107,7 +107,7 @@ typedef enum {
 	DVD_READ_TITLE_VOBS
 } dvd_read_domain_t;
 
-/**
+/*
  * dvd_file = DVDOpenFile(dvd, titlenum, domain);
  *
  * Opens a file on the DVD given the title number and domain.  If the title
@@ -117,7 +117,7 @@ typedef enum {
  */
 extern	dvd_file_t * DVDOpenFile	__PR((dvd_reader_t *, int, dvd_read_domain_t));
 
-/**
+/*
  * DVDCloseFile(dvd_file);
  *
  * Closes a file and frees the associated structure.
@@ -125,7 +125,7 @@ extern	dvd_file_t * DVDOpenFile	__PR((dvd_reader_t *, int, dvd_read_domain_t));
 extern	void DVDCloseFile		__PR((dvd_file_t *));
 
 
-/**
+/*
  * blocks = DVDFileSize(dvd_file);
  *
  * Returns the file size in blocks.

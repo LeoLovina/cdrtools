@@ -1,19 +1,19 @@
-/* @(#)overlap.c	1.9 02/04/10 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)overlap.c	1.11 04/02/20 J. Schilling from cdparanoia-III-alpha9.8 */
 #ifndef lint
-static char     sccsid[] =
-"@(#)overlap.c	1.9 02/04/10 J. Schilling from cdparanoia-III-alpha9.8";
+static	char sccsid[] =
+"@(#)overlap.c	1.11 04/02/20 J. Schilling from cdparanoia-III-alpha9.8";
 
 #endif
 /*
  *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
  */
-/***
+/*
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Monty (xiphmont@mit.edu)
  *
  * Statistic code and cache management for overlap settings
  *
- ***/
+ */
 
 #include <mconfig.h>
 #include <stdxlib.h>
@@ -26,10 +26,12 @@ static char     sccsid[] =
 
 EXPORT	void	paranoia_resetcache	__PR((cdrom_paranoia * p));
 EXPORT	void	paranoia_resetall	__PR((cdrom_paranoia * p));
-EXPORT	void	i_paranoia_trim		__PR((cdrom_paranoia * p, long beginword, long endword));
+EXPORT	void	i_paranoia_trim		__PR((cdrom_paranoia * p,
+						long beginword, long endword));
 EXPORT	void	offset_adjust_settings	__PR((cdrom_paranoia * p,
 						void (*callback) (long, int)));
-EXPORT	void	offset_add_value	__PR((cdrom_paranoia * p, offsets * o, long value,
+EXPORT	void	offset_add_value	__PR((cdrom_paranoia * p,
+						offsets * o, long value,
 						void (*callback) (long, int)));
 
 /*
@@ -78,14 +80,14 @@ i_paranoia_trim(p, beginword, endword)
 	root_block	*root = &(p->root);
 
 	if (root->vector != NULL) {
-		long	target = beginword - MAX_SECTOR_OVERLAP * CD_FRAMEWORDS;
+		long	target = beginword - p->maxdynoverlap;
 		long	rbegin = cb(root->vector);
 		long	rend = ce(root->vector);
 
 		if (rbegin > beginword)
 			goto rootfree;
 
-		if (rbegin + MAX_SECTOR_OVERLAP * CD_FRAMEWORDS < beginword) {
+		if (rbegin + p->maxdynoverlap < beginword) {
 			if (target + MIN_WORDS_OVERLAP > rend)
 				goto rootfree;
 
@@ -100,7 +102,7 @@ i_paranoia_trim(p, beginword, endword)
 			while (c) {
 				c_block	*next = c_next(c);
 
-				if (ce(c) < beginword - MAX_SECTOR_OVERLAP * CD_FRAMEWORDS)
+				if (ce(c) < beginword - p->maxdynoverlap)
 					free_c_block(c);
 				c = next;
 			}
@@ -145,8 +147,8 @@ offset_adjust_settings(p, callback)
 			 * a (potentially unstable) feedback loop
 			 */
 			{
-				c_block        *c = c_first(p);
-				v_fragment     *v = v_first(p);
+				c_block		*c = c_first(p);
+				v_fragment	*v = v_first(p);
 
 				while (v && v->one) {
 					/*
@@ -161,7 +163,7 @@ offset_adjust_settings(p, callback)
 					v = v_next(v);
 				}
 				while (c) {
-					long            adj = min(av, cb(c));
+					long	adj = min(av, cb(c));
 
 					c_set(c, cb(c) - adj);
 					c = c_next(c);
@@ -190,10 +192,10 @@ offset_adjust_settings(p, callback)
 		if (p->dynoverlap < p->stage1.offmax * 1.5)
 			p->dynoverlap = p->stage1.offmax * 1.5;
 
-		if (p->dynoverlap < MIN_SECTOR_EPSILON)
-			p->dynoverlap = MIN_SECTOR_EPSILON;
-		if (p->dynoverlap > MAX_SECTOR_OVERLAP * CD_FRAMEWORDS)
-			p->dynoverlap = MAX_SECTOR_OVERLAP * CD_FRAMEWORDS;
+		if (p->dynoverlap < p->mindynoverlap)
+			p->dynoverlap = p->mindynoverlap;
+		if (p->dynoverlap > p->maxdynoverlap)
+			p->dynoverlap = p->maxdynoverlap;
 
 		if (callback)
 			(*callback) (p->dynoverlap, PARANOIA_CB_OVERLAP);

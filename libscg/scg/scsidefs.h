@@ -1,24 +1,10 @@
-/* @(#)scsidefs.h	1.27 01/09/27 Copyright 1988 J. Schilling */
+/* @(#)scsidefs.h	1.28 04/09/04 Copyright 1988 J. Schilling */
 /*
  *	Definitions for SCSI devices i.e. for error strings in scsierrs.c
  *
  *	Copyright (c) 1988 J. Schilling
  */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+/*@@C@@*/
 
 #ifndef	_SCG_SCSIDEFS_H
 #define	_SCG_SCSIDEFS_H
@@ -109,12 +95,12 @@ extern "C" {
 /*
  * Optical memory
  */
-#define DEV_SONY_SMO		700
+#define	DEV_SONY_SMO		700
 
 
 #define	old_acb(d)	(((d) == DEV_ACB40X0) || \
-			 ((d) == DEV_ACB4000) || ((d) == DEV_ACB4010) || \
-			 ((d) == DEV_ACB4070) || ((d) == DEV_ACB5500))
+			    ((d) == DEV_ACB4000) || ((d) == DEV_ACB4010) || \
+			    ((d) == DEV_ACB4070) || ((d) == DEV_ACB5500))
 
 #define	is_ccs(d)	(!old_acb(d))
 

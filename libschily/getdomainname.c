@@ -1,10 +1,10 @@
-/* @(#)getdomainname.c	1.15 03/01/29 Copyright 1995 J. Schilling */
+/* @(#)getdomainname.c	1.16 03/06/15 Copyright 1995-2003 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getdomainname.c	1.15 03/01/29 Copyright 1995 J. Schilling";
+	"@(#)getdomainname.c	1.16 03/06/15 Copyright 1995-2003 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1995 J. Schilling
+ *	Copyright (c) 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,7 @@ getdomainname(name, namelen)
 	if (f == NULL)
 		return (-1);
 
-	while (fgetline(f, name1, sizeof(name1)) >= 0 ) {
+	while (fgetline(f, name1, sizeof (name1)) >= 0) {
 		if ((p = strchr(name1, '#')) != NULL)
 			*p = '\0';
 

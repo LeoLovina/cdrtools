@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.75 02/10/21 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.83 04/05/20 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.75 02/10/21 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.83 04/05/20 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -52,9 +52,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <linux/version.h>
@@ -70,11 +70,11 @@ static	char __sccsid[] =
 #else
 #include <linux/scsi.h>
 #endif
-#else
-#define __KERNEL__
-#include <linux/fs.h>
+#else				/* LINUX_VERSION_CODE == 0 Very old kernel? */
+#define	__KERNEL__		/* Some Linux Include files are inconsistent */
+#include <linux/fs.h>		/* From ancient versions, really needed? */
 #undef __KERNEL__
-#include "block/blk.h"
+#include "block/blk.h"		/* From ancient versions, really needed? */
 #include "scsi/scsi.h"
 #endif
 
@@ -94,10 +94,10 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.75";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.83";	/* The version for this transport*/
 
 #ifndef	SCSI_IOCTL_GET_BUS_NUMBER
-#define SCSI_IOCTL_GET_BUS_NUMBER 0x5386
+#define	SCSI_IOCTL_GET_BUS_NUMBER 0x5386
 #endif
 
 /*
@@ -105,38 +105,38 @@ LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.75";	/* The version for thi
  * XXX files. This is stolen from /usr/src/linux/drivers/scsi/scsi.h
  */
 #ifndef	DID_OK
-#define DID_OK          0x00 /* NO error                                */
-#define DID_NO_CONNECT  0x01 /* Couldn't connect before timeout period  */
-#define DID_BUS_BUSY    0x02 /* BUS stayed busy through time out period */
-#define DID_TIME_OUT    0x03 /* TIMED OUT for other reason              */
-#define DID_BAD_TARGET  0x04 /* BAD target.                             */
-#define DID_ABORT       0x05 /* Told to abort for some other reason     */
-#define DID_PARITY      0x06 /* Parity error                            */
-#define DID_ERROR       0x07 /* Internal error                          */
-#define DID_RESET       0x08 /* Reset by somebody.                      */
-#define DID_BAD_INTR    0x09 /* Got an interrupt we weren't expecting.  */ 
+#define	DID_OK		0x00 /* NO error				*/
+#define	DID_NO_CONNECT	0x01 /* Couldn't connect before timeout period	*/
+#define	DID_BUS_BUSY	0x02 /* BUS stayed busy through time out period	*/
+#define	DID_TIME_OUT	0x03 /* TIMED OUT for other reason		*/
+#define	DID_BAD_TARGET	0x04 /* BAD target.				*/
+#define	DID_ABORT	0x05 /* Told to abort for some other reason	*/
+#define	DID_PARITY	0x06 /* Parity error				*/
+#define	DID_ERROR	0x07 /* Internal error				*/
+#define	DID_RESET	0x08 /* Reset by somebody.			*/
+#define	DID_BAD_INTR	0x09 /* Got an interrupt we weren't expecting.	*/
 #endif
 
 /*
  *  These indicate the error that occurred, and what is available.
  */
-#ifndef DRIVER_BUSY
-#define DRIVER_BUSY         0x01
-#define DRIVER_SOFT         0x02
-#define DRIVER_MEDIA        0x03
-#define DRIVER_ERROR        0x04
- 
-#define DRIVER_INVALID      0x05
-#define DRIVER_TIMEOUT      0x06
-#define DRIVER_HARD         0x07
-#define DRIVER_SENSE        0x08
+#ifndef	DRIVER_BUSY
+#define	DRIVER_BUSY	0x01
+#define	DRIVER_SOFT	0x02
+#define	DRIVER_MEDIA	0x03
+#define	DRIVER_ERROR	0x04
+
+#define	DRIVER_INVALID	0x05
+#define	DRIVER_TIMEOUT	0x06
+#define	DRIVER_HARD	0x07
+#define	DRIVER_SENSE	0x08
 #endif
 
 /*
  * XXX Should add extra space in buscookies and scgfiles for a "PP bus"
  * XXX and for two or more "ATAPI busses".
  */
-#define	MAX_SCG		16	/* Max # of SCSI controllers */
+#define	MAX_SCG		256	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
 #define	MAX_LUN		8
 
@@ -159,7 +159,8 @@ struct scg_local {
 	int	pgbus;
 	int	pack_id;		/* Should be a random number	*/
 	int	drvers;
-	int	isold;
+	short	isold;
+	short	flags;
 	long	xbufsize;
 	char	*xbuf;
 	char	*SCSIbuf;
@@ -167,7 +168,12 @@ struct scg_local {
 	ata_buscookies	bc[MAX_SCHILLY_HOSTS];
 #endif
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
+
+/*
+ * Flag definitions
+ */
+#define	LF_ATA		0x01		/* Using /dev/hd* ATA interface	*/
 
 #ifdef	SG_BIG_BUFF
 #define	MAX_DMA_LINUX	SG_BIG_BUFF	/* Defined in include/scsi/sg.h	*/
@@ -201,11 +207,11 @@ LOCAL	int	scgo_send	__PR((SCSI *scgp));
 LOCAL	int	sg_rwsend	__PR((SCSI *scgp));
 #endif
 LOCAL	void	sg_clearnblock	__PR((int f));
-LOCAL	BOOL	sg_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
+LOCAL	BOOL	sg_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun, int ataidx));
 LOCAL	void	sg_initdev	__PR((SCSI *scgp, int f));
 LOCAL	int	sg_mapbus	__PR((SCSI *scgp, int busno, int ino));
 LOCAL	BOOL	sg_mapdev	__PR((SCSI *scgp, int f, int *busp, int *tgtp, int *lunp,
-							int *chanp, int *inop));
+							int *chanp, int *inop, int ataidx));
 #if defined(SG_SET_RESERVED_SIZE) && defined(SG_GET_RESERVED_SIZE)
 LOCAL	long	sg_raisedma	__PR((SCSI *scgp, long newmax));
 #endif
@@ -229,7 +235,7 @@ scgo_version(scgp, what)
 		 */
 		if (scglocal(scgp)->pgbus == 0 ||
 		    (scg_scsibus(scgp) >= 0 &&
-		     scg_scsibus(scgp) == scglocal(scgp)->pgbus))
+		    scg_scsibus(scgp) == scglocal(scgp)->pgbus))
 			return (pg_version(scgp, what));
 #endif
 		switch (what) {
@@ -251,9 +257,9 @@ scgo_version(scgp, what)
 
 				if (scglocal(scgp)->drvers >= 0) {
 					n = scglocal(scgp)->drvers;
-					js_snprintf(kv, sizeof(kv),
-                                        "%d.%d.%d",
-                                        n/10000, (n%10000)/100, n%100);
+					js_snprintf(kv, sizeof (kv),
+					"%d.%d.%d",
+					n/10000, (n%10000)/100, n%100);
 
 					return (kv);
 				}
@@ -276,6 +282,8 @@ scgo_help(scgp, f)
 #ifdef	USE_ATA
 	scgo_ahelp(scgp, f);
 #endif
+	__scg_help(f, "ATA", "ATA Packet specific SCSI transport using sg interface",
+		"ATA:", "bus,target,lun", "1,2,0", TRUE, FALSE);
 	return (0);
 }
 
@@ -284,9 +292,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	i;
 	register int	b;
@@ -294,6 +302,7 @@ scgo_open(scgp, device)
 	register int	l;
 	register int	nopen = 0;
 	char		devname[64];
+		BOOL	use_ata = FALSE;
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -310,10 +319,40 @@ scgo_open(scgp, device)
 			return (SCGO_OPEN(scgp, device));
 		}
 #endif
+		if (strcmp(device, "ATA") == 0) {
+			/*
+			 * Sending generic SCSI commands via /dev/hd* is a
+			 * really bad idea when there also is a generic
+			 * SCSI driver interface - it breaks the protocol
+			 * layering model. A better idea would be to
+			 * have a SCSI host bus adapter driver that sends
+			 * the SCSI commands via the ATA hardware. This way,
+			 * the layering model would be honored.
+			 *
+			 * People like Jens Axboe should finally fix the DMA
+			 * bugs in the ide-scsi hostadaptor emulation module
+			 * from Linux instead of publishing childish patches
+			 * to the comment above.
+			 */
+			use_ata = TRUE;
+			device = NULL;
+			if (scgp->overbose) {
+				/*
+				 * I strongly encourage people who believe that
+				 * they need to patch this message away to read
+				 * the messages in the Solaris USCSI libscg
+				 * layer instead of wetting their tissues while
+				 * being unwilling to look besides their
+				 * own belly button.
+				 */
+				js_fprintf((FILE *)scgp->errfile,
+				"Warning: Using badly designed ATAPI via /dev/hd* interface.\n");
+			}
+		}
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
@@ -323,23 +362,77 @@ scgo_open(scgp, device)
 		scglocal(scgp)->pack_id = 5;
 		scglocal(scgp)->drvers = -1;
 		scglocal(scgp)->isold = -1;
+		scglocal(scgp)->flags = 0;
+		if (use_ata)
+			scglocal(scgp)->flags |= LF_ATA;
 		scglocal(scgp)->xbufsize = 0L;
 		scglocal(scgp)->xbuf = NULL;
 
-		for (b=0; b < MAX_SCG; b++) {
+		for (b = 0; b < MAX_SCG; b++) {
 			scglocal(scgp)->buscookies[b] = (short)-1;
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
 	}
 
+	if (use_ata)
+		goto scanopen;
+
 	if ((device != NULL && *device != '\0') || (busno == -2 && tgt == -2))
 		goto openbydev;
 
-	for (i=0; i < 32; i++) {
-		js_snprintf(devname, sizeof(devname), "/dev/sg%d", i);
+scanopen:
+	/*
+	 * Note that it makes no sense to scan less than all /dev/hd* devices
+	 * as even /dev/hda may be a device that talks SCSI (e.g. a ATAPI
+	 * notebook disk or a CD/DVD writer). The CD/DVD writer case may
+	 * look silly but there may be users that did boot from a SCSI hdd
+	 * and connected 4 CD/DVD writers to both IDE cables in the PC.
+	 */
+	if (use_ata) for (i = 0; i <= 25; i++) {
+		js_snprintf(devname, sizeof (devname), "/dev/hd%c", i+'a');
+					/* O_NONBLOCK is dangerous */
+		f = open(devname, O_RDWR | O_NONBLOCK);
+		if (f < 0) {
+			/*
+			 * Set up error string but let us clear it later
+			 * if at least one open succeeded.
+			 */
+			if (scgp->errstr)
+				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"Cannot open '/dev/hd*'");
+			if (errno != ENOENT && errno != ENXIO && errno != ENODEV) {
+				if (scgp->errstr)
+					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"Cannot open '%s'", devname);
+				return (0);
+			}
+		} else {
+			int	iparm;
+
+			if (ioctl(f, SG_GET_TIMEOUT, &iparm) < 0) {
+				if (scgp->errstr)
+					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+							"SCSI unsupported with '/dev/hd*'");
+				close(f);
+				continue;
+			}
+			sg_clearnblock(f);	/* Be very proper about this */
+			if (sg_setup(scgp, f, busno, tgt, tlun, i))
+				return (++nopen);
+			if (busno < 0 && tgt < 0 && tlun < 0)
+				nopen++;
+		}
+	}
+	if (use_ata && nopen == 0)
+		return (0);
+	if (nopen > 0 && scgp->errstr)
+		scgp->errstr[0] = '\0';
+
+	if (nopen == 0) for (i = 0; i < 32; i++) {
+		js_snprintf(devname, sizeof (devname), "/dev/sg%d", i);
 					/* O_NONBLOCK is dangerous */
 		f = open(devname, O_RDWR | O_NONBLOCK);
 		if (f < 0) {
@@ -358,7 +451,7 @@ scgo_open(scgp, device)
 			}
 		} else {
 			sg_clearnblock(f);	/* Be very proper about this */
-			if (sg_setup(scgp, f, busno, tgt, tlun))
+			if (sg_setup(scgp, f, busno, tgt, tlun, -1))
 				return (++nopen);
 			if (busno < 0 && tgt < 0 && tlun < 0)
 				nopen++;
@@ -366,9 +459,9 @@ scgo_open(scgp, device)
 	}
 	if (nopen > 0 && scgp->errstr)
 		scgp->errstr[0] = '\0';
-		
-	if (nopen == 0) for (i=0; i <= 25; i++) {
-		js_snprintf(devname, sizeof(devname), "/dev/sg%c", i+'a');
+
+	if (nopen == 0) for (i = 0; i <= 25; i++) {
+		js_snprintf(devname, sizeof (devname), "/dev/sg%c", i+'a');
 					/* O_NONBLOCK is dangerous */
 		f = open(devname, O_RDWR | O_NONBLOCK);
 		if (f < 0) {
@@ -387,7 +480,7 @@ scgo_open(scgp, device)
 			}
 		} else {
 			sg_clearnblock(f);	/* Be very proper about this */
-			if (sg_setup(scgp, f, busno, tgt, tlun))
+			if (sg_setup(scgp, f, busno, tgt, tlun, -1))
 				return (++nopen);
 			if (busno < 0 && tgt < 0 && tlun < 0)
 				nopen++;
@@ -398,7 +491,22 @@ scgo_open(scgp, device)
 
 openbydev:
 	if (device != NULL && *device != '\0') {
+		b = -1;
+		if (strlen(device) == 8 && strncmp(device, "/dev/hd", 7) == 0) {
+			b = device[7] - 'a';
+			if (b < 0 || b > 25)
+				b = -1;
+		}
 		if (scgp->overbose) {
+			/*
+			 * Before you patch this away, are you sure that you
+			 * know what you are going to to?
+			 *
+			 * Note that this is a warning that helps users from
+			 * cdda2wav, mkisofs and other programs (that
+			 * distinguish SCSI addresses from file names) from
+			 * getting unexpected results.
+			 */
 			js_fprintf((FILE *)scgp->errfile,
 			"Warning: Open by 'devname' is unintentional and not supported.\n");
 		}
@@ -421,7 +529,7 @@ openbydev:
 		}
 
 		sg_clearnblock(f);		/* Be very proper about this */
-		if (!sg_mapdev(scgp, f, &busno, &tgt, &tlun, 0, 0)) {
+		if (!sg_mapdev(scgp, f, &busno, &tgt, &tlun, 0, 0, b)) {
 			close(f);
 			/*
 			 * If sg_mapdev() failes, this may be /dev/pg* device.
@@ -439,19 +547,19 @@ openbydev:
 #endif
 
 		scg_settarget(scgp, busno, tgt, tlun);
-		if (sg_setup(scgp, f, busno, tgt, tlun))
+		if (sg_setup(scgp, f, busno, tgt, tlun, b))
 			return (++nopen);
 	}
 openpg:
 #ifdef	USE_PG
 	nopen += pg_open(scgp, device);
 #endif
-	if (scgp->debug > 0) for (b=0; b < MAX_SCG; b++) {
+	if (scgp->debug > 0) for (b = 0; b < MAX_SCG; b++) {
 		js_fprintf((FILE *)scgp->errfile,
 			"Bus: %d cookie: %X\n",
 			b, scglocal(scgp)->buscookies[b]);
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				if (scglocal(scgp)->scgfiles[b][t][l] != (short)-1) {
 					js_fprintf((FILE *)scgp->errfile,
 						"file (%d,%d,%d): %d\n",
@@ -475,12 +583,12 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
+	for (b = 0; b < MAX_SCG; b++) {
 		if (b == scglocal(scgp)->pgbus)
 			continue;
 		scglocal(scgp)->buscookies[b] = (short)-1;
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
@@ -501,7 +609,7 @@ scgo_close(scgp)
 
 /*
  * The Linux kernel becomes more and more unmaintainable.
- * Every year, a new incompatible SCSI transport interface is introduced.
+ * Every year, a new incompatible SCSI transport interface is added.
  * Each of them has it's own contradictory constraints.
  * While you cannot have O_NONBLOCK set during operation, at least one
  * of the drivers requires O_NONBLOCK to be set during open().
@@ -519,12 +627,13 @@ sg_clearnblock(f)
 }
 
 LOCAL BOOL
-sg_setup(scgp, f, busno, tgt, tlun)
+sg_setup(scgp, f, busno, tgt, tlun, ataidx)
 	SCSI	*scgp;
 	int	f;
 	int	busno;
 	int	tgt;
 	int	tlun;
+	int	ataidx;
 {
 	int	n;
 	int	Chan;
@@ -542,7 +651,7 @@ sg_setup(scgp, f, busno, tgt, tlun)
 			if (scgp->overbose) {
 				js_fprintf((FILE *)scgp->errfile,
 					"Linux sg driver version: %d.%d.%d\n",
-        				n/10000, (n%10000)/100, n%100);
+					n/10000, (n%10000)/100, n%100);
 			}
 		}
 	}
@@ -550,7 +659,7 @@ sg_setup(scgp, f, busno, tgt, tlun)
 	if (scg_scsibus(scgp) >= 0 && scg_target(scgp) >= 0 && scg_lun(scgp) >= 0)
 		onetarget = TRUE;
 
-	sg_mapdev(scgp, f, &Bus, &Target, &Lun, &Chan, &Ino);
+	sg_mapdev(scgp, f, &Bus, &Target, &Lun, &Chan, &Ino, ataidx);
 
 	/*
 	 * For old kernels try to make the best guess.
@@ -610,22 +719,22 @@ sg_initdev(scgp, f)
 
 	sg_settimeout(f, scgp->deftimeout);
 
-	/* 
+	/*
 	 * If it's a block device, don't read.... pre Linux-2.4 /dev/sg*
 	 * definitely is a character device and we only need to clear the
 	 * queue for old /dev/sg* versions. If somebody ever implements
 	 * raw disk access for Linux, this test may fail.
-	 */ 
-	if (fstat(f, &sb) >= 0 && S_ISBLK(sb.st_mode)) 
-		return; 
+	 */
+	if (fstat(f, &sb) >= 0 && S_ISBLK(sb.st_mode))
+		return;
 
 	/* Eat any unwanted garbage from prior use of this device */
 
 	n = fcntl(f, F_GETFL);	/* Be very proper about this */
 	fcntl(f, F_SETFL, n|O_NONBLOCK);
 
-	fillbytes((caddr_t)&sg_rep, sizeof(struct sg_header), '\0');
-	sg_rep.hd.reply_len = sizeof(struct sg_header);
+	fillbytes((caddr_t)&sg_rep, sizeof (struct sg_header), '\0');
+	sg_rep.hd.reply_len = sizeof (struct sg_header);
 
 	/*
 	 * This is really ugly.
@@ -637,10 +746,10 @@ sg_initdev(scgp, f)
 	 * clean it up. Unfortunately, reading from /dev/hd* will
 	 * Access the medium.
 	 */
-	for (i=0; i < 1000; i++) {	/* Read at least 32k from /dev/sg* */
+	for (i = 0; i < 1000; i++) {	/* Read at least 32k from /dev/sg* */
 		int	ret;
 
-		ret = read(f, &sg_rep, sizeof(sg_rep));
+		ret = read(f, &sg_rep, sizeof (sg_rep));
 		if (ret > 0)
 			continue;
 		if (ret == 0 || errno == EAGAIN || errno == EIO)
@@ -675,7 +784,7 @@ sg_mapbus(scgp, busno, ino)
 			errmsgno(EX_BAD, "Warning Linux Bus mapping botch.\n");
 		return (busno);
 
-	} else for (i=0; i < MAX_SCG; i++) {
+	} else for (i = 0; i < MAX_SCG; i++) {
 		if (scglocal(scgp)->buscookies[i] == (short)-1) {
 			scglocal(scgp)->buscookies[i] = ino;
 			return (i);
@@ -688,7 +797,7 @@ sg_mapbus(scgp, busno, ino)
 }
 
 LOCAL BOOL
-sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop)
+sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop, ataidx)
 	SCSI	*scgp;
 	int	f;
 	int	*busp;
@@ -696,6 +805,7 @@ sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop)
 	int	*lunp;
 	int	*chanp;
 	int	*inop;
+	int	ataidx;
 {
 	struct	sg_id {
 		long	l1; /* target | lun << 8 | channel << 16 | low_ino << 24 */
@@ -707,6 +817,20 @@ sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop)
 	int	Target;
 	int	Lun;
 
+	if (ataidx >= 0) {
+		/*
+		 * The badly designed /dev/hd* interface maps everything
+		 * to 0,0,0 so we need to do the mapping ourselves.
+		 */
+		*busp = ataidx / 2;
+		*tgtp = ataidx % 2;
+		*lunp = 0;
+		if (chanp)
+			*chanp = 0;
+		if (inop)
+			*inop = 0;
+		return (TRUE);
+	}
 	if (ioctl(f, SCSI_IOCTL_GET_IDLUN, &sg_id))
 		return (FALSE);
 	if (scgp->debug > 0) {
@@ -757,8 +881,8 @@ sg_raisedma(scgp, newmax)
 	register int	t;
 	register int	l;
 	register int	f;
-		 int	val;
-		 int	old;
+		int	val;
+		int	old;
 
 	/*
 	 * First try to raise the DMA limit to a moderate value that
@@ -767,9 +891,9 @@ sg_raisedma(scgp, newmax)
 	val = 126*1024;
 
 	if (val > MAX_DMA_LINUX) {
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++) {
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++) {
 					if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
 						continue;
 					old = 0;
@@ -787,9 +911,9 @@ sg_raisedma(scgp, newmax)
 	 */
 	if (newmax > val) {
 		val = newmax;
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++) {
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++) {
 					if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
 						continue;
 					old = 0;
@@ -806,9 +930,9 @@ sg_raisedma(scgp, newmax)
 	 * To make sure we did not fail (the ioctl does not report errors)
 	 * we need to check the DMA limits. We return the smallest value.
 	 */
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
 					continue;
 				if (ioctl(f, SG_GET_RESERVED_SIZE, &val) < 0)
@@ -918,8 +1042,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -964,10 +1088,22 @@ scgo_isatapi(scgp)
 		return (pg_isatapi(scgp));
 #endif
 
+	/*
+	 * The /dev/hd* interface always returns TRUE for SG_EMULATED_HOST.
+	 * So this is completely useless.
+	 */
+	if (scglocal(scgp)->flags & LF_ATA)
+		return (-1);
+
 #ifdef	SG_EMULATED_HOST
 	{
 	int	emulated = FALSE;
 
+	/*
+	 * XXX Should we use this at all?
+	 * XXX The badly designed /dev/hd* interface always
+	 * XXX returns TRUE, even when used with e.g. /dev/sr0.
+	 */
 	if (ioctl(scgp->fd, SG_EMULATED_HOST, &emulated) >= 0)
 		return (emulated != 0);
 	}
@@ -1044,14 +1180,14 @@ LOCAL int
 sg_getint(ip)
 	int	*ip;
 {
-		 int	ret;
+		int	ret;
 	register char	*cp = (char *)ip;
 	register char	*tp = (char *)&ret;
 	register int	i;
 
-	for (i = sizeof(int); --i >= 0; )
+	for (i = sizeof (int); --i >= 0; )
 		*tp++ = *cp++;
-	
+
 	return (ret);
 }
 #define	GETINT(a)	sg_getint(&(a))
@@ -1077,7 +1213,7 @@ scgo_send(scgp)
 	if (scglocal(scgp)->isold > 0) {
 		return (sg_rwsend(scgp));
 	}
-	fillbytes((caddr_t)&sg_io, sizeof(sg_io), '\0');
+	fillbytes((caddr_t)&sg_io, sizeof (sg_io), '\0');
 
 	sg_io.interface_id = 'S';
 
@@ -1114,8 +1250,8 @@ scgo_send(scgp)
 		 * In case somebody from the Linux kernel team learns that the
 		 * corect errno would be ENOTTY, we check for this errno too.
 		 */
-		if ((sp->ux_errno == ENOTTY || sp->ux_errno == EINVAL)
-					&& scglocal(scgp)->isold < 0) {
+		if ((sp->ux_errno == ENOTTY || sp->ux_errno == EINVAL) &&
+		    scglocal(scgp)->isold < 0) {
 			scglocal(scgp)->isold = 1;
 			return (sg_rwsend(scgp));
 		}
@@ -1146,7 +1282,7 @@ scgo_send(scgp)
 				if (sp->ux_errno == 0)
 					sp->ux_errno = EIO;
 
-				if (sp->u_sense.cmd_sense != 0 &&
+				if (sp->u_sense.cmd_sense[0] != 0 &&
 				    sp->u_scb.cmd_scb[0] == 0) {
 					/*
 					 * The Linux SCSI system up to 2.4.xx
@@ -1158,6 +1294,21 @@ scgo_send(scgp)
 					sp->u_scb.cmd_scb[0] = ST_CHK_COND;
 					if (sp->sense_count == 0)
 						sp->sense_count = SG_MAX_SENSE;
+
+					if ((sp->u_sense.cmd_sense[2] == 0) &&
+					    (sp->u_sense.cmd_sense[12] == 0) &&
+					    (sp->u_sense.cmd_sense[13] == 0)) {
+						/*
+						 * The Linux SCSI system will
+						 * send a request sense for
+						 * even a dma underrun error.
+						 * Clear CHECK CONDITION state
+						 * in case of No Sense.
+						 */
+						sp->u_scb.cmd_scb[0] = 0;
+						sp->u_sense.cmd_sense[0] = 0;
+						sp->sense_count = 0;
+					}
 				}
 			}
 			break;
@@ -1168,7 +1319,7 @@ scgo_send(scgp)
 	case DID_BAD_TARGET:
 			sp->error = SCG_FATAL;
 			break;
-	
+
 	case DID_TIME_OUT:
 		__scg_times(scgp);
 
@@ -1245,23 +1396,23 @@ sg_rwsend(scgp)
 	sgp2 = sgp = &sg_rq;
 	if (sp->addr == scglocal(scgp)->SCSIbuf) {
 		sgp = (struct sg_rq *)
-			(scglocal(scgp)->SCSIbuf - (sizeof(struct sg_header) + amt));
+			(scglocal(scgp)->SCSIbuf - (sizeof (struct sg_header) + amt));
 		sgp2 = (struct sg_rq *)
-			(scglocal(scgp)->SCSIbuf - (sizeof(struct sg_header)));
+			(scglocal(scgp)->SCSIbuf - (sizeof (struct sg_header)));
 	} else {
 		if (scgp->debug > 0) {
 			js_fprintf((FILE *)scgp->errfile,
 				"DMA addr: 0x%8.8lX size: %d - using copy buffer\n",
 				(long)sp->addr, sp->size);
 		}
-		if (sp->size > (int)(sizeof(sg_rq.buf) - SCG_MAX_CMD)) {
+		if (sp->size > (int)(sizeof (sg_rq.buf) - SCG_MAX_CMD)) {
 
 			if (scglocal(scgp)->xbuf == NULL) {
 				scglocal(scgp)->xbufsize = scgp->maxbuf;
 				scglocal(scgp)->xbuf =
 					malloc(scglocal(scgp)->xbufsize +
 						SCG_MAX_CMD +
-						sizeof(struct sg_header));
+						sizeof (struct sg_header));
 				if (scgp->debug > 0) {
 					js_fprintf((FILE *)scgp->errfile,
 						"Allocated DMA copy buffer, addr: 0x%8.8lX size: %ld\n",
@@ -1281,8 +1432,8 @@ sg_rwsend(scgp)
 	/*
 	 * This is done to avoid misaligned access of sgp->some_int
 	 */
-	pack_len = sizeof(struct sg_header) + amt;
-	reply_len = sizeof(struct sg_header);
+	pack_len = sizeof (struct sg_header) + amt;
+	reply_len = sizeof (struct sg_header);
 	if (sp->flags & SCG_RECV_DATA) {
 		reply_len += sp->size;
 	} else {
@@ -1294,13 +1445,13 @@ sg_rwsend(scgp)
 	 * sgp->some_int may be misaligned if (sp->addr == SCSIbuf)
 	 * This is no problem on Intel porocessors, however
 	 * all other processors don't like it.
-	 * sizeof(struct sg_header) + amt is usually not a multiple of
-	 * sizeof(int). For this reason, we fill in the values into sg_rq
+	 * sizeof (struct sg_header) + amt is usually not a multiple of
+	 * sizeof (int). For this reason, we fill in the values into sg_rq
 	 * which is always corectly aligned and then copy it to the real
 	 * location if this location differs from sg_rq.
 	 * Never read/write directly to sgp->some_int !!!!!
 	 */
-	fillbytes((caddr_t)&sg_rq, sizeof(struct sg_header), '\0');
+	fillbytes((caddr_t)&sg_rq, sizeof (struct sg_header), '\0');
 
 	sg_rq.hd.pack_len = pack_len;
 	sg_rq.hd.reply_len = reply_len;
@@ -1308,9 +1459,9 @@ sg_rwsend(scgp)
 /*	sg_rq.hd.result = 0;	not needed because of fillbytes() */
 
 	if ((caddr_t)&sg_rq != (caddr_t)sgp)
-		movebytes((caddr_t)&sg_rq, (caddr_t)sgp, sizeof(struct sg_header));
+		movebytes((caddr_t)&sg_rq, (caddr_t)sgp, sizeof (struct sg_header));
 #else
-	fillbytes((caddr_t)sgp, sizeof(struct sg_header), '\0');
+	fillbytes((caddr_t)sgp, sizeof (struct sg_header), '\0');
 
 	sgp->hd.pack_len = pack_len;
 	sgp->hd.reply_len = reply_len;
@@ -1321,8 +1472,8 @@ sg_rwsend(scgp)
 		sgp->hd.twelve_byte = 1;
 
 
-	for (i = 0; i < amt; i++ ) {
-		sgp->buf[i] = sp->cdb.cmd_cdb[i];;
+	for (i = 0; i < amt; i++) {
+		sgp->buf[i] = sp->cdb.cmd_cdb[i];
 	}
 	if (!(sp->flags & SCG_RECV_DATA)) {
 		if ((void *)sp->addr != (void *)&sgp->buf[amt])
@@ -1337,7 +1488,7 @@ sg_rwsend(scgp)
 	else
 		sgp->hd.sense_len = sp->sense_len;
 #endif
-	i = sizeof(struct sg_header) + amt;
+	i = sizeof (struct sg_header) + amt;
 	if ((amt = write(f, sgp, i)) < 0) {			/* write */
 		sg_settimeout(f, scgp->deftimeout);
 		return (-1);
@@ -1347,7 +1498,7 @@ sg_rwsend(scgp)
 	}
 
 	if (sp->addr == scglocal(scgp)->SCSIbuf) {
-		movebytes(sgp, sgp2, sizeof(struct sg_header));
+		movebytes(sgp, sgp2, sizeof (struct sg_header));
 		sgp = sgp2;
 	}
 	sgp->hd.sense_buffer[0] = 0;
@@ -1375,8 +1526,8 @@ sg_rwsend(scgp)
 
 		case DID_OK:
 				if ((driver_byte & DRIVER_SENSE ||
-				    sgp->hd.sense_buffer[0] != 0)
-							&& status_byte == 0) {
+				    sgp->hd.sense_buffer[0] != 0) &&
+				    status_byte == 0) {
 					/*
 					 * The Linux SCSI system up to 2.4.xx
 					 * trashes the status byte in the
@@ -1387,6 +1538,21 @@ sg_rwsend(scgp)
 					status_byte = ST_CHK_COND;
 					if (sgp->hd.sense_len == 0)
 						sgp->hd.sense_len = SG_MAX_SENSE;
+
+					if ((sp->u_sense.cmd_sense[2] == 0) &&
+					    (sp->u_sense.cmd_sense[12] == 0) &&
+					    (sp->u_sense.cmd_sense[13] == 0)) {
+						/*
+						 * The Linux SCSI system will
+						 * send a request sense for
+						 * even a dma underrun error.
+						 * Clear CHECK CONDITION state
+						 * in case of No Sense.
+						 */
+						sp->u_scb.cmd_scb[0] = 0;
+						sp->u_sense.cmd_sense[0] = 0;
+						sp->sense_count = 0;
+					}
 				}
 				break;
 
@@ -1397,7 +1563,7 @@ sg_rwsend(scgp)
 		case DID_BAD_TARGET:
 				sp->error = SCG_FATAL;
 				break;
-	
+
 		case DID_TIME_OUT:
 				sp->error = SCG_TIMEOUT;
 				break;
@@ -1406,8 +1572,8 @@ sg_rwsend(scgp)
 				sp->error = SCG_RETRYABLE;
 
 				if ((driver_byte & DRIVER_SENSE ||
-				    sgp->hd.sense_buffer[0] != 0)
-							&& status_byte == 0) {
+				    sgp->hd.sense_buffer[0] != 0) &&
+				    status_byte == 0) {
 					status_byte = ST_CHK_COND;
 					sp->error = SCG_NO_ERROR;
 				}
@@ -1451,7 +1617,7 @@ sg_rwsend(scgp)
 		}
 
 		if (sp->flags & SCG_RECV_DATA)
-			sp->resid = (sp->size + sizeof(struct sg_header)) - amt;
+			sp->resid = (sp->size + sizeof (struct sg_header)) - amt;
 		else
 			sp->resid = 0;	/* sg version1 cannot return DMA resid count */
 
@@ -1476,7 +1642,7 @@ sg_rwsend(scgp)
 				sgp->hd.want_new,
 				sgp->hd.grant_new,
 				sgp->hd.cdb_len,
-				sgp->hd.sense_len,	
+				sgp->hd.sense_len,
 				sgp->hd.sense_buffer[0]);
 #else
 		js_fprintf((FILE *)scgp->errfile,
@@ -1489,7 +1655,7 @@ sg_rwsend(scgp)
 #endif
 #ifdef	DEBUG
 		js_fprintf((FILE *)scgp->errfile, "sense: ");
-		for (i=0; i < 16; i++)
+		for (i = 0; i < 16; i++)
 			js_fprintf((FILE *)scgp->errfile, "%02X ", sgp->hd.sense_buffer[i]);
 		js_fprintf((FILE *)scgp->errfile, "\n");
 #endif
@@ -1497,5 +1663,5 @@ sg_rwsend(scgp)
 
 	if (sp->timeout != scgp->deftimeout)
 		sg_settimeout(f, scgp->deftimeout);
-	return 0;
+	return (0);
 }

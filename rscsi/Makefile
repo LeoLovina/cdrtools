@@ -1,4 +1,4 @@
-#ident @(#)Makefile	1.2 00/11/19 
+#ident @(#)Makefile	1.3 04/01/02 
 ###########################################################################
 #include		$(MAKE_M_ARCH).def
 SRCROOT=	..
@@ -13,7 +13,7 @@ INSUSR=		root
 #CPPOPTS +=	-DUSE_REMOTE
 CFILES=		rscsi.c
 #HFILES=
-LIBS=		-lscg -ldeflt -lschily $(SCSILIB) $(LIB_SOCKET)
+LIBS=		-lscg $(LIB_VOLMGT) -ldeflt -lschily $(SCSILIB) $(LIB_SOCKET)
 #XMK_FILE=	Makefile.man
 
 ###########################################################################

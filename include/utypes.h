@@ -1,4 +1,4 @@
-/* @(#)utypes.h	1.10 02/05/08 Copyright 1997 J. Schilling */
+/* @(#)utypes.h	1.11 03/06/15 Copyright 1997 J. Schilling */
 /*
  *	Definitions for some user defined types
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_UTYPES_H
@@ -46,11 +46,11 @@
  * on two's complement in many places, they do not reduce portability.
  */
 #define	TYPE_ISSIGNED(t)	(((t)-1) < ((t)0))
-#define	TYPE_MSBVAL(t)		((t)( ~((t)0) << (sizeof(t)*CHAR_BIT - 1)))
+#define	TYPE_MSBVAL(t)		((t)(~((t)0) << (sizeof (t)*CHAR_BIT - 1)))
 #define	TYPE_MINVAL(t)		(TYPE_ISSIGNED(t)			\
-				 ? TYPE_MSBVAL(t)			\
-				 : ((t)0))
-#define	TYPE_MAXVAL(t)		((t)( ~((t)0) - TYPE_MINVAL(t)))
+				    ? TYPE_MSBVAL(t)			\
+				    : ((t)0))
+#define	TYPE_MAXVAL(t)		((t)(~((t)0) - TYPE_MINVAL(t)))
 
 /*
  * Let us include system defined types too.
@@ -60,7 +60,7 @@
 #define	_INCL_SYS_TYPES_H
 #endif
 
-#ifdef	__CHAR_UNSIGNED__	/* GNU GCC define     (dynamic)	*/
+#ifdef	__CHAR_UNSIGNED__	/* GNU GCC define (dynamic)	*/
 #ifndef CHAR_IS_UNSIGNED
 #define	CHAR_IS_UNSIGNED	/* Sing Schily define (static)	*/
 #endif

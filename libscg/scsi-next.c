@@ -1,7 +1,7 @@
-/* @(#)scsi-next.c	1.31 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-next.c	1.32 04/01/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-next.c	1.31 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-next.c	1.32 04/01/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the NeXT Step generic SCSI implementation.
@@ -28,9 +28,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <bsd/dev/scsireg.h>
@@ -42,7 +42,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-next.c-1.31";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-next.c-1.32";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -56,7 +56,7 @@ struct scg_local {
 	int	cur_target;
 	int	cur_lun;
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 /*#define	MAX_DMA_NEXT	(32*1024)*/
 #define	MAX_DMA_NEXT	(64*1024)	/* Check if this is not too big */
@@ -108,9 +108,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	i;
 	char		devname[64];
@@ -133,7 +133,7 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
@@ -144,8 +144,8 @@ scgo_open(scgp, device)
 		scglocal(scgp)->cur_lun		= -1;
 	}
 
-	for (i=0; i < 4; i++) {
-		js_snprintf(devname, sizeof(devname), "/dev/sg%d", i);
+	for (i = 0; i < 4; i++) {
+		js_snprintf(devname, sizeof (devname), "/dev/sg%d", i);
 		f = open(devname, O_RDWR);
 		if (scgp->debug > 0)
 			errmsg("open(devname: '%s') : %d\n", devname, f);
@@ -157,7 +157,7 @@ scgo_open(scgp, device)
 	}
 	if (f >= 0) {
 		if (scglocal(scgp)->max_scsibus < 0) {
-			for (i=0; i < MAX_SCG; i++) {
+			for (i = 0; i < MAX_SCG; i++) {
 				if (!SCGO_HAVEBUS(scgp, i))
 					break;
 			}
@@ -172,10 +172,10 @@ scgo_open(scgp, device)
 			scglocal(scgp)->cur_scsibus = 0;
 		}
 
-       	        ioctl(f, SGIOCENAS);
+		ioctl(f, SGIOCENAS);
 		if (busno > 0 && tgt > 0 && tlun > 0)
 			scg_setup(scgp, busno, tgt, tlun, TRUE);
-		return(1);
+		return (1);
 	}
 	if (scgp->errstr)
 		js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -215,7 +215,7 @@ scg_setup(scgp, busno, tgt, tlun, ex)
 	}
 
 	if (scgp->debug > 0 && ((scglocal(scgp)->cur_scsibus < 0 || scglocal(scgp)->cur_scsibus != busno)))
-		js_fprintf((FILE *)scgp->errfile, "setting SCSI bus to: %d\n", busno); 
+		js_fprintf((FILE *)scgp->errfile, "setting SCSI bus to: %d\n", busno);
 	if ((scglocal(scgp)->cur_scsibus < 0 || scglocal(scgp)->cur_scsibus != busno) &&
 				ioctl(scglocal(scgp)->scgfile, SGIOCCNTR, &busno) < 0) {
 
@@ -262,13 +262,13 @@ scgo_maxdma(scgp, amt)
 	return (maxdma);
 }
 #ifdef	XXX
-#define SGIOCENAS	_IO(  's', 2)		 	/* enable autosense */
-#define SGIOCDAS	_IO(  's', 3)			/* disable autosense */
-#define SGIOCRST	_IO(  's', 4)			/* reset SCSI bus */
-#define SGIOCCNTR       _IOW( 's', 6, int)              /* select controller */
-#define SGIOCGAS	_IOR( 's', 7, int)		/* get autosense */
-#define SGIOCMAXDMA	_IOR( 's', 8, int)		/* max DMA size */
-#define SGIOCNUMTARGS	_IOR( 's', 9, int)		/* # of targets/bus */
+#define	SGIOCENAS	_IO('s', 2)			/* enable autosense */
+#define	SGIOCDAS	_IO('s', 3)			/* disable autosense */
+#define	SGIOCRST	_IO('s', 4)			/* reset SCSI bus */
+#define	SGIOCCNTR	_IOW('s', 6, int)		/* select controller */
+#define	SGIOCGAS	_IOR('s', 7, int)		/* get autosense */
+#define	SGIOCMAXDMA	_IOR('s', 8, int)		/* max DMA size */
+#define	SGIOCNUMTARGS	_IOR('s', 9, int)		/* # of targets/bus */
 #endif
 
 LOCAL void *
@@ -373,12 +373,12 @@ scgo_send(scgp)
 	register long	*lp2;
 	int		ret = 0;
 
-	if (scgp->fd < 0 || (sp->cdb_len > sizeof(req.sr_cdb))) {
+	if (scgp->fd < 0 || (sp->cdb_len > sizeof (req.sr_cdb))) {
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EIO;
 		return (0);
 	}
-	fillbytes(&req, sizeof(req), '\0');
+	fillbytes(&req, sizeof (req), '\0');
 	movebytes(sp->cdb.cmd_cdb, &req.sr_cdb, sp->cdb_len);
 	if (sp->size) {
 		req.sr_dma_dir = SR_DMA_WR;
@@ -405,7 +405,7 @@ scgo_send(scgp)
 		js_fprintf((FILE *)scgp->errfile, "dma_xfer:    %d\n", req.sr_dma_xfr);
 	}
 	sp->u_scb.cmd_scb[0] = req.sr_scsi_status;
-	sp->sense_count = sizeof(esense_reply_t);
+	sp->sense_count = sizeof (esense_reply_t);
 	if (sp->sense_count > sp->sense_len)
 		sp->sense_count = sp->sense_len;
 	if (sp->sense_count > SCG_MAX_SENSE)
@@ -422,7 +422,7 @@ scgo_send(scgp)
 	case SR_IOST_CHKSNV:	sp->sense_count = 0;
 	case SR_IOST_CHKSV:	sp->error = SCG_RETRYABLE;
 				break;
-	
+
 	case SR_IOST_SELTO:
 	case SR_IOST_DMAOR:
 				sp->error = SCG_FATAL;		break;

@@ -1,6 +1,6 @@
-/* @(#)flag.c	2.7 00/12/03 Copyright 1986 J. Schilling */
+/* @(#)flag.c	2.9 04/08/08 Copyright 1986-2003 J. Schilling */
 /*
- *	Copyright (c) 1986 J. Schilling
+ *	Copyright (c) 1986-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -13,12 +13,12 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include "io.h"
+#include "schilyio.h"
 #include <stdxlib.h>
 
 #ifdef	DO_MYFLAG
@@ -31,7 +31,7 @@ int	_fl_max = FL_INIT;	/* max fd currently in _io_myfl */
 _io_fl	_io_smyfl[FL_INIT];	/* initial static space */
 _io_fl	*_io_myfl = _io_smyfl;	/* init to static space */
 
-LOCAL int _more_flags	__PR((FILE * ));
+LOCAL int _more_flags	__PR((FILE *));
 
 LOCAL int
 _more_flags(fp)
@@ -45,13 +45,13 @@ _more_flags(fp)
 		n += _fl_inc;
 
 	if (_io_myfl == _io_smyfl) {
-		np = (_io_fl *) malloc(n * sizeof(*np));
-		fillbytes(np, n * sizeof(*np), '\0');
-		movebytes(_io_smyfl, np, sizeof(_io_smyfl)/sizeof(*np));
+		np = (_io_fl *) malloc(n * sizeof (*np));
+		fillbytes(np, n * sizeof (*np), '\0');
+		movebytes(_io_smyfl, np, sizeof (_io_smyfl)/sizeof (*np));
 	} else {
-		np = (_io_fl *) realloc(_io_myfl, n * sizeof(*np));
+		np = (_io_fl *) realloc(_io_myfl, n * sizeof (*np));
 		if (np)
-			fillbytes(&np[_fl_max], (n-_fl_max)*sizeof(*np), '\0');
+			fillbytes(&np[_fl_max], (n-_fl_max)*sizeof (*np), '\0');
 	}
 	if (np) {
 		_io_myfl = np;
@@ -106,7 +106,7 @@ _io_set_my_flag(fp, flag)
 		while (fl && fl->fl_io != fp)
 			fl = fl->fl_next;
 		if (fl == 0) {
-			if ((fl = (_io_fl *) malloc(sizeof(*fl))) == 0)
+			if ((fl = (_io_fl *) malloc(sizeof (*fl))) == 0)
 				return;
 			fl->fl_next = fl2->fl_next;
 			fl2->fl_next = fl;

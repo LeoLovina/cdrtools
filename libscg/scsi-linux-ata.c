@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-ata.c	1.4 02/10/23 Copyright 2002 J. Schilling */
+/* @(#)scsi-linux-ata.c	1.7 04/06/12 Copyright 2002 J. Schilling */
 #ifndef lint
 static	char ata_sccsid[] =
-	"@(#)scsi-linux-ata.c	1.4 02/10/23 Copyright 2002 J. Schilling";
+	"@(#)scsi-linux-ata.c	1.7 04/06/12 Copyright 2002 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -39,14 +39,14 @@ static	char ata_sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifdef	USE_ATA
 
-LOCAL	char	_scg_atrans_version[] = "scsi-linux-ata.c-1.4";	/* The version for ATAPI transport*/
+LOCAL	char	_scg_atrans_version[] = "scsi-linux-ata.c-1.7";	/* The version for ATAPI transport*/
 
 LOCAL	char *	scgo_aversion	__PR((SCSI *scgp, int what));
 LOCAL	int	scgo_ahelp	__PR((SCSI *scgp, FILE *f));
@@ -76,20 +76,20 @@ LOCAL scg_ops_t ata_ops = {
 	scgo_areset,
 };
 
-#define HOST_EMPTY	0xF
-#define HOST_SCSI	0x0
-#define HOST_IDE	0x1
-#define HOST_USB	0x2
-#define HOST_IEEE1389	0x3
-#define HOST_PARALLEL	0x4
-#define HOST_OTHER	0xE
+#define	HOST_EMPTY	0xF
+#define	HOST_SCSI	0x0
+#define	HOST_IDE	0x1
+#define	HOST_USB	0x2
+#define	HOST_IEEE1389	0x3
+#define	HOST_PARALLEL	0x4
+#define	HOST_OTHER	0xE
 
 
-#define typlocal(p, schillybus)		scglocal(p)->bc[schillybus].typ
-#define buslocal(p, schillybus)		scglocal(p)->bc[schillybus].bus
-#define hostlocal(p, schillybus)	scglocal(p)->bc[schillybus].host
+#define	typlocal(p, schillybus)		scglocal(p)->bc[schillybus].typ
+#define	buslocal(p, schillybus)		scglocal(p)->bc[schillybus].bus
+#define	hostlocal(p, schillybus)	scglocal(p)->bc[schillybus].host
 
-#define MAX_DMA_ATA (131072-1)	/* EINVAL (hart) ENOMEM (weich) bei mehr ... */
+#define	MAX_DMA_ATA (131072-1)	/* EINVAL (hart) ENOMEM (weich) bei mehr ... */
 				/* Bei fehlerhaftem Sense Pointer kommt EFAULT */
 
 LOCAL int scgo_send		__PR((SCSI * scgp));
@@ -106,8 +106,8 @@ LOCAL int scgo_amerge		__PR((char *path, char *readedlink,
  * uncomment this when you will get a debug file #define DEBUG
  */
 #ifdef DEBUG
-#define LOGFILE "scsi-linux-ata.log"
-#define log(a)	sglog a
+#define	LOGFILE "scsi-linux-ata.log"
+#define	log(a)	sglog a
 
 LOCAL	void	sglog		__PR((const char *fmt, ...));
 
@@ -115,9 +115,11 @@ LOCAL	void	sglog		__PR((const char *fmt, ...));
 
 /* VARARGS1 */
 #ifdef	PROTOTYPES
-LOCAL void	sglog(const char *fmt, ...)
+LOCAL void
+sglog(const char *fmt, ...)
 #else
-LOCAL void	error(fmt, va_alist)
+LOCAL void
+error(fmt, va_alist)
 	char	*fmt;
 	va_dcl
 #endif
@@ -125,7 +127,8 @@ LOCAL void	error(fmt, va_alist)
 	va_list	args;
 	FILE	*f	 = fopen(LOGFILE, "a");
 
-	if (f == NULL) return;
+	if (f == NULL)
+		return;
 
 #ifdef	PROTOTYPES
 	va_start(args, fmt);
@@ -137,7 +140,7 @@ LOCAL void	error(fmt, va_alist)
 	fclose(f);
 }
 #else
-#define log(a)
+#define	log(a)
 #endif	/* DEBUG */
 
 LOCAL	int	scan_internal __PR((SCSI * scgp, int *fatal));
@@ -193,13 +196,13 @@ scgo_aopen(scgp, device)
 	register int	b;
 	register int	t;
 	register int	l;
-		 int	nopen = 0;
+		int	nopen = 0;
 
 	if (scgp->overbose)
 		error("Warning: Using ATA Packet interface.\n");
 	if (scgp->overbose) {
-		error("Warning: The related libscg interface code is in pre alpha.\n");
-		error("Warning: There may be fatal problems.\n");
+		error("Warning: The related Linux kernel interface code seems to be unmaintained.\n");
+		error("Warning: There is absolutely NO DMA, operations thus are slow.\n");
 	}
 
 	log(("\n<<<<<<<<<<<<<<<<  LOGGING ON >>>>>>>>>>>>>>>>>\n"));
@@ -214,7 +217,7 @@ scgo_aopen(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL) {
 			return (0);
 		}
@@ -291,14 +294,16 @@ scan_internal(scgp, nopen)
 		target,
 		lun;
 	char	device[128];
-	BOOL	DEVFS = TRUE;	/* try always with devfs
-				   unfortunatelly the solution with test of existing
-				   of '/dev/.devfsd' don't work, because it root.root 700
-				   and i don't like run suid root
-				 */
+	/*
+	 * try always with devfs
+	 * unfortunatelly the solution with test of existing
+	 * of '/dev/.devfsd' don't work, because it root.root 700
+	 * and i don't like run suid root
+	 */
+	BOOL	DEVFS = TRUE;
 
 	if (DEVFS) {
-		for (i = 0;; i++) {
+		for (i = 0; ; i++) {
 			sprintf(device, "/dev/cdroms/cdrom%i", i);
 			if ((f = open(device, O_RDONLY | O_NONBLOCK)) < 0) {
 				if (errno != ENOENT && errno != ENXIO && errno != ENODEV && errno != EACCES) {
@@ -347,7 +352,7 @@ scan_internal(scgp, nopen)
 	}
 	if (!DEVFS) {
 		/* for /dev/sr0 - /dev/sr? */
-		for (i = 0;; i++) {
+		for (i = 0; ; i++) {
 			sprintf(device, "/dev/sr%i", i);
 			if ((f = open(device, O_RDONLY | O_NONBLOCK)) < 0) {
 				if (errno != ENOENT && errno != ENXIO && errno != ENODEV && errno != EACCES) {
@@ -369,8 +374,8 @@ scan_internal(scgp, nopen)
 			}
 		}
 
-		/* for /dev/hda - /dev/hdh */
-		for (i = 'a'; i <= 'h'; i++) {
+		/* for /dev/hda - /dev/hdz */
+		for (i = 'a'; i <= 'z'; i++) {
 			sprintf(device, "/dev/hd%c", i);
 			if ((f = open(device, O_RDONLY | O_NONBLOCK)) < 0) {
 				if (errno != ENOENT && errno != ENXIO && errno != EACCES) {
@@ -450,7 +455,7 @@ scgo_aget_first_free_shillybus(scgp, subsystem, host, bus)
 						first_free_schilly_bus++) {
 
 		if (typlocal(scgp, first_free_schilly_bus) == HOST_EMPTY ||
-		   (typlocal(scgp, first_free_schilly_bus) == subsystem &&
+		    (typlocal(scgp, first_free_schilly_bus) == subsystem &&
 		    hostlocal(scgp, first_free_schilly_bus) == host &&
 		    buslocal(scgp, first_free_schilly_bus) == bus))
 			break;
@@ -474,9 +479,9 @@ scgo_amerge(path, readedlink, buffer, buflen)
 {
 	char	*aa;
 
-#define TOKEN_ARRAY		20
-#define LAST_CHAR(x)		(x)[strlen((x))-1]
-#define ONE_CHAR_BACK(x)	(x)[strlen((x))-1] = '\0'
+#define	TOKEN_ARRAY		20
+#define	LAST_CHAR(x)		(x)[strlen((x))-1]
+#define	ONE_CHAR_BACK(x)	(x)[strlen((x))-1] = '\0'
 	char	*ppa[TOKEN_ARRAY];
 	char	*pa;
 
@@ -486,18 +491,18 @@ scgo_amerge(path, readedlink, buffer, buflen)
 	char	*last_slash;
 
 	if (!path || !readedlink || !buffer)
-		return -(EINVAL);
+		return (-EINVAL);
 
 	if ('/' == readedlink[0]) {
 		aa = (char *) malloc(strlen(readedlink) + 1);
 		if (!aa)
-			return -(ENOMEM);
+			return (-ENOMEM);
 
 		strcpy(aa, readedlink);
 	} else {
 		aa = (char *) malloc(strlen(path) + strlen(readedlink) + 1);
 		if (!aa)
-			return -(ENOMEM);
+			return (-ENOMEM);
 
 		strcpy(aa, path);
 		if (LAST_CHAR(aa) == '/') {
@@ -510,7 +515,7 @@ scgo_amerge(path, readedlink, buffer, buflen)
 			*(++last_slash) = '\0';
 		strcat(aa, readedlink);
 	}
-	memset(ppa, 0x00, sizeof(ppa));
+	memset(ppa, 0x00, sizeof (ppa));
 
 	for (i = 0, pa = strtok(aa, seps);
 		i < TOKEN_ARRAY && pa != NULL;
@@ -520,7 +525,7 @@ scgo_amerge(path, readedlink, buffer, buflen)
 
 	if (i == TOKEN_ARRAY) {
 		free(aa);
-		return -(ENOMEM);
+		return (-ENOMEM);
 	}
 	for (i = 0; i < TOKEN_ARRAY && ppa[i]; i++) {
 		if (strcmp(ppa[i], "..") == 0) {
@@ -638,25 +643,25 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 		t,
 		l;
 
-#define TOKEN_DEV		"dev"
-#define TOKEN_SUBSYSTEM_SCSI	"scsi"
-#define TOKEN_SUBSYSTEM_IDE	"ide"
-#define TOKEN_HOST		"host"
-#define TOKEN_BUS		"bus"
-#define TOKEN_TARGET		"target"
-#define TOKEN_LUN		"lun"
-#define TOKEN_CD		"cd"
+#define	TOKEN_DEV		"dev"
+#define	TOKEN_SUBSYSTEM_SCSI	"scsi"
+#define	TOKEN_SUBSYSTEM_IDE	"ide"
+#define	TOKEN_HOST		"host"
+#define	TOKEN_BUS		"bus"
+#define	TOKEN_TARGET		"target"
+#define	TOKEN_LUN		"lun"
+#define	TOKEN_CD		"cd"
 
-#define ID_TOKEN_DEV		0
-#define ID_TOKEN_SUBSYSTEM	1
-#define ID_TOKEN_HOST		2
-#define ID_TOKEN_BUS		3
-#define ID_TOKEN_TARGET		4
-#define ID_TOKEN_LUN		5
-#define ID_TOKEN_CD		6
-#define ID_TOKEN_LAST		ID_TOKEN_CD
-#define ID_TOKEN_MAX		ID_TOKEN_LAST + 2
-#define CHARTOINT(x)		(abs(atoi(&x)))
+#define	ID_TOKEN_DEV		0
+#define	ID_TOKEN_SUBSYSTEM	1
+#define	ID_TOKEN_HOST		2
+#define	ID_TOKEN_BUS		3
+#define	ID_TOKEN_TARGET		4
+#define	ID_TOKEN_LUN		5
+#define	ID_TOKEN_CD		6
+#define	ID_TOKEN_LAST		ID_TOKEN_CD
+#define	ID_TOKEN_MAX		ID_TOKEN_LAST + 2
+#define	CHARTOINT(x)		(abs(atoi(&x)))
 
 	char		*token[ID_TOKEN_MAX],
 			*seps = "/";
@@ -665,9 +670,9 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 	struct stat	buf;
 
 #ifndef MAX_PATH
-#define MAX_PATH 260
+#define	MAX_PATH 260
 #endif
-#define LOCAL_MAX_PATH MAX_PATH
+#define	LOCAL_MAX_PATH MAX_PATH
 	char		tmp[LOCAL_MAX_PATH],
 			tmp1[LOCAL_MAX_PATH];
 	int		first_free_schilly_bus;
@@ -706,12 +711,12 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 			return (FALSE);
 		}
 	} else {
-		strncpy(tmp, device, sizeof(tmp));
+		strncpy(tmp, device, sizeof (tmp));
 	}
 	if (scgp->debug > 3) {
 		js_fprintf((FILE *) scgp->errfile, "INFO: %s -> %s\n", device, tmp);
 	}
-	memset(token, 0x00, sizeof(token));
+	memset(token, 0x00, sizeof (token));
 	i = 0;
 	token[i] = strtok(tmp, seps);
 	while (token[i] != NULL && (++i) && i < ID_TOKEN_MAX) {
@@ -728,8 +733,8 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 		errmsgno(EX_BAD, "EXAMPLE: /dev/hda or /dev/sr0\n");
 		return (FALSE);
 	}
-	if (!(strcmp(token[ID_TOKEN_SUBSYSTEM], TOKEN_SUBSYSTEM_SCSI))
-		|| !(strcmp(token[ID_TOKEN_SUBSYSTEM], TOKEN_SUBSYSTEM_IDE))) {
+	if (!(strcmp(token[ID_TOKEN_SUBSYSTEM], TOKEN_SUBSYSTEM_SCSI)) ||
+	    !(strcmp(token[ID_TOKEN_SUBSYSTEM], TOKEN_SUBSYSTEM_IDE))) {
 		h = CHARTOINT(((struct host *) token[ID_TOKEN_HOST])->host_no);
 		b = CHARTOINT(((struct bus *) token[ID_TOKEN_BUS])->bus_no);
 		t = CHARTOINT(((struct target *) token[ID_TOKEN_TARGET])->target_no);
@@ -767,12 +772,12 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 			subsystem = HOST_OTHER;
 		}
 	} else if (!token[ID_TOKEN_HOST] &&
-		strlen(token[ID_TOKEN_SUBSYSTEM]) == sizeof(old_dev)) {
+		strlen(token[ID_TOKEN_SUBSYSTEM]) == sizeof (old_dev)) {
 		char	j;
 
 		old_dev	*pDev = (old_dev *) token[ID_TOKEN_SUBSYSTEM];
 
-		if (!strncmp(pDev->prefix, "hd", 2)) {
+		if (strncmp(pDev->prefix, "hd", 2) == 0) {
 			j = pDev->device - ('a');
 
 			subsystem = HOST_IDE;
@@ -780,9 +785,9 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 			b = (j % 4) / 2;
 			t = (j % 4) % 2;
 			l = 0;
-		} else if (!strncmp(pDev->prefix, "sr", 2)) {
+		} else if (strncmp(pDev->prefix, "sr", 2) == 0) {
 #ifdef	nonono
-			if(pDev->device >= '0' && pDev->device <= '9')
+			if (pDev->device >= '0' && pDev->device <= '9')
 				j = pDev->device - ('0');
 			else
 				j = pDev->device - ('a');
@@ -815,7 +820,7 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 							"SCSI Bus: %d (mapped from %d)\n",
 							Bus, Ino);
 					}
-				} 
+				}
 /*				It is me too high ;-()*/
 #endif	/* nonono */
 			h = Ino;
@@ -979,9 +984,9 @@ scgo_aisatapi(scgp)
 {
 	int schillybus = scgp->addr.scsibus;
 	int typ = typlocal(scgp, schillybus);
-	if(typ == HOST_EMPTY)
+	if (typ == HOST_EMPTY)
 		return (-1);
-	if(typ != HOST_SCSI)
+	if (typ != HOST_SCSI)
 		return (1);
 	else
 		return (0);
@@ -1031,8 +1036,8 @@ scgo_asend(scgp)
 		return (0);
 	}
 	/* initialize */
-	fillbytes((caddr_t) & sg_cgc, sizeof(sg_cgc), '\0');
-	fillbytes((caddr_t) & sense_cgc, sizeof(sense_cgc), '\0');
+	fillbytes((caddr_t) & sg_cgc, sizeof (sg_cgc), '\0');
+	fillbytes((caddr_t) & sense_cgc, sizeof (sense_cgc), '\0');
 
 	if (sp->flags & SCG_RECV_DATA) {
 		sg_cgc.data_direction = CGC_DATA_READ;
@@ -1053,8 +1058,8 @@ scgo_asend(scgp)
 	sg_cgc.buflen = sp->size;
 	sg_cgc.buffer = sp->addr;
 
-	if (sp->sense_len > sizeof(sense_cgc))
-		sense_cgc.add_sense_len = sizeof(sense_cgc) - 8;
+	if (sp->sense_len > sizeof (sense_cgc))
+		sense_cgc.add_sense_len = sizeof (sense_cgc) - 8;
 	else
 		sense_cgc.add_sense_len = sp->sense_len - 8;
 

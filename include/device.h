@@ -1,4 +1,4 @@
-/* @(#)device.h	1.11 02/08/26 Copyright 1995 J. Schilling */
+/* @(#)device.h	1.12 03/06/15 Copyright 1995 J. Schilling */
 /*
  *	Generic header for users of major(), minor() and makedev()
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_DEVICE_H
@@ -33,7 +33,7 @@
 /*
  * On generic SVR4, major is a function (defined in sys/mkdev.h).
  * On Solaris it is defined ...
- * As we cannot just test if major is #define'd, we have to 
+ * As we cannot just test if major is #define'd, we have to
  * define _FOUND_MAJOR_ instead.
  *
  * WARNING: Do never include <sys/sysmacros.h> in SVR4, it contains
@@ -115,15 +115,15 @@ extern	XDEV_T	minormask;
 extern	XDEV_T	_dev_mask[];
 
 #define	dev_major(dev)			(((XDEV_T)(dev)) >> minorbits)
-#define	_dev_major(mbits,dev)		(((XDEV_T)(dev)) >> (mbits))
+#define	_dev_major(mbits, dev)		(((XDEV_T)(dev)) >> (mbits))
 
 #define	dev_minor(dev)			(((XDEV_T)(dev)) & minormask)
-#define	_dev_minor(mbits,dev)		(((XDEV_T)(dev)) & _dev_mask[(mbits)])
+#define	_dev_minor(mbits, dev)		(((XDEV_T)(dev)) & _dev_mask[(mbits)])
 
 
 #define	dev_make(majo, mino)		((((XDEV_T)(majo)) << minorbits) | \
 							((XDEV_T)(mino)))
-#define	_dev_make(mbits,majo,mino)	((((XDEV_T)(majo)) << (mbits) | \
+#define	_dev_make(mbits, majo, mino)	((((XDEV_T)(majo)) << (mbits) | \
 							((XDEV_T)(mino)))
 
 extern	void	dev_init	__PR((BOOL debug));

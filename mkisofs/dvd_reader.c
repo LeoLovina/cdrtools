@@ -1,7 +1,7 @@
-/* @(#)dvd_reader.c	1.1 02/07/21 joerg */
+/* @(#)dvd_reader.c	1.3 04/03/04 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)dvd_reader.c	1.1 02/07/21 joerg";
+	"@(#)dvd_reader.c	1.3 04/03/04 joerg";
 #endif
 /*
  * Copyright (C) 2001, 2002 Billy Biggs <vektor@dumbterm.net>,
@@ -63,7 +63,7 @@ EXPORT	void		DVDClose	__PR((dvd_reader_t *dvd));
 EXPORT	ssize_t		DVDFileSize	__PR((dvd_file_t *dvd_file));
 
 
-/**
+/*
  * Free a DVD file
  */
 EXPORT void
@@ -75,7 +75,7 @@ DVDCloseFile(dvd_file)
 }
 
 
-/**
+/*
  * Stat a IFO or BUP file from a DVD directory tree.
  */
 LOCAL dvd_file_t *
@@ -90,12 +90,13 @@ DVDOpenFilePath(dvd, filename)
 
 	/* Get the full path of the file. */
 
-	snprintf(full_path, sizeof(full_path),
+	snprintf(full_path, sizeof (full_path),
 				"%s/%s", dvd->path_root, filename);
 
 
-	dvd_file = (dvd_file_t *) e_malloc(sizeof(dvd_file_t));
-	if (!dvd_file) return (0);
+	dvd_file = (dvd_file_t *) e_malloc(sizeof (dvd_file_t));
+	if (!dvd_file)
+		return (0);
 	dvd_file->dvd = dvd;
 	dvd_file->filesize = 0;
 
@@ -103,13 +104,13 @@ DVDOpenFilePath(dvd, filename)
 		free(dvd_file);
 		return (0);
 	}
-	dvd_file->filesize = fileinfo.st_size / DVD_VIDEO_LB_LEN;;
+	dvd_file->filesize = fileinfo.st_size / DVD_VIDEO_LB_LEN;
 
 	return (dvd_file);
 }
 
 
-/**
+/*
  * Stat a VOB file from a DVD directory tree.
  */
 LOCAL dvd_file_t *
@@ -124,17 +125,18 @@ DVDOpenVOBPath(dvd, title, menu)
 	dvd_file_t	*dvd_file;
 	int		i;
 
-	dvd_file = (dvd_file_t *) e_malloc(sizeof(dvd_file_t));
-	if (!dvd_file) return (0);
+	dvd_file = (dvd_file_t *) e_malloc(sizeof (dvd_file_t));
+	if (!dvd_file)
+		return (0);
 	dvd_file->dvd = dvd;
 	dvd_file->filesize = 0;
 
 	if (menu) {
 		if (title == 0) {
-			snprintf(filename, sizeof(filename),
+			snprintf(filename, sizeof (filename),
 				"%s/VIDEO_TS/VIDEO_TS.VOB", dvd->path_root);
 		} else {
-			snprintf(filename, sizeof(filename),
+			snprintf(filename, sizeof (filename),
 				"%s/VIDEO_TS/VTS_%02i_0.VOB", dvd->path_root, title);
 		}
 		if (stat(filename, &fileinfo) < 0) {
@@ -143,9 +145,9 @@ DVDOpenVOBPath(dvd, title, menu)
 		}
 		dvd_file->filesize = fileinfo.st_size / DVD_VIDEO_LB_LEN;
 	} else {
-		 for (i = 0; i < 9; ++i) {
+		for (i = 0; i < 9; ++i) {
 
-			snprintf(filename, sizeof(filename),
+			snprintf(filename, sizeof (filename),
 				"%s/VIDEO_TS/VTS_%02i_%i.VOB", dvd->path_root, title, i + 1);
 			if (stat(filename, &fileinfo) < 0) {
 					break;
@@ -158,35 +160,39 @@ DVDOpenVOBPath(dvd, title, menu)
 	return (dvd_file);
 }
 
-/**
+/*
  * Stat a DVD file from a DVD directory tree
  */
 EXPORT dvd_file_t *
+#ifdef	PROTOTYPES
+DVDOpenFile(dvd_reader_t *dvd, int titlenum, dvd_read_domain_t domain)
+#else
 DVDOpenFile(dvd, titlenum, domain)
 	dvd_reader_t	*dvd;
 	int		titlenum;
 	dvd_read_domain_t domain;
+#endif
 {
 	char		filename[MAX_UDF_FILE_NAME_LEN];
 
-	switch(domain) {
+	switch (domain) {
 
 	case DVD_READ_INFO_FILE:
 		if (titlenum == 0) {
-			snprintf(filename, sizeof(filename),
+			snprintf(filename, sizeof (filename),
 					"/VIDEO_TS/VIDEO_TS.IFO");
 		} else {
-			snprintf(filename, sizeof(filename),
+			snprintf(filename, sizeof (filename),
 					"/VIDEO_TS/VTS_%02i_0.IFO", titlenum);
 		}
 		break;
 
 	case DVD_READ_INFO_BACKUP_FILE:
 		if (titlenum == 0) {
-			snprintf(filename, sizeof(filename),
+			snprintf(filename, sizeof (filename),
 					"/VIDEO_TS/VIDEO_TS.BUP");
 		} else {
-			snprintf(filename, sizeof(filename),
+			snprintf(filename, sizeof (filename),
 					"/VIDEO_TS/VTS_%02i_0.BUP", titlenum);
 		}
 		break;
@@ -195,7 +201,8 @@ DVDOpenFile(dvd, titlenum, domain)
 		return (DVDOpenVOBPath(dvd, titlenum, 1));
 
 	case DVD_READ_TITLE_VOBS:
-		if (titlenum == 0) return (0);
+		if (titlenum == 0)
+			return (0);
 		return (DVDOpenVOBPath(dvd, titlenum, 0));
 
 	default:
@@ -211,7 +218,7 @@ DVDOpenFile(dvd, titlenum, domain)
 
 
 
-/**
+/*
  * Stat a DVD directory structure
  */
 LOCAL dvd_reader_t *
@@ -220,15 +227,16 @@ DVDOpenPath(path_root)
 {
 	dvd_reader_t	*dvd;
 
-	dvd = (dvd_reader_t *) e_malloc(sizeof(dvd_reader_t));
-	if (!dvd) return (0);
+	dvd = (dvd_reader_t *) e_malloc(sizeof (dvd_reader_t));
+	if (!dvd)
+		return (0);
 	dvd->path_root = strdup(path_root);
 
 	return (dvd);
 }
 
 
-/**
+/*
  * Stat a DVD structure - this one only works with directory structures
  */
 EXPORT dvd_reader_t *
@@ -238,13 +246,14 @@ DVDOpen(path)
 	struct stat	fileinfo;
 	int		ret;
 
-	if (!path) return(0);
+	if (!path)
+		return (0);
 
 	ret = stat(path, &fileinfo);
 	if (ret < 0) {
 	/* If we can't stat the file, give up */
 #ifdef	USE_LIBSCHILY
-		errmsg("Can't stat %s\n", path);	
+		errmsg("Can't stat %s\n", path);
 #else
 		fprintf(stderr, "Can't stat %s\n", path);
 		perror("");
@@ -266,7 +275,7 @@ DVDOpen(path)
 	return (0);
 }
 
-/**
+/*
  * Free a DVD structure - this one will only close a directory tree
  */
 EXPORT void
@@ -282,7 +291,7 @@ DVDClose(dvd)
 
 
 
-/**
+/*
  * Return the size of a DVD file
  */
 EXPORT ssize_t

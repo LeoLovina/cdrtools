@@ -1,8 +1,8 @@
 #define	USE_REMOTE
-/* @(#)scsi-remote.c	1.13 03/05/16 Copyright 1990,2000-2003 J. Schilling */
+/* @(#)scsi-remote.c	1.16 04/08/24 Copyright 1990,2000-2003 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-remote.c	1.13 03/05/16 Copyright 1990,2000-2003 J. Schilling";
+	"@(#)scsi-remote.c	1.16 04/08/24 Copyright 1990,2000-2003 J. Schilling";
 #endif
 /*
  *	Remote SCSI user level command transport routines
@@ -94,7 +94,7 @@ static	char __sccsid[] =
 /*extern	BOOL	debug;*/
 LOCAL	BOOL	debug = 1;
 
-LOCAL	char	_scg_trans_version[] = "remote-1.13";	/* The version for remote SCSI	*/
+LOCAL	char	_scg_trans_version[] = "remote-1.16";	/* The version for remote SCSI	*/
 LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 LOCAL	int	scgo_rsend		__PR((SCSI *scgp));
@@ -117,9 +117,9 @@ LOCAL	int	scgo_rreset		__PR((SCSI *scgp, int what));
  * XXX via scglocal(scgp)->remfd.
  */
 LOCAL	void	rscsiabrt		__PR((int sig));
-LOCAL	int	rscsigetconn		__PR((SCSI *scgp, char* host));
+LOCAL	int	rscsigetconn		__PR((SCSI *scgp, char *host));
 LOCAL	char	*rscsiversion		__PR((SCSI *scgp, int fd, int what));
-LOCAL	int	rscsiopen		__PR((SCSI *scgp, int fd, char* fname));
+LOCAL	int	rscsiopen		__PR((SCSI *scgp, int fd, char *fname));
 LOCAL	int	rscsiclose		__PR((SCSI *scgp, int fd));
 LOCAL	int	rscsimaxdma		__PR((SCSI *scgp, int fd, long amt));
 LOCAL	int	rscsigetbuf		__PR((SCSI *scgp, int fd, long amt));
@@ -134,11 +134,11 @@ LOCAL	int	rscsifillrbuf		__PR((SCSI *scgp));
 LOCAL	int	rscsirchar		__PR((SCSI *scgp, char *cp));
 LOCAL	int	rscsireadbuf		__PR((SCSI *scgp, int fd, char *buf, int count));
 LOCAL	void	rscsivoidarg		__PR((SCSI *scgp, int fd, int count));
-LOCAL	int	rscsicmd		__PR((SCSI *scgp, int fd, char* name, char* cbuf));
-LOCAL	void	rscsisendcmd		__PR((SCSI *scgp, int fd, char* name, char* cbuf));
-LOCAL	int	rscsigetline		__PR((SCSI *scgp, int fd, char* line, int count));
+LOCAL	int	rscsicmd		__PR((SCSI *scgp, int fd, char *name, char *cbuf));
+LOCAL	void	rscsisendcmd		__PR((SCSI *scgp, int fd, char *name, char *cbuf));
+LOCAL	int	rscsigetline		__PR((SCSI *scgp, int fd, char *line, int count));
 LOCAL	int	rscsireadnum		__PR((SCSI *scgp, int fd));
-LOCAL	int	rscsigetstatus		__PR((SCSI *scgp, int fd, char* name));
+LOCAL	int	rscsigetstatus		__PR((SCSI *scgp, int fd, char *name));
 LOCAL	int	rscsiaborted		__PR((SCSI *scgp, int fd));
 #ifdef	USE_RCMD_RSH
 LOCAL	int	_rcmdrsh		__PR((char **ahost, int inport,
@@ -166,7 +166,7 @@ struct scg_local {
 };
 
 
-#define scglocal(p)	((struct scg_local *)((p)->local))
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 scg_ops_t remote_ops = {
 	scgo_rsend,		/* "S" end	*/
@@ -259,9 +259,9 @@ scgo_ropen(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	nopen = 0;
 	char		devname[128];
@@ -273,14 +273,14 @@ scgo_ropen(scgp, device)
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
 		if (scgp->errstr)
-		    js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-		       "Illegal value for busno, target or lun '%d,%d,%d'",
-		       busno, tgt, tlun);
+			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+			"Illegal value for busno, target or lun '%d,%d,%d'",
+			busno, tgt, tlun);
 
 		return (-1);
 	}
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 		scglocal(scgp)->remfd = -1;
@@ -297,15 +297,15 @@ scgo_ropen(scgp, device)
 	if (device == NULL || (strncmp(device, "REMOTE", 6) != 0) ||
 				(device = strchr(device, ':')) == NULL) {
 		if (scgp->errstr)
-		    js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-		       "Illegal remote device syntax");
+			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+				"Illegal remote device syntax");
 		return (-1);
 	}
 	device++;
 	/*
 	 * Save non user@host:device
 	 */
-	js_snprintf(devname, sizeof(devname), "%s", device);
+	js_snprintf(devname, sizeof (devname), "%s", device);
 
 	if ((p = strchr(devname, ':')) != NULL)
 		*p++ = '\0';
@@ -313,8 +313,8 @@ scgo_ropen(scgp, device)
 	f = rscsigetconn(scgp, devname);
 	if (f < 0) {
 		if (scgp->errstr)
-		    js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-		       "Cannot get connection to remote host");
+			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+				"Cannot get connection to remote host");
 		return (-1);
 	}
 	scglocal(scgp)->remfd = f;
@@ -331,7 +331,7 @@ scgo_rclose(scgp)
 	SCSI	*scgp;
 {
 	register int	f;
-		 int	ret;
+		int	ret;
 
 	if (scgp->local == NULL)
 		return (-1);
@@ -457,7 +457,7 @@ scgo_rinitiator_id(scgp)
 	return (rscsiinitiator_id(scgp, scglocal(scgp)->remfd));
 }
 
-LOCAL int 
+LOCAL int
 scgo_risatapi(scgp)
 	SCSI	*scgp;
 {
@@ -537,9 +537,9 @@ rscsigetconn(scgp, host)
 	if ((p = strchr(host, '@')) != NULL) {
 		size_t d = p - host;
 
-		if (d > sizeof(rscsiuser))
-			d = sizeof(rscsiuser);
-		js_snprintf(rscsiuser, sizeof(rscsiuser), "%.*s", (int)d, host);
+		if (d > sizeof (rscsiuser))
+			d = sizeof (rscsiuser);
+		js_snprintf(rscsiuser, sizeof (rscsiuser), "%.*s", (int)d, host);
 		name = rscsiuser;
 		host = &p[1];
 	} else {
@@ -581,7 +581,7 @@ rscsiversion(scgp, fd, what)
 	char	*p;
 	int	ret;
 
-	js_snprintf(cbuf, sizeof(cbuf), "V%d\n", what);
+	js_snprintf(cbuf, sizeof (cbuf), "V%d\n", what);
 	ret = rscsicmd(scgp, fd, "version", cbuf);
 	p = malloc(ret);
 	if (p == NULL)
@@ -603,13 +603,13 @@ rscsiopen(scgp, fd, fname)
 	int	tgt;
 	int	lun;
 
-	js_snprintf(cbuf, sizeof(cbuf), "O%s\n", fname?fname:"");
+	js_snprintf(cbuf, sizeof (cbuf), "O%s\n", fname?fname:"");
 	ret = rscsicmd(scgp, fd, "open", cbuf);
 	if (ret < 0)
 		return (ret);
 
 	bus = rscsireadnum(scgp, fd);
-	chan = rscsireadnum(scgp, fd);	
+	chan = rscsireadnum(scgp, fd);
 	tgt = rscsireadnum(scgp, fd);
 	lun = rscsireadnum(scgp, fd);
 
@@ -633,7 +633,7 @@ rscsimaxdma(scgp, fd, amt)
 {
 	char	cbuf[CMD_SIZE];
 
-	js_snprintf(cbuf, sizeof(cbuf), "D%ld\n", amt);
+	js_snprintf(cbuf, sizeof (cbuf), "D%ld\n", amt);
 	return (rscsicmd(scgp, fd, "maxdma", cbuf));
 }
 
@@ -647,7 +647,7 @@ rscsigetbuf(scgp, fd, amt)
 	int	size;
 	int	ret;
 
-	js_snprintf(cbuf, sizeof(cbuf), "M%ld\n", amt);
+	js_snprintf(cbuf, sizeof (cbuf), "M%ld\n", amt);
 	ret = rscsicmd(scgp, fd, "getbuf", cbuf);
 	if (ret < 0)
 		return (ret);
@@ -697,7 +697,7 @@ rscsihavebus(scgp, fd, busno)
 {
 	char	cbuf[2*CMD_SIZE];
 
-	js_snprintf(cbuf, sizeof(cbuf), "B%d\n%d\n",
+	js_snprintf(cbuf, sizeof (cbuf), "B%d\n%d\n",
 		busno,
 		0);
 	return (rscsicmd(scgp, fd, "havebus", cbuf));
@@ -713,7 +713,7 @@ rscsifileno(scgp, fd, busno, tgt, tlun)
 {
 	char	cbuf[3*CMD_SIZE];
 
-	js_snprintf(cbuf, sizeof(cbuf), "T%d\n%d\n%d\n%d\n",
+	js_snprintf(cbuf, sizeof (cbuf), "T%d\n%d\n%d\n%d\n",
 		busno,
 		0,
 		tgt,
@@ -745,7 +745,7 @@ rscsireset(scgp, fd, what)
 {
 	char	cbuf[CMD_SIZE];
 
-	js_snprintf(cbuf, sizeof(cbuf), "R%d\n", what);
+	js_snprintf(cbuf, sizeof (cbuf), "R%d\n", what);
 	return (rscsicmd(scgp, fd, "reset", cbuf));
 }
 
@@ -760,7 +760,7 @@ rscsiscmd(scgp, fd, sp)
 	int	amt = 0;
 	int	voidsize = 0;
 
-	ret = js_snprintf(cbuf, sizeof(cbuf), "S%d\n%d\n%d\n%d\n%d\n",
+	ret = js_snprintf(cbuf, sizeof (cbuf), "S%d\n%d\n%d\n%d\n%d\n",
 		sp->size, sp->flags,
 		sp->cdb_len, sp->sense_len,
 		sp->timeout);
@@ -769,7 +769,7 @@ rscsiscmd(scgp, fd, sp)
 
 	if ((sp->flags & SCG_RECV_DATA) == 0 && sp->size > 0) {
 		amt = sp->size;
-		if ((ret + amt) <= sizeof(cbuf)) {
+		if ((ret + amt) <= sizeof (cbuf)) {
 			movebytes(sp->addr, &cbuf[ret], amt);
 			ret += amt;
 			amt = 0;
@@ -778,7 +778,7 @@ rscsiscmd(scgp, fd, sp)
 	errno = 0;
 	if (_nixwrite(fd, cbuf, ret) != ret)
 		rscsiaborted(scgp, fd);
-	
+
 	if (amt > 0) {
 		if (_nixwrite(fd, sp->addr, amt) != amt)
 			rscsiaborted(scgp, fd);
@@ -803,7 +803,7 @@ rscsiscmd(scgp, fd, sp)
 		rscsivoidarg(scgp, fd, voidsize);
 	}
 
-	if ((sp->flags & SCG_RECV_DATA) != 0 && ret > 0) 
+	if ((sp->flags & SCG_RECV_DATA) != 0 && ret > 0)
 		rscsireadbuf(scgp, fd, sp->addr, ret);
 
 	return (0);
@@ -817,7 +817,7 @@ rscsifillrbuf(scgp)
 
 	return (scglocal(scgp)->readbcnt =
 			_niread(scglocal(scgp)->remfd,
-			     scglocal(scgp)->readbuf, READBUF_SIZE));
+			    scglocal(scgp)->readbuf, READBUF_SIZE));
 }
 
 LOCAL int
@@ -871,10 +871,10 @@ rscsivoidarg(scgp, fd, n)
 {
 	register int	i;
 	register int	amt;
-		 char	buf[512];
+		char	buf[512];
 
 	for (i = 0; i < n; i += amt) {
-		amt = sizeof(buf);
+		amt = sizeof (buf);
 		if ((n - i) < amt)
 			amt = n - i;
 		rscsireadbuf(scgp, fd, buf, amt);
@@ -934,7 +934,7 @@ rscsireadnum(scgp, fd)
 {
 	char	cbuf[CMD_SIZE];
 
-	rscsigetline(scgp, fd, cbuf, sizeof(cbuf));
+	rscsigetline(scgp, fd, cbuf, sizeof (cbuf));
 	return (atoi(cbuf));
 }
 
@@ -950,16 +950,16 @@ rscsigetstatus(scgp, fd, name)
 	int	count;
 	int	voidsize = 0;
 
-	rscsigetline(scgp, fd, cbuf, sizeof(cbuf));
+	rscsigetline(scgp, fd, cbuf, sizeof (cbuf));
 	code = cbuf[0];
 	number = atoi(&cbuf[1]);
 
 	if (code == 'E' || code == 'F') {
-		rscsigetline(scgp, fd, cbuf, sizeof(cbuf));
+		rscsigetline(scgp, fd, cbuf, sizeof (cbuf));
 		if (code == 'F')	/* should close file ??? */
 			rscsiaborted(scgp, fd);
 
-		rscsigetline(scgp, fd, cbuf, sizeof(cbuf));
+		rscsigetline(scgp, fd, cbuf, sizeof (cbuf));
 		count = atoi(cbuf);
 		if (count > 0) {
 			if (scgp->errstr == NULL) {
@@ -1058,7 +1058,7 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 		const char	*av0;
 		int		xpid;
 
-		(void)close(pp[0]);
+		(void) close(pp[0]);
 		if (dup2(pp[1], 0) == -1 ||	/* Pipe becomes 'stdin'  */
 		    dup2(0, 1) == -1) {		/* Pipe becomes 'stdout' */
 
@@ -1066,7 +1066,7 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 			_exit(EX_BAD);
 			/* NOTREACHED */
 		}
-		(void)close(pp[1]);		/* We don't need this anymore*/
+		(void) close(pp[1]);		/* We don't need this anymore*/
 
 		/*
 		 * Become 'locuser' to tell the rsh program the local user id.
@@ -1074,6 +1074,13 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 		if (getuid() != pw->pw_uid &&
 		    setuid(pw->pw_uid) == -1) {
 			errmsg("setuid(%lld) failed.\n",
+							(Llong)pw->pw_uid);
+			_exit(EX_BAD);
+			/* NOTREACHED */
+		}
+		if (getuid() != geteuid() &&
+		    seteuid(pw->pw_uid) == -1) {
+			errmsg("seteuid(%lld) failed.\n",
 							(Llong)pw->pw_uid);
 			_exit(EX_BAD);
 			/* NOTREACHED */
@@ -1129,13 +1136,13 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 		av0 = rsh;
 		if ((p = strrchr(rsh, '/')) != NULL)
 			av0 = ++p;
-		execlp(rsh, av0, *ahost, "-l", remuser, cmd, NULL);
+		execlp(rsh, av0, *ahost, "-l", remuser, cmd, (char *)NULL);
 
 		errmsg("execlp '%s' failed.\n", rsh);
 		_exit(EX_BAD);
 		/* NOTREACHED */
 	} else {
-		(void)close(pp[1]);
+		(void) close(pp[1]);
 		/*
 		 * Wait for the intermediate child.
 		 * The real 'rsh' program is completely detached from us.

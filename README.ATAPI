@@ -1,3 +1,5 @@
+# @(#)README.ATAPI	1.3 04/05/20 Copyright 1997-2004 J. Schilling
+
 People (with a Linux only background) often ask me why do you depend on 
 "ATAPI-SCSI emulation", why don't you support generic IDE?
 
@@ -7,6 +9,8 @@ People (with a Linux only background) often ask me why do you depend on
 	cannot be done using vanilla IDE commands - you will need SCSI commands
 	to do this. But how do we do this with a drive that uses an IDE
 	interface?
+
+		ATAPI stands for ATA Packet Interface
 
 	The ATAPI standard describes method of sending SCSI commands over IDE
 	transport with some small limitations to the "real" SCSI standard.
@@ -43,7 +47,12 @@ uses a default driver setup that is designed for IDE CD-ROM drives made
 before 1994 (using a IDE compat mode that only allows to use the drive
 read-only) and does not handle to send SCSI commands to ATAPI drives by
 default. This makes it hard for people who just started with Linux to do
-CD-writing on Linux if they own an ATAPI drive. 
+CD-writing on Linux if they own an ATAPI drive. Both Linus Torvalds and
+Alan Cox admit that they don't own a CD/DVD writer, how should they know about
+the problems?
+
+There are bugs with the DMA implementation that are known for many years
+but they don't get fixed.
 
 /*--------------------------------------------------------------------------*/
 Which Operating systems support ATAPI
@@ -95,12 +104,10 @@ Which Operating systems support ATAPI
 		ATAPI interface initiated by Linus Torvalds. Unfortunately,
 		this interface does not fit well into the rest of the Linux
 		SCSI kernel transport naming scheme. Cdrecord allows to
-		use this interface by calling e.g. cdrecord dev=/dev/hdc ...
-		but it is not officially supported until it has been
-		integrated into the dev=bus,target,lun nming scheme.
+		use this interface by calling e.g. cdrecord dev=ATA:1,0,0 ...
 
 	All Linux ATAPI transport implementations do not support DMA.
-	Current execptions are:
+	Current exceptions are:
 
 	-	ide-scsi with block size 2048 and if DMA has been enabled
 
@@ -108,6 +115,12 @@ Which Operating systems support ATAPI
 		allows DMA if DMA has been enabled and the sector size is a
 		multiple of 4. This allows to use DMA for audio CDs and
 		when writing any type of CD in RAW mode.
+
+		Note that is a bad idea to first implement a new kernel
+		interface that also implements the named DMA implementation
+		bugs and later fix the DMA bug _only_ for this new
+		interface. It looks like the Linux kernel folks are not
+		very cooperative :-(
 
 	RAW mode is needed for many new and cheap drives that have bugs when
 	writing in cooked mode. If there is no DMA, you cannot write faster
@@ -125,9 +138,12 @@ Which Operating systems support ATAPI
 
 -	OSF-1 / True64 Status unknown! Please report your experience...
 
--	SCO-OpenServer: Not supported, may change with next release.
+-	SCO-OpenServer: Supported with 5.0.6 and non-public patch or with
+			5.0.7. I don't know whether you need a patch for 5.0.7
 
--	SCO-UnixWare: NO
+-	SCO-UnixWare: partial support with UnixWare 7.1.3 - some SCSI commands
+			that are needed for cdda2wav and DVD writing are blocked.
+			7.1.4 will have full ATAPI support.
 
 -	SGI/IRIX: Status unknown! Please report your experience...
 
@@ -147,10 +163,21 @@ Which Operating systems support ATAPI
 	There is a fix from Sun available: the patch 108974-16 
 	Solaris 9 sparc works again, it has the fix for the ATA DMA bug included.
 
+	Newer versions of Solaris 9 disable DMA for CD-ROM drives on IDE.
+	Read README.solaris-x86-ATAPI-DMA to learn how this may be circumvented.
+
 -	VMS: works on recent versions!
 
 -	Win32 using a recent ASPI Layer supports ATAPI
 	You nay need to exclude mini port drivers (see README.win32).
+
+	Newer cdrecord versions also support the SPTI (SCSI Pass through ioctl).
+	Libscg uses SPTI by default if you are running NT-5.x or newer and are
+	administrator. With NT-4.x it may be possible to run cdrecord dev=SPTI:1,0.0 ...
+	But there are reports for blue screens (kernel crashes).
+
+-	DOS DOS-7 from win98 includes a ATAPI aware aspi
+	For other versions have a look at README.msdos and use e.g. "oakaspi".
 
 /*--------------------------------------------------------------------------*/
 General hints:

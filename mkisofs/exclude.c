@@ -1,7 +1,7 @@
-/* @(#)exclude.c	1.8 00/12/05 joerg */
+/* @(#)exclude.c	1.9 04/03/04 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)exclude.c	1.8 00/12/05 joerg";
+	"@(#)exclude.c	1.9 04/03/04 joerg";
 #endif
 /*
  * 9-Dec-93 R.-D. Marzusch, marzusch@odiehh.hanse.de:
@@ -18,7 +18,7 @@ static	char sccsid[] =
 
 
 /* this allows for 1000 entries to be excluded ... */
-#define MAXEXCL		1000
+#define	MAXEXCL		1000
 
 static char		*excl[MAXEXCL];
 
@@ -65,8 +65,8 @@ is_excluded(fn)
 	 */
 	for (i = 0; excl[i] && i < MAXEXCL; i++) {
 		if (strcmp(excl[i], fn) == 0) {
-			return 1;	/* found -> excluded filenmae */
+			return (1);	/* found -> excluded filenmae */
 		}
 	}
-	return 0;	/* not found -> not excluded */
+	return (0);	/* not found -> not excluded */
 }

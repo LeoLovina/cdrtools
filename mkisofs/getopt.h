@@ -1,4 +1,4 @@
-/* @(#)getopt.h	1.1 97/11/04 eric */
+/* @(#)getopt.h	1.3 03/03/06 eric */
 /* Declarations for getopt.
    Copyright (C) 1989, 1990, 1991, 1992, 1993 Free Software Foundation, Inc.
 
@@ -18,6 +18,10 @@
 
 #ifndef _GETOPT_H
 #define _GETOPT_H 1
+
+#ifndef	_MCONFIG_H
+#include <mconfig.h>
+#endif
 
 #ifdef	__cplusplus
 extern "C" {
@@ -77,7 +81,8 @@ extern int optopt;
 
 struct option
 {
-#if	__STDC__
+/*#if	__STDC__*/
+#ifdef	PROTOTYPES
   const char *name;
 #else
   char *name;
@@ -95,7 +100,8 @@ struct option
 #define required_argument	1
 #define optional_argument	2
 
-#if __STDC__
+/*#if __STDC__*/
+#ifdef	PROTOTYPES
 #if defined(__GNU_LIBRARY__)
 /* Many other libraries have conflicting prototypes for getopt, with
    differences in the consts, in stdlib.h.  To avoid compilation

@@ -1,6 +1,6 @@
-/* @(#)filesize.c	1.11 01/10/29 Copyright 1986 J. Schilling */
+/* @(#)filesize.c	1.13 04/08/08 Copyright 1986, 1995-2003 J. Schilling */
 /*
- *	Copyright (c) 1986 J. Schilling
+ *	Copyright (c) 1986, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -13,24 +13,24 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include "io.h"
+#include "schilyio.h"
 #include <statdefs.h>
 
 EXPORT off_t
-filesize (f)
+filesize(f)
 	register FILE	*f;
 {
 	struct stat buf;
 
 	down(f);
-	if (fstat(fileno(f), &buf) < 0){
+	if (fstat(fileno(f), &buf) < 0) {
 		raisecond("filesize", 0L);
-		return -1;
+		return (-1);
 	}
 	return (buf.st_size);
 }

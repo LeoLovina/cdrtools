@@ -1,4 +1,4 @@
-/* @(#)scsicdb.h	2.17 00/11/07 Copyright 1986 J. Schilling */
+/* @(#)scsicdb.h	2.19 04/09/04 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI Command Descriptor Block
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_SCG_SCSICDB_H
@@ -31,35 +31,35 @@
 extern "C" {
 #endif
 /*
- * SCSI Operation codes. 
+ * SCSI Operation codes.
  */
-#define SC_TEST_UNIT_READY	0x00
-#define SC_REZERO_UNIT		0x01
-#define SC_REQUEST_SENSE	0x03
-#define SC_FORMAT		0x04
-#define SC_FORMAT_TRACK		0x06
-#define SC_REASSIGN_BLOCK	0x07		/* CCS only */
-#define SC_SEEK			0x0b
-#define SC_TRANSLATE		0x0f		/* ACB4000 only */
-#define SC_INQUIRY		0x12		/* CCS only */
-#define SC_MODE_SELECT		0x15
-#define SC_RESERVE		0x16
-#define SC_RELEASE		0x17
-#define SC_MODE_SENSE		0x1a
-#define SC_START		0x1b
-#define SC_READ_DEFECT_LIST	0x37		/* CCS only, group 1 */
-#define SC_READ_BUFFER          0x3c            /* CCS only, group 1 */
+#define	SC_TEST_UNIT_READY	0x00
+#define	SC_REZERO_UNIT		0x01
+#define	SC_REQUEST_SENSE	0x03
+#define	SC_FORMAT		0x04
+#define	SC_FORMAT_TRACK		0x06
+#define	SC_REASSIGN_BLOCK	0x07		/* CCS only */
+#define	SC_SEEK			0x0b
+#define	SC_TRANSLATE		0x0f		/* ACB4000 only */
+#define	SC_INQUIRY		0x12		/* CCS only */
+#define	SC_MODE_SELECT		0x15
+#define	SC_RESERVE		0x16
+#define	SC_RELEASE		0x17
+#define	SC_MODE_SENSE		0x1a
+#define	SC_START		0x1b
+#define	SC_READ_DEFECT_LIST	0x37		/* CCS only, group 1 */
+#define	SC_READ_BUFFER		0x3c		/* CCS only, group 1 */
 	/*
 	 * Note, these two commands use identical command blocks for all
- 	 * controllers except the Adaptec ACB 4000 which sets bit 1 of byte 1.
+	 * controllers except the Adaptec ACB 4000 which sets bit 1 of byte 1.
 	 */
-#define SC_READ			0x08
-#define SC_WRITE		0x0a
-#define SC_EREAD		0x28		/* 10 byte read */
-#define SC_EWRITE		0x2a		/* 10 byte write */
-#define SC_WRITE_VERIFY		0x2e            /* 10 byte write+verify */
-#define SC_WRITE_FILE_MARK	0x10
-#define SC_UNKNOWN		0xff		/* cmd list terminator */
+#define	SC_READ			0x08
+#define	SC_WRITE		0x0a
+#define	SC_EREAD		0x28		/* 10 byte read */
+#define	SC_EWRITE		0x2a		/* 10 byte write */
+#define	SC_WRITE_VERIFY		0x2e		/* 10 byte write+verify */
+#define	SC_WRITE_FILE_MARK	0x10
+#define	SC_UNKNOWN		0xff		/* cmd list terminator */
 
 
 /*
@@ -78,7 +78,8 @@ struct	scsi_g0cdb {		/* scsi group 0 command description block */
 	Uchar	count;		/* transfer length */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
-	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	naca	  : 1;	/* Normal ACA (Auto Contingent Allegiance) */
+	Ucbit	rsvd	  : 3;	/* reserved */
 	Ucbit	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
 	Ucbit	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
 };
@@ -94,7 +95,8 @@ struct	scsi_g0cdb {		/* scsi group 0 command description block */
 	Uchar	count;		/* transfer length */
 	Ucbit	vu_57	  : 1;	/* vendor unique (byte 5 bit 7) */
 	Ucbit	vu_56	  : 1;	/* vendor unique (byte 5 bit 6) */
-	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	rsvd	  : 3;	/* reserved */
+	Ucbit	naca	  : 1;	/* Normal ACA (Auto Contingent Allegiance) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 };
@@ -112,7 +114,8 @@ struct	scsi_g1cdb {		/* scsi group 1 command description block */
 	Uchar	count[2];	/* transfer length */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
-	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	naca	  : 1;	/* Normal ACA (Auto Contingent Allegiance) */
+	Ucbit	rsvd	  : 3;	/* reserved */
 	Ucbit	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
 	Ucbit	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
 };
@@ -129,7 +132,8 @@ struct	scsi_g1cdb {		/* scsi group 1 command description block */
 	Uchar	count[2];	/* transfer length */
 	Ucbit	vu_97	  : 1;	/* vendor unique (byte 5 bit 7) */
 	Ucbit	vu_96	  : 1;	/* vendor unique (byte 5 bit 6) */
-	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	rsvd	  : 3;	/* reserved */
+	Ucbit	naca	  : 1;	/* Normal ACA (Auto Contingent Allegiance) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 };
@@ -147,7 +151,8 @@ struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	Uchar	res10;		/* reserved byte 10 */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
-	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	naca	  : 1;	/* Normal ACA (Auto Contingent Allegiance) */
+	Ucbit	rsvd	  : 3;	/* reserved */
 	Ucbit	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
 	Ucbit	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
 };
@@ -164,74 +169,75 @@ struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	Uchar	res10;		/* reserved byte 10 */
 	Ucbit	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
 	Ucbit	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
-	Ucbit	rsvd	  : 4;	/* reserved */
+	Ucbit	rsvd	  : 3;	/* reserved */
+	Ucbit	naca	  : 1;	/* Normal ACA (Auto Contingent Allegiance) */
 	Ucbit	fr	  : 1;	/* flag request (interrupt at completion) */
 	Ucbit	link	  : 1;	/* link (another command follows) */
 };
 #endif
 
-#define	g0_cdbaddr(cdb, a)	((cdb)->high_addr = (a) >> 16,\
-				 (cdb)->mid_addr = ((a) >> 8) & 0xFF,\
-				 (cdb)->low_addr = (a) & 0xFF)
+#define	g0_cdbaddr(cdb, a)	((cdb)->high_addr   = (a) >> 16,\
+				    (cdb)->mid_addr = ((a) >> 8) & 0xFF,\
+				    (cdb)->low_addr = (a) & 0xFF)
 
-#define	g1_cdbaddr(cdb, a)	((cdb)->addr[0] = (a) >> 24,\
-				 (cdb)->addr[1] = ((a) >> 16)& 0xFF,\
-				 (cdb)->addr[2] = ((a) >> 8) & 0xFF,\
-				 (cdb)->addr[3] = (a) & 0xFF)
+#define	g1_cdbaddr(cdb, a)	((cdb)->addr[0]    = (a) >> 24,\
+				    (cdb)->addr[1] = ((a) >> 16)& 0xFF,\
+				    (cdb)->addr[2] = ((a) >> 8) & 0xFF,\
+				    (cdb)->addr[3] = (a) & 0xFF)
 
-#define g5_cdbaddr(cdb, a)	g1_cdbaddr(cdb, a)
+#define	g5_cdbaddr(cdb, a)	g1_cdbaddr(cdb, a)
 
 
 #define	g0_cdblen(cdb, len)	((cdb)->count = (len))
 
-#define	g1_cdblen(cdb, len)	((cdb)->count[0] = ((len) >> 8) & 0xFF,\
-				 (cdb)->count[1] = (len) & 0xFF)
+#define	g1_cdblen(cdb, len)	((cdb)->count[0]    = ((len) >> 8) & 0xFF,\
+				    (cdb)->count[1] = (len) & 0xFF)
 
-#define g5_cdblen(cdb, len)	((cdb)->count[0] = (len) >> 24L,\
-				 (cdb)->count[1] = ((len) >> 16L)& 0xFF,\
-				 (cdb)->count[2] = ((len) >> 8L) & 0xFF,\
-				 (cdb)->count[3] = (len) & 0xFF)
+#define	g5_cdblen(cdb, len)	((cdb)->count[0]    = (len) >> 24L,\
+				    (cdb)->count[1] = ((len) >> 16L)& 0xFF,\
+				    (cdb)->count[2] = ((len) >> 8L) & 0xFF,\
+				    (cdb)->count[3] = (len) & 0xFF)
 
 /*#define	XXXXX*/
 #ifdef	XXXXX
-#define	i_to_long(a, i)		(((Uchar *)(a))[0] = ((i) >> 24)& 0xFF,\
-				 ((Uchar *)(a))[1] = ((i) >> 16)& 0xFF,\
-				 ((Uchar *)(a))[2] = ((i) >> 8) & 0xFF,\
-				 ((Uchar *)(a))[3] = (i) & 0xFF)
+#define	i_to_long(a, i)		(((Uchar    *)(a))[0] = ((i) >> 24)& 0xFF,\
+				    ((Uchar *)(a))[1] = ((i) >> 16)& 0xFF,\
+				    ((Uchar *)(a))[2] = ((i) >> 8) & 0xFF,\
+				    ((Uchar *)(a))[3] = (i) & 0xFF)
 
-#define	i_to_3_byte(a, i)	(((Uchar *)(a))[0] = ((i) >> 16)& 0xFF,\
-				 ((Uchar *)(a))[1] = ((i) >> 8) & 0xFF,\
-				 ((Uchar *)(a))[2] = (i) & 0xFF)
+#define	i_to_3_byte(a, i)	(((Uchar    *)(a))[0] = ((i) >> 16)& 0xFF,\
+				    ((Uchar *)(a))[1] = ((i) >> 8) & 0xFF,\
+				    ((Uchar *)(a))[2] = (i) & 0xFF)
 
-#define	i_to_4_byte(a, i)	(((Uchar *)(a))[0] = ((i) >> 24)& 0xFF,\
-				 ((Uchar *)(a))[1] = ((i) >> 16)& 0xFF,\
-				 ((Uchar *)(a))[2] = ((i) >> 8) & 0xFF,\
-				 ((Uchar *)(a))[3] = (i) & 0xFF)
+#define	i_to_4_byte(a, i)	(((Uchar    *)(a))[0] = ((i) >> 24)& 0xFF,\
+				    ((Uchar *)(a))[1] = ((i) >> 16)& 0xFF,\
+				    ((Uchar *)(a))[2] = ((i) >> 8) & 0xFF,\
+				    ((Uchar *)(a))[3] = (i) & 0xFF)
 
 #define	i_to_short(a, i)	(((Uchar *)(a))[0] = ((i) >> 8) & 0xFF,\
-				 ((Uchar *)(a))[1] = (i) & 0xFF)
+				    ((Uchar *)(a))[1] = (i) & 0xFF)
 
 #define	a_to_u_short(a)	((unsigned short) \
-			((((Uchar*) a)[1]       & 0xFF) | \
-			 (((Uchar*) a)[0] << 8  & 0xFF00)))
+			((((Uchar*)    a)[1]	   & 0xFF) | \
+			    (((Uchar*) a)[0] << 8  & 0xFF00)))
 
 #define	a_to_3_byte(a)	((Ulong) \
-			((((Uchar*) a)[2]       & 0xFF) | \
-			 (((Uchar*) a)[1] << 8  & 0xFF00) | \
-			 (((Uchar*) a)[0] << 16 & 0xFF0000)))
+			((((Uchar*)    a)[2]	   & 0xFF) | \
+			    (((Uchar*) a)[1] << 8  & 0xFF00) | \
+			    (((Uchar*) a)[0] << 16 & 0xFF0000)))
 
 #ifdef	__STDC__
 #define	a_to_u_long(a)	((Ulong) \
-			((((Uchar*) a)[3]       & 0xFF) | \
-			 (((Uchar*) a)[2] << 8  & 0xFF00) | \
-			 (((Uchar*) a)[1] << 16 & 0xFF0000) | \
-			 (((Uchar*) a)[0] << 24 & 0xFF000000UL)))
+			((((Uchar*)    a)[3]	   & 0xFF) | \
+			    (((Uchar*) a)[2] << 8  & 0xFF00) | \
+			    (((Uchar*) a)[1] << 16 & 0xFF0000) | \
+			    (((Uchar*) a)[0] << 24 & 0xFF000000UL)))
 #else
 #define	a_to_u_long(a)	((Ulong) \
-			((((Uchar*) a)[3]       & 0xFF) | \
-			 (((Uchar*) a)[2] << 8  & 0xFF00) | \
-			 (((Uchar*) a)[1] << 16 & 0xFF0000) | \
-			 (((Uchar*) a)[0] << 24 & 0xFF000000)))
+			((((Uchar*)    a)[3]	   & 0xFF) | \
+			    (((Uchar*) a)[2] << 8  & 0xFF00) | \
+			    (((Uchar*) a)[1] << 16 & 0xFF0000) | \
+			    (((Uchar*) a)[0] << 24 & 0xFF000000)))
 #endif
 #endif	/* XXXX */
 

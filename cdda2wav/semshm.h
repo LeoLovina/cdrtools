@@ -1,4 +1,4 @@
-/* @(#)semshm.h	1.2 99/12/19 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)semshm.h	1.3 03/08/29 Copyright 1998,1999 Heiko Eissfeldt */
 #undef DEBUG_SHM
 #ifdef DEBUG_SHM
 extern char *start_of_shm;
@@ -15,6 +15,12 @@ extern int sem_id;
 void init_pipes __PR((void));
 void init_parent __PR((void));
 void init_child __PR((void));
+#endif
+
+
+#ifdef	HAVE_AREAS
+/* the name of the shared memory mapping for the FIFO under BeOS. */
+#define	AREA_NAME	"shmfifo"
 #endif
 
 void free_sem __PR((void));

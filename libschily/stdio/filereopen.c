@@ -1,4 +1,4 @@
-/* @(#)filereopen.c	1.13 03/03/09 Copyright 1986, 1995 J. Schilling */
+/* @(#)filereopen.c	1.15 04/08/08 Copyright 1986, 1995 J. Schilling */
 /*
  *	open new file on old stream
  *
@@ -20,10 +20,10 @@
  * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include "io.h"
+#include "schilyio.h"
 
 /*
- * Note that because of a definition in io.h we are using fseeko()/ftello()
+ * Note that because of a definition in schilyio.h we are using fseeko()/ftello()
  * instead of fseek()/ftell() if available.
  */
 
@@ -65,7 +65,7 @@ filereopen(name, mode, fp)
 	int	omode = 0;
 	int	flag = 0;
 
-	if (!_cvmod (mode, &omode, &flag))
+	if (!_cvmod(mode, &omode, &flag))
 		return ((FILE *) NULL);
 
 	/*
@@ -75,7 +75,9 @@ filereopen(name, mode, fp)
 		return ((FILE *) NULL);
 	close(ret);
 
-	fp = freopen(name, fmtab[flag & (FI_READ | FI_WRITE | FI_BINARY | FI_APPEND)], fp);
+	fp = freopen(name,
+		fmtab[flag & (FI_READ | FI_WRITE | FI_BINARY | FI_APPEND)], fp);
+
 	if (fp != (FILE *) NULL) {
 		set_my_flag(fp, 0); /* must clear it if fp is reused */
 

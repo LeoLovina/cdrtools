@@ -1,8 +1,8 @@
-/* @(#)findbytes.c	1.1 00/11/26 Copyright 2000 J. Schilling */
+/* @(#)findbytes.c	1.2 03/06/15 Copyright 2000-2003 J. Schilling */
 /*
  *	Find a byte with specific value in memory.
  *
- *	Copyright (c) 2000 J. Schilling
+ *	Copyright (c) 2000-2003 J. Schilling
  *
  *	Based on a strlen() idea from Torbjorn Granlund (tege@sics.se) and
  *	Dan Sahlin (dan@sics.se) and the memchr() suggestion
@@ -19,9 +19,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -33,9 +33,11 @@
 #include <schily.h>
 
 #ifdef	PROTOTYPES
-char *findbytes(const void *vp, int cnt, char val)
+EXPORT char *
+findbytes(const void *vp, int cnt, char val)
 #else
-char *fillbytes(vp, cnt, val)
+EXPORT char *
+findbytes(vp, cnt, val)
 		const	void	*vp;
 	register	int	cnt;
 			char	val;
@@ -95,7 +97,7 @@ char *fillbytes(vp, cnt, val)
 #if SIZE_LONG > 8
 	error	SIZE_LONG has unknown value
 #endif
-	for (lp = (const Ulong *)cp; cnt >= sizeof(long); cnt -= sizeof(long)) {
+	for (lp = (const Ulong *)cp; cnt >= sizeof (long); cnt -= sizeof (long)) {
 		/*
 		 * We are not looking for 0 bytes so we need to xor with the
 		 * long mask of repeated bytes. If any of the bytes matches our
@@ -110,7 +112,7 @@ char *fillbytes(vp, cnt, val)
 		 * This will happen if there is 0x80nnnnnn / 0x80nnnnnnnnnnnnnn
 		 */
 		lval = (*lp++ ^ lmask);		   /* create 0 byte on match */
-		lval = (lval + magic_mask) ^ ~lval;/* set bits unchanged by +*/
+		lval = (lval + magic_mask) ^ ~lval; /* set bits unchanged by +*/
 		if ((lval & ~magic_mask) != 0) {   /* a magic hole was set   */
 			/*
 			 * If any of the hole bits did not change by addition,

@@ -1,7 +1,7 @@
-/* @(#)scsi.c	1.17 00/12/04 Copyright 1997 J. Schilling */
+/* @(#)scsi.c	1.19 04/03/04 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi.c	1.17 00/12/04 Copyright 1997 J. Schilling";
+	"@(#)scsi.c	1.19 04/03/04 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1997 J. Schilling
@@ -17,9 +17,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifdef	USE_SCG
@@ -36,6 +36,7 @@ static	char sccsid[] =
 #include <scg/scsitransp.h>
 
 #include "cdrecord.h"
+#include "../cdrecord/defaults.h"
 
 /*
  * NOTICE:	You should not make BUF_SIZE more than
@@ -97,9 +98,9 @@ readsecs(startsecno, buffer, sectorcount)
 #endif
 			}
 
-			amount -= secnum * secsize;
-			bp     += secnum * secsize;
-			secno  += secnum;
+			amount	-= secnum * secsize;
+			bp	+= secnum * secsize;
+			secno	+= secnum;
 		}
 		return (SECTOR_SIZE * sectorcount);
 	}
@@ -110,21 +111,20 @@ readsecs(startsecno, buffer, sectorcount)
 #ifdef	USE_LIBSCHILY
 		comerr("Seek error on old image\n");
 #else
-		fprintf(stderr,"Seek error on old image\n");
+		fprintf(stderr, "Seek error on old image\n");
 		exit(10);
 #endif
 	}
-	if( read(f, buffer, (sectorcount * SECTOR_SIZE))
-	    != (sectorcount * SECTOR_SIZE) )
-	{
+	if (read(f, buffer, (sectorcount * SECTOR_SIZE))
+			!= (sectorcount * SECTOR_SIZE)) {
 #ifdef	USE_LIBSCHILY
 		comerr("Read error on old image\n");
 #else
-		fprintf(stderr," Read error on old image\n");
+		fprintf(stderr, " Read error on old image\n");
 		exit(10);
 #endif
 	}
-	return sectorcount * SECTOR_SIZE;
+	return (sectorcount * SECTOR_SIZE);
 }
 
 EXPORT int
@@ -132,8 +132,8 @@ scsidev_open(path)
 	char	*path;
 {
 	char	errstr[80];
-	char	*buf;	/* ignored, bit OS/2 ASPI layer needs memory which
-			   has been allocated by scsi_getbuf()		   */
+	char	*buf;	/* ignored, bit OS/2 ASPI layer needs memory which */
+			/* has been allocated by scsi_getbuf()		   */
 
 	/*
 	 * Call scg_remote() to force loading the remote SCSI transport library
@@ -141,8 +141,10 @@ scsidev_open(path)
 	 * that are located inside libscg.
 	 */
 	scg_remote();
+
+	cdr_defaults(&path, NULL, NULL, NULL);
 			/* path, debug, verboseopen */
-	scgp = scg_open(path, errstr, sizeof(errstr), 0, 0);
+	scgp = scg_open(path, errstr, sizeof (errstr), 0, 0);
 	if (scgp == 0) {
 		errmsg("%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
 		return (-1);
@@ -159,7 +161,7 @@ scsidev_open(path)
 
 	allow_atapi(scgp, TRUE);
 
-	if (!wait_unit_ready(scgp, 60)) {/* Eat Unit att / Wait for drive */
+	if (!wait_unit_ready(scgp, 60)) { /* Eat Unit att / Wait for drive */
 		scgp->silent--;
 		return (-1);
 	}

@@ -1,14 +1,24 @@
 Why do I hear only noise from my first audio CD?
 
 You may have a byte swapping problem, try cdrecord -swab
+but note that is is most unlikely that you need to use the -swab
+option from cdrecord unless your input files are broken.
+It makes more sense to find out why the inout files are not OK.
 
 Cdrecord assumes Motorola/Network byte order (big-endian) on input
 regardless of the byte order of the CD-Recorder. If Cdrecord
 encounters a .wav file, byte order is corrected to match the byte order
 of the .wav file.
 
-Cdrecord currently only supports Track at once. This gives 2 seconds
-pause between two audio tracks.
+Cdrecord by default uses Track at once. This always gives 2 seconds
+pause between two audio tracks and loweres the audio quality.
+
+For best audio CD quality, use cdrecord -dao (to write in Session At Once)
+ot cdrecord -raw (to write in RAW mode). Note that there are a lot of drives
+notably from Lite-ON that have defective firmware and will write defective
+CDs if you use either TAO or SAO mode. In RAW mode, cdrecord has the
+full control over the complete CD and the chance that the CD is OK
+is much higher.
 
 The 2 seconds pause between two audio tracks is the CD ***standard***
 
@@ -25,19 +35,16 @@ In DAO mode the writing software needs to send the 2 seconds pause as
 binary zeroes and therefore is able to create illegal disks by 
 sending audio data instead. 
 
+Some drives don't accept to write illegal disks even in SAO mode.
+In this case, use the RAW mode. In RAW mode, the drive does not even
+"know" what is going on and thus cannot prevent you from writing such
+a disk.
+
 This audio data (the last two seconds of a track in this case)
 however are part of the next track from viewing the TOC of the disk.
-
-The new SCSI-3/mmc standard conforming drives
-(such as the Yamaha CDR-400, Matsushita CW-7502 ...)
-may in future be able to change the 2 second pause even in TAO mode.
-Current firmware does not allow to do this, but I expect 
-that (due to low level limitations) it will not be possible to set
-the pause to less than 5 sectors (0.066 seconds). From what I have been
-told from a firmware developer, it will most likely not do what
-people expect.
-
-You have to wait for DAO unless you own a TEAC drive that allows you
-to create a TAO disk with similar properties than a DAO disk.
+Digital Audio Extraction programs that work correctly (as intended by the
+CD standard) split the content of a CD into files by including the
+pre-gap (usually holding 2 seconds of pause) at the end of the previous
+track.
 
 Joerg Schilling

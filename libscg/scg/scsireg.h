@@ -1,4 +1,4 @@
-/* @(#)scsireg.h	1.28 02/10/09 Copyright 1987 J. Schilling */
+/* @(#)scsireg.h	1.31 04/09/04 Copyright 1987 J. Schilling */
 /*
  *	usefull definitions for dealing with CCS SCSI - devices
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_SCG_SCSIREG_H
@@ -109,9 +109,11 @@ struct	scsi_inquiry {
 };					/* 96 */
 #endif
 
+#ifdef	__SCG_COMPAT__
 #define	info		vendor_info
 #define	ident		prod_ident
 #define	revision	prod_revision
+#endif
 
 /* Peripheral Device Qualifier */
 
@@ -777,26 +779,26 @@ struct cd_mode_page_05 {		/* write parameters */
 		MP_P_CODE;		/* parsave & pagecode */
 	Uchar	p_len;			/* 0x32 = 50 Bytes */
 	Ucbit	write_type	: 4;	/* Session write type (PACKET/TAO...)*/
-	Ucbit	test_write	: 1;	/* Do not actually write data	     */
-	Ucbit	LS_V		: 1;	/* Link size valid		     */
-	Ucbit	BUFE		: 1;	/* Enable Bufunderrun free rec.	     */
+	Ucbit	test_write	: 1;	/* Do not actually write data	    */
+	Ucbit	LS_V		: 1;	/* Link size valid		    */
+	Ucbit	BUFE		: 1;	/* Enable Bufunderrun free rec.	    */
 	Ucbit	res_2_7		: 1;
 	Ucbit	track_mode	: 4;	/* Track mode (Q-sub control nibble) */
 	Ucbit	copy		: 1;	/* 1st higher gen of copy prot track ~*/
-	Ucbit	fp		: 1;	/* Fixed packed (if in packet mode)  */
-	Ucbit	multi_session	: 2;	/* Multi session write type	     */
-	Ucbit	dbtype		: 4;	/* Data block type		     */
-	Ucbit	res_4		: 4;	/* Reserved			     */
-	Uchar	link_size;		/* Link Size (default is 7)	     */
-	Uchar	res_6;			/* Reserved			     */
-	Ucbit	host_appl_code	: 6;	/* Host application code of disk     */
-	Ucbit	res_7		: 2;	/* Reserved			     */
-	Uchar	session_format;		/* Session format (DA/CDI/XA)	     */
-	Uchar	res_9;			/* Reserved			     */
+	Ucbit	fp		: 1;	/* Fixed packed (if in packet mode) */
+	Ucbit	multi_session	: 2;	/* Multi session write type	    */
+	Ucbit	dbtype		: 4;	/* Data block type		    */
+	Ucbit	res_4		: 4;	/* Reserved			    */
+	Uchar	link_size;		/* Link Size (default is 7)	    */
+	Uchar	res_6;			/* Reserved			    */
+	Ucbit	host_appl_code	: 6;	/* Host application code of disk    */
+	Ucbit	res_7		: 2;	/* Reserved			    */
+	Uchar	session_format;		/* Session format (DA/CDI/XA)	    */
+	Uchar	res_9;			/* Reserved			    */
 	Uchar	packet_size[4];		/* # of user datablocks/fixed packet */
-	Uchar	audio_pause_len[2];	/* # of blocks where index is zero   */
-	Uchar	media_cat_number[16];	/* Media catalog Number (MCN)	     */
-	Uchar	ISRC[14];		/* ISRC for this track		     */
+	Uchar	audio_pause_len[2];	/* # of blocks where index is zero  */
+	Uchar	media_cat_number[16];	/* Media catalog Number (MCN)	    */
+	Uchar	ISRC[14];		/* ISRC for this track		    */
 	Uchar	sub_header[4];
 	Uchar	vendor_uniq[4];
 };
@@ -807,26 +809,26 @@ struct cd_mode_page_05 {		/* write parameters */
 		MP_P_CODE;		/* parsave & pagecode */
 	Uchar	p_len;			/* 0x32 = 50 Bytes */
 	Ucbit	res_2_7		: 1;
-	Ucbit	BUFE		: 1;	/* Enable Bufunderrun free rec.	     */
-	Ucbit	LS_V		: 1;	/* Link size valid		     */
-	Ucbit	test_write	: 1;	/* Do not actually write data	     */
+	Ucbit	BUFE		: 1;	/* Enable Bufunderrun free rec.	    */
+	Ucbit	LS_V		: 1;	/* Link size valid		    */
+	Ucbit	test_write	: 1;	/* Do not actually write data	    */
 	Ucbit	write_type	: 4;	/* Session write type (PACKET/TAO...)*/
-	Ucbit	multi_session	: 2;	/* Multi session write type	     */
-	Ucbit	fp		: 1;	/* Fixed packed (if in packet mode)  */
+	Ucbit	multi_session	: 2;	/* Multi session write type	    */
+	Ucbit	fp		: 1;	/* Fixed packed (if in packet mode) */
 	Ucbit	copy		: 1;	/* 1st higher gen of copy prot track */
 	Ucbit	track_mode	: 4;	/* Track mode (Q-sub control nibble) */
-	Ucbit	res_4		: 4;	/* Reserved			     */
-	Ucbit	dbtype		: 4;	/* Data block type		     */
-	Uchar	link_size;		/* Link Size (default is 7)	     */
-	Uchar	res_6;			/* Reserved			     */
-	Ucbit	res_7		: 2;	/* Reserved			     */
-	Ucbit	host_appl_code	: 6;	/* Host application code of disk     */
-	Uchar	session_format;		/* Session format (DA/CDI/XA)	     */
-	Uchar	res_9;			/* Reserved			     */
+	Ucbit	res_4		: 4;	/* Reserved			    */
+	Ucbit	dbtype		: 4;	/* Data block type		    */
+	Uchar	link_size;		/* Link Size (default is 7)	    */
+	Uchar	res_6;			/* Reserved			    */
+	Ucbit	res_7		: 2;	/* Reserved			    */
+	Ucbit	host_appl_code	: 6;	/* Host application code of disk    */
+	Uchar	session_format;		/* Session format (DA/CDI/XA)	    */
+	Uchar	res_9;			/* Reserved			    */
 	Uchar	packet_size[4];		/* # of user datablocks/fixed packet */
-	Uchar	audio_pause_len[2];	/* # of blocks where index is zero   */
-	Uchar	media_cat_number[16];	/* Media catalog Number (MCN)	     */
-	Uchar	ISRC[14];		/* ISRC for this track		     */
+	Uchar	audio_pause_len[2];	/* # of blocks where index is zero  */
+	Uchar	media_cat_number[16];	/* Media catalog Number (MCN)	    */
+	Uchar	ISRC[14];		/* ISRC for this track		    */
 	Uchar	sub_header[4];
 	Uchar	vendor_uniq[4];
 };
@@ -836,10 +838,10 @@ struct cd_mode_page_05 {		/* write parameters */
 #if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
 struct cd_wr_speed_performance {
-	Uchar	res0;			/* Reserved			     */
-	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
-	Ucbit	res_1_27	: 6;	/* Reserved			     */
-	Uchar	wr_speed_supp[2];	/* Supported write speed	     */
+	Uchar	res0;			/* Reserved			    */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	    */
+	Ucbit	res_1_27	: 6;	/* Reserved			    */
+	Uchar	wr_speed_supp[2];	/* Supported write speed	    */
 };
 
 struct cd_mode_page_2A {		/* CD Cap / mech status */
@@ -847,86 +849,86 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Uchar	p_len;			/* 0x14 = 20 Bytes (MMC) */
 					/* 0x18 = 24 Bytes (MMC-2) */
 					/* 0x1C >= 28 Bytes (MMC-3) */
-	Ucbit	cd_r_read	: 1;	/* Reads CD-R  media		     */
-	Ucbit	cd_rw_read	: 1;	/* Reads CD-RW media		     */
-	Ucbit	method2		: 1;	/* Reads fixed packet method2 media  */
-	Ucbit	dvd_rom_read	: 1;	/* Reads DVD ROM media		     */
-	Ucbit	dvd_r_read	: 1;	/* Reads DVD-R media		     */
-	Ucbit	dvd_ram_read	: 1;	/* Reads DVD-RAM media		     */
-	Ucbit	res_2_67	: 2;	/* Reserved			     */
-	Ucbit	cd_r_write	: 1;	/* Supports writing CD-R  media	     */
-	Ucbit	cd_rw_write	: 1;	/* Supports writing CD-RW media	     */
-	Ucbit	test_write	: 1;	/* Supports emulation write	     */
-	Ucbit	res_3_3		: 1;	/* Reserved			     */
-	Ucbit	dvd_r_write	: 1;	/* Supports writing DVD-R media	     */
-	Ucbit	dvd_ram_write	: 1;	/* Supports writing DVD-RAM media    */
-	Ucbit	res_3_67	: 2;	/* Reserved			     */
-	Ucbit	audio_play	: 1;	/* Supports Audio play operation     */
-	Ucbit	composite	: 1;	/* Deliveres composite A/V stream    */
+	Ucbit	cd_r_read	: 1;	/* Reads CD-R  media		    */
+	Ucbit	cd_rw_read	: 1;	/* Reads CD-RW media		    */
+	Ucbit	method2		: 1;	/* Reads fixed packet method2 media */
+	Ucbit	dvd_rom_read	: 1;	/* Reads DVD ROM media		    */
+	Ucbit	dvd_r_read	: 1;	/* Reads DVD-R media		    */
+	Ucbit	dvd_ram_read	: 1;	/* Reads DVD-RAM media		    */
+	Ucbit	res_2_67	: 2;	/* Reserved			    */
+	Ucbit	cd_r_write	: 1;	/* Supports writing CD-R  media	    */
+	Ucbit	cd_rw_write	: 1;	/* Supports writing CD-RW media	    */
+	Ucbit	test_write	: 1;	/* Supports emulation write	    */
+	Ucbit	res_3_3		: 1;	/* Reserved			    */
+	Ucbit	dvd_r_write	: 1;	/* Supports writing DVD-R media	    */
+	Ucbit	dvd_ram_write	: 1;	/* Supports writing DVD-RAM media   */
+	Ucbit	res_3_67	: 2;	/* Reserved			    */
+	Ucbit	audio_play	: 1;	/* Supports Audio play operation    */
+	Ucbit	composite	: 1;	/* Deliveres composite A/V stream   */
 	Ucbit	digital_port_2	: 1;	/* Supports digital output on port 2 */
 	Ucbit	digital_port_1	: 1;	/* Supports digital output on port 1 */
-	Ucbit	mode_2_form_1	: 1;	/* Reads Mode-2 form 1 media (XA)    */
-	Ucbit	mode_2_form_2	: 1;	/* Reads Mode-2 form 2 media	     */
-	Ucbit	multi_session	: 1;	/* Reads multi-session media	     */
-	Ucbit	BUF		: 1;	/* Supports Buffer under. free rec.  */
+	Ucbit	mode_2_form_1	: 1;	/* Reads Mode-2 form 1 media (XA)   */
+	Ucbit	mode_2_form_2	: 1;	/* Reads Mode-2 form 2 media	    */
+	Ucbit	multi_session	: 1;	/* Reads multi-session media	    */
+	Ucbit	BUF		: 1;	/* Supports Buffer under. free rec. */
 	Ucbit	cd_da_supported	: 1;	/* Reads audio data with READ CD cmd */
 	Ucbit	cd_da_accurate	: 1;	/* READ CD data stream is accurate   */
 	Ucbit	rw_supported	: 1;	/* Reads R-W sub channel information */
 	Ucbit	rw_deint_corr	: 1;	/* Reads de-interleved R-W sub chan  */
-	Ucbit	c2_pointers	: 1;	/* Supports C2 error pointers	     */
-	Ucbit	ISRC		: 1;	/* Reads ISRC information	     */
-	Ucbit	UPC		: 1;	/* Reads media catalog number (UPC)  */
-	Ucbit	read_bar_code	: 1;	/* Supports reading bar codes	     */
-	Ucbit	lock		: 1;	/* PREVENT/ALLOW may lock media	     */
-	Ucbit	lock_state	: 1;	/* Lock state 0=unlocked 1=locked    */
+	Ucbit	c2_pointers	: 1;	/* Supports C2 error pointers	    */
+	Ucbit	ISRC		: 1;	/* Reads ISRC information	    */
+	Ucbit	UPC		: 1;	/* Reads media catalog number (UPC) */
+	Ucbit	read_bar_code	: 1;	/* Supports reading bar codes	    */
+	Ucbit	lock		: 1;	/* PREVENT/ALLOW may lock media	    */
+	Ucbit	lock_state	: 1;	/* Lock state 0=unlocked 1=locked   */
 	Ucbit	prevent_jumper	: 1;	/* State of prev/allow jumper 0=pres */
 	Ucbit	eject		: 1;	/* Ejects disc/cartr with STOP LoEj  */
-	Ucbit	res_6_4		: 1;	/* Reserved			     */
-	Ucbit	loading_type	: 3;	/* Loading mechanism type	     */
+	Ucbit	res_6_4		: 1;	/* Reserved			    */
+	Ucbit	loading_type	: 3;	/* Loading mechanism type	    */
 	Ucbit	sep_chan_vol	: 1;	/* Vol controls each channel separat */
 	Ucbit	sep_chan_mute	: 1;	/* Mute controls each channel separat*/
 	Ucbit	disk_present_rep: 1;	/* Changer supports disk present rep */
-	Ucbit	sw_slot_sel	: 1;	/* Load empty slot in changer	     */
-	Ucbit	side_change	: 1;	/* Side change capable		     */
+	Ucbit	sw_slot_sel	: 1;	/* Load empty slot in changer	    */
+	Ucbit	side_change	: 1;	/* Side change capable		    */
 	Ucbit	pw_in_lead_in	: 1;	/* Reads raw P-W sucode from lead in */
-	Ucbit	res_7		: 2;	/* Reserved			     */
-	Uchar	max_read_speed[2];	/* Max. read speed in KB/s	     */
-	Uchar	num_vol_levels[2];	/* # of supported volume levels	     */
-	Uchar	buffer_size[2];		/* Buffer size for the data in KB    */
-	Uchar	cur_read_speed[2];	/* Current read speed in KB/s	     */
-	Uchar	res_16;			/* Reserved			     */
-	Ucbit	res_17_0	: 1;	/* Reserved			     */
+	Ucbit	res_7		: 2;	/* Reserved			    */
+	Uchar	max_read_speed[2];	/* Max. read speed in KB/s	    */
+	Uchar	num_vol_levels[2];	/* # of supported volume levels	    */
+	Uchar	buffer_size[2];		/* Buffer size for the data in KB   */
+	Uchar	cur_read_speed[2];	/* Current read speed in KB/s	    */
+	Uchar	res_16;			/* Reserved			    */
+	Ucbit	res_17_0	: 1;	/* Reserved			    */
 	Ucbit	BCK		: 1;	/* Data valid on falling edge of BCK */
 	Ucbit	RCK		: 1;	/* Set: HIGH high LRCK=left channel  */
-	Ucbit	LSBF		: 1;	/* Set: LSB first Clear: MSB first   */
+	Ucbit	LSBF		: 1;	/* Set: LSB first Clear: MSB first  */
 	Ucbit	length		: 2;	/* 0=32BCKs 1=16BCKs 2=24BCKs 3=24I2c*/
-	Ucbit	res_17		: 2;	/* Reserved			     */
+	Ucbit	res_17		: 2;	/* Reserved			    */
 	Uchar	max_write_speed[2];	/* Max. write speed supported in KB/s*/
-	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	     */
+	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	    */
 
-					/* Byte 22 ... Only in MMC-2	     */
+					/* Byte 22 ... Only in MMC-2	    */
 	Uchar	copy_man_rev[2];	/* Copy management revision supported*/
-	Uchar	res_24;			/* Reserved			     */
-	Uchar	res_25;			/* Reserved			     */
+	Uchar	res_24;			/* Reserved			    */
+	Uchar	res_25;			/* Reserved			    */
 
-					/* Byte 26 ... Only in MMC-3	     */
-	Uchar	res_26;			/* Reserved			     */
-	Ucbit	res_27_27	: 6;	/* Reserved			     */
-	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
-	Uchar	v3_cur_write_speed[2];	/* Current write speed in KB/s	     */
-	Uchar	num_wr_speed_des[2];	/* # of wr speed perf descr. tables  */
+					/* Byte 26 ... Only in MMC-3	    */
+	Uchar	res_26;			/* Reserved			    */
+	Ucbit	res_27_27	: 6;	/* Reserved			    */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	    */
+	Uchar	v3_cur_write_speed[2];	/* Current write speed in KB/s	    */
+	Uchar	num_wr_speed_des[2];	/* # of wr speed perf descr. tables */
 	struct cd_wr_speed_performance
-		wr_speed_des[1];	/* wr speed performance descriptor   */
-					/* Actually more (num_wr_speed_des)  */
+		wr_speed_des[1];	/* wr speed performance descriptor  */
+					/* Actually more (num_wr_speed_des) */
 };
 
 #else				/* Motorola byteorder */
 
 struct cd_wr_speed_performance {
-	Uchar	res0;			/* Reserved			     */
-	Ucbit	res_1_27	: 6;	/* Reserved			     */
-	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
-	Uchar	wr_speed_supp[2];	/* Supported write speed	     */
+	Uchar	res0;			/* Reserved			    */
+	Ucbit	res_1_27	: 6;	/* Reserved			    */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	    */
+	Uchar	wr_speed_supp[2];	/* Supported write speed	    */
 };
 
 struct cd_mode_page_2A {		/* CD Cap / mech status */
@@ -934,77 +936,77 @@ struct cd_mode_page_2A {		/* CD Cap / mech status */
 	Uchar	p_len;			/* 0x14 = 20 Bytes (MMC) */
 					/* 0x18 = 24 Bytes (MMC-2) */
 					/* 0x1C >= 28 Bytes (MMC-3) */
-	Ucbit	res_2_67	: 2;	/* Reserved			     */
-	Ucbit	dvd_ram_read	: 1;	/* Reads DVD-RAM media		     */
-	Ucbit	dvd_r_read	: 1;	/* Reads DVD-R media		     */
-	Ucbit	dvd_rom_read	: 1;	/* Reads DVD ROM media		     */
-	Ucbit	method2		: 1;	/* Reads fixed packet method2 media  */
-	Ucbit	cd_rw_read	: 1;	/* Reads CD-RW media		     */
-	Ucbit	cd_r_read	: 1;	/* Reads CD-R  media		     */
-	Ucbit	res_3_67	: 2;	/* Reserved			     */
-	Ucbit	dvd_ram_write	: 1;	/* Supports writing DVD-RAM media    */
-	Ucbit	dvd_r_write	: 1;	/* Supports writing DVD-R media	     */
-	Ucbit	res_3_3		: 1;	/* Reserved			     */
-	Ucbit	test_write	: 1;	/* Supports emulation write	     */
-	Ucbit	cd_rw_write	: 1;	/* Supports writing CD-RW media	     */
-	Ucbit	cd_r_write	: 1;	/* Supports writing CD-R  media	     */
-	Ucbit	BUF		: 1;	/* Supports Buffer under. free rec.  */
-	Ucbit	multi_session	: 1;	/* Reads multi-session media	     */
-	Ucbit	mode_2_form_2	: 1;	/* Reads Mode-2 form 2 media	     */
-	Ucbit	mode_2_form_1	: 1;	/* Reads Mode-2 form 1 media (XA)    */
+	Ucbit	res_2_67	: 2;	/* Reserved			    */
+	Ucbit	dvd_ram_read	: 1;	/* Reads DVD-RAM media		    */
+	Ucbit	dvd_r_read	: 1;	/* Reads DVD-R media		    */
+	Ucbit	dvd_rom_read	: 1;	/* Reads DVD ROM media		    */
+	Ucbit	method2		: 1;	/* Reads fixed packet method2 media */
+	Ucbit	cd_rw_read	: 1;	/* Reads CD-RW media		    */
+	Ucbit	cd_r_read	: 1;	/* Reads CD-R  media		    */
+	Ucbit	res_3_67	: 2;	/* Reserved			    */
+	Ucbit	dvd_ram_write	: 1;	/* Supports writing DVD-RAM media   */
+	Ucbit	dvd_r_write	: 1;	/* Supports writing DVD-R media	    */
+	Ucbit	res_3_3		: 1;	/* Reserved			    */
+	Ucbit	test_write	: 1;	/* Supports emulation write	    */
+	Ucbit	cd_rw_write	: 1;	/* Supports writing CD-RW media	    */
+	Ucbit	cd_r_write	: 1;	/* Supports writing CD-R  media	    */
+	Ucbit	BUF		: 1;	/* Supports Buffer under. free rec. */
+	Ucbit	multi_session	: 1;	/* Reads multi-session media	    */
+	Ucbit	mode_2_form_2	: 1;	/* Reads Mode-2 form 2 media	    */
+	Ucbit	mode_2_form_1	: 1;	/* Reads Mode-2 form 1 media (XA)   */
 	Ucbit	digital_port_1	: 1;	/* Supports digital output on port 1 */
 	Ucbit	digital_port_2	: 1;	/* Supports digital output on port 2 */
-	Ucbit	composite	: 1;	/* Deliveres composite A/V stream    */
-	Ucbit	audio_play	: 1;	/* Supports Audio play operation     */
-	Ucbit	read_bar_code	: 1;	/* Supports reading bar codes	     */
-	Ucbit	UPC		: 1;	/* Reads media catalog number (UPC)  */
-	Ucbit	ISRC		: 1;	/* Reads ISRC information	     */
-	Ucbit	c2_pointers	: 1;	/* Supports C2 error pointers	     */
-	Ucbit	rw_deint_corr	: 1;	/* Reads de-interleved R-W sub chan  */
+	Ucbit	composite	: 1;	/* Deliveres composite A/V stream   */
+	Ucbit	audio_play	: 1;	/* Supports Audio play operation    */
+	Ucbit	read_bar_code	: 1;	/* Supports reading bar codes	    */
+	Ucbit	UPC		: 1;	/* Reads media catalog number (UPC) */
+	Ucbit	ISRC		: 1;	/* Reads ISRC information	    */
+	Ucbit	c2_pointers	: 1;	/* Supports C2 error pointers	    */
+	Ucbit	rw_deint_corr	: 1;	/* Reads de-interleved R-W sub chan */
 	Ucbit	rw_supported	: 1;	/* Reads R-W sub channel information */
 	Ucbit	cd_da_accurate	: 1;	/* READ CD data stream is accurate   */
 	Ucbit	cd_da_supported	: 1;	/* Reads audio data with READ CD cmd */
-	Ucbit	loading_type	: 3;	/* Loading mechanism type	     */
-	Ucbit	res_6_4		: 1;	/* Reserved			     */
-	Ucbit	eject		: 1;	/* Ejects disc/cartr with STOP LoEj  */
+	Ucbit	loading_type	: 3;	/* Loading mechanism type	    */
+	Ucbit	res_6_4		: 1;	/* Reserved			    */
+	Ucbit	eject		: 1;	/* Ejects disc/cartr with STOP LoEj */
 	Ucbit	prevent_jumper	: 1;	/* State of prev/allow jumper 0=pres */
-	Ucbit	lock_state	: 1;	/* Lock state 0=unlocked 1=locked    */
-	Ucbit	lock		: 1;	/* PREVENT/ALLOW may lock media	     */
-	Ucbit	res_7		: 2;	/* Reserved			     */
+	Ucbit	lock_state	: 1;	/* Lock state 0=unlocked 1=locked   */
+	Ucbit	lock		: 1;	/* PREVENT/ALLOW may lock media	    */
+	Ucbit	res_7		: 2;	/* Reserved			    */
 	Ucbit	pw_in_lead_in	: 1;	/* Reads raw P-W sucode from lead in */
-	Ucbit	side_change	: 1;	/* Side change capable		     */
-	Ucbit	sw_slot_sel	: 1;	/* Load empty slot in changer	     */
+	Ucbit	side_change	: 1;	/* Side change capable		    */
+	Ucbit	sw_slot_sel	: 1;	/* Load empty slot in changer	    */
 	Ucbit	disk_present_rep: 1;	/* Changer supports disk present rep */
 	Ucbit	sep_chan_mute	: 1;	/* Mute controls each channel separat*/
 	Ucbit	sep_chan_vol	: 1;	/* Vol controls each channel separat */
-	Uchar	max_read_speed[2];	/* Max. read speed in KB/s	     */
-	Uchar	num_vol_levels[2];	/* # of supported volume levels	     */
-	Uchar	buffer_size[2];		/* Buffer size for the data in KB    */
-	Uchar	cur_read_speed[2];	/* Current read speed in KB/s	     */
-	Uchar	res_16;			/* Reserved			     */
-	Ucbit	res_17		: 2;	/* Reserved			     */
+	Uchar	max_read_speed[2];	/* Max. read speed in KB/s	    */
+	Uchar	num_vol_levels[2];	/* # of supported volume levels	    */
+	Uchar	buffer_size[2];		/* Buffer size for the data in KB   */
+	Uchar	cur_read_speed[2];	/* Current read speed in KB/s	    */
+	Uchar	res_16;			/* Reserved			    */
+	Ucbit	res_17		: 2;	/* Reserved			    */
 	Ucbit	length		: 2;	/* 0=32BCKs 1=16BCKs 2=24BCKs 3=24I2c*/
-	Ucbit	LSBF		: 1;	/* Set: LSB first Clear: MSB first   */
-	Ucbit	RCK		: 1;	/* Set: HIGH high LRCK=left channel  */
+	Ucbit	LSBF		: 1;	/* Set: LSB first Clear: MSB first  */
+	Ucbit	RCK		: 1;	/* Set: HIGH high LRCK=left channel */
 	Ucbit	BCK		: 1;	/* Data valid on falling edge of BCK */
-	Ucbit	res_17_0	: 1;	/* Reserved			     */
+	Ucbit	res_17_0	: 1;	/* Reserved			    */
 	Uchar	max_write_speed[2];	/* Max. write speed supported in KB/s*/
-	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	     */
+	Uchar	cur_write_speed[2];	/* Current write speed in KB/s	    */
 
-					/* Byte 22 ... Only in MMC-2	     */
+					/* Byte 22 ... Only in MMC-2	    */
 	Uchar	copy_man_rev[2];	/* Copy management revision supported*/
-	Uchar	res_24;			/* Reserved			     */
-	Uchar	res_25;			/* Reserved			     */
+	Uchar	res_24;			/* Reserved			    */
+	Uchar	res_25;			/* Reserved			    */
 
-					/* Byte 26 ... Only in MMC-3	     */
-	Uchar	res_26;			/* Reserved			     */
-	Ucbit	res_27_27	: 6;	/* Reserved			     */
-	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	     */
-	Uchar	v3_cur_write_speed[2];	/* Current write speed in KB/s	     */
-	Uchar	num_wr_speed_des[2];	/* # of wr speed perf descr. tables  */
+					/* Byte 26 ... Only in MMC-3	    */
+	Uchar	res_26;			/* Reserved			    */
+	Ucbit	res_27_27	: 6;	/* Reserved			    */
+	Ucbit	rot_ctl_sel	: 2;	/* Rotational control selected	    */
+	Uchar	v3_cur_write_speed[2];	/* Current write speed in KB/s	    */
+	Uchar	num_wr_speed_des[2];	/* # of wr speed perf descr. tables */
 	struct cd_wr_speed_performance
-		wr_speed_des[1];	/* wr speed performance descriptor   */
-					/* Actually more (num_wr_speed_des)  */
+		wr_speed_des[1];	/* wr speed performance descriptor  */
+					/* Actually more (num_wr_speed_des) */
 };
 
 #endif
@@ -1075,8 +1077,10 @@ struct scsi_def_header {
 
 struct scsi_format_header {
 	Ucbit	res		: 8;	/* Adaptec 5500: 1 --> format track */
-	Ucbit	vu		: 1;
-	Ucbit			: 3;
+	Ucbit	vu		: 1;	/* Vendor Unique		    */
+	Ucbit	immed		: 1;	/* Return Immediately from Format   */
+	Ucbit	tryout		: 1;	/* Check if format parameters OK    */
+	Ucbit	ipattern	: 1;	/* Init patter descriptor present   */
 	Ucbit	serr		: 1;	/* Stop on error		    */
 	Ucbit	dcert		: 1;	/* Disable certification	    */
 	Ucbit	dmdl		: 1;	/* Disable manufacturer defect list */
@@ -1092,8 +1096,10 @@ struct scsi_format_header {
 	Ucbit	dmdl		: 1;	/* Disable manufacturer defect list */
 	Ucbit	dcert		: 1;	/* Disable certification	    */
 	Ucbit	serr		: 1;	/* Stop on error		    */
-	Ucbit			: 3;
-	Ucbit	vu		: 1;
+	Ucbit	ipattern	: 1;	/* Init patter descriptor present   */
+	Ucbit	tryout		: 1;	/* Check if format parameters OK    */
+	Ucbit	immed		: 1;	/* Return Immediately from Format   */
+	Ucbit	vu		: 1;	/* Vendor Unique		    */
 	Uchar	length[2];		/* Length of following list in bytes*/
 };
 #endif
@@ -1137,6 +1143,53 @@ struct	scsi_format_data {
 #define	SC_DEF_PHYS	5
 #define	SC_DEF_VU	6
 #define	SC_DEF_RES	7
+
+struct scsi_format_cap_header {
+	Uchar	res[3];			/* Reserved			*/
+	Uchar	len;			/* Len (a multiple of 8)	*/
+};
+
+#if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct scsi_format_cap_desc {
+	Uchar	nblock[4];		/* Number of blocks		*/
+	Ucbit	desc_type	: 2;	/* Descriptor type		*/
+	Ucbit	fmt_type	: 6;	/* Format Taype			*/
+	Uchar	blen[3];		/* Logical block length		*/
+};
+
+#else					/* Motorola byteorder */
+
+struct scsi_format_cap_desc {
+	Uchar	nblock[4];		/* Number of blocks		*/
+	Ucbit	fmt_type	: 6;	/* Format Taype			*/
+	Ucbit	desc_type	: 2;	/* Descriptor type		*/
+	Uchar	blen[3];		/* Logical block length		*/
+};
+#endif
+
+/*
+ * Defines for 'fmt_type'.
+ */
+#define	FCAP_TYPE_DVDPLUS_FULL	0x26	/* DVD+RW Full Format		*/
+
+/*
+ * Defines for 'desc_type'.
+ * In case of FCAP_DESC_RES, the descriptor is a formatted capacity descriptor
+ * and the 'blen' field is type dependent.
+ * For all other cases, this is the Current/Maximum Capacity descriptor and
+ * the value of 'fmt_type' is reserved and must be zero.
+ */
+#define	FCAP_DESC_RES		0	/* Reserved			*/
+#define	FCAP_DESC_UNFORM	1	/* Unformatted Media		*/
+#define	FCAP_DESC_FORM		2	/* Formatted Media		*/
+#define	FCAP_DESC_NOMEDIA	3	/* No Media			*/
+
+struct	scsi_cap_data {
+	struct scsi_format_cap_header	hd;
+	struct scsi_format_cap_desc	list[1];
+};
+
 
 struct	scsi_send_diag_cmd {
 	Uchar	cmd;

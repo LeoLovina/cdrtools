@@ -1,7 +1,7 @@
-/* @(#)mac_label.c	1.6 02/05/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)mac_label.c	1.9 04/03/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)mac_label.c	1.6 02/05/20 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)mac_label.c	1.9 04/03/05 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -62,44 +62,93 @@ gen_prepboot_label(ml)
 	unsigned char	*ml;
 {
 	struct directory_entry *de;
-	int		i,
-			block,
-			size;
+	int		i = 0;
+	int		block;
+	int		size;
 	MacLabel	*mac_label = (MacLabel *) ml;
 
 	if (verbose > 1) {
 		fprintf(stderr, "Creating %d PReP boot partition(s)\n",
-								use_prep_boot);
+						use_prep_boot + use_chrp_boot);
 	}
 	mac_label->fdiskMagic[0] = fdiskMagic0;
 	mac_label->fdiskMagic[1] = fdiskMagic1;
 
-	for (i = 0; i < use_prep_boot; i++) {
-		de = search_tree_file(root, prep_boot_image[i]);
+	if (use_chrp_boot) {
+		fprintf(stderr, "CHRP boot partition 1\n");
+
+		mac_label->image[i].boot = 0x80;
+
+		mac_label->image[i].CHSstart[0] = 0xff;
+		mac_label->image[i].CHSstart[1] = 0xff;
+		mac_label->image[i].CHSstart[2] = 0xff;
+
+		mac_label->image[i].type = chrpPartType;	/* 0x96 */
+
+		mac_label->image[i].CHSend[0] = 0xff;
+		mac_label->image[i].CHSend[1] = 0xff;
+		mac_label->image[i].CHSend[2] = 0xff;
+
+		mac_label->image[i].startSect[0] = 0;
+		mac_label->image[i].startSect[1] = 0;
+		mac_label->image[i].startSect[2] = 0;
+		mac_label->image[i].startSect[3] = 0;
+
+		size = (last_extent - session_start) * 2048 / 512;
+		mac_label->image[i].size[0] = size & 0xff;
+		mac_label->image[i].size[1] = (size >> 8) & 0xff;
+		mac_label->image[i].size[2] = (size >> 16) & 0xff;
+		mac_label->image[i].size[3] = (size >> 24) & 0xff;
+
+		i++;
+	}
+
+	for (; i < use_prep_boot + use_chrp_boot; i++) {
+		de = search_tree_file(root, prep_boot_image[i - use_chrp_boot]);
 		if (!de) {
 			fprintf(stderr,
 				"Uh oh, I cant find the boot image \"%s\"!\n",
-				prep_boot_image[i]);
+				prep_boot_image[i - use_chrp_boot]);
 			exit(1);
 		}
 		/* get size and block in 512-byte blocks */
 		block = get_733(de->isorec.extent) * 2048 / 512;
 		size = get_733(de->isorec.size) / 512 + 1;
 		fprintf(stderr, "PReP boot partition %d is \"%s\"\n",
-			i + 1, prep_boot_image[i]);
+			i + 1, prep_boot_image[i - use_chrp_boot]);
+
+		mac_label->image[i].boot = 0x80;
+
+		mac_label->image[i].CHSstart[0] = 0xff;
+		mac_label->image[i].CHSstart[1] = 0xff;
+		mac_label->image[i].CHSstart[2] = 0xff;
+
+		mac_label->image[i].type = prepPartType;	/* 0x41 */
+
+		mac_label->image[i].CHSend[0] = 0xff;
+		mac_label->image[i].CHSend[1] = 0xff;
+		mac_label->image[i].CHSend[2] = 0xff;
 
 		/* deal with  endianess */
-		mac_label->image[i].type = prepPartType;	/* 0x41 */
 		mac_label->image[i].startSect[0] = block & 0xff;
 		mac_label->image[i].startSect[1] = (block >> 8) & 0xff;
 		mac_label->image[i].startSect[2] = (block >> 16) & 0xff;
 		mac_label->image[i].startSect[3] = (block >> 24) & 0xff;
+
 		mac_label->image[i].size[0] = size & 0xff;
 		mac_label->image[i].size[1] = (size >> 8) & 0xff;
 		mac_label->image[i].size[2] = (size >> 16) & 0xff;
 		mac_label->image[i].size[3] = (size >> 24) & 0xff;
 	}
+	for (; i < 4; i++) {
+		mac_label->image[i].CHSstart[0] = 0xff;
+		mac_label->image[i].CHSstart[1] = 0xff;
+		mac_label->image[i].CHSstart[2] = 0xff;
 
+		mac_label->image[i].CHSend[0] = 0xff;
+		mac_label->image[i].CHSend[1] = 0xff;
+		mac_label->image[i].CHSend[2] = 0xff;
+	}
 }
 
 #endif	/* PREP_BOOT */
@@ -141,7 +190,7 @@ gen_mac_label(mac_boot)
 		mac_part = (MacPart *) (tmp + HFS_BLOCKSZ);
 
 		if (!(IS_MAC_PART(mac_part) &&
-		   !strncmp((char *) mac_part->pmPartType, pmPartType_2, 12))) {
+		    strncmp((char *) mac_part->pmPartType, pmPartType_2, 12) == 0)) {
 			sprintf(hce->error, "%s is not a HFS boot file",
 								mac_boot->name);
 			return (-1);
@@ -232,9 +281,9 @@ gen_mac_label(mac_boot)
 	set_732((char *) mac_part->pmPyPartStart, 1);
 	set_732((char *) mac_part->pmPartBlkCnt, mpc + 1);
 	strncpy((char *) mac_part->pmPartName, "Apple",
-						sizeof(mac_part->pmPartName));
+						sizeof (mac_part->pmPartName));
 	strncpy((char *) mac_part->pmPartType, "Apple_partition_map",
-						sizeof(mac_part->pmPartType));
+						sizeof (mac_part->pmPartType));
 	set_732((char *) mac_part->pmLgDataStart, 0);
 	set_732((char *) mac_part->pmDataCnt, mpc + 1);
 	set_732((char *) mac_part->pmPartStatus, PM_STAT_DEFAULT);
@@ -263,9 +312,9 @@ gen_mac_label(mac_boot)
 			set_732((char *) mac_part->pmPartBlkCnt,
 				mpm[i].size * (SECTOR_SIZE / HFS_BLOCKSZ));
 			strncpy((char *) mac_part->pmPartName, mpm[i].name,
-				sizeof(mac_part->pmPartName));
+				sizeof (mac_part->pmPartName));
 			strncpy((char *) mac_part->pmPartType, mpm[i].type,
-				sizeof(mac_part->pmPartType));
+				sizeof (mac_part->pmPartType));
 			set_732((char *) mac_part->pmLgDataStart, 0);
 			set_732((char *) mac_part->pmDataCnt,
 				mpm[i].size * (SECTOR_SIZE / HFS_BLOCKSZ));
@@ -283,10 +332,10 @@ gen_mac_label(mac_boot)
 			set_732((char *) mac_part->pmPyPartStart, 1);
 			set_732((char *) mac_part->pmPartBlkCnt, mpc + 1);
 			strncpy((char *) mac_part->pmPartName, "Apple",
-					sizeof(mac_part->pmPartName));
+					sizeof (mac_part->pmPartName));
 			strncpy((char *) mac_part->pmPartType,
 					"Apple_partition_map",
-					sizeof(mac_part->pmPartType));
+					sizeof (mac_part->pmPartType));
 			set_732((char *) mac_part->pmLgDataStart, 0);
 			set_732((char *) mac_part->pmDataCnt, mpc + 1);
 			set_732((char *) mac_part->pmPartStatus,
@@ -295,8 +344,8 @@ gen_mac_label(mac_boot)
 		}
 		for (i = 0; i < mpc; i++, mac_part++) {
 			if (mac_part == (MacPart *) (buffer + SECTOR_SIZE))
-				mac_part++;	/* jump over 2048 partition
-						   entry */
+				mac_part++;	/* jump over 2048 partition */
+						/* entry */
 			if (mpm[i].ntype == PM2) {
 				memcpy((char *) mac_part, tmp + HFS_BLOCKSZ * 2,
 							HFS_BLOCKSZ);
@@ -316,9 +365,9 @@ gen_mac_label(mac_boot)
 				set_732((char *) mac_part->pmPartBlkCnt,
 				    mpm[i].size * (SECTOR_SIZE / HFS_BLOCKSZ));
 				strncpy((char *) mac_part->pmPartName,
-				    mpm[i].name, sizeof(mac_part->pmPartName));
+				    mpm[i].name, sizeof (mac_part->pmPartName));
 				strncpy((char *) mac_part->pmPartType,
-				    mpm[i].type, sizeof(mac_part->pmPartType));
+				    mpm[i].type, sizeof (mac_part->pmPartType));
 				set_732((char *) mac_part->pmLgDataStart, 0);
 				set_732((char *) mac_part->pmDataCnt,
 				    mpm[i].size * (SECTOR_SIZE / HFS_BLOCKSZ));

@@ -1,7 +1,7 @@
-/* @(#)getopt.c	1.5 01/12/10 joerg */
+/* @(#)getopt.c	1.6 03/03/09 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getopt.c	1.5 01/12/10 joerg";
+	"@(#)getopt.c	1.6 03/03/09 joerg";
 #endif
 /* Getopt for GNU.
    NOTE: getopt is now part of the C library, so if you don't know what
@@ -34,9 +34,17 @@ the executable file might be covered by the GNU General Public License. */
 
 /* This tells Alpha OSF/1 not to define a getopt prototype in <stdio.h>.
    Ditto for AIX 3.2 and <stdlib.h>.  */
+/*
+ * XXX Never do it this way, it is FSF junk
+ */
 #ifndef _NO_PROTO
-#define _NO_PROTO
+/*#define _NO_PROTO*/
 #endif
+/*
+ * We do this instead:
+ */
+#undef	getopt
+#define	getopt	__nothing__
 
 #ifdef HAVE_CONFIG_H
 #if defined (emacs) || defined (CONFIG_BROKETS)
@@ -229,7 +237,6 @@ extern int strlen (const char *);
 #undef	getopt
 #define	getopt	__nothing__
 #include <stdxlib.h>
-#undef	getopt
 #endif
 #ifndef	my_index
 /*
@@ -238,6 +245,7 @@ extern int strlen (const char *);
  */
 #include <strdefs.h>
 #endif
+#undef	getopt
 
 /* Handle permutation of arguments.  */
 

@@ -70,3 +70,13 @@ Patch 108779-01
 If you have problems with ISO-9660 partitions > 4 GB  where Solaris wraps to
 offset mod 4 GB when reading from the FS install patch 113277-04.
 
+
+		IMPORTANT information for Solaris x86
+
+If have no DMA, you will get problems with buffer underruns and may never use
+the maximum write speed of current CD/DVD drives.
+
+For more information, read README.solaris-x86-ata-DMA and README.solaris-x86-ATAPI-DMA
+and take care that the locations for patching may change in future versions.
+
+

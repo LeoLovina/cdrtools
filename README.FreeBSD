@@ -24,7 +24,7 @@ We tested the patch with a collegue today (23.11.2001), here is the result:
 
 -	The Author of the patch, Thomas Quinot <thomas@cuivre.fr.eu.org>, observed
 	that it runs on *some* -CURRENT machines and hangs on *some* -STABLE
-	machines so you max whant to test what works best for you.
+	machines so you may want to test what works best for you.
 
 -	It does not run the SCSI commands in silent mode so the ATAPI low level
 	code prints unwanted kernel messages when you start cdrecord.

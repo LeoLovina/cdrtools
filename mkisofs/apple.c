@@ -1,7 +1,7 @@
-/* @(#)apple.c	1.18 02/07/21 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)apple.c	1.19 04/03/02 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)apple.c	1.18 02/07/21 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)apple.c	1.19 04/03/02 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -76,8 +76,8 @@ static int	get_sfm_info	__PR((char *, char *, dir_ent *, int));
 static int	get_xhfs_dir	__PR((char *, char *, dir_ent *, int));
 static int	get_xhfs_info	__PR((char *, char *, dir_ent *, int));
 #else
-#define get_xhfs_dir	get_none_dir
-#define get_xhfs_info	get_none_info
+#define	get_xhfs_dir	get_none_dir
+#define	get_xhfs_info	get_none_info
 #endif /* IS_MACOS_X */
 
 static void	set_ct		__PR((hfsdirent *, char *, char *));
@@ -102,9 +102,9 @@ static afpmap	*defmap;	/* the default mapping */
 static int	last_ent;	/* previous mapped entry */
 static int	map_num;	/* number of mappings */
 static int	mlen;		/* min extension length */
-static char	tmp[PATH_MAX];/* tmp working buffer */
+static char	tmp[PATH_MAX];	/* tmp working buffer */
 static int	hfs_num;	/* number of file types */
-static char	p_buf[PATH_MAX];/* info working buffer */
+static char	p_buf[PATH_MAX]; /* info working buffer */
 static FILE	*p_fp = NULL;	/* probe File pointer */
 static int	p_num = 0;	/* probe bytes read */
 static unsigned	int hselect;	/* type of HFS file selected */
@@ -114,13 +114,11 @@ struct hfs_type {	/* Types of various HFS Unix files */
 	int	flags;	/* special flags */
 	char	*info;	/* finderinfo name */
 	char	*rsrc;	/* resource fork name */
-	int	(*get_info) __PR((char *, char *, dir_ent *, int)); /* finderinfo
-								     *	function
-								     */
-	int	(*get_dir) __PR((char *, char *, dir_ent *, int));  /* directory
-								     * name
-								     * function
-								     */
+	int	(*get_info) __PR((char *, char *, dir_ent *, int)); /* finderinfo */
+								    /*	function */
+	int	(*get_dir) __PR((char *, char *, dir_ent *, int));  /* directory */
+								    /* name */
+								    /* function */
 	char	*desc;	/* description */
 };
 
@@ -202,8 +200,8 @@ static unsigned short mb_magic[] = {
 #ifndef	HAVE_STRCASECMP
 static int
 strcasecmp(s1, s2)
-	const char     *s1;
-	const char     *s2;
+	const char	*s1;
+	const char	*s2;
 {
 	while (tolower(*s1) == tolower(*s2)) {
 		if (*s1 == 0)
@@ -235,8 +233,6 @@ set_ct(hfs_ent, c, t)
 
 	hfs_ent->u.file.type[CT_SIZE] = '\0';
 	hfs_ent->u.file.creator[CT_SIZE] = '\0';
-
-	return;
 }
 
 /*
@@ -284,15 +280,15 @@ dehex(c)
 #endif
 {
 	if ((c >= '0') && (c <= '9')) {
-		return c - '0';
+		return (c - '0');
 	}
 	if ((c >= 'a') && (c <= 'f')) {
-		return c - 'a' + 10;
+		return (c - 'a' + 10);
 	}
 	if ((c >= 'A') && (c <= 'F')) {
-		return c - 'A' + 10;
+		return (c - 'A' + 10);
 	}
-/*	return 0xff; */
+/*	return (0xff); */
 	return (0);
 }
 
@@ -364,17 +360,18 @@ hstrncpy(t, f, c)
 /*
  *	basename: find just the filename with any directory component
  */
-/* not used at the moment ...
+/*
+	not used at the moment ...
 static char
 basename(a)
 	char	*a;
 {
 	char	*b;
 
-	if((b = strchr(a, '/')))
-		return(++b);
+	if ((b = strchr(a, '/')))
+		return (++b);
 	else
-		return(a);
+		return (a);
 }
 */
 
@@ -533,13 +530,13 @@ get_cap_dir(hname, dname, s_entry, ret)
 	int		num = -1;	/* bytes read */
 	hfsdirent	*hfs_ent = s_entry->hfs_ent;
 
-	num = read_info_file(hname, &info, sizeof(FileInfo));
+	num = read_info_file(hname, &info, sizeof (FileInfo));
 
 	/* check finder info is OK */
-	if (num > 0
-		&& info.fi_magic1 == FI_MAGIC1
-		&& info.fi_magic == FI_MAGIC
-		&& info.fi_bitmap & FI_BM_MACINTOSHFILENAME) {
+	if (num > 0 &&
+		info.fi_magic1 == FI_MAGIC1 &&
+		info.fi_magic == FI_MAGIC &&
+		info.fi_bitmap & FI_BM_MACINTOSHFILENAME) {
 		/* use the finderinfo name if it exists */
 		cstrncpy((char *) (hfs_ent->name),
 				(char *) (info.fi_macfilename), HFS_MAX_FLEN);
@@ -569,12 +566,12 @@ get_cap_info(hname, dname, s_entry, ret)
 	int		num = -1;	/* bytes read */
 	hfsdirent	*hfs_ent = s_entry->hfs_ent;
 
-	num = read_info_file(hname, &info, sizeof(info));
+	num = read_info_file(hname, &info, sizeof (info));
 
 	/* check finder info is OK */
-	if (num > 0
-		&& info.fi_magic1 == FI_MAGIC1
-		&& info.fi_magic == FI_MAGIC) {
+	if (num > 0 &&
+		info.fi_magic1 == FI_MAGIC1 &&
+		info.fi_magic == FI_MAGIC) {
 
 		if (info.fi_bitmap & FI_BM_MACINTOSHFILENAME) {
 			/* use the finderinfo name if it exists */
@@ -641,16 +638,16 @@ get_es_dir(hname, dname, s_entry, ret)
 	einfo = (es_FileInfo *) info;
 	uinfo = (us_FileInfo *) info;
 
-	num = read_info_file(hname, info, sizeof(info));
+	num = read_info_file(hname, info, sizeof (info));
 
 	/* check finder info for EtherShare finderinfo */
-	if (num >= (int)sizeof(es_FileInfo) &&
+	if (num >= (int)sizeof (es_FileInfo) &&
 		d_getl(einfo->magic) == ES_MAGIC &&
 		d_getw(einfo->version) == ES_VERSION) {
 
 		set_Dinfo(einfo->finderinfo, hfs_ent);
 
-	} else if (num >= (int)sizeof(us_FileInfo)) {
+	} else if (num >= (int)sizeof (us_FileInfo)) {
 		/*
 		 * UShare has no magic number, so we assume that this is a valid
 		 * info/resource file ...
@@ -702,10 +699,10 @@ get_es_info(hname, dname, s_entry, ret)
 	einfo = (es_FileInfo *) info;
 	uinfo = (us_FileInfo *) info;
 
-	num = read_info_file(hname, info, sizeof(info));
+	num = read_info_file(hname, info, sizeof (info));
 
 	/* check finder info for EtherShare finderinfo */
-	if (num >= (int)sizeof(es_FileInfo) &&
+	if (num >= (int)sizeof (es_FileInfo) &&
 		d_getl(einfo->magic) == ES_MAGIC &&
 		d_getw(einfo->version) == ES_VERSION) {
 
@@ -718,7 +715,7 @@ get_es_info(hname, dname, s_entry, ret)
 
 		hfs_ent->crdate = d_getl(einfo->createTime);
 
-	} else if (num >= (int)sizeof(us_FileInfo)) {
+	} else if (num >= (int)sizeof (us_FileInfo)) {
 		/*
 		 * UShare has no magic number, so we assume that this is a valid
 		 * info/resource file ...
@@ -961,7 +958,7 @@ get_dbl_dir(hname, dname, s_entry, ret)
 	hp = (a_hdr *) p_buf;
 	memset(hp, 0, A_HDR_SIZE);
 
-	memset(name, 0, sizeof(name));
+	memset(name, 0, sizeof (name));
 
 	/* open and read the info/rsrc file (it's the same file) */
 	if ((fp = fopen(hname, "rb")) != NULL)
@@ -1061,7 +1058,7 @@ get_dbl_dir(hname, dname, s_entry, ret)
  *	Unix time (1st Jan 1970).
  *
  *	However, NetaTalk files seem to do their own thing - older
- *	Netatalk files don't have a magic number of version and 
+ *	Netatalk files don't have a magic number of version and
  *	store dates in ID=7 (don't know how). Newer Netatalk files
  *	claim to be version 1, but store dates in ID=7 as if they
  *	were version 2 files.
@@ -1097,8 +1094,8 @@ get_dbl_info(hname, dname, s_entry, ret)
 	hp = (a_hdr *) p_buf;
 	memset(hp, 0, A_HDR_SIZE);
 
-	memset(name, 0, sizeof(name));
-	memset(dates, 0, sizeof(dates));
+	memset(name, 0, sizeof (name));
+	memset(dates, 0, sizeof (dates));
 
 	/* get the rsrc file info - should exist ... */
 	if ((s_entry1 = s_entry->assoc) == NULL)
@@ -1285,7 +1282,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 		memcpy(entries, (p_buf + A_HDR_SIZE), nentries * A_ENTRY_SIZE);
 	} else {
 		/* have a vaild AppleSingle File */
-		memset(name, 0, sizeof(name));
+		memset(name, 0, sizeof (name));
 
 		/* get the rsrc file info - should exist ... */
 		if ((s_entry1 = s_entry->assoc) == NULL)
@@ -1332,7 +1329,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 				break;
 			case ID_FILEDATESI:
 				/* get file info */
-				dates =(unsigned char *)p_buf + d_getl(ep->offset);
+				dates = (unsigned char *)p_buf + d_getl(ep->offset);
 				/* get the correct Unix time */
 				if (ver == A_VERSION1) {
 					hfs_ent->crdate =
@@ -1440,7 +1437,7 @@ get_hfs_fe_info(hfs_info, name)
 		if (info.nlen != 0) {
 
 			hfs_info1 =
-			(struct hfs_info *)e_malloc(sizeof(struct hfs_info));
+			(struct hfs_info *)e_malloc(sizeof (struct hfs_info));
 			/* add this entry to the list */
 			hfs_info1->next = hfs_info;
 			hfs_info = hfs_info1;
@@ -1519,7 +1516,7 @@ get_hfs_sgi_info(hfs_info, name)
 
 	while (fread(&info, 1, SGI_SIZE, fp) != 0) {
 
-		hfs_info1 = (struct hfs_info *)e_malloc(sizeof(struct hfs_info));
+		hfs_info1 = (struct hfs_info *)e_malloc(sizeof (struct hfs_info));
 		/* add this entry to the list */
 		hfs_info1->next = hfs_info;
 		hfs_info = hfs_info1;
@@ -1570,7 +1567,7 @@ match_key(hfs_info, key)
 
 {
 	while (hfs_info) {
-		if (!strcasecmp(key, hfs_info->keyname))
+		if (strcasecmp(key, hfs_info->keyname) == 0)
 			return (hfs_info);
 		hfs_info = hfs_info->next;
 	}
@@ -1633,7 +1630,7 @@ get_fe_info(hname, dname, s_entry, ret)
 	int	ret;
 {
 	struct hfs_info	*hfs_info;
-	hfsdirent	*hfs_ent = s_entry->hfs_ent;;
+	hfsdirent	*hfs_ent = s_entry->hfs_ent;
 
 	/* cached finderinfo stored with parent directory */
 	hfs_info = s_entry->filedir->hfs_info;
@@ -1646,7 +1643,7 @@ get_fe_info(hname, dname, s_entry, ret)
 			s_entry->filedir->hfs_info = hfs_info;
 	}
 	if (ret != TYPE_NONE) {
-		char           *dn = dname;
+		char	*dn = dname;
 
 #ifdef _WIN32_TEST
 		/*
@@ -1655,12 +1652,12 @@ get_fe_info(hname, dname, s_entry, ret)
 		 * so we need do go a bit of win32 stuff
 		 * ...
 		 */
-		char            sname[1024],
-		                lname[1024];
+		char	sname[1024];
+		char	lname[1024];
 
 		cygwin32_conv_to_full_win32_path(s_entry->whole_name, lname);
 
-		if (GetShortPathName(lname, sname, sizeof(sname))) {
+		if (GetShortPathName(lname, sname, sizeof (sname))) {
 			if (dn = strrchr(sname, '\\'))
 				dn++;
 			else
@@ -1797,15 +1794,15 @@ get_sfm_info(hname, dname, s_entry, ret)
 	int	ret;
 {
 	sfm_info	info;	/* finderinfo struct */
-	int		num = -1;/* bytes read */
+	int		num = -1; /* bytes read */
 	hfsdirent	*hfs_ent = s_entry->hfs_ent;
 
-	num = read_info_file(hname, &info, sizeof(info));
+	num = read_info_file(hname, &info, sizeof (info));
 
 	/* check finder info is OK */
-	if (num == sizeof(info)
-		&& !memcmp((char *)info.afpi_Signature, (char *)sfm_magic, 4)
-		&& !memcmp((char *)info.afpi_Version, (char *)sfm_version, 4)) {
+	if (num == sizeof (info) &&
+		!memcmp((char *)info.afpi_Signature, (char *)sfm_magic, 4) &&
+		!memcmp((char *)info.afpi_Version, (char *)sfm_version, 4)) {
 		/* use Unix name */
 		hstrncpy((unsigned char *)(hfs_ent->name), dname, HFS_MAX_FLEN);
 
@@ -1833,7 +1830,7 @@ get_sfm_info(hname, dname, s_entry, ret)
  *
  *	Here we are dealing with actual HFS files - not some encoding
  *	we have to use a system call to get the finderinfo
- *	
+ *
  *	The file name here is the pseudo name for the resource fork
  */
 static int
@@ -1849,15 +1846,15 @@ get_xhfs_dir(hname, dname, s_entry, ret)
 	struct attrlist attrs;
 	int		i;
 
-	memset(&attrs, 0, sizeof(attrs));
+	memset(&attrs, 0, sizeof (attrs));
 
 	/* set flags we need to get info from getattrlist() */
 	attrs.bitmapcount = ATTR_BIT_MAP_COUNT;
-	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME
-				| ATTR_CMN_FNDRINFO ;
+	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME |
+				ATTR_CMN_FNDRINFO;
 
 	/* get the info */
-	err = getattrlist(hname, &attrs, &ainfo, sizeof(ainfo), 0);
+	err = getattrlist(hname, &attrs, &ainfo, sizeof (ainfo), 0);
 
 	if (err == 0) {
 		/*
@@ -1865,7 +1862,7 @@ get_xhfs_dir(hname, dname, s_entry, ret)
 		 * 'true' HFS directory ...
 		 */
 		err = 1;
-		for(i=0; i < sizeof(ainfo.info); i++) {
+		for (i = 0; i < sizeof (ainfo.info); i++) {
 			if (ainfo.info[i] != 0) {
 				err = 0;
 				break;
@@ -1899,7 +1896,7 @@ get_xhfs_dir(hname, dname, s_entry, ret)
  *
  *	Here we are dealing with actual HFS files - not some encoding
  *	we have to use a system call to get the finderinfo
- *	
+ *
  *	The file name here is the pseudo name for the resource fork
  */
 static int
@@ -1916,20 +1913,21 @@ get_xhfs_info(hname, dname, s_entry, ret)
 	int		i;
 	int		size;
 
-	memset(&attrs, 0, sizeof(attrs));
+	memset(&attrs, 0, sizeof (attrs));
 
 	/* set flags we need to get info from getattrlist() */
 	attrs.bitmapcount = ATTR_BIT_MAP_COUNT;
-	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME
-				| ATTR_CMN_FNDRINFO ;
+	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME |
+				ATTR_CMN_FNDRINFO;
 
 	/* get the info */
-	err = getattrlist(hname, &attrs, &ainfo, sizeof(ainfo), 0);
+	err = getattrlist(hname, &attrs, &ainfo, sizeof (ainfo), 0);
 
 	/* check finder info is OK */
 	if (err == 0) {
 
-		/* If the Finfo is blank and the resource file is empty,
+		/*
+		 * If the Finfo is blank and the resource file is empty,
 		 * then we assume it's not a 'true' HFS file ...
 		 * There will be not associated file if the resource fork
 		 * is empty
@@ -1937,7 +1935,7 @@ get_xhfs_info(hname, dname, s_entry, ret)
 
 		if (s_entry->assoc == NULL) {
 			err = 1;
-			for(i=0; i < sizeof(ainfo.info); i++) {
+			for (i = 0; i < sizeof (ainfo.info); i++) {
 				if (ainfo.info[i] != 0) {
 					err = 0;
 					break;
@@ -1960,7 +1958,7 @@ get_xhfs_info(hname, dname, s_entry, ret)
 			 * the source is HFS ... but we will just in case
 			 */
 			hfs_ent->crdate = d_getl((byte *)&ainfo.ctime.tv_sec);
-		
+
 			hfs_ent->mddate = d_getl((byte *)&ainfo.mtime.tv_sec);
 		}
 
@@ -2056,14 +2054,14 @@ set_root_info(name)
 
 	s_entry = root->self;
 
-	hfs_ent = (hfsdirent *) e_malloc(sizeof(hfsdirent));
-	memset(hfs_ent, 0, sizeof(hfsdirent));
+	hfs_ent = (hfsdirent *) e_malloc(sizeof (hfsdirent));
+	memset(hfs_ent, 0, sizeof (hfsdirent));
 
 	/* make sure root has a valid hfs_ent */
 	s_entry->hfs_ent = root->hfs_ent = hfs_ent;
 
 	/* search for correct type of root info data */
-	for (i=1; i<hfs_num; i++) {
+	for (i = 1; i < hfs_num; i++) {
 		if ((hfs_types[i].flags & PROBE) ||
 				(hfs_types[i].get_info == get_none_info))
 			continue;
@@ -2236,7 +2234,7 @@ get_hfs_rname(wname, dname, rname)
 					return (TYPE_NONE);
 				} else {
 					if ((p_num = read(p_fd, p_buf,
-							sizeof(p_buf))) <= 0) {
+							sizeof (p_buf))) <= 0) {
 						/*
 						 * can't read, or zero length
 						 * - give up
@@ -2285,49 +2283,49 @@ hfs_exclude(d_name)
 	char	*d_name;
 {
 	/* we don't exclude "." and ".." */
-	if (!strcmp(d_name, "."))
-		return 0;
-	if (!strcmp(d_name, ".."))
-		return 0;
+	if (strcmp(d_name, ".") == 0)
+		return (0);
+	if (strcmp(d_name, "..") == 0)
+		return (0);
 
 	/* do not add the following to our list of dir entries */
 	if (DO_CAP & hselect) {
 		/* CAP */
-		if (!strcmp(d_name, ".finderinfo"))
-			return 1;
-		if (!strcmp(d_name, ".resource"))
-			return 1;
-		if (!strcmp(d_name, ".ADeskTop"))
-			return 1;
-		if (!strcmp(d_name, ".IDeskTop"))
-			return 1;
-		if (!strcmp(d_name, "Network Trash Folder"))
-			return 1;
+		if (strcmp(d_name, ".finderinfo") == 0)
+			return (1);
+		if (strcmp(d_name, ".resource") == 0)
+			return (1);
+		if (strcmp(d_name, ".ADeskTop") == 0)
+			return (1);
+		if (strcmp(d_name, ".IDeskTop") == 0)
+			return (1);
+		if (strcmp(d_name, "Network Trash Folder") == 0)
+			return (1);
 		/*
 		 * special case when HFS volume is mounted using Linux's hfs_fs
 		 * Brad Midgley <brad@pht.com>
 		 */
-		if (!strcmp(d_name, ".rootinfo"))
-			return 1;
+		if (strcmp(d_name, ".rootinfo") == 0)
+			return (1);
 	}
 	if (DO_ESH & hselect) {
 		/* Helios EtherShare files */
-		if (!strcmp(d_name, ".rsrc"))
-			return 1;
-		if (!strcmp(d_name, ".Desktop"))
-			return 1;
-		if (!strcmp(d_name, ".DeskServer"))
-			return 1;
-		if (!strcmp(d_name, ".Label"))
-			return 1;
+		if (strcmp(d_name, ".rsrc") == 0)
+			return (1);
+		if (strcmp(d_name, ".Desktop") == 0)
+			return (1);
+		if (strcmp(d_name, ".DeskServer") == 0)
+			return (1);
+		if (strcmp(d_name, ".Label") == 0)
+			return (1);
 	}
 	if (DO_DBL & hselect) {
 	/* Apple Double */
 		/*
 		 * special case when HFS volume is mounted using Linux's hfs_fs
 		 */
-		if (!strcmp(d_name, "%RootInfo"))
-			return 1;
+		if (strcmp(d_name, "%RootInfo") == 0)
+			return (1);
 		/*
 		 * have to be careful here - a filename starting with '%'
 		 * may be vaild if the next two letters are a hex character -
@@ -2336,46 +2334,46 @@ hfs_exclude(d_name)
 		 */
 		if (*d_name == '%')
 			if (hex2char(d_name) == 0)
-				return 1;
+				return (1);
 	}
 	if (DO_NETA & hselect) {
-		if (!strcmp(d_name, ".AppleDouble"))
-			return 1;
-		if (!strcmp(d_name, ".AppleDesktop"))
-			return 1;
+		if (strcmp(d_name, ".AppleDouble") == 0)
+			return (1);
+		if (strcmp(d_name, ".AppleDesktop") == 0)
+			return (1);
 	}
 	if ((DO_FEU & hselect) || (DO_FEL & hselect)) {
 		/* PC Exchange */
-		if (!strcmp(d_name, "RESOURCE.FRK"))
-			return 1;
-		if (!strcmp(d_name, "FINDER.DAT"))
-			return 1;
-		if (!strcmp(d_name, "DESKTOP"))
-			return 1;
-		if (!strcmp(d_name, "FILEID.DAT"))
-			return 1;
-		if (!strcmp(d_name, "resource.frk"))
-			return 1;
-		if (!strcmp(d_name, "finder.dat"))
-			return 1;
-		if (!strcmp(d_name, "desktop"))
-			return 1;
-		if (!strcmp(d_name, "fileid.dat"))
-			return 1;
+		if (strcmp(d_name, "RESOURCE.FRK") == 0)
+			return (1);
+		if (strcmp(d_name, "FINDER.DAT") == 0)
+			return (1);
+		if (strcmp(d_name, "DESKTOP") == 0)
+			return (1);
+		if (strcmp(d_name, "FILEID.DAT") == 0)
+			return (1);
+		if (strcmp(d_name, "resource.frk") == 0)
+			return (1);
+		if (strcmp(d_name, "finder.dat") == 0)
+			return (1);
+		if (strcmp(d_name, "desktop") == 0)
+			return (1);
+		if (strcmp(d_name, "fileid.dat") == 0)
+			return (1);
 	}
 	if (DO_SGI & hselect) {
 		/* SGI */
-		if (!strcmp(d_name, ".HSResource"))
-			return 1;
-		if (!strcmp(d_name, ".HSancillary"))
-			return 1;
+		if (strcmp(d_name, ".HSResource") == 0)
+			return (1);
+		if (strcmp(d_name, ".HSancillary") == 0)
+			return (1);
 	}
 	if (DO_DAVE & hselect) {
 		/* DAVE */
-		if (!strcmp(d_name, "resource.frk"))
-			return 1;
-		if (!strcmp(d_name, "DesktopFolderDB"))
-			return 1;
+		if (strcmp(d_name, "resource.frk") == 0)
+			return (1);
+		if (strcmp(d_name, "DesktopFolderDB") == 0)
+			return (1);
 	}
 #ifndef _WIN32
 	/*
@@ -2385,26 +2383,26 @@ hfs_exclude(d_name)
 	 */
 	if (DO_SFM & hselect) {
 		/* SFM */
-		char           *dn = strrchr(d_name, ':');
+		char	*dn = strrchr(d_name, ':');
 
 		if (dn) {
-			if (!strcmp(dn, ":Afp_Resource"))
-				return 1;
-			if (!strcmp(dn, ":Comments"))
-				return 1;
-			if (!strcmp(dn, ":Afp_AfpInfo"))
-				return 1;
+			if (strcmp(dn, ":Afp_Resource") == 0)
+				return (1);
+			if (strcmp(dn, ":Comments") == 0)
+				return (1);
+			if (strcmp(dn, ":Afp_AfpInfo") == 0)
+				return (1);
 		}
 	}
 #endif	/* _WIN32 */
 
 	if (DO_XDBL & hselect) {
 		/* XDB */
-		if(!strncmp(d_name, "._", 2))
-			return 1;
+		if (strncmp(d_name, "._", 2) == 0)
+			return (1);
 	}
 
-	return 0;
+	return (0);
 }
 
 /*
@@ -2451,7 +2449,7 @@ hfs_init(name, fdflags, hfs_select)
 
 	/* setup number of Unix/HFS filetype - we may wish to not bother */
 	if (hfs_select) {
-		hfs_num = sizeof(hfs_types) / sizeof(struct hfs_type);
+		hfs_num = sizeof (hfs_types) / sizeof (struct hfs_type);
 
 		/*
 		 * code below needs to be tidied up
@@ -2485,7 +2483,7 @@ hfs_init(name, fdflags, hfs_select)
 	map_num = last_ent = 0;
 
 	/* allocate memory for the default entry */
-	defmap = (afpmap *) e_malloc(sizeof(afpmap));
+	defmap = (afpmap *) e_malloc(sizeof (afpmap));
 
 	/* set default values */
 	defmap->extn = DEFMATCH;
@@ -2520,7 +2518,7 @@ hfs_init(name, fdflags, hfs_select)
 	if ((fp = fopen(name, "r")) == NULL)
 		perr("unable to open mapping file");
 
-	map = (afpmap **) e_malloc(NUMMAP * sizeof(afpmap *));
+	map = (afpmap **) e_malloc(NUMMAP * sizeof (afpmap *));
 
 	/* read afpfile line by line */
 	while (fgets(buf, PATH_MAX, fp) != NULL) {
@@ -2533,12 +2531,12 @@ hfs_init(name, fdflags, hfs_select)
 		/* increase list size if needed */
 		if (map_num == count) {
 			count += NUMMAP;
-			map = (afpmap **)realloc(map, count * sizeof(afpmap *));
+			map = (afpmap **)realloc(map, count * sizeof (afpmap *));
 			if (map == NULL)
 				perr("not enough memory");
 		}
 		/* allocate memory for this entry */
-		amap = (afpmap *) e_malloc(sizeof(afpmap));
+		amap = (afpmap *) e_malloc(sizeof (afpmap));
 
 		t = amap->type;
 		c = amap->creator;
@@ -2566,7 +2564,7 @@ hfs_init(name, fdflags, hfs_select)
 		amap->fdflags = fdflags;
 
 		/* see if we have the default creator/type */
-		if (!strcmp(amap->extn, DEFMATCH)) {
+		if (strcmp(amap->extn, DEFMATCH) == 0) {
 			/* get rid of the old default */
 			free(defmap);
 			/* make this the default */
@@ -2583,7 +2581,7 @@ hfs_init(name, fdflags, hfs_select)
 
 	/* free up some memory */
 	if (map_num != count) {
-		map = (afpmap **) realloc(map, map_num * sizeof(afpmap *));
+		map = (afpmap **) realloc(map, map_num * sizeof (afpmap *));
 		if (map == NULL)
 			perr("not enough memory");
 	}
@@ -2636,8 +2634,8 @@ map_ext(name, type, creator, fdflags, whole_name)
 			amap = map[last_ent];
 
 			/* compare the end of the filename */
-/*			if (!strcmp((name+len - amap->elen), amap->extn)) { */
-			if (!strcasecmp((name+len - amap->elen), amap->extn)) {
+/*			if (strcmp((name+len - amap->elen), amap->extn) == 0) { */
+			if (strcasecmp((name+len - amap->elen), amap->extn) == 0) {
 				/* set the required info */
 				*type = amap->type;
 				*creator = amap->creator;

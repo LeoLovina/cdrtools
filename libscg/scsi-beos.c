@@ -1,7 +1,7 @@
-/* @(#)scsi-beos.c	1.21 02/10/19 Copyright 1998 J. Schilling */
+/* @(#)scsi-beos.c	1.22 04/01/15 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-beos.c	1.21 02/10/19 Copyright 1998 J. Schilling";
+	"@(#)scsi-beos.c	1.22 04/01/15 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for the BeOS user-land raw SCSI implementation.
@@ -30,9 +30,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 
@@ -43,7 +43,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.21";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.22";	/* The version for this transport*/
 
 /*
  * There are also defines for:
@@ -58,7 +58,7 @@ LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.21";	/* The version for this tr
  */
 
 /* nasty hack to avoid broken def of bool in SupportDefs.h */
-#define _SUPPORT_DEFS_H
+#define	_SUPPORT_DEFS_H
 
 #ifndef _SYS_TYPES_H
 typedef unsigned long			ulong;
@@ -219,7 +219,7 @@ scgo_close(scgp)
 	struct _fdmap_	*f;
 	struct _fdmap_	*fnext;
 
-	for (f = (struct _fdmap_ *)scgp->local; f; f=fnext) {
+	for (f = (struct _fdmap_ *)scgp->local; f; f = fnext) {
 		scgp->local = 0;
 		fnext = f->next;
 		close(f->fd);
@@ -267,9 +267,9 @@ scgo_havebus(scgp, busno)
 	char		buf[128];
 
 	if (busno < 8)
-		js_snprintf(buf, sizeof(buf), "/dev/bus/scsi/%d", busno);
+		js_snprintf(buf, sizeof (buf), "/dev/bus/scsi/%d", busno);
 	else
-		js_snprintf(buf, sizeof(buf), "/dev/disk/ide/atapi/%d", busno-8);
+		js_snprintf(buf, sizeof (buf), "/dev/disk/ide/atapi/%d", busno-8);
 	if (stat(buf, &sb))
 		return (FALSE);
 	return (TRUE);
@@ -286,24 +286,24 @@ scgo_fileno(scgp, busno, tgt, tlun)
 	char		buf[128];
 	int		fd;
 
-	for (f = (struct _fdmap_ *)scgp->local; f; f=f->next) {
+	for (f = (struct _fdmap_ *)scgp->local; f; f = f->next) {
 		if (f->bus == busno && f->targ == tgt && f->lun == tlun)
 			return (f->fd);
 	}
 	if (busno < 8) {
-		js_snprintf(buf, sizeof(buf),
+		js_snprintf(buf, sizeof (buf),
 					"/dev/bus/scsi/%d/%d/%d/raw",
 					busno, tgt, tlun);
 	} else {
 		char *tgtstr = (tgt == 0) ? "master" : (tgt == 1) ? "slave" : "dummy";
-		js_snprintf(buf, sizeof(buf),
+		js_snprintf(buf, sizeof (buf),
 					"/dev/disk/ide/atapi/%d/%s/%d/raw",
 					busno-8, tgtstr, tlun);
 	}
 	fd = open(buf, 0);
 
-	if (fd >=0 ) {
-		f = (struct _fdmap_ *) malloc(sizeof(struct _fdmap_));
+	if (fd >= 0) {
+		f = (struct _fdmap_ *) malloc(sizeof (struct _fdmap_));
 		f->bus = busno;
 		f->targ = tgt;
 		f->lun = tlun;
@@ -369,7 +369,7 @@ scgo_send(scgp)
 			scgp->fd, rdc.command[0], rdc.command_length,
 			rdc.data_length, rdc.sense_data_length);
 	}
-	e = ioctl(scgp->fd, B_RAW_DEVICE_COMMAND, &rdc, sizeof(rdc));
+	e = ioctl(scgp->fd, B_RAW_DEVICE_COMMAND, &rdc, sizeof (rdc));
 	sp->ux_errno = 0;
 	if (!e) {
 		cam_error = rdc.cam_status;

@@ -1,7 +1,7 @@
-/* @(#)fifo.c	1.41 02/11/22 Copyright 1989,1997-2002 J. Schilling */
+/* @(#)fifo.c	1.47 04/03/02 Copyright 1989,1997-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)fifo.c	1.41 02/11/22 Copyright 1989,1997-2002 J. Schilling";
+	"@(#)fifo.c	1.47 04/03/02 Copyright 1989,1997-2004 J. Schilling";
 #endif
 /*
  *	A "fifo" that uses shared memory between two processes
@@ -10,7 +10,7 @@ static	char sccsid[] =
  *	and a proposal from Finn Arne Gangstad <finnag@guardian.no>
  *	who had the idea to use a ring buffer to handle average size chunks.
  *
- *	Copyright (c) 1989,1997-2002 J. Schilling
+ *	Copyright (c) 1989,1997-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	DEBUG
@@ -73,12 +73,13 @@ static	char sccsid[] =
 #include <schily.h>
 
 #include "cdrecord.h"
+#include "xio.h"
 
 #ifdef DEBUG
 #ifdef XDEBUG
 FILE	*ef;
-#define	USDEBUG1	if (debug) {if(s == owner_reader)fprintf(ef, "r");else fprintf(ef, "w");fflush(ef);}
-#define	USDEBUG2	if (debug) {if(s == owner_reader)fprintf(ef, "R");else fprintf(ef, "W");fflush(ef);}
+#define	USDEBUG1	if (debug) {if (s == owner_reader) fprintf(ef, "r"); else fprintf(ef, "w"); fflush(ef); }
+#define	USDEBUG2	if (debug) {if (s == owner_reader) fprintf(ef, "R"); else fprintf(ef, "W"); fflush(ef); }
 #else
 #define	USDEBUG1
 #define	USDEBUG2
@@ -90,13 +91,13 @@ FILE	*ef;
 #define	USDEBUG2
 #endif
 
-#define palign(x, a)	(((char *)(x)) + ((a) - 1 - (((UIntptr_t)((x)-1))%(a))))
+#define	palign(x, a)	(((char *)(x)) + ((a) - 1 - (((UIntptr_t)((x)-1))%(a))))
 
 typedef enum faio_owner {
-	owner_none,		/* Unused in real life			     */
-	owner_writer,		/* owned by process that writes into FIFO    */
-	owner_faio,		/* Intermediate state when buf still in use  */
-	owner_reader		/* owned by process that reads from FIFO     */
+	owner_none,		/* Unused in real life			    */
+	owner_writer,		/* owned by process that writes into FIFO   */
+	owner_faio,		/* Intermediate state when buf still in use */
+	owner_reader		/* owned by process that reads from FIFO    */
 } fowner_t;
 
 char	*onames[] = {
@@ -146,20 +147,20 @@ struct faio_stats {
 LOCAL	char	*buf;
 LOCAL	char	*bufbase;
 LOCAL	char	*bufend;
-LOCAL	long	buflen;
+LOCAL	long	buflen;			/* The size of the FIFO buffer */
 
 extern	int	debug;
 extern	int	lverbose;
 
 EXPORT	void	init_fifo	__PR((long));
 #ifdef	USE_MMAP
-LOCAL	char*	mkshare		__PR((int size));
+LOCAL	char	*mkshare	__PR((int size));
 #endif
 #ifdef	USE_USGSHM
-LOCAL	char*	mkshm		__PR((int size));
+LOCAL	char	*mkshm		__PR((int size));
 #endif
 #ifdef	USE_OS2SHM
-LOCAL	char*	mkos2shm	__PR((int size));
+LOCAL	char	*mkos2shm	__PR((int size));
 #endif
 
 EXPORT	BOOL	init_faio	__PR((track_t *trackp, int));
@@ -169,8 +170,8 @@ EXPORT	int	wait_faio	__PR((void));
 LOCAL	void	faio_reader	__PR((track_t *trackp));
 LOCAL	void	faio_read_track	__PR((track_t *trackp));
 LOCAL	void	faio_wait_on_buffer __PR((faio_t *f, fowner_t s,
-					  unsigned long delay,
-					  unsigned long max_wait));
+					unsigned long delay,
+					unsigned long max_wait));
 LOCAL	int	faio_read_segment __PR((int fd, faio_t *f, track_t *track, long secno, int len));
 LOCAL	faio_t	*faio_ref	__PR((int n));
 EXPORT	int	faio_read_buf	__PR((int f, char *bp, int size));
@@ -317,7 +318,7 @@ mkos2shm(size)
 	 * memory segment to 0x3fa000 (aprox. 4MBytes). Using OS/2 native API we have
 	 * no such restriction so I decided to use it allowing fifos of arbitrary size.
 	 */
-	if(DosAllocSharedMem(&addr,NULL,size,0X100L | 0x1L | 0x2L | 0x10L))
+	if (DosAllocSharedMem(&addr, NULL, size, 0X100L | 0x1L | 0x2L | 0x10L))
 		comerr("DosAllocSharedMem() failed\n");
 
 	if (debug) errmsgno(EX_BAD, "shared memory allocated attached at: %p size %d\n",
@@ -329,10 +330,10 @@ mkos2shm(size)
 
 LOCAL	int	faio_buffers;
 LOCAL	int	faio_buf_size;
-LOCAL	int	buf_idx = 0;		/* Initialize to fix an Amiga bug    */
-LOCAL	int	buf_idx_reader = 0;	/* Separate var to allow vfork()     */
+LOCAL	int	buf_idx = 0;		/* Initialize to fix an Amiga bug   */
+LOCAL	int	buf_idx_reader = 0;	/* Separate var to allow vfork()    */
 					/* buf_idx_reader is for the process */
-					/* that fills the FIFO		     */
+					/* that fills the FIFO		    */
 LOCAL	pid_t	faio_pid;
 LOCAL	BOOL	faio_didwait;
 
@@ -346,7 +347,7 @@ LOCAL	BOOL	faio_didwait;
 #define	__vfork_resume() ix_vfork_resume()
 
 #else	/* !AMIGA */
-#define __vfork_resume()
+#define	__vfork_resume()
 #endif
 
 
@@ -356,7 +357,7 @@ LOCAL	BOOL	faio_didwait;
 EXPORT BOOL
 init_faio(trackp, bufsize)
 	track_t	*trackp;
-	int	bufsize;
+	int	bufsize;	/* The size of a single transfer buffer */
 {
 	int	n;
 	faio_t	*f;
@@ -381,16 +382,16 @@ init_faio(trackp, bufsize)
 	 * properly page aligned.
 	 */
 	bufsize = roundup(bufsize, pagesize);
-	faio_buffers = (buflen - sizeof(*sp)) / bufsize;
-	EDEBUG(("bufsize: %d buffers: %d hdrsize %ld\n", bufsize, faio_buffers, (long)faio_buffers * sizeof(struct faio)));
+	faio_buffers = (buflen - sizeof (*sp)) / bufsize;
+	EDEBUG(("bufsize: %d buffers: %d hdrsize %ld\n", bufsize, faio_buffers, (long)faio_buffers * sizeof (struct faio)));
 
 	/*
 	 * Reduce buffer space by header space.
 	 */
-	n = sizeof(*sp) + faio_buffers * sizeof(struct faio);
+	n = sizeof (*sp) + faio_buffers * sizeof (struct faio);
 	n = roundup(n, pagesize);
 	faio_buffers = (buflen-n) / bufsize;
-	EDEBUG(("bufsize: %d buffers: %d hdrsize %ld\n", bufsize, faio_buffers, (long)faio_buffers * sizeof(struct faio)));
+	EDEBUG(("bufsize: %d buffers: %d hdrsize %ld\n", bufsize, faio_buffers, (long)faio_buffers * sizeof (struct faio)));
 
 	if (faio_buffers < MIN_BUFFERS) {
 		errmsgno(EX_BAD,
@@ -403,7 +404,7 @@ init_faio(trackp, bufsize)
 		printf("Using %d buffers of %d bytes.\n", faio_buffers, faio_buf_size);
 
 	f = (faio_t *)buf;
-	base = buf + roundup(sizeof(*sp) + faio_buffers * sizeof(struct faio),
+	base = buf + roundup(sizeof (*sp) + faio_buffers * sizeof (struct faio),
 				pagesize);
 
 	for (n = 0; n < faio_buffers; n++, f++, base += bufsize) {
@@ -428,7 +429,7 @@ init_faio(trackp, bufsize)
 		raisepri(1);		/* almost max priority */
 
 #ifdef USE_OS2SHM
-		DosGetSharedMem(buf,3);	/* PAG_READ|PAG_WRITE */
+		DosGetSharedMem(buf, 3); /* PAG_READ|PAG_WRITE */
 #endif
 		/* Ignoring SIGALRM cures the SCO usleep() bug */
 /*		signal(SIGALRM, SIG_IGN);*/
@@ -436,11 +437,25 @@ init_faio(trackp, bufsize)
 		faio_reader(trackp);
 		/* NOTREACHED */
 	} else {
+#ifdef	__needed__
+		Uint	t;
+#endif
+
 		faio_didwait = FALSE;
 
+		/*
+		 * XXX We used to close all track files in the foreground
+		 * XXX process. This was not correct before we used "xio"
+		 * XXX and with "xio" it will start to fail because we need
+		 * XXX the fd handles for the faio_get_buf() function.
+		 */
+#ifdef	__needed__
 		/* close all file-descriptors that only the child will use */
-		for (n = 1; n <= trackp->tracks; n++)
-			close(trackp[n].f);
+		for (t = 1; t <= trackp->tracks; t++) {
+			if (trackp[t].xfp != NULL)
+				xclose(trackp[t].xfp);
+		}
+#endif
 	}
 
 	return (TRUE);
@@ -504,14 +519,14 @@ faio_reader(trackp)
 	track_t	*trackp;
 {
 	/* This function should not return, but _exit. */
-	int	trackno;
+	Uint	trackno;
 
 	if (debug)
 		printf("\nfaio_reader starting\n");
 
 	for (trackno = 1; trackno <= trackp->tracks; trackno++) {
 		if (debug)
-			printf("\nfaio_reader reading track %d\n", trackno);
+			printf("\nfaio_reader reading track %u\n", trackno);
 		faio_read_track(&trackp[trackno]);
 	}
 	sp->done++;
@@ -546,7 +561,7 @@ LOCAL void
 faio_read_track(trackp)
 	track_t *trackp;
 {
-	int	fd = trackp->f;
+	int	fd = -1;
 	int	bytespt = trackp->secsize * trackp->secspt;
 	int	secspt = trackp->secspt;
 	int	l;
@@ -555,11 +570,14 @@ faio_read_track(trackp)
 	tsize_t	bytes_read = (tsize_t)0;
 	long	bytes_to_read;
 
+	if (trackp->xfp != NULL)
+		fd = xfileno(trackp->xfp);
+
 	if (bytespt > faio_buf_size) {
 		comerrno(EX_BAD,
 		"faio_read_track fatal: secsize %d secspt %d, bytespt(%d) > %d !!\n",
-			 trackp->secsize, trackp->secspt, bytespt,
-			 faio_buf_size);
+			trackp->secsize, trackp->secspt, bytespt,
+			faio_buf_size);
 	}
 
 	do {
@@ -580,15 +598,21 @@ faio_read_track(trackp)
 		secno += secspt;
 	} while (tracksize < 0 || bytes_read < tracksize);
 
-	close(fd);	/* Don't keep files open longer than neccesary */
+	xclose(trackp->xfp);	/* Don't keep files open longer than neccesary */
 }
 
 LOCAL void
+#ifdef	PROTOTYPES
+faio_wait_on_buffer(faio_t *f, fowner_t s,
+			unsigned long delay,
+			unsigned long max_wait)
+#else
 faio_wait_on_buffer(f, s, delay, max_wait)
 	faio_t	*f;
 	fowner_t s;
 	unsigned long delay;
 	unsigned long max_wait;
+#endif
 {
 	unsigned long max_loops;
 
@@ -613,7 +637,7 @@ faio_wait_on_buffer(f, s, delay, max_wait)
 	if (debug) {
 		errmsgno(EX_BAD,
 		"%lu microseconds passed waiting for %d current: %d idx: %ld\n",
-		max_wait, s, f->owner, (long)(f - faio_ref(0))/sizeof(*f));
+		max_wait, s, f->owner, (long)(f - faio_ref(0))/sizeof (*f));
 	}
 	comerrno(EX_BAD, "faio_wait_on_buffer for %s timed out.\n",
 	(s > owner_reader || s < owner_none) ? "bad_owner" : onames[s-owner_none]);
@@ -640,7 +664,7 @@ faio_read_segment(fd, f, trackp, secno, len)
 
 	sp->puts++;
 
-	return l;
+	return (l);
 }
 
 EXPORT int
@@ -655,7 +679,7 @@ faio_read_buf(fd, bp, size)
 	if (len > 0) {
 		movebytes(bufp, bp, len);
 	}
-	return len;
+	return (len);
 }
 
 EXPORT int
@@ -709,7 +733,7 @@ again:
 	*bpp = f->bufp;
 	if (--f->users <= 0)
 		f->owner = owner_faio;
-	return len;
+	return (len);
 }
 
 EXPORT void
@@ -730,8 +754,9 @@ fifo_percent(addone)
 {
 	int	percent;
 
-	if (buflen == 0L)
+	if (sp == NULL)	/* We might not use a FIFO */
 		return (-1);
+
 	if (sp->done)
 		return (100);
 	percent = (100*(sp->puts + 1 - sp->gets)/faio_buffers);

@@ -1,8 +1,8 @@
-/* @(#)movebytes.c	1.12 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)movebytes.c	1.13 03/06/15 Copyright 1985, 1989, 1995-2003 J. Schilling */
 /*
  *	move data
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1989, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,18 +15,19 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <standard.h>
 #include <align.h>
 #include <schily.h>
 
-#define	DO8(a)	a;a;a;a;a;a;a;a;
+#define	DO8(a)	a; a; a; a; a; a; a; a;
 
-char *movebytes(fromv, tov, cnt)
+EXPORT char *
+movebytes(fromv, tov, cnt)
 	const void	*fromv;
 	void		*tov;
 	int		cnt;
@@ -46,12 +47,12 @@ char *movebytes(fromv, tov, cnt)
 		 * source is on higher adresses than destination:
 		 *	move bytes forwards
 		 */
-		if (n >= (int)(8 * sizeof(long))) {
+		if (n >= (int)(8 * sizeof (long))) {
 			if (l2aligned(from, to)) {
 				register const long *froml = (const long *)from;
 				register long *tol = (long *)to;
 				register int rem = n % (8 * sizeof (long));
-			
+
 				n /= (8 * sizeof (long));
 				do {
 					DO8 (*tol++ = *froml++);
@@ -89,7 +90,7 @@ char *movebytes(fromv, tov, cnt)
 		to += n;
 		from += n;
 		ep = to;
-		if (n >= (int)(8 * sizeof(long))) {
+		if (n >= (int)(8 * sizeof (long))) {
 			if (l2aligned(from, to)) {
 				register const long *froml = (const long *)from;
 				register long *tol = (long *)to;

@@ -1,4 +1,4 @@
-/* @(#)scsi_cmds.h	1.10 02/07/08 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)scsi_cmds.h	1.11 03/03/02 Copyright 1998,1999 Heiko Eissfeldt */
 /* header file for scsi_cmds.c */
 
 extern unsigned char *cmd;
@@ -21,8 +21,10 @@ int ReadCdda12Matsushita __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned 
 int ReadCdda12 __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SecorBurstVal ));
 int ReadCdda10 __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SecorBurstVal ));
 int ReadStandard __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SctorBurstVal ));
+int ReadStandardData __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SctorBurstVal ));
 int ReadCddaFallbackMMC __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SctorBurstVal ));
 int ReadCddaSubSony __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
+int ReadCddaSub96Sony __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
 int ReadCddaSubMMC12 __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
 unsigned ReadTocSony __PR(( SCSI *scgp ));
 unsigned ReadTocMMC __PR(( SCSI *scgp ));

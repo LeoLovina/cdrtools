@@ -1,8 +1,8 @@
-/* @(#)fexec.c	1.21 02/06/08 Copyright 1985 J. Schilling */
+/* @(#)fexec.c	1.24 04/06/06 Copyright 1985, 1995-2004 J. Schilling */
 /*
  *	Execute a program with stdio redirection
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1995-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -46,12 +46,6 @@
 
 #define	MAX_F_ARGS	16
 
-#ifdef	__EMX__
-#define	PATH_ENV_DELIM	';'
-#else
-#define	PATH_ENV_DELIM	':'
-#endif
-
 extern	char **environ;
 
 LOCAL void	 fdcopy __PR((int, int));
@@ -60,9 +54,11 @@ LOCAL const char *chkname __PR((const char *, const char *));
 LOCAL const char *getpath __PR((char * const *));
 
 #ifdef	PROTOTYPES
-int fexecl(const char *name, FILE *in, FILE *out, FILE *err, ...)
+EXPORT int
+fexecl(const char *name, FILE *in, FILE *out, FILE *err, ...)
 #else
-int fexecl(name, in, out, err, va_alist)
+EXPORT int
+fexecl(name, in, out, err, va_alist)
 	char	*name;
 	FILE	*in;
 	FILE	*out;
@@ -90,7 +86,7 @@ int fexecl(name, in, out, err, va_alist)
 	if (ac < MAX_F_ARGS) {
 		pav = av = xav;
 	} else {
-		pav = av = (char **)malloc((ac+1)*sizeof(char *));
+		pav = av = (char **)malloc((ac+1)*sizeof (char *));
 		if (av == 0)
 			return (-1);
 	}
@@ -113,9 +109,11 @@ int fexecl(name, in, out, err, va_alist)
 }
 
 #ifdef	PROTOTYPES
-int fexecle(const char *name, FILE *in, FILE *out, FILE *err, ...)
+EXPORT int
+fexecle(const char *name, FILE *in, FILE *out, FILE *err, ...)
 #else
-int fexecle(name, in, out, err, va_alist)
+EXPORT int
+fexecle(name, in, out, err, va_alist)
 	char	*name;
 	FILE	*in;
 	FILE	*out;
@@ -145,7 +143,7 @@ int fexecle(name, in, out, err, va_alist)
 	if (ac < MAX_F_ARGS) {
 		pav = av = xav;
 	} else {
-		pav = av = (char **)malloc((ac+1)*sizeof(char *));
+		pav = av = (char **)malloc((ac+1)*sizeof (char *));
 		if (av == 0)
 			return (-1);
 	}
@@ -167,17 +165,19 @@ int fexecle(name, in, out, err, va_alist)
 	return (ret);
 }
 
-int fexecv(name, in, out, err, ac, av)
+EXPORT int
+fexecv(name, in, out, err, ac, av)
 	const char *name;
 	FILE *in, *out, *err;
 	int ac;
 	char *av[];
 {
 	av[ac] = NULL;			/*  force list to be null terminated */
-	return fexecve (name, in, out, err, av, environ);
+	return (fexecve(name, in, out, err, av, environ));
 }
 
-int fexecve(name, in, out, err, av, env)
+EXPORT int
+fexecve(name, in, out, err, av, env)
 	const char *name;
 	FILE *in, *out, *err;
 	char * const av[], * const env[];
@@ -194,7 +194,7 @@ int fexecve(name, in, out, err, av, env)
 	int	f[3];
 	int	errsav;
 #endif
-	
+
 	fflush(out);
 	fflush(err);
 	fin  = fdown(in);
@@ -212,8 +212,8 @@ int fexecve(name, in, out, err, av, env)
 
 	} else if ((path = getpath(env)) == NULL) {
 		ret = exec_env(name, fin, fout, ferr, av, env);
-		if ((ret == ENOFILE) && strlen (name) <= (sizeof(nbuf) - 6)) {
-			strcatl(nbuf, "/bin/", name, NULL);
+		if ((ret == ENOFILE) && strlen(name) <= (sizeof (nbuf) - 6)) {
+			strcatl(nbuf, "/bin/", name, (char *)NULL);
 			ret = exec_env(nbuf, fin, fout, ferr, av, env);
 			if (ret == EMISSDIR)
 				ret = ENOFILE;
@@ -221,19 +221,21 @@ int fexecve(name, in, out, err, av, env)
 	} else {
 		int	nlen = strlen(name);
 
-		for(;;) {
+		for (;;) {
 			np = nbuf;
 			/*
 			 * JOS always uses ':' as PATH Environ separator
 			 */
-			while (*path != ':' && *path != '\0'
-			    && np < &nbuf[MAXPATHNAME-nlen-2])
-  				*np++ = *path++;
+			while (*path != ':' && *path != '\0' &&
+				np < &nbuf[MAXPATHNAME-nlen-2]) {
+
+				*np++ = *path++;
+			}
 			*np = '\0';
 			if (*nbuf == '\0')
-				strcatl(nbuf, name, NULL);
+				strcatl(nbuf, name, (char *)NULL);
 			else
-				strcatl(nbuf, nbuf, "/", name, NULL);
+				strcatl(nbuf, nbuf, "/", name, (char *)NULL);
 			ret = exec_env(nbuf, fin, fout, ferr, av, env);
 			if (ret == EMISSDIR)
 				ret = ENOFILE;
@@ -242,7 +244,7 @@ int fexecve(name, in, out, err, av, env)
 			path++;
 		}
 	}
-	return(ret);
+	return (ret);
 
 #else	/* JOS */
 
@@ -270,7 +272,7 @@ int fexecve(name, in, out, err, av, env)
 		close(fout);
 	if (ferr != 2)
 		close(ferr);
-	
+
 	/*
 	 * If name contains a pathdelimiter ('/' on unix)
 	 * or name is too long ...
@@ -281,28 +283,30 @@ int fexecve(name, in, out, err, av, env)
 #else
 	if (strchr(name, '/')) {
 #endif
-		ret = execve (name, av, env);
+		ret = execve(name, av, env);
 
 	} else if ((path = getpath(env)) == NULL) {
-		ret = execve (name, av, env);
-		if ((geterrno() == ENOENT) && strlen (name) <= (sizeof(nbuf) - 6)) {
-			strcatl(nbuf, "/bin/", name, NULL);
-			ret = execve (nbuf, av, env);
+		ret = execve(name, av, env);
+		if ((geterrno() == ENOENT) && strlen(name) <= (sizeof (nbuf) - 6)) {
+			strcatl(nbuf, "/bin/", name, (char *)NULL);
+			ret = execve(nbuf, av, env);
 		}
 	} else {
 		int	nlen = strlen(name);
 
-		for(;;) {
+		for (;;) {
 			np = nbuf;
-			while (*path != PATH_ENV_DELIM && *path != '\0'
-			    && np < &nbuf[MAXPATHNAME-nlen-2])
-  				*np++ = *path++;
+			while (*path != PATH_ENV_DELIM && *path != '\0' &&
+				np < &nbuf[MAXPATHNAME-nlen-2]) {
+
+				*np++ = *path++;
+			}
 			*np = '\0';
 			if (*nbuf == '\0')
-				strcatl(nbuf, name, NULL);
+				strcatl(nbuf, name, (char *)NULL);
 			else
-				strcatl(nbuf, nbuf, "/", name, NULL);
-			ret = execve (nbuf, av, env);
+				strcatl(nbuf, nbuf, "/", name, (char *)NULL);
+			ret = execve(nbuf, av, env);
 			if (geterrno() != ENOENT || *path == '\0')
 				break;
 			path++;
@@ -313,30 +317,31 @@ int fexecve(name, in, out, err, av, env)
 	if (ferr != 2) {
 		fdmove(2, ferr);
 		fdmove(o[2], 2);
-		if(f[2] == 0)
+		if (f[2] == 0)
 			fcntl(2, F_SETFD, 0);
 	}
 	if (fout != 1) {
 		fdmove(1, fout);
 		fdmove(o[1], 1);
-		if(f[1] == 0)
+		if (f[1] == 0)
 			fcntl(1, F_SETFD, 0);
 	}
 	if (fin != 0) {
 		fdmove(0, fin);
 		fdmove(o[0], 0);
-		if(f[0] == 0)
+		if (f[0] == 0)
 			fcntl(0, F_SETFD, 0);
 	}
 	seterrno(errsav);
-	return(ret);
+	return (ret);
 
 #endif	/* JOS */
 }
 
 #ifndef	JOS
 
-LOCAL void fdcopy(fd1, fd2)
+LOCAL void
+fdcopy(fd1, fd2)
 	int	fd1;
 	int	fd2;
 {
@@ -344,7 +349,8 @@ LOCAL void fdcopy(fd1, fd2)
 	fcntl(fd1, F_DUPFD, fd2);
 }
 
-LOCAL void fdmove(fd1, fd2)
+LOCAL void
+fdmove(fd1, fd2)
 	int	fd1;
 	int	fd2;
 {
@@ -356,16 +362,17 @@ LOCAL void fdmove(fd1, fd2)
 
 /*----------------------------------------------------------------------------
 |
-|	get PATH from env 
+|	get PATH from env
 |
 +----------------------------------------------------------------------------*/
 
-LOCAL const char *getpath(env)
+LOCAL const char *
+getpath(env)
 	char	* const *env;
 {
 	char * const *p = env;
 	const char *p2;
- 
+
 	if (p != NULL) {
 		while (*p != NULL) {
 			if ((p2 = chkname("PATH", *p)) != NULL)
@@ -384,11 +391,12 @@ LOCAL const char *getpath(env)
 |
 +----------------------------------------------------------------------------*/
 
-LOCAL const char *chkname(name, ev)
+LOCAL const char *
+chkname(name, ev)
 	const char	*name;
 	const char	*ev;
 {
-	for(;;) {
+	for (;;) {
 		if (*name != *ev) {
 			if (*ev == '=' && *name == '\0')
 				return (++ev);

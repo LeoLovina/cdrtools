@@ -1,24 +1,10 @@
-/* @(#)scsisense.h	2.17 00/11/07 Copyright 1986 J. Schilling */
+/* @(#)scsisense.h	2.18 04/09/04 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI status code and sense structure
  *
  *	Copyright (c) 1986 J. Schilling
  */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+/*@@C@@*/
 
 #ifndef	_SCG_SCSISENSE_H
 #define	_SCG_SCSISENSE_H
@@ -41,7 +27,7 @@ struct	scsi_status {
 	Ucbit	busy	: 1;	/* device busy or reserved */
 	Ucbit	is	: 1;	/* intermediate status sent */
 	Ucbit	vu_05	: 1;	/* vendor unique */
-#define st_scsi2	vu_05	/* SCSI-2 modifier bit */
+#define	st_scsi2	vu_05	/* SCSI-2 modifier bit */
 	Ucbit	vu_06	: 1;	/* vendor unique */
 	Ucbit	st_rsvd	: 1;	/* reserved */
 
@@ -62,7 +48,7 @@ struct	scsi_status {
 	Ucbit	st_rsvd	: 1;	/* reserved */
 	Ucbit	vu_06	: 1;	/* vendor unique */
 	Ucbit	vu_05	: 1;	/* vendor unique */
-#define st_scsi2	vu_05	/* SCSI-2 modifier bit */
+#define	st_scsi2	vu_05	/* SCSI-2 modifier bit */
 	Ucbit	is	: 1;	/* intermediate status sent */
 	Ucbit	busy	: 1;	/* device busy or reserved */
 	Ucbit	cm	: 1;	/* condition met */
@@ -120,7 +106,7 @@ struct	scsi_sense {		/* scsi sense for error classes 0-6 */
  * SCSI extended sense parameter block.
  */
 #ifdef	comment
-#define SC_CLASS_EXTENDED_SENSE 0x7     /* indicates extended sense */
+#define	SC_CLASS_EXTENDED_SENSE 0x7	/* indicates extended sense */
 #endif
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */

@@ -1,4 +1,4 @@
-/* @(#)global.h	1.9 02/09/04 Copyright 1998-2002 Heiko Eissfeldt */
+/* @(#)global.h	1.11 04/07/29 Copyright 1998-2004 Heiko Eissfeldt */
 /* Global Variables */
 
 #ifdef  MD5_SIGNATURES
@@ -34,6 +34,7 @@ typedef struct global
 	int			verbose;
 	int			scsi_silent;
 	int			scsi_verbose;
+	int			scanbus;
 	int			multiname;
 	int			sh_bits;
 	int			Remainder;
@@ -88,11 +89,14 @@ typedef struct global
 
 	struct paranoia_parms_t
 	{
-	        int	disable_paranoia:1;
-	        int	disable_extra_paranoia:1;
-	        int	disable_scratch_detect:1;
-	        int	disable_scratch_repair:1;
+	        Ucbit	disable_paranoia:1;
+	        Ucbit	disable_extra_paranoia:1;
+	        Ucbit	disable_scratch_detect:1;
+	        Ucbit	disable_scratch_repair:1;
 		int	retries;
+		int	overlap;
+		int	mindynoverlap;
+		int	maxdynoverlap;
 	}
 	paranoia_parms;
 #endif

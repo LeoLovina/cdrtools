@@ -1,10 +1,10 @@
-/* @(#)isosize.c	1.8 01/10/09 Copyright 1996 J. Schilling */
+/* @(#)isosize.c	1.9 04/03/02 Copyright 1996, 2001-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isosize.c	1.8 01/10/09 Copyright 1996 J. Schilling";
+	"@(#)isosize.c	1.9 04/03/02 Copyright 1996, 2001-2004 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1996 J. Schilling
+ *	Copyright (c) 1996, 2001-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -17,9 +17,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -63,7 +63,7 @@ isosize(f)
 	vp = (struct iso9660_pr_voldesc *) &vd;
 
 	do {
-		read(f, &vd, sizeof(vd));
+		read(f, &vd, sizeof (vd));
 		if (GET_UBYTE(vd.vd_type) == VD_PRIMARY)
 			break;
 

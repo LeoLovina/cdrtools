@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-pg.c	1.42 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-pg.c	1.43 04/01/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char ___sccsid[] =
-	"@(#)scsi-linux-pg.c	1.42 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-pg.c	1.43 04/01/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the Linux PARIDE implementation.
@@ -29,9 +29,9 @@ static	char ___sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <string.h>
@@ -39,7 +39,7 @@ static	char ___sccsid[] =
 #include <linux/pg.h>
 #else
 #include "pg.h"		/* Use local version as Linux sometimes doesn't have */
-#endif			/* installed. Now libscg always supports PP SCSI     */
+#endif			/* installed. Now libscg always supports PP SCSI    */
 
 /*
  *	Warning: you may change this source, but if you do that
@@ -48,7 +48,7 @@ static	char ___sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.42";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version_pg[] = "scsi-linux-pg.c-1.43";	/* The version for this transport*/
 
 #ifdef	USE_PG_ONLY
 
@@ -62,7 +62,7 @@ struct scg_local {
 	int	pgbus;
 	char	*SCSIbuf;
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 #else
 
@@ -135,9 +135,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 #ifdef	USE_PG_ONLY
@@ -168,7 +168,7 @@ scgo_open(scgp, device)
 	if (scglocal(scgp)->buscookies[MAX_SCG-1] != (short)-1)
 		return (0);			/* No space for pgbus */
 
-	for (b=MAX_SCG-1; b >= 0; b--) {
+	for (b = MAX_SCG-1; b >= 0; b--) {
 		if (scglocal(scgp)->buscookies[b] != (short)-1) {
 			scglocal(scgp)->pgbus = ++b;
 			break;
@@ -180,16 +180,16 @@ scgo_open(scgp, device)
 	}
 #else
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
 		scglocal(scgp)->pgbus = -2;
 		scglocal(scgp)->SCSIbuf = (char *)-1;
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
@@ -201,12 +201,12 @@ scgo_open(scgp, device)
 	if ((device != NULL && *device != '\0') || (busno == -2 && tgt == -2))
 		goto openbydev;
 
-	if (busno >= 0 && tgt >= 0 && tlun >= 0) {	
+	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 #ifndef	USE_PG_ONLY
 		if (scglocal(scgp)->pgbus != busno)
 			return (0);
 #endif
-		js_snprintf(devname, sizeof(devname), "/dev/pg%d", tgt);
+		js_snprintf(devname, sizeof (devname), "/dev/pg%d", tgt);
 		f = open(devname, O_RDWR | O_NONBLOCK);
 		if (f < 0) {
 			if (scgp->errstr)
@@ -215,11 +215,11 @@ scgo_open(scgp, device)
 			return (0);
 		}
 		scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
-		return 1;
+		return (1);
 	} else {
 		tlun = 0;
-		for(tgt=0;tgt<MAX_TGT;tgt++) {
-			js_snprintf(devname, sizeof(devname), "/dev/pg%d", tgt);
+		for (tgt = 0; tgt < MAX_TGT; tgt++) {
+			js_snprintf(devname, sizeof (devname), "/dev/pg%d", tgt);
 			f = open(devname, O_RDWR | O_NONBLOCK);
 			if (f < 0) {
 				/*
@@ -288,8 +288,8 @@ scgo_close(scgp)
 	b = scglocal(scgp)->pgbus;
 	scglocal(scgp)->buscookies[b] = (short)-1;
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++) {
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++) {
 			f = scglocal(scgp)->scgfiles[b][t][l];
 			if (f >= 0)
 				close(f);
@@ -314,19 +314,19 @@ scgo_getbuf(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-        char    *ret;
+	char    *ret;
 
-        if (scgp->debug > 0) {
-                js_fprintf((FILE *)scgp->errfile,
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
 			"scgo_getbuf: %ld bytes\n", amt);
 	}
-        ret = valloc((size_t)(amt+getpagesize()));
-        if (ret == NULL)
-                return (ret);
+	ret = valloc((size_t)(amt+getpagesize()));
+	if (ret == NULL)
+		return (ret);
 	scgp->bufbase = ret;
-        ret += getpagesize();
-        scglocal(scgp)->SCSIbuf = ret;
-        return ((void *)ret);
+	ret += getpagesize();
+	scglocal(scgp)->SCSIbuf = ret;
+	return ((void *)ret);
 
 }
 
@@ -353,8 +353,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -410,17 +410,17 @@ scgo_reset(scgp, what)
 	/*
 	 * XXX Does this reset TGT or BUS ???
 	 */
-	return (write(scgp->fd, (char *)&hdr, sizeof(hdr)));
+	return (write(scgp->fd, (char *)&hdr, sizeof (hdr)));
 
 }
 
 #ifndef MAX
-#define MAX(a,b)	((a)>(b)?(a):(b))
+#define	MAX(a, b)	((a) > (b) ? (a):(b))
 #endif
 
-#define	RHSIZE	sizeof(struct pg_read_hdr)
-#define WHSIZE  sizeof(struct pg_write_hdr)
-#define LEAD	MAX(RHSIZE,WHSIZE)
+#define	RHSIZE	sizeof (struct pg_read_hdr)
+#define	WHSIZE  sizeof (struct pg_write_hdr)
+#define	LEAD	MAX(RHSIZE, WHSIZE)
 
 LOCAL int
 do_scg_cmd(scgp, sp)
@@ -440,12 +440,12 @@ do_scg_cmd(scgp, sp)
 		comerrno(EX_BAD, "Can't do %d byte command.\n", sp->cdb_len);
 
 	if (sp->addr == scglocal(scgp)->SCSIbuf) {
-		use_local = 0; 
+		use_local = 0;
 		dbp = sp->addr;
 	} else {
 		use_local = 1;
 		dbp = &local[LEAD];
-		if (!inward) 
+		if (!inward)
 			movebytes(sp->addr, dbp, sp->size);
 	}
 
@@ -457,7 +457,7 @@ do_scg_cmd(scgp, sp)
 	whp->dlen    = sp->size;
 	whp->timeout = sp->timeout;
 
-	for(i=0; i<12; i++) {
+	for (i = 0; i < 12; i++) {
 		if (i < sp->cdb_len)
 			whp->packet[i] = sp->cdb.cmd_cdb[i];
 		else
@@ -465,7 +465,7 @@ do_scg_cmd(scgp, sp)
 	}
 
 	i = WHSIZE;
-	if (!inward) 
+	if (!inward)
 		i += sp->size;
 
 	r = write(scgp->fd, (char *)whp, i);
@@ -480,9 +480,9 @@ do_scg_cmd(scgp, sp)
 			 * respond to the command.
 			 */
 			sp->error = SCG_FATAL;
-			return 0;
+			return (0);
 		}
-		return -1;
+		return (-1);
 	}
 
 	if (r != i)
@@ -498,12 +498,12 @@ do_scg_cmd(scgp, sp)
 		sp->ux_errno = geterrno();
 		if (sp->ux_errno == ETIME) {
 			sp->error = SCG_TIMEOUT;
-			return 0;
+			return (0);
 		}
 		sp->error = SCG_FATAL;
-		return -1;
+		return (-1);
 	}
-		
+
 	i = rhp->dlen;
 	if (i > sp->size) {
 		/*
@@ -523,8 +523,8 @@ do_scg_cmd(scgp, sp)
 	if (use_local && inward)
 		movebytes(dbp, sp->addr, i);
 
-	fillbytes(&sp->scb, sizeof(sp->scb), '\0');
-        fillbytes(&sp->u_sense.cmd_sense, sizeof(sp->u_sense.cmd_sense), '\0');
+	fillbytes(&sp->scb, sizeof (sp->scb), '\0');
+	fillbytes(&sp->u_sense.cmd_sense, sizeof (sp->u_sense.cmd_sense), '\0');
 
 	sp->error = SCG_NO_ERROR;
 	i = rhp->scsi?2:0;
@@ -541,7 +541,7 @@ do_scg_cmd(scgp, sp)
 /*		sp->error = SCG_RETRYABLE;*/
 	}
 
-	return 0;
+	return (0);
 
 }
 
@@ -550,26 +550,25 @@ do_scg_sense(scgp, sp)
 	SCSI	*scgp;
 	struct scg_cmd	*sp;
 {
-        int             ret;
-        struct scg_cmd  s_cmd;
+	int		ret;
+	struct scg_cmd 	s_cmd;
 
-        fillbytes((caddr_t)&s_cmd, sizeof(s_cmd), '\0');
-        s_cmd.addr = (caddr_t)sp->u_sense.cmd_sense;
-        s_cmd.size = sp->sense_len;
-        s_cmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-        s_cmd.cdb_len = SC_G0_CDBLEN;
-        s_cmd.sense_len = CCS_SENSE_LEN;
-        s_cmd.cdb.g0_cdb.cmd = SC_REQUEST_SENSE;
-        s_cmd.cdb.g0_cdb.lun = sp->cdb.g0_cdb.lun;
-        s_cmd.cdb.g0_cdb.count = sp->sense_len;
-        ret = do_scg_cmd(scgp, &s_cmd);
+	fillbytes((caddr_t)&s_cmd, sizeof (s_cmd), '\0');
+	s_cmd.addr = (caddr_t)sp->u_sense.cmd_sense;
+	s_cmd.size = sp->sense_len;
+	s_cmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	s_cmd.cdb_len = SC_G0_CDBLEN;
+	s_cmd.sense_len = CCS_SENSE_LEN;
+	s_cmd.cdb.g0_cdb.cmd = SC_REQUEST_SENSE;
+	s_cmd.cdb.g0_cdb.lun = sp->cdb.g0_cdb.lun;
+	s_cmd.cdb.g0_cdb.count = sp->sense_len;
+	ret = do_scg_cmd(scgp, &s_cmd);
 
-        if (ret < 0)
-                return (ret);
+	if (ret < 0)
+		return (ret);
 
-        sp->sense_count = sp->sense_len - s_cmd.resid;
-        return (ret);
-
+	sp->sense_count = sp->sense_len - s_cmd.resid;
+	return (ret);
 }
 
 LOCAL int

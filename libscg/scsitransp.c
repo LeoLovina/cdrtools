@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.86 03/05/03 Copyright 1988,1995,2000 J. Schilling */
+/* @(#)scsitransp.c	1.91 04/06/17 Copyright 1988,1995,2000-2004 J. Schilling */
 /*#ifndef lint*/
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.86 03/05/03 Copyright 1988,1995,2000 J. Schilling";
+	"@(#)scsitransp.c	1.91 04/06/17 Copyright 1988,1995,2000-2004 J. Schilling";
 /*#endif*/
 /*
  *	SCSI user level command transport routines (generic part).
@@ -12,7 +12,7 @@ static	char sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1988,1995,2000 J. Schilling
+ *	Copyright (c) 1988,1995,2000-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -52,7 +52,7 @@ static	char sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_version[]		= "0.7";	/* The global libscg version	*/
+LOCAL	char	_scg_version[]		= "0.8";	/* The global libscg version	*/
 LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 #define	DEFTIMEOUT	20	/* Default timeout for SCSI command transport */
@@ -158,6 +158,24 @@ scg__open(scgp, device)
 	int	ret;
 	scg_ops_t *ops;
 extern	scg_ops_t scg_std_ops;
+
+	/*
+	 * Begin restricted code for quality assurance.
+	 *
+	 * Warning: you are not allowed to modify the quality ensurance code below.
+	 *
+	 * This restiction is introduced because this way, I hope that people
+	 * contribute to the project instead of creating branches.
+	 */
+#if	!defined(IS_SCHILY_XCONFIG)
+	printf("\nWarning: This version of libscg has not been configured via the standard\n");
+	printf("autoconfiguration method of the Schily makefile system. There is a high risk\n");
+	printf("that the code is not configured correctly and for this reason will not behave\n");
+	printf("as expected.\n");
+#endif
+	/*
+	 * End restricted code for quality assurance.
+	 */
 
 	scgp->ops = &scg_std_ops;
 
@@ -305,10 +323,10 @@ scg_yes(msg)
 
 	js_printf("%s", msg);
 	flush();
-	if (getline(okbuf, sizeof(okbuf)) == EOF)
+	if (getline(okbuf, sizeof (okbuf)) == EOF)
 		exit(EX_BAD);
-	if(streql(okbuf, "y") || streql(okbuf, "yes") ||
-	   streql(okbuf, "Y") || streql(okbuf, "YES"))
+	if (streql(okbuf, "y") || streql(okbuf, "yes") ||
+	    streql(okbuf, "Y") || streql(okbuf, "YES"))
 		return (TRUE);
 	else
 		return (FALSE);
@@ -340,7 +358,7 @@ EXPORT int
 scg_cmd(scgp)
 	SCSI	*scgp;
 {
-		 int		ret;
+		int		ret;
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
 	/*
@@ -443,7 +461,7 @@ scg_svhead(scgp, buf, maxcnt)
 	p += amt;
 	maxcnt -= amt;
 
-	amt= scg_sprintcdb(scgp, p, maxcnt);
+	amt = scg_sprintcdb(scgp, p, maxcnt);
 	if (amt < 0)
 		return (amt);
 	p += amt;
@@ -578,7 +596,7 @@ scg_cmd_err(scgp)
 {
 	register struct scg_cmd *cp = scgp->scmd;
 
-	if(cp->error != SCG_NO_ERROR ||
+	if (cp->error != SCG_NO_ERROR ||
 				cp->ux_errno != 0 ||
 				*(Uchar *)&cp->scb != 0 ||
 				cp->u_sense.cmd_sense[0] != 0)	/* Paranioa */
@@ -629,7 +647,7 @@ scg_fprinterr(scgp, f)
 	char	errbuf[SCSI_ERRSTR_SIZE];
 	int	amt;
 
-	amt = scg_sprinterr(scgp, errbuf, sizeof(errbuf));
+	amt = scg_sprinterr(scgp, errbuf, sizeof (errbuf));
 	if (amt > 0) {
 		filewrite(f, errbuf, amt);
 		fflush(f);
@@ -685,9 +703,9 @@ scg__sprinterr(scgp, buf, maxcnt)
 	int	maxcnt;
 {
 	register struct scg_cmd *cp = scgp->scmd;
-	register char	*err;
-		 char	*cmdname = "SCSI command name not set by caller";
-		 char	errbuf[64];
+	register char		*err;
+		char		*cmdname = "SCSI command name not set by caller";
+		char		errbuf[64];
 	register char		*p = buf;
 	register int		amt;
 
@@ -700,14 +718,14 @@ scg__sprinterr(scgp, buf, maxcnt)
 				 * We need to cast timeval->* to long because
 				 * of the broken sys/time.h in Linux.
 				 */
-	case SCG_TIMEOUT  :	js_snprintf(errbuf, sizeof(errbuf),
+	case SCG_TIMEOUT  :	js_snprintf(errbuf, sizeof (errbuf),
 					"cmd timeout after %ld.%03ld (%d) s",
 					(long)scgp->cmdstop->tv_sec,
 					(long)scgp->cmdstop->tv_usec/1000,
 								cp->timeout);
 				err = errbuf;
 				break;
-	default:		js_snprintf(errbuf, sizeof(errbuf),
+	default:		js_snprintf(errbuf, sizeof (errbuf),
 					"error: %d", cp->error);
 				err = errbuf;
 	}
@@ -947,7 +965,7 @@ scg_printstatus(scgp)
 	char	errbuf[SCSI_ERRSTR_SIZE];
 	int	amt;
 
-	amt = scg_sprintstatus(scgp, errbuf, sizeof(errbuf));
+	amt = scg_sprintstatus(scgp, errbuf, sizeof (errbuf));
 	if (amt > 0) {
 		filewrite((FILE *)scgp->errfile, errbuf, amt);
 		fflush((FILE *)scgp->errfile);
@@ -964,8 +982,8 @@ scg_sprintstatus(scgp, buf, maxcnt)
 	int	maxcnt;
 {
 	register struct scg_cmd *cp = scgp->scmd;
-		 char	*err;
-		 char	*err2 = "";
+		char	*err;
+		char	*err2 = "";
 	register char	*p = buf;
 	register int	amt;
 
@@ -1213,11 +1231,11 @@ scg_sense_key(scgp)
 	register struct scg_cmd *cp = scgp->scmd;
 	int	key = -1;
 
-	if(!scg_cmd_err(scgp))
+	if (!scg_cmd_err(scgp))
 		return (0);
 
 	if (cp->sense.code >= 0x70)
-		key = ((struct scsi_ext_sense*)&(cp->sense))->key;
+		key = ((struct scsi_ext_sense *)&(cp->sense))->key;
 	return (key);
 }
 
@@ -1231,11 +1249,11 @@ scg_sense_code(scgp)
 	register struct scg_cmd *cp = scgp->scmd;
 	int	code = -1;
 
-	if(!scg_cmd_err(scgp))
+	if (!scg_cmd_err(scgp))
 		return (0);
 
 	if (cp->sense.code >= 0x70)
-		code = ((struct scsi_ext_sense*)&(cp->sense))->sense_code;
+		code = ((struct scsi_ext_sense *)&(cp->sense))->sense_code;
 	else
 		code = cp->sense.code;
 	return (code);
@@ -1250,11 +1268,11 @@ scg_sense_qual(scgp)
 {
 	register struct scg_cmd *cp = scgp->scmd;
 
-	if(!scg_cmd_err(scgp))
+	if (!scg_cmd_err(scgp))
 		return (0);
 
 	if (cp->sense.code >= 0x70)
-		return (((struct scsi_ext_sense*)&(cp->sense))->qual_code);
+		return (((struct scsi_ext_sense *)&(cp->sense))->qual_code);
 	else
 		return (0);
 }
@@ -1287,7 +1305,8 @@ scg_fprintdev(f, ip)
 			js_fprintf(f, "unsupported ");
 			break;
 		default:
-			js_fprintf(f, "vendor specific %d ", ip->qualifier);
+			js_fprintf(f, "vendor specific %d ",
+						(int)ip->qualifier);
 		}
 	}
 	switch (ip->type) {
@@ -1307,7 +1326,7 @@ scg_fprintdev(f, ip)
 	case INQ_SCAN:
 		js_fprintf(f, "Scanner");	break;
 	case INQ_OMEM:
-		js_fprintf(f, "Optical Storage");break;
+		js_fprintf(f, "Optical Storage"); break;
 	case INQ_JUKE:
 		js_fprintf(f, "Juke Box");	break;
 	case INQ_COMM:
@@ -1319,19 +1338,19 @@ scg_fprintdev(f, ip)
 	case INQ_STARR:
 		js_fprintf(f, "Storage array");	break;
 	case INQ_ENCL:
-		js_fprintf(f, "Enclosure services");break;
+		js_fprintf(f, "Enclosure services"); break;
 	case INQ_SDAD:
-		js_fprintf(f, "Simple direct access");break;
+		js_fprintf(f, "Simple direct access"); break;
 	case INQ_OCRW:
-		js_fprintf(f, "Optical card r/w");break;
+		js_fprintf(f, "Optical card r/w"); break;
 	case INQ_BRIDGE:
-		js_fprintf(f, "Bridging expander");break;
+		js_fprintf(f, "Bridging expander"); break;
 	case INQ_OSD:
-		js_fprintf(f, "Object based storage");break;
+		js_fprintf(f, "Object based storage"); break;
 	case INQ_ADC:
-		js_fprintf(f, "Automation/Drive Interface");break;
+		js_fprintf(f, "Automation/Drive Interface"); break;
 	case INQ_WELLKNOWN:
-		js_fprintf(f, "Well known lun");break;
+		js_fprintf(f, "Well known lun"); break;
 
 	case INQ_NODEV:
 		if (ip->data_format >= 2) {
@@ -1342,7 +1361,8 @@ scg_fprintdev(f, ip)
 			break;
 		}
 	default:
-		js_fprintf(f, "unknown device type 0x%x", ip->type);
+		js_fprintf(f, "unknown device type 0x%x",
+						(int)ip->type);
 	}
 	js_fprintf(f, "\n");
 }

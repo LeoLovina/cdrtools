@@ -1,4 +1,4 @@
-New driveropts= option "tattoofile=". Use together with -checkrive 
+New driveropts= option "tattoofile=". Use together with -checkdrive 
 to write an image of the right size to disk.
 
 	DiskT@2 hints:
@@ -55,9 +55,9 @@ this after I try it.
   sed strips from the first line to the line containing 255, which is the 
 last header line. 
  
-Note that it would be better to use the actual height of the applicable mage instead
+Note that it would be better to use the actual height of the applicable image instead
 of the maximum value of 320 and it would be even more correct to create an
 image that has the right width/height ratio for the target on CD in order
-get an undistorted view of the mage n CD.
+get an undistorted view of the image on CD.
 
 For best visibility, use black text on light background.

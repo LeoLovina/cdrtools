@@ -1,7 +1,7 @@
-/* @(#)file.c	1.4 01/10/29 joerg */
+/* @(#)file.c	1.5 04/05/15 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)file.c	1.4 01/10/29 joerg";
+	"@(#)file.c	1.5 04/05/15 joerg";
 #endif
 /*
 **	find file types by using a modified "magic" file
@@ -100,7 +100,6 @@ int	zflag = 0;	/* follow (uncompress) compressed files */
 char *magicfile;	/* where magic be found 		*/
 
 char *progname;		/* used throughout 			*/
-int lineno;		/* line number in the magic file	*/
 #endif
 
 char *	get_magic_match	__PR((const char *inname));

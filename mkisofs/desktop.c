@@ -1,7 +1,7 @@
-/* @(#)desktop.c	1.5 02/10/01 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)desktop.c	1.6 04/03/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)desktop.c	1.5 02/10/01 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)desktop.c	1.6 04/03/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -49,11 +49,11 @@ static	char sccsid[] =
 #include "mkisofs.h"
 
 #define	DB	"Desktop DB"
-#define DBFC	"DMGR"
-#define DBT	"BTFL"
+#define	DBFC	"DMGR"
+#define	DBT	"BTFL"
 
 #define	DF	"Desktop DF"
-#define DFT	"DTFL"
+#define	DFT	"DTFL"
 
 /*
  * from "data.h" - libhfs routines
@@ -83,10 +83,10 @@ make_desktop(vol, end)
 	 * First do a memset because there was a report about randomly
 	 * changing Desktop DB/DF entries...
 	 */
-	memset(&ent, 0, sizeof(hfsdirent));	/* First clear all ... */
-	ent.u.file.rsize = 0;				/* resource size == 0 */
-	strcpy(ent.u.file.creator, DBFC);		/* creator */
-	strcpy(ent.u.file.type, DBT);			/* type */
+	memset(&ent, 0, sizeof (hfsdirent));	/* First clear all ... */
+	ent.u.file.rsize = 0;			/* resource size == 0 */
+	strcpy(ent.u.file.creator, DBFC);	/* creator */
+	strcpy(ent.u.file.type, DBT);		/* type */
 	ent.crdate = ent.mddate = time(0);	/* date is now */
 	ent.fdflags = HFS_FNDR_ISINVISIBLE;	/* invisible files */
 
@@ -157,7 +157,7 @@ make_desktop(vol, end)
 			perr(hfs_error);
 	}
 
-	 /* setup "Desktop DF" file as an empty file */
+	/* setup "Desktop DF" file as an empty file */
 	strcpy(ent.u.file.type, DFT);		/* type */
 	ent.u.file.dsize = 0;			/* empty */
 

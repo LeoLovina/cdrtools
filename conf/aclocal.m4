@@ -1,4 +1,4 @@
-dnl @(#)aclocal.m4	1.34 03/03/08 Copyright 1998 J. Schilling
+dnl @(#)aclocal.m4	1.39 04/07/25 Copyright 1998 J. Schilling
 
 dnl Set VARIABLE to VALUE in C-string form, verbatim, or 1.
 dnl AC_DEFINE_STRING(VARIABLE [, VALUE])
@@ -91,6 +91,19 @@ AC_DEFUN([AC_STRUCT_ST_FLAGS],
                                 [ac_cv_struct_st_flags=no])])
 if test $ac_cv_struct_st_flags = yes; then
   AC_DEFINE(HAVE_ST_FLAGS)
+fi])
+
+dnl Checks if structure 'stat' have field 'st_fstype'.
+dnl Defines HAVE_ST_FSTYPE on success.
+AC_DEFUN([AC_STRUCT_ST_FSTYPE],
+[AC_CACHE_CHECK([if struct stat contains st_fstype], ac_cv_struct_st_fstype,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/stat.h>],
+                                [struct  stat s; s.st_fstype[0] = 0;],
+                                [ac_cv_struct_st_fstype=yes],
+                                [ac_cv_struct_st_fstype=no])])
+if test $ac_cv_struct_st_fstype = yes; then
+  AC_DEFINE(HAVE_ST_FSTYPE)
 fi])
 
 dnl Checks if structure 'mtget' have field 'mt_type'.
@@ -1556,6 +1569,132 @@ fcntl(0, F_SETLK, &fl);],
                 [ac_cv_func_fcntl_lock=no])])
 if test $ac_cv_func_fcntl_lock = yes; then
   AC_DEFINE(HAVE_FCNTL_LOCKF)
+fi])
+
+
+dnl Checks if link() allows hard links on symlinks
+dnl Defines HAVE_HARD_SYMLINKS on success.
+AC_DEFUN([AC_HARD_SYMLINKS],
+[AC_CACHE_CHECK([if link() allows hard links on symlinks], ac_cv_hard_symlinks,
+                [AC_TRY_RUN([
+main()
+{
+	int	ret = 0;
+
+	unlink("confdefs.f1");
+	unlink("confdefs.l1");
+	unlink("confdefs.h1");
+
+	if (symlink("confdefs.f1", "confdefs.l1") < 0)
+		ret = 1;
+	if (link("confdefs.l1", "confdefs.h1") < 0)
+		ret = 1;
+
+	unlink("confdefs.l1");
+	unlink("confdefs.h1");
+
+	exit(ret);
+}],
+                [ac_cv_hard_symlinks=yes],
+                [ac_cv_hard_symlinks=no])])
+if test $ac_cv_hard_symlinks = yes; then
+  AC_DEFINE(HAVE_HARD_SYMLINKS)
+fi])
+
+
+dnl Checks if link() does not follow symlinks
+dnl Defines HAVE_LINK_NOFOLLOW on success.
+AC_DEFUN([AC_LINK_NOFOLLOW],
+[AC_CACHE_CHECK([if link() does not folow symlinks], ac_cv_link_nofollow,
+                [AC_TRY_RUN([
+#include <sys/types.h>
+#include <sys/stat.h>
+
+main()
+{
+	int	ret = 0;
+	int	f;
+	struct stat sb;
+
+	unlink("confdefs.f1");
+	unlink("confdefs.l1");
+	unlink("confdefs.h1");
+
+	f = creat("confdefs.f1", 0666);
+	close(f);
+	if (symlink("confdefs.f1", "confdefs.l1") < 0)
+		ret = 1;
+	if (link("confdefs.l1", "confdefs.h1") < 0)
+		ret = 1;
+
+	stat("confdefs.f1", &sb);
+	if (sb.st_nlink == 2)
+		ret = 1;
+
+	unlink("confdefs.f1");
+	unlink("confdefs.l1");
+	unlink("confdefs.h1");
+
+	exit(ret);
+}],
+                [ac_cv_link_nofollow=yes],
+                [ac_cv_link_nofollow=no])])
+if test $ac_cv_link_nofollow = yes; then
+  AC_DEFINE(HAVE_LINK_NOFOLLOW)
+fi])
+
+dnl Checks if access() does implement E_OK (010) for effective UIDs
+dnl Defines HAVE_ACCESS_E_OK on success.
+AC_DEFUN([AC_ACCESS_E_OK],
+[AC_REQUIRE([AC_HEADER_ERRNO_DEF])dnl
+AC_CHECK_HEADERS(unistd.h)
+AC_CACHE_CHECK([if access() does implement E_OK], ac_cv_access_e_ok,
+                [AC_TRY_RUN([
+# ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+# endif
+#ifndef	R_OK
+#define	R_OK	4	/* Test for Read permission */
+#define	W_OK	2	/* Test for Write permission */
+#define	X_OK	1	/* Test for eXecute permission */
+#define	F_OK	0	/* Test for existence of File */
+#endif
+
+#ifndef	E_OK
+#ifdef	EFF_ONLY_OK
+#define	E_OK	EFF_ONLY_OK /* Irix */
+#else
+#ifdef	EUID_OK
+#define	E_OK	EUID_OK	/* UNICOS (0400) */
+#else
+#define	E_OK	010	/* Test effective uids */
+#endif
+#endif
+#endif
+
+#include <errno.h>
+#ifndef	HAVE_ERRNO_DEF
+extern	int	errno;
+#endif
+
+main()
+{
+	int	ret = 0;
+
+	if (access(".", F_OK) != 0)
+		ret = 1;
+	else if (access(".", E_OK|F_OK) != 0)
+		ret = 1;
+	else if (access(".", (R_OK<<4)|F_OK) == 0)
+		ret = 1;
+
+
+	exit(ret);
+}],
+                [ac_cv_access_e_ok=yes],
+                [ac_cv_access_e_ok=no])])
+if test $ac_cv_access_e_ok = yes; then
+  AC_DEFINE(HAVE_ACCESS_E_OK)
 fi])
 
 

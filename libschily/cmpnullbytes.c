@@ -1,12 +1,12 @@
-/* @(#)cmpnullbytes.c	1.1 02/02/28 Copyright 1988,2002 J. Schilling */
+/* @(#)cmpnullbytes.c	1.2 03/06/15 Copyright 1988,2002-2003 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cmpnullbytes.c	1.1 02/02/28 Copyright 1988,2002 J. Schilling";
+	"@(#)cmpnullbytes.c	1.2 03/06/15 Copyright 1988,2002-2003 J. Schilling";
 #endif  /* lint */
 /*
  *	compare data against null
  *
- *	Copyright (c) 1988,2002 J. Schilling
+ *	Copyright (c) 1988,2002-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,18 +19,19 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <standard.h>
 #include <align.h>
 #include <schily.h>
 
-#define	DO8(a)	a;a;a;a;a;a;a;a;
+#define	DO8(a)	a; a; a; a; a; a; a; a;
 
-int cmpnullbytes(fromp, cnt)
+EXPORT int
+cmpnullbytes(fromp, cnt)
 	const void	*fromp;
 	int		cnt;
 {
@@ -52,14 +53,14 @@ int cmpnullbytes(fromp, cnt)
 	}
 	n++;
 
-	if (n >= (int)(8 * sizeof(long))) {
+	if (n >= (int)(8 * sizeof (long))) {
 		if (laligned(from)) {
 			register const long *froml = (const long *)from;
 			register int rem = n % (8 * sizeof (long));
 
 			n /= (8 * sizeof (long));
 			do {
-				DO8 (
+				DO8(
 					if (*froml++ != 0)
 						break;
 				);
@@ -77,7 +78,7 @@ int cmpnullbytes(fromp, cnt)
 		if (n >= 8) {
 			n -= 8;
 			do {
-				DO8 (
+				DO8(
 					if (*from++ != 0)
 						goto cdiff;
 				);
@@ -96,7 +97,7 @@ int cmpnullbytes(fromp, cnt)
 	} while (--n > 0);
 	return (cnt);
 ldiff:
-	n = sizeof(long);
+	n = sizeof (long);
 	do {
 		if (*from++ != 0)
 			goto cdiff;

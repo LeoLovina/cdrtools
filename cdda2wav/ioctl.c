@@ -1,7 +1,7 @@
-/* @(#)ioctl.c	1.18 02/11/21 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)ioctl.c	1.19 03/12/27 Copyright 1998,1999,2000 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)ioctl.c	1.18 02/11/21 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)ioctl.c	1.19 03/12/27 Copyright 1998,1999,2000 Heiko Eissfeldt";
 
 #endif
 /***
@@ -27,6 +27,7 @@ static char     sccsid[] =
 #include <sys/ioctl.h>
 #include <statdefs.h>
 #include <schily.h>
+#include <device.h>
 
 #include <scg/scsitransp.h>
 
@@ -510,7 +511,7 @@ void SetupCookedIoctl( pdev_name )
       exit(STAT_ERROR);
     }
 #if	defined __linux__
-    switch ((int)(statstruct.st_rdev >> 8L)) {
+    switch (major(statstruct.st_rdev)) {
     case CDU31A_CDROM_MAJOR:	/* sony cdu-31a/33a */
         global.nsectors = 13;
         if (global.nsectors >= 14) {
@@ -530,7 +531,7 @@ void SetupCookedIoctl( pdev_name )
     }
     err = ioctl(global.cooked_fd, CDROMAUDIOBUFSIZ, global.nsectors);
 
-    switch ((int)(statstruct.st_rdev >> 8L)) {
+    switch (major(statstruct.st_rdev)) {
     case MATSUSHITA_CDROM_MAJOR:	/* sbpcd 1 */
     case MATSUSHITA_CDROM2_MAJOR:	/* sbpcd 2 */
     case MATSUSHITA_CDROM3_MAJOR:	/* sbpcd 3 */

@@ -1,7 +1,7 @@
-/* @(#)ifo_read.c	1.3 02/12/12 joerg */
+/* @(#)ifo_read.c	1.5 04/03/04 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)ifo_read.c	1.3 02/12/12 joerg";
+	"@(#)ifo_read.c	1.5 04/03/04 joerg";
 #endif
 /*
  * Copyright (C) 2002 Olaf Beck <olaf_sc@yahoo.com>
@@ -65,11 +65,11 @@ ifoReadVTSI(file, ifofile)
 	ifofile->vmgi_mat = NULL;
 	ifofile->tt_srpt = NULL;
 
-	vtsi_mat = (vtsi_mat_t *)e_malloc(sizeof(vtsi_mat_t));
-	if(!vtsi_mat) {
+	vtsi_mat = (vtsi_mat_t *)e_malloc(sizeof (vtsi_mat_t));
+	if (!vtsi_mat) {
 /*		fprintf(stderr, "Memmory allocation error\n");*/
 		free(ifofile);
-		return(0);
+		return (0);
 	}
 
 	ifofile->vtsi_mat = vtsi_mat;
@@ -85,17 +85,17 @@ ifoReadVTSI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
@@ -113,17 +113,17 @@ ifoReadVTSI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
@@ -142,18 +142,18 @@ ifoReadVTSI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
@@ -172,25 +172,25 @@ ifoReadVTSI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
 
 	vtsi_mat->vtstt_vobs = sector;
 
-	return(ifofile);
+	return (ifofile);
 }
 
 
@@ -200,7 +200,7 @@ ifoReadVGMI(file, ifofile)
 	ifo_handle_t * ifofile;
 {
 	off_t	offset;
-	int	counter;
+	Uint	counter;
 	UInt32_t sector;
 	UInt16_t titles;
 
@@ -210,11 +210,11 @@ ifoReadVGMI(file, ifofile)
 	/* Make the VTS part null */
 	ifofile->vtsi_mat = NULL;
 
-	vmgi_mat = (vmgi_mat_t *)e_malloc(sizeof(vmgi_mat_t));
-	if(!vmgi_mat) {
+	vmgi_mat = (vmgi_mat_t *)e_malloc(sizeof (vmgi_mat_t));
+	if (!vmgi_mat) {
 /*		fprintf(stderr, "Memmory allocation error\n");*/
 		free(ifofile);
-		return(0);
+		return (0);
 	}
 
 	ifofile->vmgi_mat = vmgi_mat;
@@ -230,17 +230,17 @@ ifoReadVGMI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
@@ -258,18 +258,18 @@ ifoReadVGMI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
@@ -288,18 +288,18 @@ ifoReadVGMI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 
-	if (read(file, &titles, sizeof(titles)) != sizeof(titles)) {
+	if (read(file, &titles, sizeof (titles)) != sizeof (titles)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_16(titles);
@@ -318,18 +318,18 @@ ifoReadVGMI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
@@ -348,29 +348,29 @@ ifoReadVGMI(file, ifofile)
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 
-	if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	B2N_32(sector);
 
 	vmgi_mat->tt_srpt = sector;
 
-	tt_srpt = (tt_srpt_t *)e_malloc(sizeof(tt_srpt_t));
-	if(!tt_srpt) {
+	tt_srpt = (tt_srpt_t *)e_malloc(sizeof (tt_srpt_t));
+	if (!tt_srpt) {
 /*		fprintf(stderr, "Memmory allocation error\n");*/
 		ifoClose(ifofile);
-		return(0);
+		return (0);
 	}
 
 	ifofile->tt_srpt = tt_srpt;
@@ -386,24 +386,24 @@ ifoReadVGMI(file, ifofile)
 #else
 		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
-		return(0);
+		return (0);
 	}
 
-	if (read(file, &titles, sizeof(titles)) != sizeof(titles)) {
+	if (read(file, &titles, sizeof (titles)) != sizeof (titles)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
-		return(0);
+		return (0);
 	}
 
 	B2N_16(titles);
 
 	tt_srpt->nr_of_srpts = titles;
 
-	tt_srpt->title = (title_info_t *)e_malloc(sizeof(title_info_t) * tt_srpt->nr_of_srpts);
-	if(!tt_srpt->title) {
+	tt_srpt->title = (title_info_t *)e_malloc(sizeof (title_info_t) * tt_srpt->nr_of_srpts);
+	if (!tt_srpt->title) {
 /*		fprintf(stderr, "Memmory allocation error\n");*/
 		ifoClose(ifofile);
 		return (0);
@@ -420,17 +420,17 @@ ifoReadVGMI(file, ifofile)
 			fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
 #endif
 			ifoClose(ifofile);
-			return(0);
+			return (0);
 		}
 
-		if (read(file, &sector, sizeof(sector)) != sizeof(sector)) {
+		if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
 #ifdef	USE_LIBSCHILY
 			errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 			fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
 			ifoClose(ifofile);
-			return(0);
+			return (0);
 		}
 
 		B2N_32(sector);
@@ -459,15 +459,15 @@ ifoOpen(dvd, title)
 
 	identifier[0] = '\0';
 
-	ifofile = (ifo_handle_t *)e_malloc(sizeof(ifo_handle_t));
+	ifofile = (ifo_handle_t *)e_malloc(sizeof (ifo_handle_t));
 
-	memset(ifofile, 0, sizeof(ifo_handle_t));
+	memset(ifofile, 0, sizeof (ifo_handle_t));
 
-	if(title) {
-		snprintf(full_path, sizeof(full_path),
+	if (title) {
+		snprintf(full_path, sizeof (full_path),
 				"%s/VIDEO_TS/VTS_%02d_0.IFO", dvd->path_root, title);
 	} else {
-		snprintf(full_path, sizeof(full_path),
+		snprintf(full_path, sizeof (full_path),
 				"%s/VIDEO_TS/VIDEO_TS.IFO", dvd->path_root);
 	}
 
@@ -478,30 +478,30 @@ ifoOpen(dvd, title)
 		fprintf(stderr, "Faild to open %s\n", full_path);
 #endif
 		free(ifofile);
-		return(0);
+		return (0);
 	}
 
 	offset = 0;
 
 	/* Determine if we have a VMGI or VTSI */
 
-	if (read(file, identifier, sizeof(identifier)) != sizeof(identifier)) {
+	if (read(file, identifier, sizeof (identifier)) != sizeof (identifier)) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Faild to read VIDEO_TS.IFO\n");
 #else
 		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
 #endif
-		return(0);
+		return (0);
 	}
 
 	if ((strstr("DVDVIDEO-VMG", identifier) != 0) && (title == 0)) {
 		ifofile = ifoReadVGMI(file, ifofile);
 		close(file);
-		return(ifofile);
+		return (ifofile);
 	} else if ((strstr("DVDVIDEO-VTS", identifier) != 0) && (title != 0)) {
 		ifofile = ifoReadVTSI(file, ifofile);
 		close(file);
-		return(ifofile);
+		return (ifofile);
 	} else {
 #ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD, "Giving up this is not a valid IFO file\n");
@@ -510,8 +510,8 @@ ifoOpen(dvd, title)
 #endif
 		close(file);
 		free(ifofile);
-		ifofile=0;
-		return(0);
+		ifofile = 0;
+		return (0);
 	}
 }
 
@@ -519,17 +519,16 @@ LOCAL void
 ifoFree_TT_SRPT(ifofile)
 	ifo_handle_t *ifofile;
 {
-	if(!ifofile)
+	if (!ifofile)
 		return;
 
-	if(ifofile->tt_srpt) {
-		if(ifofile->tt_srpt->title) {
+	if (ifofile->tt_srpt) {
+		if (ifofile->tt_srpt->title) {
 			free(ifofile->tt_srpt->title);
 		}
 		free(ifofile->tt_srpt);
 		ifofile->tt_srpt = 0;
 	}
-	return;
 }
 
 EXPORT void
@@ -537,7 +536,7 @@ ifoClose(ifofile)
 	ifo_handle_t * ifofile;
 {
 
-	if(!ifofile)
+	if (!ifofile)
 		return;
 
 	ifoFree_TT_SRPT(ifofile);
@@ -551,6 +550,6 @@ ifoClose(ifofile)
 	}
 
 	free(ifofile);
-	ifofile=0;
+	ifofile = 0;
 }
 #endif /* DVD_VIDEO */

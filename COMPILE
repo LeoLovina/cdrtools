@@ -258,7 +258,7 @@ Hints for compilation:
 	on some architectures that will not correctly recognize the default
 	target. In this case call 'make all' or ../Gmake all'.
 
-	Note that speudo error messages from gmake similar to:
+	Note that pseudo error messages from gmake similar to:
 
 	gmake[1]: Entering directory `cdrtools-1.10/conf'
 	../RULES/rules.cnf:58: ../incs/sparc-sunos5-cc/Inull: No such file or directory

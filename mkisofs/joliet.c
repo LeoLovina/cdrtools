@@ -1,28 +1,29 @@
-/* @(#)joliet.c	1.34 02/11/22 joerg */
+/* @(#)joliet.c	1.37 03/04/28 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)joliet.c	1.34 02/11/22 joerg";
+	"@(#)joliet.c	1.37 03/04/28 joerg";
 #endif
 /*
  * File joliet.c - handle Win95/WinNT long file/unicode extensions for iso9660.
-
-   Copyright 1997 Eric Youngdale.
-   APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 22/2/2000
-   Copyright (c) 1999,2000,2001 J. Schilling
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ * Copyright 1997 Eric Youngdale.
+ * APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 22/2/2000
+ * Copyright (c) 1999,2000,2001 J. Schilling
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 /*
  * Joliet extensions for ISO9660.  These are spottily documented by
@@ -91,15 +92,15 @@ static	char sccsid[] =
 
 static Uint	jpath_table_index;
 static struct directory **jpathlist;
-static int      next_jpath_index = 1;
-static int      sort_goof;
+static int	next_jpath_index = 1;
+static int	jsort_goof;
 
 static	char	ucs_codes[] = {
 		'\0',		/* UCS-level 0 is illegal	*/
 		'@',		/* UCS-level 1			*/
 		'C',		/* UCS-level 2			*/
 		'E',		/* UCS-level 3			*/
-};	
+};
 
 #ifdef	UDF
 	void	convert_to_unicode	__PR((unsigned char *buffer,
@@ -139,26 +140,26 @@ static int	jpathtab_size		__PR((int starting_extent));
  *
  */
 #ifdef	PROTOTYPES
-unsigned char 
+unsigned char
 conv_charset(unsigned char c,
 	struct nls_table *inls,
 	struct nls_table *onls)
 #else
-unsigned char 
+unsigned char
 conv_charset(c, inls, onls)
 	unsigned char c;
 	struct nls_table *inls;
 	struct nls_table *onls;
 #endif
 {
-	unsigned char uh,
-		      ul,
-		      uc,
-		      *up;
+	unsigned char	uh;
+	unsigned char	ul;
+	unsigned char	uc;
+	unsigned char	*up;
 
 	/* if we have a null mapping, just return the input character */
 	if (inls == onls)
-		return c;
+		return (c);
 
 	/* get high and low UNICODE bytes */
 	uh = inls->charset2uni[c].uni2;
@@ -220,7 +221,7 @@ convert_to_unicode(buffer, size, source, inls)
 	 * then assume the input was 0 terminated.
 	 */
 	j = 0;
-	for (i = 0; (i + 1) < size; i += 2, j++) {	/* Size may be odd!!!*/
+	for (i = 0; (i + 1) < size; i += 2, j++) {	/* Size may be odd! */
 		/*
 		 * JS integrated from: Achim_Kaiser@t-online.de
 		 * SGE modified according to Linux kernel source
@@ -229,15 +230,15 @@ convert_to_unicode(buffer, size, source, inls)
 		 */
 		uc = tmpbuf[j];			/* temporary copy */
 		if (uc != '\0') {		/* must be converted */
-			uh = inls->charset2uni[uc].uni2;	/* convert forward:
-							   hibyte...	     */
-			ul = inls->charset2uni[uc].uni1;	/* ...lobyte	     */
-			up = inls->page_uni2charset[uh];	/* convert backward:
-							   page...	     */
+			uh = inls->charset2uni[uc].uni2;	/* convert forward:  */
+								/*   hibyte...	*/
+			ul = inls->charset2uni[uc].uni1;	/* ...lobyte	*/
+			up = inls->page_uni2charset[uh];	/* convert backward: */
+								/*   page...	*/
 			if (up == NULL)
-				uc = '\0';	/* ...wrong unicode page     */
+				uc = '\0';	/* wrong unicode page	   */
 			else
-				uc = up[ul];	/* backconverted character   */
+				uc = up[ul];	/* backconverted character */
 			if (uc != tmpbuf[j])
 				uc = '\0';	/* should be identical */
 			if (uc <= 0x1f || uc == 0x7f)
@@ -259,8 +260,8 @@ convert_to_unicode(buffer, size, source, inls)
 				uc = '_';
 			}
 		}
-		buffer[i] = inls->charset2uni[uc].uni2;	/* final UNICODE
-							   conversion */
+		buffer[i] = inls->charset2uni[uc].uni2;	/* final UNICODE */
+							/* conversion */
 		buffer[i + 1] = inls->charset2uni[uc].uni1;
 	}
 
@@ -302,7 +303,7 @@ joliet_strlen(string)
 	if (rtn > 2*jlen) {
 		rtn = 2*jlen;
 	}
-	return rtn;
+	return (rtn);
 }
 
 /*
@@ -346,23 +347,23 @@ get_joliet_vol_desc(jvol_desc)
 	 *  We probably will want to filter any characters >= 0x80.
 	 */
 	convert_to_unicode((Uchar *) jvol_desc->system_id,
-			sizeof(jvol_desc->system_id), NULL, in_nls);
+			sizeof (jvol_desc->system_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->volume_id,
-			sizeof(jvol_desc->volume_id), NULL, in_nls);
+			sizeof (jvol_desc->volume_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->volume_set_id,
-			sizeof(jvol_desc->volume_set_id), NULL, in_nls);
+			sizeof (jvol_desc->volume_set_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->publisher_id,
-			sizeof(jvol_desc->publisher_id), NULL, in_nls);
+			sizeof (jvol_desc->publisher_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->preparer_id,
-			sizeof(jvol_desc->preparer_id), NULL, in_nls);
+			sizeof (jvol_desc->preparer_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->application_id,
-			sizeof(jvol_desc->application_id), NULL, in_nls);
+			sizeof (jvol_desc->application_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->copyright_file_id,
-			sizeof(jvol_desc->copyright_file_id), NULL, in_nls);
+			sizeof (jvol_desc->copyright_file_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->abstract_file_id,
-			sizeof(jvol_desc->abstract_file_id), NULL, in_nls);
+			sizeof (jvol_desc->abstract_file_id), NULL, in_nls);
 	convert_to_unicode((Uchar *) jvol_desc->bibliographic_file_id,
-			sizeof(jvol_desc->bibliographic_file_id), NULL, in_nls);
+			sizeof (jvol_desc->bibliographic_file_id), NULL, in_nls);
 }
 
 static void
@@ -431,10 +432,10 @@ joliet_compare_paths(r, l)
 
 	/* make sure root directory is first */
 	if (rr == root)
-		return -1;
+		return (-1);
 
 	if (ll == root)
-		return 1;
+		return (1);
 
 	rparent = rr->parent->jpath_index;
 	lparent = ll->parent->jpath_index;
@@ -445,10 +446,10 @@ joliet_compare_paths(r, l)
 		lparent = ll->self->parent_rec->filedir->jpath_index;
 	}
 	if (rparent < lparent) {
-		return -1;
+		return (-1);
 	}
 	if (rparent > lparent) {
-		return 1;
+		return (1);
 	}
 #ifdef APPLE_HYB
 	/*
@@ -458,8 +459,7 @@ joliet_compare_paths(r, l)
 	if (USE_MAC_NAME(rr->self)) {
 		rpnt = rr->self->hfs_ent->name;
 		rinls = hfs_inls;
-	}
-	else {
+	} else {
 		rpnt = rr->self->name;
 		rinls = in_nls;
 	}
@@ -467,8 +467,7 @@ joliet_compare_paths(r, l)
 	if (USE_MAC_NAME(ll->self)) {
 		lpnt = ll->self->hfs_ent->name;
 		linls = hfs_inls;
-	}
-	else {
+	} else {
 		lpnt = ll->self->name;
 		linls = in_nls;
 	}
@@ -485,20 +484,20 @@ joliet_compare_paths(r, l)
 		convert_to_unicode(ltmp, 2, lpnt, linls);
 
 		if (a_to_u_2_byte(rtmp) < a_to_u_2_byte(ltmp))
-			return -1;
+			return (-1);
 		if (a_to_u_2_byte(rtmp) > a_to_u_2_byte(ltmp))
-			return 1;
+			return (1);
 
 		rpnt++;
 		lpnt++;
 	}
 
 	if (*rpnt)
-		return 1;
+		return (1);
 	if (*lpnt)
-		return -1;
+		return (-1);
 
-	return 0;
+	return (0);
 
 }/* compare_paths(... */
 
@@ -523,18 +522,18 @@ generate_joliet_path_tables()
 
 	/* Now start filling in the path tables.  Start with root directory */
 	jpath_table_index = 0;
-	jpathlist = (struct directory **) e_malloc(sizeof(struct directory *)
+	jpathlist = (struct directory **) e_malloc(sizeof (struct directory *)
 		* next_jpath_index);
-	memset(jpathlist, 0, sizeof(struct directory *) * next_jpath_index);
+	memset(jpathlist, 0, sizeof (struct directory *) * next_jpath_index);
 	build_jpathlist(root);
 
 	do {
 		fix = 0;
-#ifdef	__STDC__
-		qsort(&jpathlist[1], next_jpath_index - 1, sizeof(struct directory *),
+#ifdef	PROTOTYPES
+		qsort(&jpathlist[1], next_jpath_index - 1, sizeof (struct directory *),
 			(int (*) (const void *, const void *)) joliet_compare_paths);
 #else
-		qsort(&jpathlist[1], next_jpath_index - 1, sizeof(struct directory *),
+		qsort(&jpathlist[1], next_jpath_index - 1, sizeof (struct directory *),
 			joliet_compare_paths);
 #endif
 
@@ -671,7 +670,7 @@ generate_joliet_path_tables()
 			jpath_table_size);
 #endif
 	}
-	return 0;
+	return (0);
 }/* generate_path_tables(... */
 
 static void
@@ -806,11 +805,11 @@ generate_one_joliet_directory(dpnt, outfile)
 		 * Finally dump the Unicode version of the filename.
 		 * Note - . and .. are the same as with non-Joliet discs.
 		 */
-		if ((jrec.flags[0] & ISO_DIRECTORY) != 0
-			&& strcmp(s_entry1->name, ".") == 0) {
+		if ((jrec.flags[0] & ISO_DIRECTORY) != 0 &&
+			strcmp(s_entry1->name, ".") == 0) {
 			directory_buffer[dir_index++] = 0;
-		} else if ((jrec.flags[0] & ISO_DIRECTORY) != 0
-			&& strcmp(s_entry1->name, "..") == 0) {
+		} else if ((jrec.flags[0] & ISO_DIRECTORY) != 0 &&
+			strcmp(s_entry1->name, "..") == 0) {
 			directory_buffer[dir_index++] = 1;
 		} else {
 #ifdef APPLE_HYB
@@ -820,12 +819,14 @@ generate_one_joliet_directory(dpnt, outfile)
 					(Uchar *) directory_buffer+dir_index,
 					cvt_len,
 					s_entry1->hfs_ent->name, hfs_inls);
-			} else 
+			} else
 #endif	/* APPLE_HYB */
+			{
 				convert_to_unicode(
 					(Uchar *) directory_buffer+dir_index,
 					cvt_len,
 					s_entry1->name, in_nls);
+			}
 			dir_index += cvt_len;
 		}
 
@@ -848,7 +849,7 @@ generate_one_joliet_directory(dpnt, outfile)
 			dir_index, dpnt->de_name);
 #endif
 	}
-	xfwrite(directory_buffer, 1, total_size, outfile);
+	xfwrite(directory_buffer, total_size, 1, outfile, 0, FALSE);
 	last_extent_written += total_size >> 11;
 	free(directory_buffer);
 }/* generate_one_joliet_directory(... */
@@ -866,7 +867,7 @@ joliet_sort_n_finish(this_dir)
 	 */
 	if (this_dir != reloc_dir &&
 				this_dir->dir_flags & INHIBIT_JOLIET_ENTRY) {
-		return 0;
+		return (0);
 	}
 	for (s_entry = this_dir->contents; s_entry; s_entry = s_entry->next) {
 		/* skip hidden entries */
@@ -939,7 +940,7 @@ joliet_sort_n_finish(this_dir)
 	}
 
 	if ((this_dir->dir_flags & INHIBIT_JOLIET_ENTRY) != 0) {
-		return 0;
+		return (0);
 	}
 	this_dir->jcontents = this_dir->contents;
 	status = joliet_sort_directory(&this_dir->jcontents);
@@ -955,7 +956,7 @@ joliet_sort_n_finish(this_dir)
 /*XXX JS  this_dir->ce_bytes = 0;*/
 	for (s_entry = this_dir->jcontents; s_entry;
 						s_entry = s_entry->jnext) {
-		int             jreclen;
+		int	jreclen;
 
 		if ((s_entry->de_flags & INHIBIT_JOLIET_ENTRY) != 0) {
 			continue;
@@ -968,7 +969,7 @@ joliet_sort_n_finish(this_dir)
 		}
 		this_dir->jsize += jreclen;
 	}
-	return status;
+	return (status);
 }
 
 /*
@@ -1000,8 +1001,7 @@ joliet_compare_dirs(rr, ll)
 	if (USE_MAC_NAME(*r)) {
 		rpnt = (*r)->hfs_ent->name;
 		rinls = hfs_inls;
-	}
-	else {
+	} else {
 		rpnt = (*r)->name;
 		rinls = in_nls;
 	}
@@ -1009,8 +1009,7 @@ joliet_compare_dirs(rr, ll)
 	if (USE_MAC_NAME(*l)) {
 		lpnt = (*l)->hfs_ent->name;
 		linls = hfs_inls;
-	}
-	else {
+	} else {
 		lpnt = (*l)->name;
 		linls = in_nls;
 	}
@@ -1034,7 +1033,7 @@ joliet_compare_dirs(rr, ll)
 			"Error: %s and %s have the same Joliet name\n",
 			(*r)->whole_name, (*l)->whole_name);
 #endif
-		sort_goof++;
+		jsort_goof++;
 	}
 	/*
 	 * Put the '.' and '..' entries on the head of the sorted list.
@@ -1042,14 +1041,14 @@ joliet_compare_dirs(rr, ll)
 	 * band characters cause this not to be the case sometimes.
 	 */
 	if (strcmp(rpnt, ".") == 0)
-		return -1;
+		return (-1);
 	if (strcmp(lpnt, ".") == 0)
-		return 1;
+		return (1);
 
 	if (strcmp(rpnt, "..") == 0)
-		return -1;
+		return (-1);
 	if (strcmp(lpnt, "..") == 0)
-		return 1;
+		return (1);
 
 #ifdef DVD_VIDEO
 	/*
@@ -1067,48 +1066,48 @@ joliet_compare_dirs(rr, ll)
 	if (dvd_video) {
 		if (strcmp(rpnt, "VIDEO_TS.IFO") == 0)
 			return (-1);
- 		if (strcmp(lpnt, "VIDEO_TS.IFO") == 0)
+		if (strcmp(lpnt, "VIDEO_TS.IFO") == 0)
 			return (1);
 	}
 #endif
 
 	while (*rpnt && *lpnt) {
 		if (*rpnt == ';' && *lpnt != ';')
-			return -1;
+			return (-1);
 		if (*rpnt != ';' && *lpnt == ';')
-			return 1;
+			return (1);
 
 		if (*rpnt == ';' && *lpnt == ';')
-			return 0;
+			return (0);
 
 		/*
-		 * Extensions are not special here. 
+		 * Extensions are not special here.
 		 * Don't treat the dot as something that must be bumped to
 		 * the start of the list.
 		 */
 #if 0
 		if (*rpnt == '.' && *lpnt != '.')
-			return -1;
+			return (-1);
 		if (*rpnt != '.' && *lpnt == '.')
-			return 1;
+			return (1);
 #endif
 
 		convert_to_unicode(rtmp, 2, rpnt, rinls);
 		convert_to_unicode(ltmp, 2, lpnt, linls);
 
 		if (a_to_u_2_byte(rtmp) < a_to_u_2_byte(ltmp))
-			return -1;
+			return (-1);
 		if (a_to_u_2_byte(rtmp) > a_to_u_2_byte(ltmp))
-			return 1;
+			return (1);
 
 		rpnt++;
 		lpnt++;
 	}
 	if (*rpnt)
-		return 1;
+		return (1);
 	if (*lpnt)
-		return -1;
-	return 0;
+		return (-1);
+	return (0);
 }
 
 
@@ -1139,7 +1138,7 @@ joliet_sort_directory(sort_dir)
 
 	/* OK, now we know how many there are.  Build a vector for sorting. */
 	sortlist = (struct directory_entry **)
-		e_malloc(sizeof(struct directory_entry *) * dcount);
+		e_malloc(sizeof (struct directory_entry *) * dcount);
 
 	dcount = 0;
 	s_entry = *sort_dir;
@@ -1152,12 +1151,12 @@ joliet_sort_directory(sort_dir)
 		s_entry = s_entry->next;
 	}
 
-	sort_goof = 0;
-#ifdef	__STDC__
-	qsort(sortlist, dcount, sizeof(struct directory_entry *),
+	jsort_goof = 0;
+#ifdef	PROTOTYPES
+	qsort(sortlist, dcount, sizeof (struct directory_entry *),
 		(int (*) (const void *, const void *)) joliet_compare_dirs);
 #else
-	qsort(sortlist, dcount, sizeof(struct directory_entry *),
+	qsort(sortlist, dcount, sizeof (struct directory_entry *),
 		joliet_compare_dirs);
 #endif
 
@@ -1170,7 +1169,7 @@ joliet_sort_directory(sort_dir)
 	*sort_dir = sortlist[0];
 
 	free(sortlist);
-	return sort_goof;
+	return (jsort_goof);
 }
 
 int
@@ -1194,7 +1193,7 @@ joliet_sort_tree(node)
 		}
 		dpnt = dpnt->next;
 	}
-	return ret;
+	return (ret);
 }
 
 static void
@@ -1235,14 +1234,14 @@ jpathtab_write(outfile)
 	FILE	*outfile;
 {
 	/* Next we write the path tables */
-	xfwrite(jpath_table_l, 1, jpath_blocks << 11, outfile);
-	xfwrite(jpath_table_m, 1, jpath_blocks << 11, outfile);
+	xfwrite(jpath_table_l, jpath_blocks << 11, 1, outfile, 0, FALSE);
+	xfwrite(jpath_table_m, jpath_blocks << 11, 1, outfile, 0, FALSE);
 	last_extent_written += 2 * jpath_blocks;
 	free(jpath_table_l);
 	free(jpath_table_m);
 	jpath_table_l = NULL;
 	jpath_table_m = NULL;
-	return 0;
+	return (0);
 }
 
 static int
@@ -1250,7 +1249,7 @@ jdirtree_size(starting_extent)
 	int	starting_extent;
 {
 	assign_joliet_directory_addresses(root);
-	return 0;
+	return (0);
 }
 
 static int
@@ -1267,7 +1266,7 @@ jroot_gen()
 	jroot_record.interleave[0] = 0;
 	set_723(jroot_record.volume_sequence_number, volume_sequence_number);
 	jroot_record.name_len[0] = 1;
-	return 0;
+	return (0);
 }
 
 static int
@@ -1275,7 +1274,7 @@ jdirtree_write(outfile)
 	FILE	*outfile;
 {
 	generate_joliet_directories(root, outfile);
-	return 0;
+	return (0);
 }
 
 /*
@@ -1290,9 +1289,9 @@ jvd_write(outfile)
 	/* Next we write out the boot volume descriptor for the disc */
 	jvol_desc = vol_desc;
 	get_joliet_vol_desc(&jvol_desc);
-	xfwrite(&jvol_desc, 1, SECTOR_SIZE, outfile);
+	xfwrite(&jvol_desc, SECTOR_SIZE, 1, outfile, 0, FALSE);
 	last_extent_written++;
-	return 0;
+	return (0);
 }
 
 /*
@@ -1308,7 +1307,7 @@ jpathtab_size(starting_extent)
 	jpath_table[3] = 0;
 
 	last_extent += 2 * jpath_blocks;
-	return 0;
+	return (0);
 }
 
 struct output_fragment joliet_desc = {NULL, oneblock_size, jroot_gen, jvd_write, "Joliet Volume Descriptor" };

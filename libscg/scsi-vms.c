@@ -1,7 +1,7 @@
-/* @(#)scsi-vms.c	1.32 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-vms.c	1.33 04/01/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-vms.c	1.32 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-vms.c	1.33 04/01/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the VMS generic SCSI implementation.
@@ -32,9 +32,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <iodef.h>
@@ -51,46 +51,46 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.32";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-vms.c-1.33";	/* The version for this transport*/
 
-#define VMS_MAX_DK	4		/* DK[A-D] VMS device controllers */
-#define VMS_MAX_GK	4		/* GK[A-D] VMS device controllers */
-#define VMS_MAX_DQ	26		/* DQ[A-Z] VMS device controllers */
+#define	VMS_MAX_DK	4		/* DK[A-D] VMS device controllers */
+#define	VMS_MAX_GK	4		/* GK[A-D] VMS device controllers */
+#define	VMS_MAX_DQ	26		/* DQ[A-Z] VMS device controllers */
 
-#define VMS_DKRANGE_MAX	VMS_MAX_DK
-#define VMS_GKRANGE_MAX	(VMS_DKRANGE_MAX + VMS_MAX_GK)
-#define VMS_DQRANGE_MAX	(VMS_GKRANGE_MAX + VMS_MAX_DQ )
+#define	VMS_DKRANGE_MAX	VMS_MAX_DK
+#define	VMS_GKRANGE_MAX	(VMS_DKRANGE_MAX + VMS_MAX_GK)
+#define	VMS_DQRANGE_MAX	(VMS_GKRANGE_MAX + VMS_MAX_DQ)
 
-#define MAX_SCG 	VMS_DQRANGE_MAX	/* Max # of SCSI controllers */
-#define MAX_TGT 	16
-#define MAX_LUN 	8
+#define	MAX_SCG 	VMS_DQRANGE_MAX	/* Max # of SCSI controllers */
+#define	MAX_TGT 	16
+#define	MAX_LUN 	8
 
-#define MAX_DMA_VMS	(63*1024)	/* Check if this is not too big */
-#define MAX_PHSTMO_VMS	300
-#define MAX_DSCTMO_VMS	((64*1024)-1)	/* max value for OpenVMS/AXP 7.1 ehh*/
+#define	MAX_DMA_VMS	(63*1024)	/* Check if this is not too big */
+#define	MAX_PHSTMO_VMS	300
+#define	MAX_DSCTMO_VMS	((64*1024)-1)	/* max value for OpenVMS/AXP 7.1 ehh*/
 
 /*
  * Define a mapping from the scsi busno to the three character
  * VMS device controller.
  * The valid busno values are broken into three ranges, one for each of
- * the three supported devices: dk, gk, and dq.  
+ * the three supported devices: dk, gk, and dq.
  * The vmschar[] and vmschar1[] arrays are subscripted by an offset
  * corresponding to each of the three ranges [0,1,2] to provide the
  * two characters of the VMS device.
- * The offset of the busno value within its range is used to define the 
+ * The offset of the busno value within its range is used to define the
  * third character, using the vmschar2[] array.
- */ 
-LOCAL	char	vmschar[]	= {'d','g','d'};
-LOCAL	char	vmschar1[]	= {'k','k','q'};
-LOCAL	char	vmschar2[]	= {'a','b','c','d','e','f','g','h','i','j',
-				   'k','l','m','n','o','p','q','r','s','t',
-				   'u','v','w','x','y','z'};
+ */
+LOCAL	char	vmschar[]	= {'d', 'g', 'd'};
+LOCAL	char	vmschar1[]	= {'k', 'k', 'q'};
+LOCAL	char	vmschar2[]	= {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+				    'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+				    'u', 'v', 'w', 'x', 'y', 'z'};
 
 
 LOCAL	int	do_scg_cmd	__PR((SCSI *scgp, struct scg_cmd *sp));
 LOCAL	int	do_scg_sense	__PR((SCSI *scgp, struct scg_cmd *sp));
 
-#define DEVICE_NAMELEN 8
+#define	DEVICE_NAMELEN 8
 
 struct SCSI$DESC {
 	Uint	SCSI$L_OPCODE;		/* SCSI Operation Code */
@@ -126,22 +126,22 @@ struct SCSI$IOSB {
 #pragma member_alignment restore
 #endif
 
-#define SCSI$K_GOOD_STATUS	0
-#define SCSI$K_CHECK_CONDITION 0x2
-#define SCSI$K_CONDITION_MET 0x4
-#define SCSI$K_BUSY 0x8
-#define SCSI$K_INTERMEDIATE 0x10
-#define SCSI$K_INTERMEDIATE_C_MET 0x14
-#define SCSI$K_RESERVATION_CONFLICT 0x18
-#define SCSI$K_COMMAND_TERMINATED 0x22
-#define SCSI$K_QUEUE_FULL 0x28
+#define	SCSI$K_GOOD_STATUS		0
+#define	SCSI$K_CHECK_CONDITION		0x2
+#define	SCSI$K_CONDITION_MET		0x4
+#define	SCSI$K_BUSY			0x8
+#define	SCSI$K_INTERMEDIATE		0x10
+#define	SCSI$K_INTERMEDIATE_C_MET	0x14
+#define	SCSI$K_RESERVATION_CONFLICT	0x18
+#define	SCSI$K_COMMAND_TERMINATED	0x22
+#define	SCSI$K_QUEUE_FULL		0x28
 
 
-#define SCSI$K_WRITE		0X0	/* direction of transfer=write */
-#define SCSI$K_READ		0X1	/* direction of transfer=read */
-#define SCSI$K_FL_ENAB_DIS	0X2	/* enable disconnects */
-#define SCSI$K_FL_ENAB_SYNC	0X4	/* enable sync */
-#define GK_EFN			0	/* Event flag number */
+#define	SCSI$K_WRITE		0X0	/* direction of transfer=write */
+#define	SCSI$K_READ		0X1	/* direction of transfer=read */
+#define	SCSI$K_FL_ENAB_DIS	0X2	/* enable disconnects */
+#define	SCSI$K_FL_ENAB_SYNC	0X4	/* enable sync */
+#define	GK_EFN			0	/* Event flag number */
 
 static char	gk_device[8];		/* XXX JS hoffentlich gibt es keinen Ueberlauf */
 static Ushort	gk_chan;
@@ -149,7 +149,7 @@ static Ushort	transfer_length;
 static int	i;
 static int	status;
 static $DESCRIPTOR(gk_device_desc, gk_device);
-static struct SCSI$IOSB gk_iosb ;
+static struct SCSI$IOSB gk_iosb;
 static struct SCSI$DESC gk_desc;
 static FILE *fp;
 
@@ -157,7 +157,7 @@ static FILE *fp;
 struct scg_local {
 	Ushort	gk_chan;
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 /*
  * Return version information for the low level SCSI transport code.
@@ -240,18 +240,18 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 	}
 
-	if (busno < VMS_DKRANGE_MAX ) {			/*in the dk range?   */
+	if (busno < VMS_DKRANGE_MAX) {			/* in the dk range?   */
 		range = 0;
 		range_offset = busno;
-	} else if (busno < VMS_GKRANGE_MAX ) {		/*in the gk range?   */
+	} else if (busno < VMS_GKRANGE_MAX) {		/* in the gk range?   */
 		range = 1;
 		range_offset = busno - VMS_DKRANGE_MAX;
-	} else if (busno < VMS_DQRANGE_MAX ) {		/*in the dq range?   */
+	} else if (busno < VMS_DQRANGE_MAX) {		/* in the dq range?   */
 		range = 2;
 		range_offset = busno - VMS_GKRANGE_MAX;
 	}
@@ -259,10 +259,10 @@ scgo_open(scgp, device)
 	buschar1 = vmschar1[range];			/* get 2nd device char*/
 	buschar2 = vmschar2[range_offset];		/* get controller char*/
 
-	js_snprintf(devname, sizeof(devname), "%c%c%c%d0%d:",
+	js_snprintf(devname, sizeof (devname), "%c%c%c%d0%d:",
 					buschar, buschar1, buschar2,
 					tgt, tlun);
-	strcpy (gk_device, devname);
+	strcpy(gk_device, devname);
 	status = sys$assign(&gk_device_desc, &gk_chan, 0, 0);
 	if (!(status & 1)) {
 		js_fprintf((FILE *)scgp->errfile,
@@ -290,7 +290,7 @@ scgo_close(scgp)
 	 * sys$dassgn()
 	 */
 
-	status=sys$dassgn(gk_chan);
+	status = sys$dassgn(gk_chan);
 
 	return (status);
 }
@@ -338,9 +338,9 @@ scgo_isatapi(scgp)
 {
 	int	busno = scg_scsibus(scgp);
 
-	if (busno >= 8) 
+	if (busno >= 8)
 		return (TRUE);
-	
+
 	return (FALSE);
 }
 
@@ -389,7 +389,8 @@ do_scg_cmd(scgp, sp)
 	/* XXX JS XXX This cannot be OK */
 	notcmdretry = (sp->flags & SCG_CMD_RETRY)^SCG_CMD_RETRY;
 	/* error corrected ehh	*/
-/* XXX JS Wenn das notcmdretry Flag bei VMS auch 0x08 ist und Du darauf hoffst,
+/*
+ * XXX JS Wenn das notcmdretry Flag bei VMS auch 0x08 ist und Du darauf hoffst,
  * XXX	Dasz ich den Wert nie aendere, dann ist das richtig.
  * XXX Siehe unten: Das gleiche gilt fuer SCG_RECV_DATA und SCG_DISRE_ENA !!!
  */
@@ -433,7 +434,7 @@ do_scg_cmd(scgp, sp)
 		js_fprintf(fp, " DISCON_TMOUT: %d\n", gk_desc.SCSI$L_DISCON_TMOUT);
 	}
 	status = sys$qiow(GK_EFN, gk_chan, IO$_DIAGNOSE, &gk_iosb, 0, 0,
-			&gk_desc, sizeof(gk_desc), 0, 0, 0, 0);
+			&gk_desc, sizeof (gk_desc), 0, 0, 0, 0);
 
 
 	if (scgp->debug > 0) {
@@ -448,7 +449,7 @@ do_scg_cmd(scgp, sp)
 
 	if (!(status & 1)) {		/* Fehlerindikation fuer sys$qiow() */
 		sp->ux_errno = geterrno();
-		/* schwerwiegender nicht SCSI bedingter Fehler => return(-1) */
+		/* schwerwiegender nicht SCSI bedingter Fehler => return (-1) */
 		if (sp->ux_errno == ENOTTY || sp->ux_errno == ENXIO ||
 		    sp->ux_errno == EINVAL || sp->ux_errno == EACCES) {
 			return (-1);
@@ -475,7 +476,7 @@ do_scg_cmd(scgp, sp)
 			js_fprintf(fp, "sp->error %i\n", sp->error);
 			js_fprintf(fp, "sp->resid %i\n", sp->resid);
 		}
-		return(0);
+		return (0);
 	}
 
 	severity = gk_iosb.SCSI$W_VMS_STAT & 0x7;
@@ -508,7 +509,7 @@ do_scg_cmd(scgp, sp)
 		js_fprintf(fp, "gk_iosb.SCSI$W_VMS_STAT != 0\n");
 		js_fprintf(fp, "sp->error %i\n", sp->error);
 	}
-	return(0);
+	return (0);
 }
 
 LOCAL int
@@ -519,7 +520,7 @@ do_scg_sense(scgp, sp)
 	int		ret;
 	struct scg_cmd	s_cmd;
 
-	fillbytes((caddr_t)&s_cmd, sizeof(s_cmd), '\0');
+	fillbytes((caddr_t)&s_cmd, sizeof (s_cmd), '\0');
 	s_cmd.addr = (char *)sp->u_sense.cmd_sense;
 	s_cmd.size = sp->sense_len;
 	s_cmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;

@@ -1,7 +1,7 @@
-/* @(#)scsi-openserver.c	1.30 02/10/19 Copyright 1998 J. Schilling, Santa Cruz Operation */
+/* @(#)scsi-openserver.c	1.31 04/01/15 Copyright 1998 J. Schilling, Santa Cruz Operation */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-openserver.c	1.30 02/10/19 Copyright 1998 J. Schilling, Santa Cruz Operation";
+	"@(#)scsi-openserver.c	1.31 04/01/15 Copyright 1998 J. Schilling, Santa Cruz Operation";
 #endif
 /*
  *	Interface for the SCO SCSI implementation.
@@ -25,9 +25,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #undef	sense
@@ -41,32 +41,33 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.30";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.31";	/* The version for this transport*/
 
 #define	MAX_SCG		16		/* Max # of cdrom devices */
-#define	MAX_TGT		16		/* Not really needed      */
-#define	MAX_LUN		8		/* Not really needed      */
+#define	MAX_TGT		16		/* Not really needed	  */
+#define	MAX_LUN		8		/* Not really needed	  */
 
 #define	MAX_DMA		(64*1024)
 
-#define	MAXPATH	       256		/* max length of devicepath  */
-#define MAXLINE		80		/* max length of input line  */
-#define MAXSCSI		99		/* max number of mscsi lines */
+#define	MAXPATH		256		/* max length of devicepath  */
+#define	MAXLINE		80		/* max length of input line  */
+#define	MAXSCSI		99		/* max number of mscsi lines */
 #define	MAXDRVN		10		/* max length of drivername  */
 
-#define DEV_DIR		"/tmp"
+#define	DEV_DIR		"/tmp"
 #define	DEV_NAME	"scg.s%1dt%1dl%1d"
 
-/* ---------------------------------------------------------------------
-** We will only deal with cdroms by default! Only if you set a specific
-** environment variable, we will scan "all" devices !
-** Set LIBSCG_SCAN_ALL to any value to enable access to all your SCSI
-** devices.
-**
-** The upcoming support for USB will be for USB 1.1, so as this is not
-** tested yet, we will currently ignore drives connect to the USB stack
-** (usbha controller) regardless of having set LIBSCG_SCAN_ALL or not!
-*/
+/*
+ * ---------------------------------------------------------------------
+ * We will only deal with cdroms by default! Only if you set a specific
+ * environment variable, we will scan "all" devices !
+ * Set LIBSCG_SCAN_ALL to any value to enable access to all your SCSI
+ * devices.
+ *
+ * The upcoming support for USB will be for USB 1.1, so as this is not
+ * tested yet, we will currently ignore drives connect to the USB stack
+ * (usbha controller) regardless of having set LIBSCG_SCAN_ALL or not!
+ */
 
 #define	DEV_ROOT	"/dev/dsk/0s0"
 
@@ -80,55 +81,57 @@ LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.30";	/* The version for t
 #define	SCSI_CFG	"/etc/sconf -r"		/* no. of configured devices  */
 #define	SCSI_DEV	"/etc/sconf -g %d"	/* read line 'n' of mscsi tbl */
 
-#define	DRV_ATAPI	"wd"		/* SCO OpenServer IDE driver 	*/
-#define	DRV_USB		"usbha"		/* SCO OpenServer USB driver 	*/
-#define	DRV_NOHA	"noha"		/* IDE/ATAPI device configured,
-					** but missing !	
-					*/
-
-#define	T_DISK		"Sdsk"		/* SCO OpenServer SCSI disk 	*/
-#define	T_CDROM		"Srom"		/* SCO OpenServer SCSI cdrom 	*/
-#define	T_TAPE		"Stp"		/* SCO OpenServer SCSI tape 	*/
-#define	T_FLOPPY	"Sflp"		/* SCO OpenServer SCSI floppy 	*/
+#define	DRV_ATAPI	"wd"		/* SCO OpenServer IDE driver	*/
+#define	DRV_USB		"usbha"		/* SCO OpenServer USB driver	*/
+#define	DRV_NOHA	"noha"		/* IDE/ATAPI device configured,	*/
+					/* but missing !		*/
 
 
-/* ---------------------------------------------------------------------
-** Environment variables to control certain functionality
-*/
+#define	T_DISK		"Sdsk"		/* SCO OpenServer SCSI disk	*/
+#define	T_CDROM		"Srom"		/* SCO OpenServer SCSI cdrom	*/
+#define	T_TAPE		"Stp"		/* SCO OpenServer SCSI tape	*/
+#define	T_FLOPPY	"Sflp"		/* SCO OpenServer SCSI floppy	*/
+
+
+/*
+ * ---------------------------------------------------------------------
+ * Environment variables to control certain functionality
+ */
 
 #define	SCAN_ALL	"LIBSCG_SCAN_ALL"	/* enable access for all devices */
 #define	SCSI_USER_CMD	"LIBSCG_SCSIUSERCMD"	/* use old SCSIUSERCMD ioctl() */
 #define	DMA_OVERRIDE	"LIBSCG_MAX_DMA"	/* override MAX_DMA value */
 #define	ENABLE_USB	"LIBSCG_ENABLE_USB"	/* enable access of USB devices */
 
-LOCAL	int	scan_all    = 0;	/* don't scan all devices by default */
-LOCAL	int	scsiusercmd = 0; 	/* use SCSIUSERCMD2 ioctl by default */
-LOCAL	int	enable_usb  = 0;	/* don't scan USB devices by default */
-LOCAL	long	max_dma     = MAX_DMA;	/* use MAX_DMA DMA buffer by default */
+LOCAL	int	scan_all	= 0;	/* don't scan all devices by default */
+LOCAL	int	scsiusercmd	= 0;	/* use SCSIUSERCMD2 ioctl by default */
+LOCAL	int	enable_usb	= 0;	/* don't scan USB devices by default */
+LOCAL	long	max_dma		= MAX_DMA; /* use MAX_DMA DMA buffer by default */
 
 
-/* ---------------------------------------------------------------------
-** There are two scsi passthrough ioctl() on SCO OpenServer 5.0.[45],
-** while there is only one available on SCO OpenServer 5.0.[02].
-**
-** The SCSIUSERCMD ioctl is available on all OpenServer 5
-**
-** The SCSIUSERCMD2 ioctl which executes the usercmd and reads the sense
-** in one go, is only available from 5.0.4 onwards.
-**
-** By default we will use the SCSIUSERCMD2 ioctl(), in order to execute
-** the SCSIUSERCMD ioctl() instead set the environment variable
-** LIBSCG_SCSIUSERCMD to any value. Using the olderSCSIUSERCMD ioctl() will
-** if the SCSI commands returns a CHECK CONDITION status, run a seperate
-** REQUEST_SENSE command immediately. But we need to remember that in a
-** multi-tasking environment, there might be other code which has accessed
-** the device in between these two steps and therefore the sense code
-** is no longer valid !!!
-**
-** NOTE: There are problems with the usage of AHA 154X controllers
-** and SCSIUSERCMD2 such as nonsense (weird) output on cdrecord -scanbus
-**
-*/
+/*
+ * ---------------------------------------------------------------------
+ * There are two scsi passthrough ioctl() on SCO OpenServer 5.0.[45],
+ * while there is only one available on SCO OpenServer 5.0.[02].
+ *
+ * The SCSIUSERCMD ioctl is available on all OpenServer 5
+ *
+ * The SCSIUSERCMD2 ioctl which executes the usercmd and reads the sense
+ * in one go, is only available from 5.0.4 onwards.
+ *
+ * By default we will use the SCSIUSERCMD2 ioctl(), in order to execute
+ * the SCSIUSERCMD ioctl() instead set the environment variable
+ * LIBSCG_SCSIUSERCMD to any value. Using the olderSCSIUSERCMD ioctl() will
+ * if the SCSI commands returns a CHECK CONDITION status, run a seperate
+ * REQUEST_SENSE command immediately. But we need to remember that in a
+ * multi-tasking environment, there might be other code which has accessed
+ * the device in between these two steps and therefore the sense code
+ * is no longer valid !!!
+ *
+ * NOTE: There are problems with the usage of AHA 154X controllers
+ * and SCSIUSERCMD2 such as nonsense (weird) output on cdrecord -scanbus
+ *
+ */
 
 
 typedef struct scg2sdi {
@@ -165,31 +168,32 @@ LOCAL	int	openserver_init	__PR((SCSI *scgp));
 LOCAL	void	cp_scg2sco	__PR((struct scsicmd2 *sco, struct scg_cmd *scg));
 LOCAL	void	cp_sco2scg	__PR((struct scsicmd2 *sco, struct scg_cmd *scg));
 
-/* -------------------------------------------------------------------------
-** SCO OpenServer does not have a generic scsi device driver, which can
-** be used to access any configured scsi device. But we can use the "Sxxx"
-** scsi peripherial drivers passthrough ioctl() (SCSIUSERCMD / SCSIUSERCMD2)
-** to send scsi user comands to any target device controlled by the
-** corresponding target driver.
-**
-** This passthrough implementation for libscg currently allows to
-** handle the following devices classes:
-**
-**	1. DISK		handled by Sdsk
-**	2. CD-ROM	handled by Srom
-**	3. TAPES	handled by Stp
-**	4. FLOPPY	handled by Sflp
-**
-** NOTE: The libscg OpenServer passthrough routines have changed with
-**       cdrecord-1.8 to enable the -scanbus option. Therefore the
-**	 addressing scheme is now the same as used on many other platforms
-**	 like Solaris, Linux etc.
-**
-**   ===============================================================
-**   RUN 'cdrecord -scanbus' TO SEE THE DEVICE ADDRESSES YOU CAN USE
-**   ===============================================================
-**
-*/
+/*
+ * -------------------------------------------------------------------------
+ * SCO OpenServer does not have a generic scsi device driver, which can
+ * be used to access any configured scsi device. But we can use the "Sxxx"
+ * scsi peripherial drivers passthrough ioctl() (SCSIUSERCMD / SCSIUSERCMD2)
+ * to send scsi user comands to any target device controlled by the
+ * corresponding target driver.
+ *
+ * This passthrough implementation for libscg currently allows to
+ * handle the following devices classes:
+ *
+ *	1. DISK		handled by Sdsk
+ *	2. CD-ROM	handled by Srom
+ *	3. TAPES	handled by Stp
+ *	4. FLOPPY	handled by Sflp
+ *
+ * NOTE: The libscg OpenServer passthrough routines have changed with
+ *       cdrecord-1.8 to enable the -scanbus option. Therefore the
+ *	 addressing scheme is now the same as used on many other platforms
+ *	 like Solaris, Linux etc.
+ *
+ *   ===============================================================
+ *   RUN 'cdrecord -scanbus' TO SEE THE DEVICE ADDRESSES YOU CAN USE
+ *   ===============================================================
+ *
+ */
 
 /*
  * Return version information for the low level SCSI transport code.
@@ -229,16 +233,17 @@ scgo_help(scgp, f)
 	return (0);
 }
 
-/* ---------------------------------------------------------------
-** This routine sorts the amscsi_t lines on the following columns
-** in ascending order:
-**
-**	1. drv  - driver name
-**	2. bus  - scsibus per controller
-**	3. tgt  - target id of device
-**	4. lun  - lun of the device
-**
-*/
+/*
+ * ---------------------------------------------------------------
+ * This routine sorts the amscsi_t lines on the following columns
+ * in ascending order:
+ *
+ *	1. drv  - driver name
+ *	2. bus  - scsibus per controller
+ *	3. tgt  - target id of device
+ *	4. lun  - lun of the device
+ *
+ */
 
 
 LOCAL int
@@ -249,7 +254,7 @@ sort_mscsi(l1, l2)
 	amscsi_t	*t1 = (amscsi_t *) l1;
 	amscsi_t	*t2 = (amscsi_t *) l2;
 
-	if ( strcmp(t1->drv, t2->drv) == 0 ) {
+	if (strcmp(t1->drv, t2->drv) == 0) {
 		if (t1->bus < t2->bus) {
 			return (-1);
 
@@ -275,23 +280,24 @@ sort_mscsi(l1, l2)
 	}
 }
 
-/* ---------------------------------------------------------------
-** This routine is introduced to find all scsi devices which are
-** currently configured into the kernel. This is done by reading
-** the dynamic kernel mscsi tables and parse the resulting lines.
-** As the output of 'sconf' is not directly usable the information
-** found is to be sorted and re-arranged to be used with the libscg
-** routines.
-**
-** NOTE: One problem is currently still not solved ! If you don't
-**       have a media in your CD-ROM/CD-Writer we are not able to
-**       do an open() and therefore will set the drive to be not
-**       available (valid=0).
-**
-**       This will for example cause cdrecord to not list the drive
-**	 in the -scanbus output.
-**
-*/
+/*
+ * ---------------------------------------------------------------
+ * This routine is introduced to find all scsi devices which are
+ * currently configured into the kernel. This is done by reading
+ * the dynamic kernel mscsi tables and parse the resulting lines.
+ * As the output of 'sconf' is not directly usable the information
+ * found is to be sorted and re-arranged to be used with the libscg
+ * routines.
+ *
+ * NOTE: One problem is currently still not solved ! If you don't
+ *       have a media in your CD-ROM/CD-Writer we are not able to
+ *       do an open() and therefore will set the drive to be not
+ *       available (valid=0).
+ *
+ *       This will for example cause cdrecord to not list the drive
+ *	 in the -scanbus output.
+ *
+ */
 
 LOCAL int
 openserver_init(scgp)
@@ -317,12 +323,12 @@ extern	char		**environ;
 
 	for (s = 0; s < MAX_SCG; s++) {
 		for (t = 0; t < MAX_TGT; t++) {
-			for (l = 0; l < MAX_LUN ; l++) {
-				sdidevs[s][t][l].valid  =  0;
-				sdidevs[s][t][l].open   = -1;
-				sdidevs[s][t][l].atapi  = -1;
-				sdidevs[s][t][l].fd     = -1;
-				sdidevs[s][t][l].lmscsi = -1;
+			for (l = 0; l < MAX_LUN; l++) {
+				sdidevs[s][t][l].valid	=  0;
+				sdidevs[s][t][l].open	= -1;
+				sdidevs[s][t][l].atapi	= -1;
+				sdidevs[s][t][l].fd	= -1;
+				sdidevs[s][t][l].lmscsi	= -1;
 			}
 		}
 	}
@@ -361,7 +367,7 @@ extern	char		**environ;
 
 	evsave = environ;
 	environ = 0;
-	if ((cmd = popen(SCSI_CFG,"r")) == NULL) {
+	if ((cmd = popen(SCSI_CFG, "r")) == NULL) {
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 				"Error popen() for \"%s\"",
@@ -405,20 +411,20 @@ extern	char		**environ;
 		cmtbl[l].lun = -1;
 		cmtbl[l].scg = -1;
 
-		memset( cmtbl[l].typ, '\0', MAXDRVN);
-		memset( cmtbl[l].drv, '\0', MAXDRVN);
-		memset( cmtbl[l].dev, '\0', MAXDRVN);
+		memset(cmtbl[l].typ, '\0', MAXDRVN);
+		memset(cmtbl[l].drv, '\0', MAXDRVN);
+		memset(cmtbl[l].dev, '\0', MAXDRVN);
 
-		/* read sconf -g 'n' and get line of kernel mscsi table! */
+		/* read sconf -g 'n' and get line of kernel mscsi table!  */
 		/* the order the lines will be received in will determine */
-		/* the device name we can use to open the device         */
+		/* the device name we can use to open the device	  */
 
-		js_snprintf(sconf, sizeof(sconf),
+		js_snprintf(sconf, sizeof (sconf),
 			SCSI_DEV, l + 1); /* enumeration starts with 1 */
 
 		evsave = environ;
 		environ = 0;
-		if ((cmd = popen(sconf,"r")) == NULL) {
+		if ((cmd = popen(sconf, "r")) == NULL) {
 			if (scgp->errstr)
 				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 					"Error popen() for \"%s\"",
@@ -439,30 +445,30 @@ extern	char		**environ;
 			return (-1);
 		}
 
-		sscanf(lines, SCAN_DEV,  cmtbl[l].typ,
-					 cmtbl[l].drv,
+		sscanf(lines, SCAN_DEV, cmtbl[l].typ,
+					cmtbl[l].drv,
 					&cmtbl[l].hba,
 					&cmtbl[l].bus,
 					&cmtbl[l].tgt,
 					&cmtbl[l].lun);
 
-		if ( strstr(cmtbl[l].typ, T_DISK) != NULL ) {
-			js_snprintf(cmtbl[l].dev,  sizeof(cmtbl[l].dev),
+		if (strstr(cmtbl[l].typ, T_DISK) != NULL) {
+			js_snprintf(cmtbl[l].dev,  sizeof (cmtbl[l].dev),
 					DEV_SDSK, ++nSdsk);
 		}
 
-		if ( strstr(cmtbl[l].typ, T_CDROM) != NULL ) {
-			js_snprintf(cmtbl[l].dev,  sizeof(cmtbl[l].dev),
+		if (strstr(cmtbl[l].typ, T_CDROM) != NULL) {
+			js_snprintf(cmtbl[l].dev,  sizeof (cmtbl[l].dev),
 					DEV_SROM, ++nSrom);
 		}
 
-		if ( strstr(cmtbl[l].typ, T_TAPE) != NULL ) {
-			js_snprintf(cmtbl[l].dev, sizeof(cmtbl[l].dev),
+		if (strstr(cmtbl[l].typ, T_TAPE) != NULL) {
+			js_snprintf(cmtbl[l].dev, sizeof (cmtbl[l].dev),
 					DEV_STP, ++nStp);
 		}
 
-		if ( strstr(cmtbl[l].typ, T_FLOPPY) != NULL ) {
-			js_snprintf(cmtbl[l].dev, sizeof(cmtbl[l].dev),
+		if (strstr(cmtbl[l].typ, T_FLOPPY) != NULL) {
+			js_snprintf(cmtbl[l].dev, sizeof (cmtbl[l].dev),
 					DEV_SFLP, ++nSflp);
 		}
 
@@ -491,7 +497,7 @@ extern	char		**environ;
 
 	/* ok, now let's sort this array of scsi devices	*/
 
-	qsort((void *) cmtbl, nlm, sizeof(amscsi_t), sort_mscsi);
+	qsort((void *) cmtbl, nlm, sizeof (amscsi_t), sort_mscsi);
 
 	if (scgp->debug > 0) {
 		for (l = 0; l < nlm; l++)
@@ -507,13 +513,14 @@ extern	char		**environ;
 		js_fprintf((FILE *)scgp->errfile, "-------------------- \n");
 	}
 
-	/* find root disk controller to make it scg 0     	*/
+	/* find root disk controller to make it scg 0		*/
 
-	/* if we have disk(s) found in the mscsi table, we still
-	** don't know if the rootdisk is among these, there can
-	** be a IDE rootdisk as well, but it's not listed in
-	** the mscsi table.
-	*/
+	/*
+	 * if we have disk(s) found in the mscsi table, we still
+	 * don't know if the rootdisk is among these, there can
+	 * be a IDE rootdisk as well, but it's not listed in
+	 * the mscsi table.
+	 */
 
 	t = 0;
 	if (nSdsk > 0) {
@@ -522,11 +529,11 @@ extern	char		**environ;
 				t = l;
 	} else {
 
-		/* we haven't found a disk in mscsi, so we definitely
-		** have an IDE disk on a wd adapter as IDE disks are
-		** not listed as SCSI disks in the kernel mscsi table
-		*/
-
+		/*
+		 * we haven't found a disk in mscsi, so we definitely
+		 * have an IDE disk on a wd adapter as IDE disks are
+		 * not listed as SCSI disks in the kernel mscsi table
+		 */
 		ide_rootdisk = 1;
 
 	}
@@ -598,21 +605,22 @@ extern	char		**environ;
 
 	for (s = 0; s < MAX_SCG; s++) {
 		for (t = 0; t < MAX_TGT; t++) {
-			for (l = 0; l < MAX_LUN ; l++) {
+			for (l = 0; l < MAX_LUN; l++) {
 
-			  if ( sdidevs[s][t][l].valid == 0)
-			  	continue;
+				if (sdidevs[s][t][l].valid == 0)
+					continue;
 
-			  /* Open pass-through device node */
+				/* Open pass-through device node */
 
 				mscsi = sdidevs[s][t][l].lmscsi;
 
 				strcpy(dname, cmtbl[mscsi].dev);
 
-	/* ------------------------------------------------------------------
-	** NOTE: If we can't open the device, we will set the device invalid!
-	** ------------------------------------------------------------------
-	*/
+	/*
+	 * ------------------------------------------------------------------
+	 * NOTE: If we can't open the device, we will set the device invalid!
+	 * ------------------------------------------------------------------
+	 */
 				errno = 0;
 				if ((fd = open(dname, (O_RDONLY | O_NONBLOCK))) < 0) {
 					sdidevs[s][t][l].valid = 0;
@@ -684,19 +692,19 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
 		for (b = 0; b < MAX_SCG; b++) {
 			for (t = 0; t < MAX_TGT; t++) {
-				for (l = 0; l < MAX_LUN ; l++)
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
 	}
 
-	if (*device != '\0') {          /* we don't allow old dev usage */
+	if (*device != '\0') {		/* we don't allow old dev usage */
 		errno = EINVAL;
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -704,7 +712,7 @@ scgo_open(scgp, device)
 		return (-1);
 	}
 
-	return ( openserver_init(scgp) );
+	return (openserver_init(scgp));
 
 }
 
@@ -720,9 +728,9 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
@@ -785,8 +793,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -817,17 +825,18 @@ scgo_initiator_id(scgp)
 {
 	return (-1);
 
-	/* We don't know the initiator ID yet, but we can if we parse the
-	** output of the command 'cat /dev/string/cfg | grep "%adapter"'
-	**
-	** Sample line:
-	**
- 	**   %adapter 0xE800-0xE8FF 11 - type=alad ha=0 bus=0 id=7 fts=sto
-	**
-	** This tells us that the alad controller 0 has an id of 7 !
-	** The parsing should be done in openserver_init().
-	**
-	*/
+	/*
+	 * We don't know the initiator ID yet, but we can if we parse the
+	 * output of the command 'cat /dev/string/cfg | grep "%adapter"'
+	 *
+	 * Sample line:
+	 *
+	 *	%adapter 0xE800-0xE8FF 11 - type=alad ha=0 bus=0 id=7 fts=sto
+	 *
+	 * This tells us that the alad controller 0 has an id of 7 !
+	 * The parsing should be done in openserver_init().
+	 *
+	 */
 }
 
 LOCAL int
@@ -843,7 +852,7 @@ scgo_reset(scgp, what)
 	int	what;
 {
 	errno = EINVAL;
-	return(-1);		/* no scsi reset available */
+	return (-1);		/* no scsi reset available */
 }
 
 LOCAL void
@@ -861,13 +870,13 @@ cp_scg2sco(sco, scg)
 	if (!(scg->flags & SCG_RECV_DATA) && (scg->size > 0))
 		sco->cmd.is_write = 1;
 
-	if (scg->cdb_len == SC_G0_CDBLEN )
+	if (scg->cdb_len == SC_G0_CDBLEN)
 		memcpy(sco->cmd.cdb, &scg->cdb.g0_cdb, scg->cdb_len);
 
-	if (scg->cdb_len == SC_G1_CDBLEN )
+	if (scg->cdb_len == SC_G1_CDBLEN)
 		memcpy(sco->cmd.cdb, &scg->cdb.g1_cdb, scg->cdb_len);
 
-	if (scg->cdb_len == SC_G5_CDBLEN )
+	if (scg->cdb_len == SC_G5_CDBLEN)
 		memcpy(sco->cmd.cdb, &scg->cdb.g5_cdb, scg->cdb_len);
 }
 
@@ -877,9 +886,9 @@ cp_sco2scg(sco, scg)
 	struct scsicmd2	*sco;
 	struct scg_cmd	*scg;
 {
-	scg->size      = sco->cmd.data_len;
+	scg->size	= sco->cmd.data_len;
 
-	memset(&scg->scb, 0, sizeof(scg->scb));
+	memset(&scg->scb, 0, sizeof (scg->scb));
 
 	if (sco->sense_len > SCG_MAX_SENSE)
 		scg->sense_count = SCG_MAX_SENSE;
@@ -907,10 +916,10 @@ scgo_send(scgp)
 		return (0);
 	}
 
-	memset(&scsi_cmd, 0, sizeof(scsi_cmd));
-	memset(sense_buf, 0, sizeof(sense_buf));
+	memset(&scsi_cmd, 0, sizeof (scsi_cmd));
+	memset(sense_buf, 0, sizeof (sense_buf));
 	scsi_cmd.sense_ptr = sense_buf;
-	scsi_cmd.sense_len = sizeof(sense_buf);
+	scsi_cmd.sense_len = sizeof (sense_buf);
 	cp_scg2sco(&scsi_cmd, sp);
 
 	errno = 0;
@@ -952,15 +961,16 @@ scgo_send(scgp)
 				if (sp->sense_len > SCG_MAX_SENSE)
 					sp->sense_len = SCG_MAX_SENSE;
 
-				memset((caddr_t)&s_cmd, 0, sizeof(s_cmd));
+				memset((caddr_t)&s_cmd, 0, sizeof (s_cmd));
 
 				s_cmd.data_ptr  = (caddr_t) sp->u_sense.cmd_sense;
 				s_cmd.data_len  = sp->sense_len;
 				s_cmd.is_write  = 0;
 				s_cmd.cdb[0]    = SC_REQUEST_SENSE;
 
-				while (((ioctlStatus = ioctl(scgp->fd, SCSIUSERCMD, &s_cmd)) < 0)
-				       && (errno == EINTR));
+				while (((ioctlStatus = ioctl(scgp->fd, SCSIUSERCMD, &s_cmd)) < 0) &&
+					(errno == EINTR))
+						;
 
 				sp->sense_count = sp->sense_len;
 				sp->ux_errno    = errno;
@@ -972,9 +982,9 @@ scgo_send(scgp)
 
 			if (scgp->debug > 0) {
 				if (errno != 0)
-					js_fprintf((FILE *)scgp->errfile, "ux_errno: %d (%s) \n", sp->ux_errno, strerror(sp->ux_errno) );
+					js_fprintf((FILE *)scgp->errfile, "ux_errno: %d (%s) \n", sp->ux_errno, strerror(sp->ux_errno));
 				if (sp->u_scb.cmd_scb[0] != 0)
-					js_fprintf((FILE *)scgp->errfile, "tgt_stat: %d \n", sp->u_scb.cmd_scb[0] );
+					js_fprintf((FILE *)scgp->errfile, "tgt_stat: %d \n", sp->u_scb.cmd_scb[0]);
 			}
 			break;
 
@@ -1013,9 +1023,9 @@ scgo_send(scgp)
 
 			if (scgp->debug > 0) {
 				if (errno != 0)
-					js_fprintf((FILE *)scgp->errfile, "ux_errno: %d (%s) \n", sp->ux_errno, strerror(sp->ux_errno) );
+					js_fprintf((FILE *)scgp->errfile, "ux_errno: %d (%s) \n", sp->ux_errno, strerror(sp->ux_errno));
 				if (sp->u_scb.cmd_scb[0] != 0)
-					js_fprintf((FILE *)scgp->errfile, "tgt_stat: %d \n", sp->u_scb.cmd_scb[0] );
+					js_fprintf((FILE *)scgp->errfile, "tgt_stat: %d \n", sp->u_scb.cmd_scb[0]);
 			}
 			break;
 

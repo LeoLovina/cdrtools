@@ -1,30 +1,31 @@
-/* @(#)mkisofs.c	1.123 02/12/07 joerg */
+/* @(#)mkisofs.c	1.161 04/09/08 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)mkisofs.c	1.123 02/12/07 joerg";
+	"@(#)mkisofs.c	1.161 04/09/08 joerg";
 #endif
 /*
  * Program mkisofs.c - generate iso9660 filesystem  based upon directory
  * tree on hard disk.
-
-   Written by Eric Youngdale (1993).
-
-   Copyright 1993 Yggdrasil Computing, Incorporated
-   Copyright (c) 1999,2000,2001 J. Schilling
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ * Written by Eric Youngdale (1993).
+ *
+ * Copyright 1993 Yggdrasil Computing, Incorporated
+ * Copyright (c) 1999,2000-2004 J. Schilling
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 22/2/2000 */
 
@@ -42,6 +43,10 @@ static	char sccsid[] =
 #include "udf.h"
 #endif
 
+#ifdef	NEED_O_BINARY
+#include <io.h>					/* for setmode() prototype */
+#endif
+
 #include "getopt.h"	/* Always include local (nonstandard) getopt.h */
 
 #ifdef VMS
@@ -57,7 +62,7 @@ static	char sccsid[] =
 struct directory *root = NULL;
 int		path_ind;
 
-char	version_string[] = "mkisofs 2.0.3";
+char	version_string[] = "mkisofs 2.01";
 
 char		*outfile;
 FILE		*discimage;
@@ -65,12 +70,12 @@ unsigned int	next_extent	= 0;
 unsigned int	last_extent	= 0;
 unsigned int	session_start	= 0;
 unsigned int	path_table_size	= 0;
-unsigned int	path_table[4]	= {0,};
+unsigned int	path_table[4]	= {0, };
 unsigned int	path_blocks	= 0;
 
 
 unsigned int	jpath_table_size = 0;
-unsigned int	jpath_table[4]	= {0,};
+unsigned int	jpath_table[4]	= {0, };
 unsigned int	jpath_blocks	= 0;
 
 struct iso_directory_record root_record;
@@ -91,8 +96,11 @@ int	load_addr = 0;
 int	load_size = 0;
 int	boot_info_table = 0;
 int	use_sparcboot = 0;
+int	use_sunx86boot = 0;
 int	use_genboot = 0;
 int	use_RockRidge = 0;
+int	use_XA = 0;
+int	osecsize = 0;	/* Output-sector size, 0 means default secsize 2048 */
 int	use_Joliet = 0;
 int	jlen = JMAX;	/* maximum Joliet file name length */
 int	verbose = 1;
@@ -101,9 +109,9 @@ int	gui = 0;
 int	all_files = 1;	/* New default is to include all files */
 int	follow_links = 0;
 #ifdef	IS_CYGWIN
-int	cache_inodes = 0;/* Do not cache inodes on Cygwin by default */
+int	cache_inodes = 0; /* Do not cache inodes on Cygwin by default */
 #else
-int	cache_inodes = 1;/* Cache inodes if OS has unique inodes */
+int	cache_inodes = 1; /* Cache inodes if OS has unique inodes */
 #endif
 int	rationalize = 0;
 int	rationalize_uid = 0;
@@ -146,10 +154,10 @@ int	jhide_trans_tbl;	/* Hide TRANS.TBL from Joliet tree */
 int	hide_rr_moved;		/* Name RR_MOVED .rr_moved in Rock Ridge tree */
 int	omit_period = 0;	/* Violates iso9660, but these are a pain */
 int	transparent_compression = 0; /* So far only works with linux */
-int	omit_version_number = 0;/* May violate iso9660, but noone uses vers */
+int	omit_version_number = 0; /* May violate iso9660, but noone uses vers */
 int	no_rr = 0;		/* Do not use RR attributes from old session */
 int	force_rr = 0;		/* Force to use RR attributes from old session */
-Uint	RR_relocation_depth = 6;/* Violates iso9660, but most systems work */
+Uint	RR_relocation_depth = 6; /* Violates iso9660, but most systems work */
 int	iso9660_level = 1;
 int	iso9660_namelen = LEN_ISONAME; /* 31 characters, may be set to 37 */
 int	full_iso9660_filenames = 0; /* Full 31 character iso9660 filenames */
@@ -166,6 +174,8 @@ int	use_fileversion = 0;	/* Use file version # from filesystem */
 int	split_SL_component = 1;	/* circumvent a bug in the SunOS driver */
 int	split_SL_field = 1;	/* circumvent a bug in the SunOS */
 char	*trans_tbl = "TRANS.TBL"; /* default name for translation table */
+int	stream_media_size = 0;	/* # of blocks on the media */
+char	*stream_filename = "STREAM.IMG;1"; /* Default stream file name */
 
 #ifdef APPLE_HYB
 int	apple_hyb = 0;		/* create HFS hybrid flag */
@@ -197,7 +207,7 @@ char	*hfs_parms = NULL;	/* low level HFS parameters */
 #ifdef PREP_BOOT
 char	*prep_boot_image[4];
 int	use_prep_boot = 0;
-
+int	use_chrp_boot = 0;
 #endif	/* PREP_BOOT */
 #endif	/* APPLE_HYB */
 
@@ -272,140 +282,159 @@ struct ld_option {
  * Codes used for the long options with no short synonyms. Note that all these
  * values must not be ASCII or EBCDIC.
  */
-#define OPTION_HELP			1000
-#define OPTION_QUIET			1001
-#define OPTION_NOSPLIT_SL_COMPONENT	1002
-#define OPTION_NOSPLIT_SL_FIELD		1003
-#define OPTION_PRINT_SIZE		1004
-#define OPTION_SPLIT_OUTPUT		1005
-#define OPTION_ABSTRACT			1006
-#define OPTION_BIBLIO			1007
-#define OPTION_COPYRIGHT		1008
-#define OPTION_SYSID			1009
-#define OPTION_VOLSET			1010
-#define OPTION_VOLSET_SIZE		1011
-#define OPTION_VOLSET_SEQ_NUM		1012
-#define OPTION_I_HIDE			1013
-#define OPTION_J_HIDE			1014
-#define OPTION_LOG_FILE			1015
-#define OPTION_PVERSION			1016
-#define OPTION_NOBAK			1017
-#define OPTION_SPARCLABEL		1018
-#define OPTION_HARD_DISK_BOOT		1019
-#define OPTION_NO_EMUL_BOOT		1020
-#define OPTION_NO_BOOT			1021
-#define OPTION_BOOT_LOAD_ADDR		1022
-#define OPTION_BOOT_LOAD_SIZE		1023
-#define OPTION_BOOT_INFO_TABLE		1024
-#define OPTION_HIDE_TRANS_TBL		1025
-#define OPTION_HIDE_RR_MOVED		1026
-#define OPTION_GUI			1027
-#define OPTION_TRANS_TBL		1028
-#define OPTION_P_LIST			1029
-#define OPTION_I_LIST			1030
-#define OPTION_J_LIST			1031
-#define OPTION_X_LIST			1032
-#define OPTION_NO_RR			1033
-#define OPTION_JCHARSET			1034
-#define OPTION_PAD			1035
-#define OPTION_H_HIDE			1036
-#define OPTION_H_LIST			1037
-#define OPTION_CHECK_OLDNAMES		1038
+#define	OPTION_HELP			1000
+#define	OPTION_QUIET			1001
+#define	OPTION_NOSPLIT_SL_COMPONENT	1002
+#define	OPTION_NOSPLIT_SL_FIELD		1003
+#define	OPTION_PRINT_SIZE		1004
+#define	OPTION_SPLIT_OUTPUT		1005
+#define	OPTION_ABSTRACT			1006
+#define	OPTION_BIBLIO			1007
+#define	OPTION_COPYRIGHT		1008
+#define	OPTION_SYSID			1009
+#define	OPTION_VOLSET			1010
+#define	OPTION_VOLSET_SIZE		1011
+#define	OPTION_VOLSET_SEQ_NUM		1012
+#define	OPTION_I_HIDE			1013
+#define	OPTION_J_HIDE			1014
+#define	OPTION_LOG_FILE			1015
+#define	OPTION_PVERSION			1016
+#define	OPTION_NOBAK			1017
+#define	OPTION_SPARCLABEL		1018
+#define	OPTION_HARD_DISK_BOOT		1019
+#define	OPTION_NO_EMUL_BOOT		1020
+#define	OPTION_NO_BOOT			1021
+#define	OPTION_BOOT_LOAD_ADDR		1022
+#define	OPTION_BOOT_LOAD_SIZE		1023
+#define	OPTION_BOOT_INFO_TABLE		1024
+#define	OPTION_HIDE_TRANS_TBL		1025
+#define	OPTION_HIDE_RR_MOVED		1026
+#define	OPTION_GUI			1027
+#define	OPTION_TRANS_TBL		1028
+#define	OPTION_P_LIST			1029
+#define	OPTION_I_LIST			1030
+#define	OPTION_J_LIST			1031
+#define	OPTION_X_LIST			1032
+#define	OPTION_NO_RR			1033
+#define	OPTION_JCHARSET			1034
+#define	OPTION_PAD			1035
+#define	OPTION_H_HIDE			1036
+#define	OPTION_H_LIST			1037
+#define	OPTION_CHECK_OLDNAMES		1038
 
 #ifdef SORTING
-#define OPTION_SORT			1039
+#define	OPTION_SORT			1039
 #endif /* SORTING */
-#define OPTION_UCS_LEVEL		1040
-#define OPTION_ISO_TRANSLATE		1041
-#define OPTION_ISO_LEVEL		1042
-#define OPTION_RELAXED_FILENAMES	1043
-#define OPTION_ALLOW_LOWERCASE		1044
-#define OPTION_ALLOW_MULTIDOT		1045
-#define OPTION_USE_FILEVERSION		1046
-#define OPTION_MAX_FILENAMES		1047
-#define OPTION_ALT_BOOT			1048
-#define OPTION_USE_GRAFT		1049
+#define	OPTION_UCS_LEVEL		1040
+#define	OPTION_ISO_TRANSLATE		1041
+#define	OPTION_ISO_LEVEL		1042
+#define	OPTION_RELAXED_FILENAMES	1043
+#define	OPTION_ALLOW_LOWERCASE		1044
+#define	OPTION_ALLOW_MULTIDOT		1045
+#define	OPTION_USE_FILEVERSION		1046
+#define	OPTION_MAX_FILENAMES		1047
+#define	OPTION_ALT_BOOT			1048
+#define	OPTION_USE_GRAFT		1049
 
-#define OPTION_INPUT_CHARSET		1050
-#define OPTION_OUTPUT_CHARSET		1051
+#define	OPTION_INPUT_CHARSET		1050
+#define	OPTION_OUTPUT_CHARSET		1051
 
-#define OPTION_NOPAD			1052
-#define OPTION_UID			1053
-#define OPTION_GID			1054
-#define OPTION_FILEMODE			1055
-#define OPTION_DIRMODE			1056
-#define OPTION_NEW_DIR_MODE		1057
-#define OPTION_CACHE_INODES		1058
-#define OPTION_NOCACHE_INODES		1059
+#define	OPTION_NOPAD			1052
+#define	OPTION_UID			1053
+#define	OPTION_GID			1054
+#define	OPTION_FILEMODE			1055
+#define	OPTION_DIRMODE			1056
+#define	OPTION_NEW_DIR_MODE		1057
+#define	OPTION_CACHE_INODES		1058
+#define	OPTION_NOCACHE_INODES		1059
 
-#define OPTION_CHECK_SESSION		1060
-#define OPTION_FORCE_RR			1061
+#define	OPTION_CHECK_SESSION		1060
+#define	OPTION_FORCE_RR			1061
 
-#define OPTION_DEBUG			1062
+#define	OPTION_DEBUG			1062
 
-#define OPTION_JLONG			1063
+#define	OPTION_JLONG			1063
+
+#define	OPTION_STREAM_FILE_NAME		1064
+#define	OPTION_STREAM_CD_SIZE		1065
+
+#define	OPTION_XA			1066
+#define	OPTION_XA_RATIONALIZED		1067
+
+#define	OPTION_SUNX86BOOT		1068
+#define	OPTION_SUNX86LABEL		1069
+
+#define	OPTION_ALLOW_LEADING_DOTS	1070
+#define	OPTION_PUBLISHER		1071
 
 #ifdef UDF
-#define OPTION_UDF			1500
+#define	OPTION_UDF			1500
 #endif
 #ifdef DVD_VIDEO
-#define OPTION_DVD			1501
+#define	OPTION_DVD			1501
 #endif
 
 #ifdef APPLE_HYB
-#define OPTION_CAP			2000
-#define OPTION_NETA			2001
-#define OPTION_DBL			2002
-#define OPTION_ESH			2003
-#define OPTION_FE			2004
-#define OPTION_SGI			2005
-#define OPTION_MBIN			2006
-#define OPTION_SGL			2007
+#define	OPTION_CAP			2000
+#define	OPTION_NETA			2001
+#define	OPTION_DBL			2002
+#define	OPTION_ESH			2003
+#define	OPTION_FE			2004
+#define	OPTION_SGI			2005
+#define	OPTION_MBIN			2006
+#define	OPTION_SGL			2007
 /* aliases */
-#define OPTION_USH			2008
-#define OPTION_XIN			2009
+#define	OPTION_USH			2008
+#define	OPTION_XIN			2009
 
-#define OPTION_DAVE			2010
-#define OPTION_SFM			2011
-#define OPTION_XDBL			2012
-#define OPTION_XHFS			2013
+#define	OPTION_DAVE			2010
+#define	OPTION_SFM			2011
+#define	OPTION_XDBL			2012
+#define	OPTION_XHFS			2013
 
-#define OPTION_PROBE			2020
-#define OPTION_MACNAME			2021
-#define OPTION_NOMACFILES		2022
-#define OPTION_BOOT_HFS_FILE		2023
-#define OPTION_MAGIC_FILE		2024
+#define	OPTION_PROBE			2020
+#define	OPTION_MACNAME			2021
+#define	OPTION_NOMACFILES		2022
+#define	OPTION_BOOT_HFS_FILE		2023
+#define	OPTION_MAGIC_FILE		2024
 
-#define OPTION_HFS_LIST			2025
+#define	OPTION_HFS_LIST			2025
 
-#define OPTION_GEN_PT			2026
+#define	OPTION_GEN_PT			2026
 
-#define OPTION_CREATE_DT		2027
-#define OPTION_HFS_HIDE			2028
+#define	OPTION_CREATE_DT		2027
+#define	OPTION_HFS_HIDE			2028
 
-#define OPTION_AUTOSTART		2029
-#define OPTION_BSIZE			2030
-#define OPTION_HFS_VOLID		2031
-#define OPTION_PREP_BOOT		2032
-#define OPTION_ICON_POS			2033
+#define	OPTION_AUTOSTART		2029
+#define	OPTION_BSIZE			2030
+#define	OPTION_HFS_VOLID		2031
+#define	OPTION_PREP_BOOT		2032
+#define	OPTION_ICON_POS			2033
 
-#define OPTION_HFS_TYPE			2034
-#define OPTION_HFS_CREATOR		2035
+#define	OPTION_HFS_TYPE			2034
+#define	OPTION_HFS_CREATOR		2035
 
-#define OPTION_ROOT_INFO		2036
+#define	OPTION_ROOT_INFO		2036
 
-#define OPTION_HFS_INPUT_CHARSET	2037
-#define OPTION_HFS_OUTPUT_CHARSET	2038
+#define	OPTION_HFS_INPUT_CHARSET	2037
+#define	OPTION_HFS_OUTPUT_CHARSET	2038
 
-#define OPTION_HFS_UNLOCK		2039
-#define OPTION_HFS_BLESS		2040
-#define OPTION_HFS_PARMS		2041
+#define	OPTION_HFS_UNLOCK		2039
+#define	OPTION_HFS_BLESS		2040
+#define	OPTION_HFS_PARMS		2041
+
+#define	OPTION_CHRP_BOOT		2042
+
+#define	OPTION_RELOC_ROOT		2043
+#define	OPTION_RELOC_OLD_ROOT		2044
+
+#define	OPTION_MAP_FILE			2045
 
 #endif	/* APPLE_HYB */
 
-static int	save_pname = 0;
+LOCAL int	save_pname = 0;
 
-static const struct ld_option ld_options[] =
+LOCAL const struct ld_option ld_options[] =
 {
 	{{"nobak", no_argument, NULL, OPTION_NOBAK},
 	'\0', NULL, "Do not include backup files", ONE_DASH},
@@ -435,10 +464,14 @@ static const struct ld_option ld_options[] =
 	'\0', NULL, "Start specifying alternative El Torito boot parameters", ONE_DASH},
 	{{"sparc-boot", required_argument, NULL, 'B'},
 	'B', "FILES", "Set sparc boot image names", ONE_DASH},
+	{{"sunx86-boot", required_argument, NULL, OPTION_SUNX86BOOT},
+	'\0', "FILES", "Set sunx86 boot image names", ONE_DASH},
 	{{"generic-boot", required_argument, NULL, 'G'},
 	'G', "FILE", "Set generic boot image name", ONE_DASH},
 	{{"sparc-label", required_argument, NULL, OPTION_SPARCLABEL},
 	'\0', "label text", "Set sparc boot disk label", ONE_DASH},
+	{{"sunx86-label", required_argument, NULL, OPTION_SUNX86LABEL},
+	'\0', "label text", "Set sunx86 boot disk label", ONE_DASH},
 	{{"eltorito-catalog", required_argument, NULL, 'c'},
 	'c', "FILE", "Set El Torito boot catalog name", ONE_DASH},
 	{{"cdrecord-params", required_argument, NULL, 'C'},
@@ -446,18 +479,22 @@ static const struct ld_option ld_options[] =
 	{{"omit-period", no_argument, NULL, 'd'},
 	'd', NULL, "Omit trailing periods from filenames (violates ISO9660)", ONE_DASH},
 	{{"dir-mode", required_argument, NULL, OPTION_DIRMODE},
-	 '\0', "mode", "Make the mode of all directories this mode.", ONE_DASH},
+	'\0', "mode", "Make the mode of all directories this mode.", ONE_DASH},
 	{{"disable-deep-relocation", no_argument, NULL, 'D'},
 	'D', NULL, "Disable deep directory relocation (violates ISO9660)", ONE_DASH},
 	{{"file-mode", required_argument, NULL, OPTION_FILEMODE},
-	 '\0', "mode", "Make the mode of all plain files this mode.", ONE_DASH},
+	'\0', "mode", "Make the mode of all plain files this mode.", ONE_DASH},
 	{{"follow-links", no_argument, NULL, 'f'},
 	'f', NULL, "Follow symbolic links", ONE_DASH},
 	{{"gid", required_argument, NULL, OPTION_GID},
-	 '\0', "gid", "Make the group owner of all files this gid.",
-	 ONE_DASH},
+	'\0', "gid", "Make the group owner of all files this gid.",
+	ONE_DASH},
 	{{"graft-points", no_argument, NULL, OPTION_USE_GRAFT},
 	'\0', NULL, "Allow to use graft points for filenames", ONE_DASH},
+	{{"root", required_argument, NULL, OPTION_RELOC_ROOT},
+	'\0', "DIR", "Set root directory for all new files and directories", ONE_DASH},
+	{{"old-root", required_argument, NULL, OPTION_RELOC_OLD_ROOT},
+	'\0', "DIR", "Set root directory in previous session that is searched for files", ONE_DASH},
 	{{"help", no_argument, NULL, OPTION_HELP},
 	'\0', NULL, "Print option help", ONE_DASH},
 	{{"hide", required_argument, NULL, OPTION_I_HIDE},
@@ -485,7 +522,7 @@ static const struct ld_option ld_options[] =
 	{{"output-charset", required_argument, NULL, OPTION_OUTPUT_CHARSET},
 	'\0', "CHARSET", "Output charset for file name conversion", ONE_DASH},
 	{{"iso-level", required_argument, NULL, OPTION_ISO_LEVEL},
-	'\0', "LEVEL", "Set ISO9660 conformance level (1..3)", ONE_DASH},
+	'\0', "LEVEL", "Set ISO9660 conformance level (1..3) or 4 for ISO9660 version 2", ONE_DASH},
 	{{"joliet", no_argument, NULL, 'J'},
 	'J', NULL, "Generate Joliet directory information", ONE_DASH},
 	{{"joliet-long", no_argument, NULL, OPTION_JLONG},
@@ -496,8 +533,17 @@ static const struct ld_option ld_options[] =
 	'l', NULL, "Allow full 31 character filenames for ISO9660 names", ONE_DASH},
 	{{"max-iso9660-filenames", no_argument, NULL, OPTION_MAX_FILENAMES},
 	'\0', NULL, "Allow 37 character filenames for ISO9660 names (violates ISO9660)", ONE_DASH},
+
+	{{"allow-leading-dots", no_argument, NULL, OPTION_ALLOW_LEADING_DOTS},
+	'\0', NULL, "Allow ISO9660 filenames to start with '.' (violates ISO9660)", ONE_DASH},
+	{{"ldots", no_argument, NULL, OPTION_ALLOW_LEADING_DOTS},
+	'\0', NULL, "Allow ISO9660 filenames to start with '.' (violates ISO9660)", ONE_DASH},
+
+/* POSIX.1-2001 REMOVE -----> */
 	{{"allow-leading-dots", no_argument, NULL, 'L'},
-	'L', NULL, "Allow ISO9660 filenames to start with '.' (violates ISO9660)", ONE_DASH},
+	'L', NULL, "OLD Pre-POSIX.1-2001 option - don't use -L", ONE_DASH},
+/* -----> END POSIX.1-2001 REMOVE */
+
 	{{"log-file", required_argument, NULL, OPTION_LOG_FILE},
 	'\0', "LOG_FILE", "Re-direct messages to LOG_FILE", ONE_DASH},
 	{{"exclude", required_argument, NULL, 'm'},
@@ -505,15 +551,17 @@ static const struct ld_option ld_options[] =
 	{{"exclude-list", required_argument, NULL, OPTION_X_LIST},
 	'\0', "FILE", "File with list of file names to exclude", ONE_DASH},
 	{{"pad", no_argument, NULL, OPTION_PAD},
-	0, NULL, "Pad outout to a multiple of 32k (default)", ONE_DASH},
+	0, NULL, "Pad output to a multiple of 32k (default)", ONE_DASH},
 	{{"no-pad", no_argument, NULL, OPTION_NOPAD},
 	0, NULL, "Do not pad output to a multiple of 32k", ONE_DASH},
 	{{"prev-session", required_argument, NULL, 'M'},
 	'M', "FILE", "Set path to previous session to merge", ONE_DASH},
+	{{"dev", required_argument, NULL, 'M'},
+	'\0', "SCSIdev", "Set path to previous session to merge", ONE_DASH},
 	{{"omit-version-number", no_argument, NULL, 'N'},
 	'N', NULL, "Omit version number from ISO9660 filename (violates ISO9660)", ONE_DASH},
 	{{"new-dir-mode", required_argument, NULL, OPTION_NEW_DIR_MODE},
-	 '\0', "mode", "Mode used when creating new directories.", ONE_DASH},
+	'\0', "mode", "Mode used when creating new directories.", ONE_DASH},
 	{{"force-rr", no_argument, NULL, OPTION_FORCE_RR},
 	0, NULL, "Inhibit automatic Rock Ridge detection for previous session", ONE_DASH},
 	{{"no-rr", no_argument, NULL, OPTION_NO_RR},
@@ -530,22 +578,32 @@ static const struct ld_option ld_options[] =
 	'p', "PREP", "Set Volume preparer", ONE_DASH},
 	{{"print-size", no_argument, NULL, OPTION_PRINT_SIZE},
 	'\0', NULL, "Print estimated filesystem size and exit", ONE_DASH},
+	{{"publisher", required_argument, NULL, OPTION_PUBLISHER},
+	'\0', "PUB", "Set Volume publisher", ONE_DASH},
+/* POSIX.1-2001 REMOVE -----> */
 	{{"publisher", required_argument, NULL, 'P'},
-	'P', "PUB", "Set Volume publisher", ONE_DASH},
+	'P', "PUB", "OLD Pre-POSIX.1-2001 option - don't use -P", ONE_DASH},
+/* -----> END POSIX.1-2001 REMOVE */
 	{{"quiet", no_argument, NULL, OPTION_QUIET},
 	'\0', NULL, "Run quietly", ONE_DASH},
 	{{"rational-rock", no_argument, NULL, 'r'},
 	'r', NULL, "Generate rationalized Rock Ridge directory information", ONE_DASH},
 	{{"rock", no_argument, NULL, 'R'},
 	'R', NULL, "Generate Rock Ridge directory information", ONE_DASH},
+	{{"sectype", required_argument, NULL, 's'},
+	's', "TYPE", "Set output sector type to e.g. data/xa1/raw", ONE_DASH},
 
 #ifdef SORTING
 	{ {"sort", required_argument, NULL, OPTION_SORT},
-	'\0', "FILE", "Sort file content locations according to rules in FILE" , ONE_DASH },
+	'\0', "FILE", "Sort file content locations according to rules in FILE", ONE_DASH },
 #endif /* SORTING */
 
 	{{"split-output", no_argument, NULL, OPTION_SPLIT_OUTPUT},
 	'\0', NULL, "Split output into files of approx. 1GB size", ONE_DASH},
+	{{"stream-file-name", required_argument, NULL, OPTION_STREAM_FILE_NAME},
+	'\0', "FILE_NAME", "Set the stream file ISO9660 name (incl. version)", ONE_DASH},
+	{{"stream-media-size", required_argument, NULL, OPTION_STREAM_CD_SIZE},
+	'\0', "#", "Set the size of your CD media in sectors", ONE_DASH},
 	{{"sysid", required_argument, NULL, OPTION_SYSID},
 	'\0', "ID", "Set System ID", ONE_DASH},
 	{{"translation-table", no_argument, NULL, 'T'},
@@ -566,10 +624,10 @@ static const struct ld_option ld_options[] =
 #endif
 
 	{{"uid", required_argument, NULL, OPTION_UID},
-	 '\0', "uid", "Make the owner of all files this uid.", 
-	 ONE_DASH},
+	'\0', "uid", "Make the owner of all files this uid.",
+	ONE_DASH},
 	{{"untranslated-filenames", no_argument, NULL, 'U'},
-	'U', NULL, "Allow Untranslated filenames (for HPUX & AIX - violates ISO9660). Forces -l, -d, -L, -N, -relaxed-filenames, -allow-lowercase, -allow-multidot", ONE_DASH},
+	'U', NULL, "Allow Untranslated filenames (for HPUX & AIX - violates ISO9660). Forces -l, -d, -N, -allow-leading-dots, -relaxed-filenames, -allow-lowercase, -allow-multidot", ONE_DASH},
 	{{"relaxed-filenames", no_argument, NULL, OPTION_RELAXED_FILENAMES},
 	'\0', NULL, "Allow 7 bit ASCII except lower case characters (violates ISO9660)", ONE_DASH},
 	{{"no-iso-translate", no_argument, NULL, OPTION_ISO_TRANSLATE},
@@ -606,8 +664,13 @@ static const struct ld_option ld_options[] =
 	'\0', "#", "Set numbers of load sectors", ONE_DASH},
 	{{"boot-info-table", no_argument, NULL, OPTION_BOOT_INFO_TABLE},
 	'\0', NULL, "Patch boot image with info table", ONE_DASH},
+	{{"XA", no_argument, NULL, OPTION_XA},
+	'\0', NULL, "Generate XA directory attruibutes", ONE_DASH},
+	{{"xa", no_argument, NULL, OPTION_XA_RATIONALIZED},
+	'\0', NULL, "Generate rationalized XA directory attruibutes", ONE_DASH},
 	{{"transparent-compression", no_argument, NULL, 'z'},
 	'z', NULL, "Enable transparent compression of files", ONE_DASH},
+
 #ifdef APPLE_HYB
 	{{"hfs-type", required_argument, NULL, OPTION_HFS_TYPE},
 	'\0', "TYPE", "Set HFS default TYPE", ONE_DASH},
@@ -617,8 +680,12 @@ static const struct ld_option ld_options[] =
 	'g', NULL, "Add Apple ISO9660 extensions", ONE_DASH},
 	{{"hfs", no_argument, NULL, 'h'},
 	'h', NULL, "Create ISO9660/HFS hybrid", ONE_DASH},
+	{{"map", required_argument, NULL, OPTION_MAP_FILE},
+	'\0', "MAPPING_FILE", "Map file extensions to HFS TYPE/CREATOR", ONE_DASH},
+/* POSIX.1-2001 REMOVE -----> */
 	{{"map", required_argument, NULL, 'H'},
-	'H', "MAPPING_FILE", "Map file extensions to HFS TYPE/CREATOR", ONE_DASH},
+	'H', "MAPPING_FILE", "OLD Pre-POSIX.1-2001 option - don't use -H", ONE_DASH},
+/* -----> END POSIX.1-2001 REMOVE */
 	{{"magic", required_argument, NULL, OPTION_MAGIC_FILE},
 	'\0', "FILE", "Magic file for HFS TYPE/CREATOR", ONE_DASH},
 	{{"probe", no_argument, NULL, OPTION_PROBE},
@@ -661,6 +728,8 @@ static const struct ld_option ld_options[] =
 #ifdef PREP_BOOT
 	{{"prep-boot", required_argument, NULL, OPTION_PREP_BOOT},
 	'\0', "FILE", "PReP boot image file -- up to 4 are allowed", ONE_DASH},
+	{{"chrp-boot", no_argument, NULL, OPTION_CHRP_BOOT},
+	'\0', NULL, "Add CHRP boot header", ONE_DASH},
 #endif	/* PREP_BOOT */
 	{{"cap", no_argument, NULL, OPTION_CAP},
 	'\0', NULL, "Look for AUFS CAP Macintosh files", TWO_DASHES},
@@ -693,11 +762,8 @@ static const struct ld_option ld_options[] =
 #endif	/* APPLE_HYB */
 };
 
-#define OPTION_COUNT (sizeof ld_options / sizeof ld_options[0])
+#define	OPTION_COUNT (sizeof ld_options / sizeof (ld_options[0]))
 
-#if defined(ultrix) || defined(_AUX_SOURCE)
-	char    *strdup		__PR((char *s));
-#endif
 LOCAL	void	read_rcfile	__PR((char *appname));
 LOCAL	void	susage		__PR((int excode));
 LOCAL	void	usage		__PR((int excode));
@@ -709,20 +775,6 @@ EXPORT	int	main		__PR((int argc, char **argv));
 EXPORT	char *	findgequal	__PR((char *s));
 LOCAL	char *	escstrcpy	__PR((char *to, char *from));
 EXPORT	void *	e_malloc	__PR((size_t size));
-
-#if defined(ultrix) || defined(_AUX_SOURCE)
-char
-*strdup(s)
-	char	*s;
-{
-	char	*c;
-
-	if (c = (char *) malloc(strlen(s) + 1))
-		strcpy(c, s);
-	return c;
-}
-
-#endif
 
 LOCAL void
 read_rcfile(appname)
@@ -749,7 +801,7 @@ read_rcfile(appname)
 
 	if (!rcfile) {
 		pnt = getenv("MKISOFSRC");
-		if (pnt && strlen(pnt) <= sizeof(filename)) {
+		if (pnt && strlen(pnt) <= sizeof (filename)) {
 			strcpy(filename, pnt);
 			if (access(filename, R_OK) == 0)
 				rcfile = fopen(filename, "r");
@@ -764,7 +816,7 @@ read_rcfile(appname)
 	if (!rcfile) {
 		pnt = getenv("HOME");
 		if (pnt && strlen(pnt) + strlen(rcfn) + 2 <=
-							sizeof(filename)) {
+							sizeof (filename)) {
 			strcpy(filename, pnt);
 			strcat(filename, "/");
 			strcat(filename, rcfn);
@@ -778,8 +830,8 @@ read_rcfile(appname)
 #endif
 		}
 	}
-	if (!rcfile && strlen(appname) + sizeof(rcfn) + 2 <=
-							sizeof(filename)) {
+	if (!rcfile && strlen(appname) + sizeof (rcfn) + 2 <=
+							sizeof (filename)) {
 		strcpy(filename, appname);
 		pnt = strrchr(filename, '/');
 		if (pnt) {
@@ -801,7 +853,7 @@ read_rcfile(appname)
 	}
 	/* OK, we got it.  Now read in the lines and parse them */
 	linum = 0;
-	while (fgets(linebuffer, sizeof(linebuffer), rcfile)) {
+	while (fgets(linebuffer, sizeof (linebuffer), rcfile)) {
 		char	*name;
 		char	*name_end;
 
@@ -860,13 +912,13 @@ read_rcfile(appname)
 				break;
 			}
 			pnt1++;
-		};
+		}
 		/* OK, now figure out which option we have */
 		for (rco = rcopt; rco->tag; rco++) {
 			if (strcmp(rco->tag, name) == 0) {
 				*rco->variable = strdup(pnt);
 				break;
-			};
+			}
 		}
 		if (rco->tag == NULL) {
 			fprintf(stderr, "%s:%d: field name \"%s\" unknown\n",
@@ -892,11 +944,11 @@ char	*jpath_table_m = NULL;
 int	goof = 0;
 
 #ifndef TRUE
-#define TRUE 1
+#define	TRUE 1
 #endif
 
 #ifndef FALSE
-#define FALSE 0
+#define	FALSE 0
 #endif
 
 LOCAL void
@@ -948,8 +1000,8 @@ usage(excode)
 
 			j = i;
 			do {
-				if (ld_options[j].shortopt != '\0'
-					&& ld_options[j].control != NO_HELP) {
+				if (ld_options[j].shortopt != '\0' &&
+					ld_options[j].control != NO_HELP) {
 					fprintf(stderr, "%s-%c",
 						comma ? ", " : "",
 						ld_options[j].shortopt);
@@ -971,8 +1023,8 @@ usage(excode)
 
 			j = i;
 			do {
-				if (ld_options[j].opt.name != NULL
-					&& ld_options[j].control != NO_HELP) {
+				if (ld_options[j].opt.name != NULL &&
+					ld_options[j].control != NO_HELP) {
 					fprintf(stderr, "%s-%s%s",
 						comma ? ", " : "",
 						ld_options[j].control == TWO_DASHES ? "-" : "",
@@ -1051,7 +1103,7 @@ iso9660_date(result, crtime)
 	result[6] = -(local->tm_min + 60 *
 			(local->tm_hour + 24 * local->tm_yday)) / 15;
 
-	return 0;
+	return (0);
 }
 
 /* hide "./rr_moved" if all its contents are hidden */
@@ -1126,6 +1178,8 @@ main(argc, argv)
 #endif
 	struct stat	statbuf;
 	char		*merge_image = NULL;
+	char		*reloc_root = NULL;
+	char		*reloc_old_root = NULL;
 	struct iso_directory_record *mrootp = NULL;
 	struct output_fragment *opnt;
 	int		longind;
@@ -1137,9 +1191,9 @@ main(argc, argv)
 	char		*node = NULL;
 	char		*pathnames = 0;
 	FILE		*pfp = NULL;
-	char		pname[PATH_MAX],
-			*arg;
-	char		nodename[PATH_MAX];
+	char		pname[2*PATH_MAX + 1 + 1];	/* may be too short */
+	char		*arg;				/* if '\\' present  */
+	char		nodename[PATH_MAX + 1];
 	int		no_path_names = 1;
 	int		warn_violate = 0;
 	int		have_cmd_line_pathspec = 0;
@@ -1192,8 +1246,8 @@ main(argc, argv)
 				shortopts[is] = ld_options[i].shortopt;
 				++is;
 				if (ld_options[i].opt.has_arg ==
-					required_argument
-					|| ld_options[i].opt.has_arg ==
+					required_argument ||
+					ld_options[i].opt.has_arg ==
 							optional_argument) {
 					shortopts[is] = ':';
 					++is;
@@ -1265,10 +1319,28 @@ main(argc, argv)
 				 * No restrictions
 				 */
 				break;
+			case 4:
+				/*
+				 * This is ISO-9660:1988 (ISO-9660 version 2)
+				 */
+				iso9660_namelen = MAX_ISONAME_V2; /* allow 207 chars */
+				full_iso9660_filenames++;	/* 31+ chars	*/
+				omit_version_number++;
+				RR_relocation_depth = 32767;
+
+				/*
+				 * From -U ...
+				 */
+				omit_period++;			/* trailing dot */
+				allow_leading_dots++;
+				relaxed_filenames++;		/* all chars	*/
+				allow_lowercase++;		/* even lowcase	*/
+				allow_multidot++;		/* > 1 dots	*/
+				break;
 
 			default:
-				comerrno(EX_BAD, "Illegal iso9660 Level %d, use 1..3.\n",
-							ucs_level);
+				comerrno(EX_BAD, "Illegal iso9660 Level %d, use 1..3 or 4.\n",
+							iso9660_level);
 			}
 			break;
 		case 'J':
@@ -1291,9 +1363,10 @@ main(argc, argv)
 			all_files = 0;
 			break;
 		case 'b':
+			do_sort++;		/* We sort bootcat/botimage */
 			use_eltorito++;
-			boot_image = optarg;	/* pathname of the boot image
-						   on disk */
+			boot_image = optarg;	/* pathname of the boot image */
+						/* on disk */
 			if (boot_image == NULL) {
 #ifdef	USE_LIBSCHILY
 				comerrno(EX_BAD,
@@ -1314,9 +1387,20 @@ main(argc, argv)
 			new_boot_entry();
 			break;
 		case 'B':
+			if (use_sunx86boot)
+				comerrno(EX_BAD,
+				"-sparc-boot and -sunx86-boot are mutual exclusive.\n");
 			use_sparcboot++;
 			/* list of pathnames of boot images */
 			scan_sparc_boot(optarg);
+			break;
+		case OPTION_SUNX86BOOT:
+			if (use_sparcboot)
+				comerrno(EX_BAD,
+				"-sparc-boot and -sunx86-boot are mutual exclusive.\n");
+			use_sunx86boot++;
+			/* list of pathnames of boot images */
+			scan_sunx86_boot(optarg);
 			break;
 		case 'G':
 			use_genboot++;
@@ -1336,6 +1420,10 @@ main(argc, argv)
 		case OPTION_SPARCLABEL:
 			/* Sun disk label string */
 			sparc_boot_label(optarg);
+			break;
+		case OPTION_SUNX86LABEL:
+			/* Sun disk label string */
+			sunx86_boot_label(optarg);
 			break;
 		case 'c':
 			use_eltorito++;
@@ -1363,7 +1451,7 @@ main(argc, argv)
 				"Abstract filename string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case 'A':
 			appid = optarg;
@@ -1376,7 +1464,7 @@ main(argc, argv)
 				"Application-id string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_BIBLIO:
 			biblio = optarg;
@@ -1389,7 +1477,7 @@ main(argc, argv)
 				"Bibliographic filename string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_CACHE_INODES:
 			cache_inodes = 1;
@@ -1424,7 +1512,7 @@ main(argc, argv)
 				"Copyright filename string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_DEBUG:
 			debug++;
@@ -1450,12 +1538,17 @@ main(argc, argv)
 			full_iso9660_filenames++;
 			break;
 		case OPTION_MAX_FILENAMES:
-			iso9660_namelen = MAX_ISONAME;	/* allow 37 chars */
+			iso9660_namelen = MAX_ISONAME_V1; /* allow 37 chars */
 			full_iso9660_filenames++;
 			omit_version_number++;
 			warn_violate++;
 			break;
 		case 'L':
+			errmsgno(EX_BAD, "The option '-L' is reserved by POSIX.1-2001.\n");
+			errmsgno(EX_BAD, "The option '-L' means 'follow all symbolic links'.\n");
+			errmsgno(EX_BAD, "Mkisofs-2.02 will introduce POSIX semantics for '-L'.\n");
+			errmsgno(EX_BAD, "Use -allow-leading-dots in future to get old mkisofs behavior.\n");
+		case OPTION_ALLOW_LEADING_DOTS:
 			/*
 			 * -L Reserved by POSIX.1-2001
 			 * Meaning: Follow all symbolic links
@@ -1468,6 +1561,12 @@ main(argc, argv)
 			break;
 		case 'M':
 			merge_image = optarg;
+			break;
+		case OPTION_RELOC_ROOT:
+			reloc_root = optarg;
+			break;
+		case OPTION_RELOC_OLD_ROOT:
+			reloc_old_root = optarg;
 			break;
 		case 'N':
 			omit_version_number++;
@@ -1500,12 +1599,17 @@ main(argc, argv)
 				fprintf(stderr, "Preparer string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_PRINT_SIZE:
 			print_size++;
 			break;
 		case 'P':
+			errmsgno(EX_BAD, "The option '-P' is reserved by POSIX.1-2001.\n");
+			errmsgno(EX_BAD, "The option '-P' means 'do not follow symbolic links'.\n");
+			errmsgno(EX_BAD, "Mkisofs-2.02 will introduce POSIX semantics for '-P'.\n");
+			errmsgno(EX_BAD, "Use -publisher in future to get old mkisofs behavior.\n");
+		case OPTION_PUBLISHER:
 			/*
 			 * -P Reserved by POSIX.1-2001
 			 * Meaning: Do not follow symbolic links
@@ -1519,7 +1623,7 @@ main(argc, argv)
 				fprintf(stderr, "Publisher string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_QUIET:
 			verbose = 0;
@@ -1531,9 +1635,26 @@ main(argc, argv)
 			rationalize_all++;
 			use_RockRidge++;
 			break;
+		case OPTION_XA:
+			use_XA++;
+			break;
+		case OPTION_XA_RATIONALIZED:
+			rationalize_all++;
+			use_XA++;
+			break;
 
-#ifdef	Needed_for_Next_release
 		case 's':
+			if (strcmp(optarg, "data") == 0)
+				osecsize = 2048;
+			else if (strcmp(optarg, "xa1") == 0)
+				osecsize = 2056;
+			else if (strcmp(optarg, "raw") == 0) {
+				osecsize = 2352;
+				comerrno(EX_BAD,
+					"Unsupported sector type '%s'.\n",
+					optarg);
+			}
+			break;
 		case 'S':
 #ifdef	USE_LIBSCHILY
 			errmsgno(EX_BAD, "Option -%c is reserved for future use.\n", c);
@@ -1541,7 +1662,6 @@ main(argc, argv)
 			fprintf(stderr, "Option -%c is reserved for future use.\n", c);
 #endif
 			susage(1);
-#endif
 
 		case OPTION_NEW_DIR_MODE:
 			rationalize++;
@@ -1558,7 +1678,7 @@ main(argc, argv)
 				exit(1);
 #endif
 			}
- 			break;
+			break;
 		}
 
 		case OPTION_UID:
@@ -1577,7 +1697,7 @@ main(argc, argv)
 				exit(1);
 #endif
 			}
- 			break;
+			break;
 		}
 
 		case OPTION_GID:
@@ -1596,7 +1716,7 @@ main(argc, argv)
 				exit(1);
 #endif
 			}
- 			break;
+			break;
 		}
 
 		case OPTION_FILEMODE:
@@ -1616,7 +1736,7 @@ main(argc, argv)
 				exit(1);
 #endif
 			}
- 			break;
+			break;
 		}
 
 		case OPTION_DIRMODE:
@@ -1636,7 +1756,7 @@ main(argc, argv)
 				exit(1);
 #endif
 			}
- 			break;
+			break;
 		}
 
 #ifdef SORTING
@@ -1649,6 +1769,16 @@ main(argc, argv)
 		case OPTION_SPLIT_OUTPUT:
 			split_output++;
 			break;
+
+		case OPTION_STREAM_FILE_NAME:
+			comerrno(EX_BAD, "-stream-file-name not yet implemented\n");
+			stream_filename = optarg;
+			break;
+
+		case OPTION_STREAM_CD_SIZE:
+			stream_media_size = atoi(optarg);
+			break;
+
 		case OPTION_SYSID:
 			system_id = optarg;
 			if (strlen(system_id) > 32) {
@@ -1659,7 +1789,7 @@ main(argc, argv)
 				fprintf(stderr, "System ID string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_TRANS_TBL:
 			trans_tbl = optarg;
@@ -1684,7 +1814,7 @@ main(argc, argv)
 			use_udf++;
 			dvd_video++;
 			break;
-#endif			
+#endif
 		case OPTION_USE_FILEVERSION:
 			use_fileversion++;
 			break;
@@ -1693,7 +1823,8 @@ main(argc, argv)
 			 * Minimal (only truncation of 31+ characters)
 			 * translation of filenames.
 			 *
-			 * Forces -l, -d, -L, -N, -relaxed-filenames,
+			 * Forces -l, -d, -N, -allow-leading-dots,
+			 * -relaxed-filenames,
 			 * -allow-lowercase, -allow-multidot
 			 *
 			 * This is for HP-UX, which does not recognize ANY
@@ -1740,7 +1871,7 @@ main(argc, argv)
 					"Volume ID string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_VOLSET:
 			volset_id = optarg;
@@ -1753,10 +1884,30 @@ main(argc, argv)
 				"Volume set ID string too long\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_VOLSET_SIZE:
 			volume_set_size = atoi(optarg);
+			if (volume_set_size <= 0) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD,
+				"Illegal Volume Set Size %s\n", optarg);
+#else
+				fprintf(stderr,
+				"Illegal Volume Set Size %s\n", optarg);
+				exit(1);
+#endif
+			}
+			if (volume_set_size > 1) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD,
+				"Volume Set Size > 1 not yet supported\n");
+#else
+				fprintf(stderr,
+				"Volume Set Size > 1 not yet supported\n");
+				exit(1);
+#endif
+			}
 			break;
 		case OPTION_VOLSET_SEQ_NUM:
 			volume_sequence_number = atoi(optarg);
@@ -1833,6 +1984,12 @@ main(argc, argv)
 			printf("%s (%s-%s-%s)\n",
 				version_string,
 				HOST_CPU, HOST_VENDOR, HOST_OS);
+#ifdef	OPTION_SILO_BOOT
+			printf("Warning: this is unofficial (modified) version of mkisofs that incorporates\n");
+			printf("	support for a non Sparc compliant boot method called SILO.\n");
+			printf("	The official method to create Sparc boot CDs is to use -sparc-boot\n");
+			printf("	In case of problems first test with an official version of mkisofs.\n");
+#endif
 			exit(0);
 			break;
 		case OPTION_NOSPLIT_SL_COMPONENT:
@@ -1920,7 +2077,7 @@ main(argc, argv)
 				"HFS default TYPE string has illegal length.\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case OPTION_HFS_CREATOR:
 			defcreator = optarg;
@@ -1934,9 +2091,14 @@ main(argc, argv)
 				"HFS default CREATOR string has illegal length.\n");
 				exit(1);
 #endif
-			};
+			}
 			break;
 		case 'H':
+			errmsgno(EX_BAD, "The option '-H' is reserved by POSIX.1-2001.\n");
+			errmsgno(EX_BAD, "The option '-H' means 'follow symbolic links on command line'.\n");
+			errmsgno(EX_BAD, "Mkisofs-2.02 will introduce POSIX semantics for '-H'.\n");
+			errmsgno(EX_BAD, "Use -map in future to get old mkisofs behavior.\n");
+		case OPTION_MAP_FILE:
 			/*
 			 * -H Reserved by POSIX.1-2001
 			 * Meaning: Follow symbolic links on command line
@@ -2073,13 +2235,13 @@ main(argc, argv)
 #ifdef PREP_BOOT
 		case OPTION_PREP_BOOT:
 			use_prep_boot++;
-			if (use_prep_boot > 4) {
+			if (use_prep_boot > 4 - use_chrp_boot) {
 #ifdef	USE_LIBSCHILY
 				comerrno(EX_BAD,
-				"Maximum of 4 PReP boot images are allowed\n");
+				"Maximum of 4 PRep+CHRP partition entries are allowed\n");
 #else
 				fprintf(stderr,
-				"Maximum of 4 PReP boot images are allowed\n");
+				"Maximum of 4 PRep+CHRP partition entries are allowed\n");
 #endif
 				exit(1);
 			}
@@ -2092,6 +2254,21 @@ main(argc, argv)
 #else
 				fprintf(stderr,
 				"Required PReP boot image pathname missing\n");
+#endif
+				exit(1);
+			}
+			break;
+		case OPTION_CHRP_BOOT:
+			if (use_chrp_boot)
+				break;		/* silently allow duplicates */
+			use_chrp_boot = 1;
+			if (use_prep_boot > 3) {
+#ifdef USE_LIBSCHILY
+				comerrno(EX_BAD,
+				"Maximum of 4 PRep+CHRP partition entries are allowed\n");
+#else
+				fprintf(stderr,
+				"Maximum of 4 PRep+CHRP partition entries are allowed\n");
 #endif
 				exit(1);
 			}
@@ -2121,8 +2298,13 @@ parse_input_files:
 	if (use_udf && !use_Joliet)
 		jlen = 255;
 
+	if (use_RockRidge && (iso9660_namelen > MAX_ISONAME_V2_RR))
+		iso9660_namelen = MAX_ISONAME_V2_RR;
+
 	if (warn_violate)
 		error("Warning: creating filesystem that does not conform to ISO-9660.\n");
+	if (iso9660_level > 3)
+		error("Warning: Creating ISO-9660:1999 (version 2) filesystem.\n");
 	if (iso9660_namelen > LEN_ISONAME)
 		error("Warning: ISO-9660 filenames longer than %d may cause buffer overflows in the OS.\n",
 			LEN_ISONAME);
@@ -2153,7 +2335,7 @@ parse_input_files:
 #endif /* APPLE_HYB */
 
 	if (icharset == NULL) {
-#if	(defined(__CYGWIN32__) || defined(__CYGWIN__)) && !defined(IS_CYGWIN_1)
+#if	(defined(__CYGWIN32__) || defined(__CYGWIN__) || defined(__DJGPP__)) && !defined(IS_CYGWIN_1)
 		in_nls = load_nls("cp437");
 #else
 		in_nls = load_nls("iso8859-1");
@@ -2308,11 +2490,11 @@ parse_input_files:
 		exit(1);
 #endif
 	}
-	if (apple_hyb && use_sparcboot) {
+	if (apple_hyb && (use_sparcboot || use_sunx86boot)) {
 #ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD, "Can't have -hfs with -sparc-boot\n");
+		comerrno(EX_BAD, "Can't have -hfs with -sparc-boot/-sunx86-boot\n");
 #else
-		fprintf(stderr, "Can't have -hfs with -sparc-boot\n");
+		fprintf(stderr, "Can't have -hfs with -sparc-boot/-sunx86-boot\n");
 		exit(1);
 #endif
 	}
@@ -2344,7 +2526,7 @@ parse_input_files:
 
 	if (apple_both && verbose && !(hfs_select || *afpfile || magic_file)) {
 #ifdef	USE_LIBSCHILY
-		errmsgno(EX_BAD, 
+		errmsgno(EX_BAD,
 		"Warning: no Apple/Unix files will be decoded/mapped\n");
 #else
 		fprintf(stderr,
@@ -2367,10 +2549,16 @@ parse_input_files:
 		hfs_init(afpfile, 0, hfs_select);
 	}
 	if (apple_ext && !use_RockRidge) {
+#ifdef	nonono
 		/* use RockRidge to set the SystemUse field ... */
 		use_RockRidge++;
 		rationalize_all++;
+#endif
 	}
+	if (apple_ext && !(use_XA || use_RockRidge)) {
+		comerrno(EX_BAD, "Need either -XA/-xa or -R/-r for -apple to become active.\n");
+	}
+
 #endif	/* APPLE_HYB */
 
 	if (rationalize_all) {
@@ -2441,8 +2629,8 @@ parse_input_files:
 	/* The first step is to scan the directory tree, and take some notes */
 
 	if ((arg = get_pnames(argc, argv, optind, pname,
-						sizeof(pname), pfp)) == NULL) {
-		if (check_session == 0) {
+					sizeof (pname), pfp)) == NULL) {
+		if (check_session == 0 && !stream_media_size) {
 #ifdef	USE_LIBSCHILY
 			errmsgno(EX_BAD, "Missing pathspec.\n");
 #endif
@@ -2455,8 +2643,23 @@ parse_input_files:
 	 * in the pathnames file (stored in pname) - we don't want
 	 * to skip this pathspec when we read the pathnames file again
 	 */
-	if (!have_cmd_line_pathspec) {
+	if (!have_cmd_line_pathspec && !stream_media_size) {
 		save_pname = 1;
+	}
+	if (stream_media_size) {
+		if (use_XA || use_RockRidge || use_udf || use_Joliet)
+			comerrno(EX_BAD,
+			"Cannot use XA, Rock Ridge, UDF or Joliet with -stream-media-size\n");
+		if (merge_image)
+			comerrno(EX_BAD,
+			"Cannot use multi session with -stream-media-size\n");
+		if (use_eltorito || use_sparcboot || use_sunx86boot ||
+		    use_genboot || use_prep_boot || hfs_boot_file)
+			comerrno(EX_BAD,
+			"Cannot use boot options with -stream-media-size\n");
+		if (apple_hyb)
+			comerrno(EX_BAD,
+			"Cannot use Apple hybrid options with -stream-media-size\n");
 	}
 
 	if (use_RockRidge) {
@@ -2541,8 +2744,14 @@ parse_input_files:
 	stat_filter(node, &statbuf);
 	add_directory_hash(statbuf.st_dev, STAT_INODE(statbuf));
 
-	memset(&de, 0, sizeof(de));
+	memset(&de, 0, sizeof (de));
 
+	/*
+	 * PO:
+	 * Isn't root NULL at this time anyway?
+	 * I think it is created by the first call to
+	 * find_or_create_directory() below.
+	 */
 	de.filedir = root;	/* We need this to bootstrap */
 
 	if (cdrecord_data != NULL && merge_image == NULL) {
@@ -2578,21 +2787,29 @@ parse_input_files:
 		 * This is the first ISO directory entry in the root dir.
 		 */
 		c = isonum_733((unsigned char *)mrootp->extent);
-		readsecs(c, sector, 1);		
+		readsecs(c, sector, 1);
 		c = rr_flags((struct iso_directory_record *)sector);
-		if (c) {
-			if (c & 1024) {
+		if (c & RR_FLAG_XA)
+			fprintf(stderr, "XA signatures found\n");
+		if (c & RR_FLAG_AA)
+			fprintf(stderr, "AA signatures found\n");
+		if (c & ~(RR_FLAG_XA|RR_FLAG_AA)) {
+			if (c & RR_FLAG_SP) {
 				fprintf(stderr, "Rock Ridge signatures found\n");
 			} else {
 				fprintf(stderr, "Bad Rock Ridge signatures found (SU record missing)\n");
 				if (!force_rr)
-					no_rr++; 
+					no_rr++;
 			}
 		} else {
 			fprintf(stderr, "NO Rock Ridge present\n");
-			if (!force_rr)
-				no_rr++; 
+			if ((c & (RR_FLAG_XA|RR_FLAG_AA)) == 0) {
+				if (!force_rr)
+					no_rr++;
+			}
 		}
+		if (no_rr)
+			fprintf(stderr, "Disabling Rock Ridge / XA / AA\n");
 	}
 	/*
 	 * Create an empty root directory. If we ever scan it for real,
@@ -2613,17 +2830,17 @@ parse_input_files:
 	 */
 if (check_session == 0)
 	while ((arg = get_pnames(argc, argv, optind, pname,
-						sizeof(pname), pfp)) != NULL) {
+					sizeof (pname), pfp)) != NULL) {
 		struct directory *graft_dir;
 		struct stat	st;
 		char		*short_name;
 		int		status;
-		char		graft_point[PATH_MAX];
+		char		graft_point[PATH_MAX + 1];
 
 		/*
 		 * We would like a syntax like:
 		 *
-		 * 	/tmp=/usr/tmp/xxx
+		 *	/tmp=/usr/tmp/xxx
 		 *
 		 * where the user can specify a place to graft each component
 		 * of the tree.  To do this, we may have to create directories
@@ -2652,13 +2869,26 @@ if (check_session == 0)
 
 		short_name = NULL;
 
-		if (node != NULL) {
+		if (node != NULL || reloc_root) {
 			char		*pnt;
 			char		*xpnt;
+			size_t		len;
 
-			*node = '\0';
-			escstrcpy(graft_point, arg);
-			*node = '=';
+			/* insert -root prefix */
+			if (reloc_root != NULL) {
+				strcpy(graft_point, reloc_root);
+				len = strlen(graft_point);
+				if (graft_point[len] != '/')
+					graft_point[len++] = '/';
+			} else {
+				len = 0;
+			}
+
+			if (node) {
+				*node = '\0';
+				escstrcpy(&graft_point[len], arg);
+				*node = '=';
+			}
 
 			/*
 			 * Remove unwanted "./" & "/" sequences from start...
@@ -2673,7 +2903,11 @@ if (check_session == 0)
 				strcpy(graft_point, xpnt);
 			} while (xpnt > graft_point);
 
-			node = escstrcpy(nodename, ++node);
+			if (node) {
+				node = escstrcpy(nodename, ++node);
+			} else {
+				node = arg;
+			}
 
 			graft_dir = root;
 			xpnt = graft_point;
@@ -2687,14 +2921,13 @@ if (check_session == 0)
 			else
 				status = lstat_filter(node, &st);
 			if (status == 0 && S_ISDIR(st.st_mode)) {
-				int	len = strlen(graft_point);
+				len = strlen(graft_point);
 
-				if ((len <= (sizeof(graft_point) -1)) &&
+				if ((len <= (sizeof (graft_point) -1)) &&
 				    graft_point[len-1] != '/') {
 					graft_point[len++] = '/';
 					graft_point[len] = '\0';
 				}
-					
 			}
 			if (debug)
 				error("GRAFT:'%s'\n", xpnt);
@@ -2823,7 +3056,7 @@ if (check_session == 0)
 	 * - not going to happen at the moment as we have to have at least one
 	 * path on the command line
 	 */
-	if (no_path_names && !check_session) {
+	if (no_path_names && !check_session && !stream_media_size) {
 #ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD, "No pathnames found.\n");
 #endif
@@ -2834,7 +3067,8 @@ if (check_session == 0)
 	 * side, since we may need to create some additional directories.
 	 */
 	if (merge_image != NULL) {
-		if (merge_previous_session(root, mrootp) < 0) {
+		if (merge_previous_session(root, mrootp,
+					reloc_root, reloc_old_root) < 0) {
 #ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD, "Cannot merge previous session.\n");
 #else
@@ -2868,7 +3102,7 @@ if (check_session == 0)
 	/*
 	 * Free up any matching memory
 	 */
-	for (n=0;n<MAX_MAT;n++)
+	for (n = 0; n < MAX_MAT; n++)
 		gen_del_match(n);
 
 #ifdef SORTING
@@ -2907,10 +3141,9 @@ if (check_session == 0)
 	}
 	/*
 	 * Fix a couple of things in the root directory so that everything is
-	 * self consistent.
+	 * self consistent. Fix this up so that the path tables get done right.
 	 */
-	root->self = root->contents;	/* Fix this up so that the path tables
-					   get done right */
+	root->self = root->contents;
 
 	/* OK, ready to write the file.  Open it up, and generate the thing. */
 	if (print_size) {
@@ -2932,11 +3165,11 @@ if (check_session == 0)
 			fprintf(stderr, "Unable to open disc image file\n");
 			exit(1);
 #endif
-		};
+		}
 	} else {
 		discimage = stdout;
 
-#if	defined(__CYGWIN32__) || defined(__CYGWIN__) || defined(__EMX__)
+#ifdef	NEED_O_BINARY
 		setmode(fileno(stdout), O_BINARY);
 #endif
 	}
@@ -2957,17 +3190,17 @@ if (check_session == 0)
 	 */
 #ifdef APPLE_HYB
 #ifdef PREP_BOOT
-	if (apple_hyb || use_prep_boot)
+	if (apple_hyb || use_prep_boot || use_chrp_boot)
 #else	/* PREP_BOOT */
 	if (apple_hyb)
 #endif	/* PREP_BOOT */
 		outputlist_insert(&hfs_desc);
 #endif	/* APPLE_HYB */
-	if (use_sparcboot)
+	if (use_sparcboot || use_sunx86boot)
 		outputlist_insert(&sunlabel_desc);
 	if (use_genboot)
 		outputlist_insert(&genboot_desc);
-	outputlist_insert(&padblock_desc);
+	outputlist_insert(&startpad_desc);
 
 	/* PVD for disc. */
 	outputlist_insert(&voldesc_desc);
@@ -2976,6 +3209,10 @@ if (check_session == 0)
 	if (use_eltorito) {
 		outputlist_insert(&torito_desc);
 	}
+	/* Enhanced PVD for disc. neded if we write ISO-9660:1999 */
+	if (iso9660_level > 3)
+		outputlist_insert(&xvoldesc_desc);
+
 	/* SVD for Joliet. */
 	if (use_Joliet) {
 		outputlist_insert(&joliet_desc);
@@ -3016,11 +3253,18 @@ if (check_session == 0)
 #endif
 
 	/* Now start with path tables and directory tree info. */
-	outputlist_insert(&pathtable_desc);
+	if (!stream_media_size)
+		outputlist_insert(&pathtable_desc);
+	else
+		outputlist_insert(&strpath_desc);
+
 	if (use_Joliet) {
 		outputlist_insert(&jpathtable_desc);
 	}
-	outputlist_insert(&dirtree_desc);
+
+	if (!stream_media_size)
+		outputlist_insert(&dirtree_desc);
+
 	if (use_Joliet) {
 		outputlist_insert(&jdirtree_desc);
 	}
@@ -3029,7 +3273,13 @@ if (check_session == 0)
 	if (extension_record) {
 		outputlist_insert(&extension_desc);
 	}
-	outputlist_insert(&files_desc);
+
+	if (!stream_media_size) {
+		outputlist_insert(&files_desc);
+	} else {
+		outputlist_insert(&strfile_desc);
+		outputlist_insert(&strdir_desc);
+	}
 
 	/*
 	 * Allow room for the various headers we will be writing.
@@ -3060,8 +3310,20 @@ if (check_session == 0)
 		}
 	}
 
+	/*
+	 * Padding just after the ISO-9660 filesystem.
+	 *
+	 * files_desc does not have an of_size function. For this
+	 * reason, we must insert us after the files content has been
+	 * generated.
+	 */
 #ifdef UDF
 	if (use_udf) {
+		/* Single anchor volume descriptor pointer at end */
+		outputlist_insert(&udf_end_anchor_vol_desc_frag);
+		if (udf_end_anchor_vol_desc_frag.of_size != NULL) {
+			(*udf_end_anchor_vol_desc_frag.of_size) (last_extent);
+		}
 		if (dopad) {
 			/*
 			 * Pad with anchor volume descriptor pointer
@@ -3071,39 +3333,49 @@ if (check_session == 0)
 			if (udf_padend_avdp_frag.of_size != NULL) {
 				(*udf_padend_avdp_frag.of_size) (last_extent);
 			}
-		} else {
-			/* Single anchor volume descriptor pointer at end */
-			outputlist_insert(&udf_end_anchor_vol_desc_frag);
-			if (udf_end_anchor_vol_desc_frag.of_size != NULL) {
-				(*udf_end_anchor_vol_desc_frag.of_size) (last_extent);
-			}
 		}
 	} else
 #endif
-	if (dopad) {
-		/*
-		 * Padding just after the ISO-9660 filesystem.
-		 *
-		 * files_desc does not have an of_size function. For this
-		 * reason, we must insert us after the files content has been
-		 * generated.
-		 */
-		outputlist_insert(&padend_desc);
-		if (padend_desc.of_size != NULL) {
-			(*padend_desc.of_size) (last_extent);
+	if (dopad && !(use_sparcboot || use_sunx86boot)) {
+		outputlist_insert(&endpad_desc);
+		if (endpad_desc.of_size != NULL) {
+			(*endpad_desc.of_size) (last_extent);
 		}
 	}
 	c = 0;
 	if (use_sparcboot) {
+		if (dopad) {
+			/* Padding before the boot partitions. */
+			outputlist_insert(&interpad_desc);
+			if (interpad_desc.of_size != NULL) {
+				(*interpad_desc.of_size) (last_extent);
+			}
+		}
 		c = make_sun_label();
 		last_extent += c;
 		outputlist_insert(&sunboot_desc);
-	}
-	if (use_sparcboot && dopad) {
-		/* Second padding after the boot partitions. */
-		outputlist_insert(&padend_desc);
-		if (padend_desc.of_size != NULL) {
-			(*padend_desc.of_size) (last_extent);
+		if (dopad) {
+			outputlist_insert(&endpad_desc);
+			if (endpad_desc.of_size != NULL) {
+				(*endpad_desc.of_size) (last_extent);
+			}
+		}
+	} else if (use_sunx86boot) {
+		if (dopad) {
+			/* Padding before the boot partitions. */
+			outputlist_insert(&interpad_desc);
+			if (interpad_desc.of_size != NULL) {
+				(*interpad_desc.of_size) (last_extent);
+			}
+		}
+		c = make_sunx86_label();
+		last_extent += c;
+		outputlist_insert(&sunboot_desc);
+		if (dopad) {
+			outputlist_insert(&endpad_desc);
+			if (endpad_desc.of_size != NULL) {
+				(*endpad_desc.of_size) (last_extent);
+			}
 		}
 	}
 	if (print_size > 0) {
@@ -3126,7 +3398,7 @@ if (check_session == 0)
 		    opnt->of_start_extent != last_extent_written) {
 			/*
 			 * Consistency check.
-			 * XXX Should make sure than all entries have
+			 * XXX Should make sure that all entries have
 			 * XXXX of_start_extent set up correctly.
 			 */
 			comerrno(EX_BAD,
@@ -3143,19 +3415,24 @@ if (check_session == 0)
 					opnt->of_name, last_extent_written-oext);
 		}
 	}
+	if (last_extent != last_extent_written) {
+		comerrno(EX_BAD,
+		"Implementation botch: FS should end at %u but ends at %u.\n",
+				last_extent, last_extent_written);
+	}
 
 	if (verbose > 0) {
 #ifdef HAVE_SBRK
 		fprintf(stderr, "Max brk space used %x\n",
 			(unsigned int)(((unsigned long) sbrk(0)) - mem_start));
 #endif
-		fprintf(stderr, "%d extents written (%d Mb)\n",
+		fprintf(stderr, "%d extents written (%d MB)\n",
 			last_extent, last_extent >> 9);
 	}
 #ifdef VMS
-	return 1;
+	return (1);
 #else
-	return 0;
+	return (0);
 #endif
 }
 
@@ -3225,5 +3502,5 @@ e_malloc(size)
 	 * to avoid core dumps.
 	 */
 	memset(pt, 0, size);
-	return pt;
+	return (pt);
 }

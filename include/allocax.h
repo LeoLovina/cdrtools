@@ -1,4 +1,4 @@
-/* @(#)allocax.h	1.1 02/10/10 Copyright 2002 J. Schilling */
+/* @(#)allocax.h	1.3 03/07/15 Copyright 2002 J. Schilling */
 /*
  *	Definitions for users of alloca()
  *
@@ -19,9 +19,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 

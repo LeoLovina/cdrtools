@@ -1,19 +1,19 @@
-/* @(#)gap.c	1.11 02/04/10 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)gap.c	1.12 04/02/18 J. Schilling from cdparanoia-III-alpha9.8 */
 #ifndef lint
-static char     sccsid[] =
-"@(#)gap.c	1.11 02/04/10 J. Schilling from cdparanoia-III-alpha9.8";
+static	char sccsid[] =
+"@(#)gap.c	1.12 04/02/18 J. Schilling from cdparanoia-III-alpha9.8";
 
 #endif
 /*
  *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
  */
-/***
+/*
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Monty (xiphmont@mit.edu)
  *
  * Gapa analysis support code for paranoia
  *
- ***/
+ */
 
 #include <mconfig.h>
 #include <standard.h>
@@ -24,22 +24,26 @@ static char     sccsid[] =
 #include "gap.h"
 
 EXPORT long	i_paranoia_overlap_r	__PR((Int16_t * buffA, Int16_t * buffB,
- 						long offsetA, long offsetB));
+						long offsetA, long offsetB));
 EXPORT long	i_paranoia_overlap_f	__PR((Int16_t * buffA, Int16_t * buffB,
 						long offsetA, long offsetB,
 						long sizeA, long sizeB));
-EXPORT int	i_stutter_or_gap	__PR((Int16_t * A, Int16_t * B, long offA, long offB,
+EXPORT int	i_stutter_or_gap	__PR((Int16_t * A, Int16_t * B,
+						long offA, long offB,
 						long gap));
 EXPORT void	i_analyze_rift_f	__PR((Int16_t * A, Int16_t * B,
 						long sizeA, long sizeB,
 						long aoffset, long boffset,
-						long *matchA, long *matchB, long *matchC));
+						long *matchA, long *matchB,
+						long *matchC));
 EXPORT void	i_analyze_rift_r	__PR((Int16_t * A, Int16_t * B,
 						long sizeA, long sizeB,
 						long aoffset, long boffset,
-						long *matchA, long *matchB, long *matchC));
+						long *matchA, long *matchB,
+						long *matchC));
 
-EXPORT void	analyze_rift_silence_f	__PR((Int16_t * A, Int16_t * B, long sizeA, long sizeB,
+EXPORT void	analyze_rift_silence_f	__PR((Int16_t * A, Int16_t * B,
+						long sizeA, long sizeB,
 						long aoffset, long boffset,
 						long *matchA, long *matchB));
 
@@ -129,7 +133,7 @@ i_analyze_rift_f(A, B, sizeA, sizeB, aoffset, boffset, matchA, matchB, matchC)
 	 * Look for three possible matches... (A) Ariftv->B,
 	 * (B) Briftv->A and (c) AB->AB.
 	 */
-	for (i = 0;; i++) {
+	for (i = 0; ; i++) {
 		if (i < bpast)	/* A */
 			if (i_paranoia_overlap_f(A, B, aoffset, boffset + i, sizeA, sizeB) >= MIN_WORDS_RIFT) {
 				*matchA = i;
@@ -158,8 +162,8 @@ i_analyze_rift_f(A, B, sizeA, sizeB, aoffset, boffset, matchA, matchB, matchC)
 	if (*matchA) {
 		if (i_stutter_or_gap(A, B, aoffset - *matchA, boffset, *matchA))
 			return;
-		*matchB = -*matchA;	/* signify we need to remove n bytes
-					   from B */
+		*matchB = -*matchA;	/* signify we need to remove n bytes */
+					/* from B */
 		*matchA = 0;
 		return;
 	} else {
@@ -197,7 +201,7 @@ i_analyze_rift_r(A, B, sizeA, sizeB, aoffset, boffset, matchA, matchB, matchC)
 	 * Look for three possible matches... (A) Ariftv->B, (B) Briftv->A and
 	 * (c) AB->AB.
 	 */
-	for (i = 0;; i++) {
+	for (i = 0; ; i++) {
 		if (i < bpast)	/* A */
 			if (i_paranoia_overlap_r(A, B, aoffset, boffset - i) >= MIN_WORDS_RIFT) {
 				*matchA = i;
@@ -227,8 +231,8 @@ i_analyze_rift_r(A, B, sizeA, sizeB, aoffset, boffset, matchA, matchB, matchC)
 	if (*matchA) {
 		if (i_stutter_or_gap(A, B, aoffset + 1, boffset - *matchA + 1, *matchA))
 			return;
-		*matchB = -*matchA;	/* signify we need to remove n bytes
-					   from B */
+		*matchB = -*matchA;	/* signify we need to remove n bytes */
+					/* from B */
 		*matchA = 0;
 		return;
 	} else {

@@ -1,7 +1,8 @@
-On newer OpenBSD releases there is a bug in /usr/include/ctype.h,
-it #defines EOF ignoring POSIX rules. As the schily make environmemnt
-relies on EOF as an indicator to check whether stdio.h has been included,
-there may be problems to compile things. If you find compile problems,
+On OpenBSD releases between December 11th and December 30th 2002
+there is a bug in /usr/include/ctype.h, it #defines EOF ignoring
+POSIX rules. As the schily make environment relies on EOF as an
+indicator to check whether stdio.h has been included, there may 
+be problems to compile things. If you find compile problems,
 you may try to include 
 
 #undef EOF 
@@ -37,10 +38,10 @@ In these examples, 'cd0' and 'cd1' are the SCSI CD devices on the
 system, and they should be accessed by '/dev/rcd0c' and '/dev/rcd1c',
 respectively.
 
-It seems that the atapiscsi(4) driver has some bugs that may cause
-cdrecord to hang for a while.  While this is annoying, it is harmless.
-The command will eventually timeout (the default timeout is 40 seconds,
-but can be changed with timeout=%d).  Trying to kill the "hung" process
-may leave the device unusable until the system is rebooted (wich would
-be another bug of the atapiscsi(4) driver as killing a process should
-do all necessary housekeeping for the dead process), so just be patient.
+In December 2002 there have been reports that the atapiscsi(4) driver has
+some bugs that may cause cdrecord to hang for a while.  While this is
+annoying, it is harmless. The command will eventually timeout (the default
+timeout is 40 seconds, but can be changed with timeout=%d).  Trying to kill
+the "hung" process may leave the device unusable until the system is rebooted
+(which would be another bug of the atapiscsi(4) driver as killing a process
+should do all necessary housekeeping for the dead process), so just be patient.

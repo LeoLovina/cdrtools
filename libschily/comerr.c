@@ -1,8 +1,8 @@
-/* @(#)comerr.c	1.28 02/10/07 Copyright 1985 J. Schilling */
+/* @(#)comerr.c	1.29 03/06/15 Copyright 1985-1989, 1995-2003 J. Schilling */
 /*
  *	Routines for printing command errors
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985-1989, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -58,7 +58,7 @@ on_comerr(func, arg)
 {
 	ex_t	*fp;
 
-	fp = malloc(sizeof(*fp));
+	fp = malloc(sizeof (*fp));
 	if (fp == NULL)
 		return (-1);
 
@@ -71,9 +71,11 @@ on_comerr(func, arg)
 
 /* VARARGS1 */
 #ifdef	PROTOTYPES
-void comerr(const char *msg, ...)
+EXPORT void
+comerr(const char *msg, ...)
 #else
-void comerr(msg, va_alist)
+EXPORT void
+comerr(msg, va_alist)
 	char	*msg;
 	va_dcl
 #endif
@@ -85,16 +87,18 @@ void comerr(msg, va_alist)
 #else
 	va_start(args);
 #endif
-	(void)_comerr(TRUE, geterrno(), msg, args);
+	(void) _comerr(TRUE, geterrno(), msg, args);
 	/* NOTREACHED */
 	va_end(args);
 }
 
 /* VARARGS2 */
 #ifdef	PROTOTYPES
-void comerrno(int err, const char *msg, ...)
+EXPORT void
+comerrno(int err, const char *msg, ...)
 #else
-void comerrno(err, msg, va_alist)
+EXPORT void
+comerrno(err, msg, va_alist)
 	int	err;
 	char	*msg;
 	va_dcl
@@ -107,16 +111,18 @@ void comerrno(err, msg, va_alist)
 #else
 	va_start(args);
 #endif
-	(void)_comerr(TRUE, err, msg, args);
+	(void) _comerr(TRUE, err, msg, args);
 	/* NOTREACHED */
 	va_end(args);
 }
 
 /* VARARGS1 */
 #ifdef	PROTOTYPES
-int errmsg(const char *msg, ...)
+EXPORT int
+errmsg(const char *msg, ...)
 #else
-int errmsg(msg, va_alist)
+EXPORT int
+errmsg(msg, va_alist)
 	char	*msg;
 	va_dcl
 #endif
@@ -136,9 +142,11 @@ int errmsg(msg, va_alist)
 
 /* VARARGS2 */
 #ifdef	PROTOTYPES
-int errmsgno(int err, const char *msg, ...)
+EXPORT int
+errmsgno(int err, const char *msg, ...)
 #else
-int errmsgno(err, msg, va_alist)
+EXPORT int
+errmsgno(err, msg, va_alist)
 	int	err;
 	char	*msg;
 	va_dcl
@@ -177,7 +185,8 @@ int errmsgno(err, msg, va_alist)
 	 */
 #define	silent_error(e)		((e) < 0)
 #endif
-LOCAL int _comerr(exflg, err, msg, args)
+LOCAL int
+_comerr(exflg, err, msg, args)
 	int		exflg;
 	int		err;
 	const char	*msg;
@@ -186,13 +195,13 @@ LOCAL int _comerr(exflg, err, msg, args)
 	char	errbuf[20];
 	char	*errnam;
 	char	*prognam = get_progname();
-	
+
 	if (silent_error(err)) {
 		error("%s: %r", prognam, msg, args);
 	} else {
 		errnam = errmsgstr(err);
 		if (errnam == NULL) {
-			(void)js_snprintf(errbuf, sizeof (errbuf),
+			(void) js_snprintf(errbuf, sizeof (errbuf),
 						"Error %d", err);
 			errnam = errbuf;
 		}
@@ -202,7 +211,7 @@ LOCAL int _comerr(exflg, err, msg, args)
 		comexit(err);
 		/* NOTREACHED */
 	}
-	return(err);
+	return (err);
 }
 
 EXPORT void

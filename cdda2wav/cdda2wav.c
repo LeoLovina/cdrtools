@@ -1,7 +1,7 @@
-/* @(#)cdda2wav.c	1.50 02/11/21 Copyright 1998-2002 Heiko Eissfeldt */
+/* @(#)cdda2wav.c	1.58 04/07/29 Copyright 1998-2004 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)cdda2wav.c	1.50 02/11/21 Copyright 1998-2002 Heiko Eissfeldt";
+"@(#)cdda2wav.c	1.58 04/07/29 Copyright 1998-2004 Heiko Eissfeldt";
 
 #endif
 #undef DEBUG_BUFFER_ADDRESSES
@@ -93,6 +93,11 @@ static char     sccsid[] =
 #include <vadefs.h>
 
 #include <scg/scsitransp.h>
+
+#ifdef	HAVE_AREAS
+#include <be/kernel/OS.h>
+#endif
+
 #include "mytype.h"
 #include "sndconfig.h"
 
@@ -117,6 +122,7 @@ static char     sccsid[] =
 #ifdef	USE_PARANOIA
 #include "cdda_paranoia.h"
 #endif
+#include "defaults.h"
 
 int main				__PR((int argc, char **argv));
 static void RestrictPlaybackRate	__PR((long newrate));
@@ -143,7 +149,7 @@ no-write,N,dump-rates,R,bulk,B,alltracks,verbose-scsi+,V+,\
 find-extremes,F,find-mono,G,no-infofile,H,\
 deemphasize,T,info-only,J,silent-scsi,Q,\
 cddbp-server*,cddbp-port*,\
-device*,dev*,D*,auxdevice*,A*,interface*,I*,output-format*,O*,\
+scanbus,device*,dev*,D*,auxdevice*,A*,interface*,I*,output-format*,O*,\
 output-endianess*,E*,cdrom-endianess*,C*,speed#,S#,\
 playback-realtime#L,p#L,md5#,M#,set-overlap#,P#,sound-device*,K*,\
 cddb#,L#,channels*,c*,bits-per-sample#,b#,rate#,r#,gui,g,\
@@ -153,7 +159,7 @@ stereo,s,mono,m,wait,w,echo,e,quiet,q,max,x\
 ";
 
 
-#if	defined(__CYGWIN32__) ||defined(__EMX__)
+#ifdef	NEED_O_BINARY
 #include <io.h>		/* for setmode() prototype */
 #endif
 
@@ -431,106 +437,97 @@ static unsigned int track = 1;
  * define size-related entries in audio file header, update and close file */
 static void CloseAll ()
 {
-  WAIT_T chld_return_status;
-  int amichild;
+	WAIT_T chld_return_status;
+	int amiparent;
 
-  /* terminate child process first */
-  amichild = child_pid == 0;
+	/* terminate child process first */
+	amiparent = child_pid > 0;
+
+	if (global.iloop > 0) {
+		/* set to zero */
+		global.iloop = 0;
+	}
 
 #if	defined	HAVE_FORK_AND_SHAREDMEM
-  if (amichild == 0) {
 # ifdef DEBUG_CLEANUP
-fprintf(stderr, "Parent (READER) terminating, \n");
-# endif
-
-    if (global.iloop > 0) {
-      /* set to zero */
-      global.iloop = 0;
-      kill(child_pid, SIGINT);
-    }
-
-#else
-  if (1) {
-#endif
-    /* switch to original mode and close device */
-    EnableCdda (get_scsi_p(), 0, 0);
-#if	defined	HAVE_FORK_AND_SHAREDMEM
-  } else {
-#ifdef DEBUG_CLEANUP
-fprintf(stderr, "Child (WRITER) terminating, \n");
+	fprintf(stderr, "%s terminating, \n", amiparent ? 
+		"Parent (READER)" : "Child (WRITER)");
 #endif
 #else
 # ifdef DEBUG_CLEANUP
-fprintf(stderr, "Cdda2wav single process terminating, \n");
+	fprintf(stderr, "Cdda2wav single process terminating, \n");
 # endif
 #endif
-    /* do general clean up */
 
-    if (global.audio>=0) {
-      if (bulk) {
-        /* finish sample file for this track */
-        CloseAudio(global.channels,
-  	  global.nSamplesDoneInTrack, global.audio_out);
-      } else {
-        /* finish sample file for this track */
-        CloseAudio(global.channels,
-  	  (unsigned int) *nSamplesToDo, global.audio_out);
-      }
-    }
+	if (amiparent || child_pid < 0) {
+		/* switch to original mode and close device */
+		EnableCdda (get_scsi_p(), 0, 0);
+	}
 
-    /* tell minimum and maximum amplitudes, if required */
-    if (global.findminmax) {
-      fprintf(stderr,
-	 "Right channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
-	global.minamp[0], global.maxamp[0]);
-      fprintf(stderr,
-	 "Left  channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
-	global.minamp[1], global.maxamp[1]);
-    }
+	if (!amiparent) {
+		/* do general clean up */
 
-    /* tell mono or stereo recording, if required */
-    if (global.findmono) {
-      fprintf(stderr, "Audio samples are originally %s.\n", global.ismono ? "mono" : "stereo");
-    }
+		if (global.audio>=0) {
+			if (bulk) {
+				/* finish sample file for this track */
+				CloseAudio(global.channels,
+				 global.nSamplesDoneInTrack, global.audio_out);
+			} else {
+				/* finish sample file for this track */
+				CloseAudio(global.channels,
+				 (unsigned int) *nSamplesToDo, global.audio_out);
+			}
+		}
+
+		/* tell minimum and maximum amplitudes, if required */
+		if (global.findminmax) {
+			fprintf(stderr,
+			"Right channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
+			global.minamp[0], global.maxamp[0]);
+			fprintf(stderr,
+			"Left  channel: minimum amplitude :%d/-32768, maximum amplitude :%d/32767\n", 
+			global.minamp[1], global.maxamp[1]);
+		}
+
+		/* tell mono or stereo recording, if required */
+		if (global.findmono) {
+			fprintf(stderr, "Audio samples are originally %s.\n", global.ismono ? "mono" : "stereo");
+		}
+
+		return;	/* end of child or single process */
+	}
 
 
+	if (global.have_forked == 1) {
 #ifdef DEBUG_CLEANUP
-fprintf(stderr, "Child (WRITER) terminating, \n");
+		fprintf(stderr, "Parent wait for child death, \n");
 #endif
 
-    return;
-  }
-
-  if (global.have_forked == 1) {
-#ifdef DEBUG_CLEANUP
-fprintf(stderr, "Parent wait for child death, \n");
-#endif
-
-    /* wait for child to terminate */
-    if (0 > wait(&chld_return_status)) {
-      perror("");
-    } else {
-      if (WIFEXITED(chld_return_status)) {
-        if (WEXITSTATUS(chld_return_status)) {
-          fprintf(stderr, "\nW Child exited with %d\n", WEXITSTATUS(chld_return_status));
-        }
-      }
-      if (WIFSIGNALED(chld_return_status)) {
-        fprintf(stderr, "\nW Child exited due to signal %d\n", WTERMSIG(chld_return_status));
-      }
-      if (WIFSTOPPED(chld_return_status)) {
-        fprintf(stderr, "\nW Child is stopped due to signal %d\n", WSTOPSIG(chld_return_status));
-      }
-    }
+		/* wait for child to terminate */
+		if (0 > wait(&chld_return_status)) {
+			perror("");
+		} else {
+			if (WIFEXITED(chld_return_status)) {
+				if (WEXITSTATUS(chld_return_status)) {
+					fprintf(stderr, "\nW Child exited with %d\n", WEXITSTATUS(chld_return_status));
+				}
+			}
+			if (WIFSIGNALED(chld_return_status)) {
+				fprintf(stderr, "\nW Child exited due to signal %d\n", WTERMSIG(chld_return_status));
+			}
+			if (WIFSTOPPED(chld_return_status)) {
+				fprintf(stderr, "\nW Child is stopped due to signal %d\n", WSTOPSIG(chld_return_status));
+			}
+		}
 
 #ifdef DEBUG_CLEANUP
-fprintf(stderr, "\nW Parent child death, state:%d\n", chld_return_status);
+		fprintf(stderr, "\nW Parent child death, state:%d\n", chld_return_status);
 #endif
-  }
+	}
+
 #ifdef GPROF
-  rename("gmon.out", "gmon.child");
+	rename("gmon.out", "gmon.child");
 #endif
-
 }
 
 
@@ -569,28 +566,27 @@ void FatalError (szMessage, va_alist)
 	va_dcl
 #endif
 {
-  va_list marker;
+	va_list marker;
 
 #ifdef  PROTOTYPES
-  va_start(marker, szMessage);
+	va_start(marker, szMessage);
 #else
-  va_start(marker);
+	va_start(marker);
 #endif
 
-  error("%r", szMessage, marker);
+	error("%r", szMessage, marker);
 
-  va_end(marker);
+	va_end(marker);
 
-  if (child_pid == -2)
-    exit (1);
-
-  if (child_pid == 0) {
-    /* kill the parent too */
-    kill(getppid(), SIGINT);
-  } else {
-	kill(child_pid, SIGINT);
-  }
-  exit (1);
+	if (child_pid >= 0) {
+		if (child_pid == 0) {
+			/* kill the parent too */
+			kill(getppid(), SIGINT);
+		} else {
+			kill(child_pid, SIGINT);
+		}
+	}
+	exit (1);
 }
 
 
@@ -745,6 +741,7 @@ OPTIONS:\n\
   (-H) -no-infofile		no info file generation.\n\
   (-g) -gui			generate special output suitable for gui frontends.\n\
   (-Q) -silent-scsi		do not print status of erreneous scsi-commands.\n\
+       -scanbus			scan the SCSI bus and exit\n\
   (-M) md5=count		calculate MD-5 checksum for blocks of 'count' bytes.\n\
   (-q) -quiet			quiet operation, no screen output.\n\
   (-p) playback-realtime=perc	play (echo) audio pitched at perc percent (50%-200%).\n\
@@ -779,7 +776,9 @@ defaults	%s, %d bit, %d.%02d Hz, track 1, no offset, one track,\n",
 
 static void init_globals()
 {
+#ifdef	HISTORICAL_JUNK
   global.dev_name = CD_DEVICE;	/* device name */
+#endif
   global.aux_name = AUX_DEVICE;/* auxiliary cdrom device */
   strncpy(global.fname_base, FILENAME, sizeof(global.fname_base));/* auxiliary cdrom device */
   global.have_forked = 0;	/* state variable for clean up */
@@ -793,6 +792,7 @@ static void init_globals()
   global.verbose  =  SHOW_TOC + SHOW_SUMMARY + SHOW_STARTPOSITIONS + SHOW_TITLES;	/* verbose level */
   global.scsi_silent = 0;
   global.scsi_verbose = 0;		/* SCSI verbose level */
+  global.scanbus = 0;
   global.multiname = 0;		/* multiple file names given */
   global.sh_bits  =  0;		/* sh_bits: sample bit shift */
   global.Remainder=  0;		/* remainder */
@@ -844,6 +844,16 @@ static void init_globals()
   memset(global.trackindexlist, 0, sizeof(global.trackindexlist));
 
   global.just_the_toc = 0;
+#ifdef	USE_PARANOIA
+	global.paranoia_parms.disable_paranoia = 
+	global.paranoia_parms.disable_extra_paranoia = 
+	global.paranoia_parms.disable_scratch_detect =
+	global.paranoia_parms.disable_scratch_repair = 0;
+	global.paranoia_parms.retries = 20;
+	global.paranoia_parms.overlap = -1;
+	global.paranoia_parms.mindynoverlap = -1;
+	global.paranoia_parms.maxdynoverlap = -1;
+#endif
 }
 
 #if !defined (HAVE_STRCASECMP) || (HAVE_STRCASECMP != 1)
@@ -1033,13 +1043,39 @@ switch_to_realtime_priority()
 #endif
 #endif
 
+/* SCSI cleanup */
+int on_exitscsi __PR((void *status));
+
+int
+on_exitscsi(status)
+	void *status;
+{
+	exit((int)status);
+	return 0;
+}
+
 /* wrapper for signal handler exit needed for Mac-OS-X */
 static void exit_wrapper __PR((int status));
 
 static void exit_wrapper(status)
 	int status;
 {
-	exit(status);
+#if defined DEBUG_CLEANUP
+	fprintf( stderr, "Exit(%d) for %s\n", status, child_pid == 0 ? "Child" : "Parent");
+	fflush(stderr);
+#endif
+
+	if (child_pid != 0) {
+		SCSI *scgp = get_scsi_p();
+		if (scgp->running) {
+			scgp->cb_fun = on_exitscsi;
+			scgp->cb_arg = (void *)status;
+		} else {
+			on_exitscsi((void *)status);
+		} 
+	} else {
+		exit(status);
+	}
 }
 
 /* signal handler for process communication */
@@ -1070,7 +1106,9 @@ static struct paranoia_statistics
 	int	last_heartbeatstate;
 	long	lasttime;
 	char	heartbeat;
-	int	overlap;
+	int	minoverlap;
+	int	curoverlap;
+	int	maxoverlap;
 	int	slevel;
 	int	slastlevel;
 	int	stimeout;
@@ -1086,35 +1124,36 @@ static struct paranoia_statistics
 	unsigned drifts;
 	unsigned fixup_droppeds;
 	unsigned fixup_dupeds;
-}	para_stat;
+}	*para_stat;
 
 
 static void paranoia_reset __PR((void));
 static void paranoia_reset()
 {
-	para_stat.c_sector = 0;
-	para_stat.v_sector = 0;
-	para_stat.last_heartbeatstate = 0;
-	para_stat.lasttime = 0;
-	para_stat.heartbeat = ' ';
-	para_stat.overlap = 0;
-	para_stat.slevel = 0;
-	para_stat.slastlevel = 0;
-	para_stat.stimeout = 0;
-	para_stat.rip_smile_level = 0;
-	para_stat.verifies = 0;
-	para_stat.reads = 0;
-	para_stat.readerrs = 0;
-	para_stat.fixup_edges = 0;
-	para_stat.fixup_atoms = 0;
-	para_stat.fixup_droppeds = 0;
-	para_stat.fixup_dupeds = 0;
-	para_stat.drifts = 0;
-	para_stat.scratchs = 0;
-	para_stat.overlaps = 0;
-	para_stat.skips = 0;
+	para_stat->c_sector = 0;
+	para_stat->v_sector = 0;
+	para_stat->last_heartbeatstate = 0;
+	para_stat->lasttime = 0;
+	para_stat->heartbeat = ' ';
+	para_stat->minoverlap = 0x7FFFFFFF;
+	para_stat->curoverlap = 0;
+	para_stat->maxoverlap = 0;
+	para_stat->slevel = 0;
+	para_stat->slastlevel = 0;
+	para_stat->stimeout = 0;
+	para_stat->rip_smile_level = 0;
+	para_stat->verifies = 0;
+	para_stat->reads = 0;
+	para_stat->readerrs = 0;
+	para_stat->fixup_edges = 0;
+	para_stat->fixup_atoms = 0;
+	para_stat->fixup_droppeds = 0;
+	para_stat->fixup_dupeds = 0;
+	para_stat->drifts = 0;
+	para_stat->scratchs = 0;
+	para_stat->overlaps = 0;
+	para_stat->skips = 0;
 }
-
 
 static void paranoia_callback __PR((long inpos, int function));
 
@@ -1127,75 +1166,79 @@ static void paranoia_callback(inpos, function)
 
 	switch (function) {
 		case	-2:
-			para_stat.v_sector = inpos / CD_FRAMEWORDS;
+			para_stat->v_sector = inpos / CD_FRAMEWORDS;
 			return;
 		case	-1:
-			para_stat.last_heartbeatstate = 8;
-			para_stat.heartbeat = '*';
-			para_stat.slevel = 0;
-			para_stat.v_sector = inpos / CD_FRAMEWORDS;
+			para_stat->last_heartbeatstate = 8;
+			para_stat->heartbeat = '*';
+			para_stat->slevel = 0;
+			para_stat->v_sector = inpos / CD_FRAMEWORDS;
 		break;
 		case	PARANOIA_CB_VERIFY:
-			if (para_stat.stimeout >= 30) {
-				if (para_stat.overlap > CD_FRAMEWORDS) {
-					para_stat.slevel = 2;
+			if (para_stat->stimeout >= 30) {
+				if (para_stat->curoverlap > CD_FRAMEWORDS) {
+					para_stat->slevel = 2;
 				} else {
-					para_stat.slevel = 1;
+					para_stat->slevel = 1;
 				}
 			}
-			para_stat.verifies++;
+			para_stat->verifies++;
 		break;
 		case	PARANOIA_CB_READ:
-			if (inpos / CD_FRAMEWORDS > para_stat.c_sector) {
-				para_stat.c_sector = inpos / CD_FRAMEWORDS;
+			if (inpos / CD_FRAMEWORDS > para_stat->c_sector) {
+				para_stat->c_sector = inpos / CD_FRAMEWORDS;
 			}
-			para_stat.reads++;
+			para_stat->reads++;
 		break;
 		case	PARANOIA_CB_FIXUP_EDGE:
-			if (para_stat.stimeout >= 5) {
-				if (para_stat.overlap > CD_FRAMEWORDS) {
-					para_stat.slevel = 2;
+			if (para_stat->stimeout >= 5) {
+				if (para_stat->curoverlap > CD_FRAMEWORDS) {
+					para_stat->slevel = 2;
 				} else {
-					para_stat.slevel = 1;
+					para_stat->slevel = 1;
 				}
 			}
-			para_stat.fixup_edges++;
+			para_stat->fixup_edges++;
 		break;
 		case	PARANOIA_CB_FIXUP_ATOM:
-			if (para_stat.slevel < 3 || para_stat.stimeout > 5) {
-				para_stat.slevel = 3;
+			if (para_stat->slevel < 3 || para_stat->stimeout > 5) {
+				para_stat->slevel = 3;
 			}
-			para_stat.fixup_atoms++;
+			para_stat->fixup_atoms++;
 		break;
 		case	PARANOIA_CB_READERR:
-			para_stat.slevel = 6;
-			para_stat.readerrs++;
+			para_stat->slevel = 6;
+			para_stat->readerrs++;
 		break;
 		case	PARANOIA_CB_SKIP:
-			para_stat.slevel = 8;
-			para_stat.skips++;
+			para_stat->slevel = 8;
+			para_stat->skips++;
 		break;
 		case	PARANOIA_CB_OVERLAP:
-			para_stat.overlap = inpos;
-			para_stat.overlaps++;
+			para_stat->curoverlap = inpos;
+			if (inpos > para_stat->maxoverlap)
+				para_stat->maxoverlap = inpos;
+			if (inpos < para_stat->minoverlap)
+				para_stat->minoverlap = inpos;
+			para_stat->overlaps++;
 		break;
 		case	PARANOIA_CB_SCRATCH:
-			para_stat.slevel = 7;
-			para_stat.scratchs++;
+			para_stat->slevel = 7;
+			para_stat->scratchs++;
 		break;
 		case	PARANOIA_CB_DRIFT:
-			if (para_stat.slevel < 4 || para_stat.stimeout > 5) {
-				para_stat.slevel = 4;
+			if (para_stat->slevel < 4 || para_stat->stimeout > 5) {
+				para_stat->slevel = 4;
 			}
-			para_stat.drifts++;
+			para_stat->drifts++;
 		break;
 		case	PARANOIA_CB_FIXUP_DROPPED:
-			para_stat.slevel = 5;
-			para_stat.fixup_droppeds++;
+			para_stat->slevel = 5;
+			para_stat->fixup_droppeds++;
 		break;
 		case	PARANOIA_CB_FIXUP_DUPED:
-			para_stat.slevel = 5;
-			para_stat.fixup_dupeds++;
+			para_stat->slevel = 5;
+			para_stat->fixup_dupeds++;
 		break;
 	}
 
@@ -1203,39 +1246,39 @@ static void paranoia_callback(inpos, function)
 	/* now in tenth of seconds. */
 	test = thistime.tv_sec * 10 + thistime.tv_usec / 100000;
 
-	if (para_stat.lasttime != test
+	if (para_stat->lasttime != test
 		|| function == -1
-		|| para_stat.slastlevel != para_stat.slevel) {
+		|| para_stat->slastlevel != para_stat->slevel) {
 
 		if (function == -1
-			|| para_stat.slastlevel != para_stat.slevel) {
+			|| para_stat->slastlevel != para_stat->slevel) {
 
 			static const char hstates[] = " .o0O0o.";
 
-			para_stat.lasttime = test;
-			para_stat.stimeout++;
+			para_stat->lasttime = test;
+			para_stat->stimeout++;
 
-			para_stat.last_heartbeatstate++;
-			if (para_stat.last_heartbeatstate > 7) {
-				para_stat.last_heartbeatstate = 0;
+			para_stat->last_heartbeatstate++;
+			if (para_stat->last_heartbeatstate > 7) {
+				para_stat->last_heartbeatstate = 0;
 			}
-			para_stat.heartbeat = hstates[para_stat.last_heartbeatstate];
+			para_stat->heartbeat = hstates[para_stat->last_heartbeatstate];
 
 			if (function == -1) {
-				para_stat.heartbeat = '*';
+				para_stat->heartbeat = '*';
 			}
 		}
 
-		if (para_stat.slastlevel != para_stat.slevel) {
-			para_stat.stimeout = 0;
+		if (para_stat->slastlevel != para_stat->slevel) {
+			para_stat->stimeout = 0;
 		}
-		para_stat.slastlevel = para_stat.slevel;
+		para_stat->slastlevel = para_stat->slevel;
 	}
 
-	if (para_stat.slevel < 8) {
-		para_stat.rip_smile_level = para_stat.slevel;
+	if (para_stat->slevel < 8) {
+		para_stat->rip_smile_level = para_stat->slevel;
 	} else {
-		para_stat.rip_smile_level = 0;
+		para_stat->rip_smile_level = 0;
 	}
 }
 #endif
@@ -1439,54 +1482,7 @@ fprintf(stderr, "decreasing overlap from %u to %u (jitter %d)\n", global.overlap
 	} else {
 		global.iloop = 0;
 	}
-	if (global.verbose) {
-		unsigned per;
-		static unsigned oper = 200;
 
-#ifdef	PERCENTAGE_PER_TRACK
-		/* Thomas Niederreiter wants percentage per track */
-		unsigned start_in_track = max(BeginAtSample,
-			Get_AudioStartSector(current_track)*CD_FRAMESAMPLES);
-
-		per = min(BeginAtSample + (long)*nSamplesToDo,
-			Get_StartSector(current_track+1)*CD_FRAMESAMPLES)
-			- (long)start_in_track;
-
-		per = (BeginAtSample+*nSamplesToDo-global.iloop
-			- start_in_track
-			)/(per/100);
-
-#else
-		per = global.iloop ? (*nSamplesToDo-global.iloop)/(nSamplesToDo/100) : 100;
-#endif
-
-		if (global.overlap > 0) {
-			fprintf(stderr, "\r%2d/%2d/%2d/%7d %3d%%",
-				minover, maxover, global.overlap,
-				newbuf ? offset - global.overlap*CD_FRAMESIZE_RAW : 9999999,
-				per);
-			fflush(stderr);
-		} else if (oper != per) {
-			fprintf(stderr, "\r%3d%%", per);
-			fflush(stderr);
-			oper = per;
-		}
-#ifdef	USE_PARANOIA
-		if (global.paranoia_selected && per == 100) {
-			fprintf(stderr, " %u rderr, %u edge, %u atom, %u drop, %u dup, %u skip, %u drift %u overl\n"
-				,para_stat.readerrs
-				,para_stat.fixup_edges
-				,para_stat.fixup_atoms
-				,para_stat.fixup_droppeds
-				,para_stat.fixup_dupeds
-				,para_stat.skips
-				,para_stat.drifts
-				,para_stat.overlaps
-			);
-			paranoia_reset();
-		}
-#endif
-	}
 	lSector += SectorBurst - global.overlap;
 
 #if	defined	PERCENTAGE_PER_TRACK && defined HAVE_FORK_AND_SHAREDMEM
@@ -1502,127 +1498,261 @@ fprintf(stderr, "decreasing overlap from %u to %u (jitter %d)\n", global.overlap
 	return offset;
 }
 
+static void
+print_percentage __PR((unsigned *poper, int c_offset));
+
+static void
+print_percentage(poper, c_offset)
+	unsigned *poper;
+	int	c_offset;
+{
+	unsigned per;
+#ifdef	PERCENTAGE_PER_TRACK
+	/* Thomas Niederreiter wants percentage per track */
+	unsigned start_in_track = max(BeginAtSample,
+		Get_AudioStartSector(current_track)*CD_FRAMESAMPLES);
+
+	per = min(BeginAtSample + (long)*nSamplesToDo,
+		Get_StartSector(current_track+1)*CD_FRAMESAMPLES)
+		- (long)start_in_track;
+
+	per = (BeginAtSample+nSamplesDone
+		- start_in_track
+		)/(per/100);
+
+#else
+	per = global.iloop ? (nSamplesDone)/(*nSamplesToDo/100) : 100;
+#endif
+
+	if (global.overlap > 0) {
+		fprintf(stderr, "\r%2d/%2d/%2d/%7d %3d%%",
+			minover, maxover, global.overlap,
+			c_offset - global.overlap*CD_FRAMESIZE_RAW,
+			per);
+	} else if (*poper != per) {
+		fprintf(stderr, "\r%3d%%", per);
+	}
+	*poper = per;
+	fflush(stderr);
+}
 
 static unsigned long do_write __PR((myringbuff *p));
 static unsigned long do_write (p)
 	myringbuff	*p;
 {
-      int current_offset;
-      unsigned int InSamples;
-      current_offset = get_offset(p);
+	int current_offset;
+	unsigned int InSamples;
+	static unsigned oper = 200;
 
-      /* how many bytes are available? */
-      InSamples = global.nsectors*CD_FRAMESAMPLES - current_offset/4;
-      /* how many samples are wanted? */
-      InSamples = min((*nSamplesToDo-nSamplesDone),InSamples);
+	current_offset = get_offset(p);
 
-      /* when track end is reached, close current file and start a new one */
-      while ((nSamplesDone < *nSamplesToDo) && (InSamples != 0)) {
-	long unsigned int how_much = InSamples;
+	/* how many bytes are available? */
+	InSamples = global.nsectors*CD_FRAMESAMPLES - current_offset/4;
+	/* how many samples are wanted? */
+	InSamples = min((*nSamplesToDo-nSamplesDone),InSamples);
 
-	long int left_in_track;
-	left_in_track  = Get_StartSector(current_track+1)*CD_FRAMESAMPLES
-			 - (int)(BeginAtSample+nSamplesDone);
+	/* when track end is reached, close current file and start a new one */
+	while ((nSamplesDone < *nSamplesToDo) && (InSamples != 0)) {
+		long unsigned int how_much = InSamples;
 
-	if (*eorecording != 0 && current_track == cdtracks+1 &&
-            (*total_segments_read) == (*total_segments_written)+1)
-		left_in_track = InSamples;
+		long int left_in_track;
+		left_in_track  = Get_StartSector(current_track+1)*CD_FRAMESAMPLES
+				 - (int)(BeginAtSample+nSamplesDone);
+
+		if (*eorecording != 0 && current_track == cdtracks+1 &&
+       		    (*total_segments_read) == (*total_segments_written)+1) {
+			/* limit, if the actual end of the last track is
+			 * not known from the toc. */
+			left_in_track = InSamples;
+		}
 
 if (left_in_track < 0) {
 	fprintf(stderr, "internal error: negative left_in_track:%ld, current_track=%d\n",left_in_track, current_track);
 }
 
-	if (bulk)
-	  how_much = min(how_much, (unsigned long) left_in_track);
-
+		if (bulk) {
+			how_much = min(how_much, (unsigned long) left_in_track);
+		}
 
 #ifdef MD5_SIGNATURES
-	if (global.md5count) {
-	  MD5Update (&global.context, ((unsigned char *)p->data) +current_offset, min(global.md5count,how_much));
-	  global.md5count -= min(global.md5count,how_much);
-	}
+		if (global.md5count) {
+			MD5Update (&global.context, ((unsigned char *)p->data) +current_offset, min(global.md5count,how_much));
+			global.md5count -= min(global.md5count,how_much);
+		}
 #endif
-	if ( SaveBuffer ( p->data + current_offset/4,
+		if ( SaveBuffer ( p->data + current_offset/4,
 			 how_much,
 			 &nSamplesDone) ) {
-	  if (global.have_forked == 1) {
-	    /* kill parent */
-	    kill(getppid(), SIGINT);
-	  }
-	  exit(WRITE_ERROR);
+			if (global.have_forked == 1) {
+				/* kill parent */
+				kill(getppid(), SIGINT);
+			}
+			exit(WRITE_ERROR);
+		}
+
+		global.nSamplesDoneInTrack += how_much;
+		SamplesToWrite -= how_much;
+
+		/* move residual samples upto buffer start */
+		if (how_much < InSamples) {
+			memmove(
+			  (char *)(p->data) + current_offset,
+			  (char *)(p->data) + current_offset + how_much*4,
+			  (InSamples - how_much) * 4);
+		}
+
+		if ((unsigned long) left_in_track <= InSamples || SamplesToWrite == 0) {
+			/* the current portion to be handled is 
+			   the end of a track */
+
+			if (bulk) {
+				/* finish sample file for this track */
+				CloseAudio(global.channels,
+				  global.nSamplesDoneInTrack, global.audio_out);
+			} else if (SamplesToWrite == 0) {
+				/* finish sample file for this track */
+				CloseAudio(global.channels,
+				  (unsigned int) *nSamplesToDo, global.audio_out);
+			}
+
+			if (global.verbose) {
+#ifdef	USE_PARANOIA
+				double	f;
+#endif
+				print_percentage(&oper, current_offset);
+				fputc(' ', stderr);
+#ifndef	THOMAS_SCHAU_MAL
+				if ((unsigned long)left_in_track > InSamples) {
+					fputs(" incomplete", stderr);
+				}
+#endif
+				if (global.tracktitle[current_track] != NULL) {
+					fprintf( stderr,
+						" track %2u '%s' recorded", 
+						current_track,
+						global.tracktitle[current_track]);
+				} else {
+					fprintf( stderr,
+						" track %2u recorded",
+						current_track);
+				}
+#ifdef	USE_PARANOIA
+				oper = para_stat->readerrs + para_stat->skips +
+					  para_stat->fixup_edges + para_stat->fixup_atoms + 
+					  para_stat->fixup_droppeds + para_stat->fixup_dupeds + 
+					  para_stat->drifts;
+				f = (100.0 * oper) / (((double)global.nSamplesDoneInTrack)/588.0);
+
+				if (para_stat->readerrs) {
+					fprintf(stderr, " with audible hard errors");
+				} else if ((para_stat->skips) > 0) {
+					fprintf(stderr, " with %sretry/skip errors",
+							f < 2.0 ? "":"audible ");
+				} else if (oper > 0) {
+					oper = f;
+					
+					fprintf(stderr, " with ");
+					if (oper < 2)
+						fprintf(stderr, "minor");
+					else if (oper < 10)
+						fprintf(stderr, "medium");
+					else if (oper < 67)
+						fprintf(stderr, "noticable audible");
+					else if (oper < 100)
+						fprintf(stderr, "major audible");
+					else
+						fprintf(stderr, "extreme audible");
+					fprintf(stderr, " problems");
+				} else {
+					fprintf(stderr, " successfully");
+				}
+				if (f >= 0.1)
+					fprintf(stderr, " (%.1f%% problem sectors)", f);
+#else
+				fprintf(stderr, " successfully");
+#endif
+
+				if (waitforsignal == 1) {
+					fprintf(stderr, ". %d silent samples omitted", global.SkippedSamples);
+				}
+				fputs("\n", stderr);
+
+				if (global.reads_illleadout && *eorecording == 1) {
+					fprintf(stderr, "Real lead out at: %ld sectors\n", 
+					  (*nSamplesToDo+BeginAtSample)/CD_FRAMESAMPLES);
+				}
+#ifdef	USE_PARANOIA
+				if (global.paranoia_selected) {
+					oper = 200;	/* force new output */
+					print_percentage(&oper, current_offset);
+					if (para_stat->minoverlap == 0x7FFFFFFF)
+						para_stat->minoverlap = 0;
+					fprintf(stderr, "  %u rderr, %u skip, %u atom, %u edge, %u drop, %u dup, %u drift\n"
+						,para_stat->readerrs
+						,para_stat->skips
+						,para_stat->fixup_atoms
+						,para_stat->fixup_edges
+						,para_stat->fixup_droppeds
+						,para_stat->fixup_dupeds
+						,para_stat->drifts);
+					oper = 200;	/* force new output */
+					print_percentage(&oper, current_offset);
+					fprintf(stderr, "  %u overlap(%.4g .. %.4g)\n",
+						para_stat->overlaps,
+						(float)para_stat->minoverlap / (2352.0/2.0),
+						(float)para_stat->maxoverlap / (2352.0/2.0));
+					paranoia_reset();
+				}
+#endif
+			}
+
+			global.nSamplesDoneInTrack = 0;
+			if ( bulk && SamplesToWrite > 0 ) {
+				if ( !global.no_file ) {
+					char *tmp_fname;
+
+					/* build next filename */
+					tmp_fname = get_next_name();
+					if (tmp_fname != NULL) {
+						strncpy(global.fname_base,
+							tmp_fname,
+							sizeof global.fname_base);
+						global.fname_base[
+							sizeof(global.fname_base)-1] =
+							'\0';
+					}
+
+					tmp_fname = cut_extension(global.fname_base);
+					tmp_fname[0] = '\0';
+
+					if (global.multiname == 0) {
+						sprintf(fname, "%s_%02u.%s",
+							global.fname_base,
+							current_track+1,
+							audio_type);
+					} else {
+						sprintf(fname, "%s.%s",
+							global.fname_base,
+							audio_type);
+					}
+
+					OpenAudio( fname, rate, bits, global.channels,
+						(Get_AudioStartSector(current_track+1) -
+						 Get_AudioStartSector(current_track))
+							*CD_FRAMESIZE_RAW,
+						global.audio_out);
+				} /* global.nofile */
+			} /* if ( bulk && SamplesToWrite > 0 ) */
+			current_track++;
+
+		} /* left_in_track <= InSamples */
+		InSamples -= how_much;
+
+	}  /* end while */
+	if (!global.quiet && *nSamplesToDo != nSamplesDone) {
+		print_percentage(&oper, current_offset);
 	}
-        global.nSamplesDoneInTrack += how_much;
-	SamplesToWrite -= how_much;
-
-	/* move residual samples upto buffer start */
-	if (how_much < InSamples) 
-		memmove(
-		  (char *)(p->data) + current_offset,
-		  (char *)(p->data) + current_offset + how_much*4,
-		  (InSamples - how_much) * 4);
-
-	if ((unsigned long) left_in_track <= InSamples) {
-
-	  if (bulk) {
-	    /* finish sample file for this track */
-	    CloseAudio(global.channels,
-	  	  global.nSamplesDoneInTrack, global.audio_out);
-          } else if (SamplesToWrite == 0) {
-	    /* finish sample file for this track */
-	    CloseAudio(global.channels,
-	  	  (unsigned int) *nSamplesToDo, global.audio_out);
-	  }
-
-	  if (global.verbose) {
-	    if (global.tracktitle[current_track] != NULL) {
-	      fprintf( stderr, "\b\b\b\b100%%  track %2u '%s' successfully recorded", 
-			current_track, global.tracktitle[current_track]);
-            } else {
-	      fprintf( stderr, "\b\b\b\b100%%  track %2u successfully recorded", current_track);
-            }
-	    if (waitforsignal == 1)
-		fprintf(stderr, ". %d silent samples omitted", global.SkippedSamples);
-	    fputs("\n", stderr);
-	    if (global.reads_illleadout && *eorecording == 1) {
-		fprintf(stderr, "Real lead out at: %ld sectors\n", 
-			(*nSamplesToDo+BeginAtSample)/CD_FRAMESAMPLES);
-	    }
-          }
-
-          global.nSamplesDoneInTrack = 0;
-	  if ( bulk && SamplesToWrite > 0 ) {
-	    if ( !global.no_file ) {
-	      char *tmp_fname;
-
-	      /* build next filename */
-	      tmp_fname = get_next_name();
-	      if (tmp_fname != NULL) {
-		      strncpy(global.fname_base , tmp_fname, sizeof global.fname_base);
-		      global.fname_base[sizeof(global.fname_base)-1]=0;
-	      }
-
-	      tmp_fname = cut_extension(global.fname_base);
-	      tmp_fname[0] = '\0';
-
-	      if (global.multiname == 0) {
-		sprintf(fname, "%s_%02u.%s",global.fname_base,current_track+1,
-			audio_type);
-	      } else {
-		sprintf(fname, "%s.%s",global.fname_base, audio_type);
-	      }
-	      OpenAudio( fname, rate, bits, global.channels,
-			(Get_AudioStartSector(current_track+1) -
-			 Get_AudioStartSector(current_track))*CD_FRAMESIZE_RAW,
-			global.audio_out);
-	    } /* global.nofile */
-	  } /* if ( bulk && SamplesToWrite > 0 ) */
-	  current_track++;
-
-	} /* left_in_track <= InSamples */
-	InSamples -= how_much;
-
-      }  /* end while */
-      return nSamplesDone;
+	return nSamplesDone;
 }
 
 #define PRINT_OVERLAP_INIT \
@@ -1692,7 +1822,7 @@ forked_write()
     } /* end for */
 
 }
-#else
+#endif
 
 /* This function implements the read and write calls in one loop (in case
  * there is no fork/thread_create system call).
@@ -1721,7 +1851,6 @@ nonforked_loop()
     }
 
 }
-#endif
 
 void verbose_usage __PR((void));
 
@@ -1749,8 +1878,11 @@ void paranoia_usage()
 	fputs("\
 	help		lists all paranoia options.\n\
 	disable		disables paranoia mode. Paranoia is still being used.\n\
-	no_verify	switches verify off, and overlap on.\n\
+	no-verify	switches verify off, and overlap on.\n\
 	retries=amount	set the number of maximum retries per sector.\n\
+	overlap=amount	set the number of sectors used for statical paranoia overlap.\n\
+	minoverlap=amt	set the min. number of sectors used for dynamic paranoia overlap.\n\
+	maxoverlap=amt	set the max. number of sectors used for dynamic paranoia overlap.\n\
 ", stderr);
 }
 #endif
@@ -1857,7 +1989,34 @@ handle_paranoia_opts(optstr, flagp)
 				global.paranoia_parms.retries = rets;
 			}
 		}
-		else if (strncmp(optstr, "no_verify", optlen) == 0) {
+		else if (strncmp(optstr, "overlap=", min(8, optlen)) == 0) {
+			char *eqp = strchr(optstr, '=');
+			int   rets;
+
+			astoi(eqp+1, &rets);
+			if (rets >= 0) {
+				global.paranoia_parms.overlap = rets;
+			}
+		}
+		else if (strncmp(optstr, "minoverlap=", min(11, optlen)) == 0) {
+			char *eqp = strchr(optstr, '=');
+			int   rets;
+
+			astoi(eqp+1, &rets);
+			if (rets >= 0) {
+				global.paranoia_parms.mindynoverlap = rets;
+			}
+		}
+		else if (strncmp(optstr, "maxoverlap=", min(11, optlen)) == 0) {
+			char *eqp = strchr(optstr, '=');
+			int   rets;
+
+			astoi(eqp+1, &rets);
+			if (rets >= 0) {
+				global.paranoia_parms.maxdynoverlap = rets;
+			}
+		}
+		else if (strncmp(optstr, "no-verify", optlen) == 0) {
 			global.paranoia_parms.disable_extra_paranoia = 1;
 		}
 		else if (strncmp(optstr, "disable", optlen) == 0) {
@@ -1876,7 +2035,7 @@ handle_paranoia_opts(optstr, flagp)
 	}
 	return 1;
 #else
-	fputs("lib paranoia support is not configured!\n", stderr)
+	fputs("lib paranoia support is not configured!\n", stderr);
 	return 0;
 #endif
 }
@@ -1978,6 +2137,7 @@ int main( argc, argv )
 			, &global.scsi_silent, &global.scsi_silent
 
 			, &global.cddbp_server, &global.cddbp_port
+			, &global.scanbus
 			, &global.dev_name, &global.dev_name, &global.dev_name
 			, &global.aux_name, &global.aux_name
 			, &int_name, &int_name
@@ -2033,6 +2193,8 @@ int main( argc, argv )
 	if (help) {
 		usage();
 	}
+	if (!global.scanbus)
+		cdr_defaults(&global.dev_name, NULL, NULL, NULL); 
 	if (dump_rates) {	/* list available rates */
 		int ii;
 
@@ -2310,7 +2472,7 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
   argv2 = argv + moreargs;
   if ( moreargs < argc ) {
     if (!strcmp(argv[moreargs],"-")) {
-#if     defined(__CYGWIN32__) || defined(__EMX__)
+#ifdef	NEED_O_BINARY
       setmode(fileno(stdout), O_BINARY);
 #endif
       global.audio = dup (fileno(stdout));
@@ -2353,15 +2515,23 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
 
     /* Value of 'nsectors' must be defined here */
 
-    global.shmsize = HEADER_SIZE + ENTRY_SIZE_PAGE_AL * global.buffers;
+    global.shmsize = 0;
+#ifdef	USE_PARANOIA
+    while (global.shmsize < sizeof (struct paranoia_statistics))
+		global.shmsize += global.pagesize;
+#endif
+    global.shmsize += 10*global.pagesize;	/* XXX Der Speicherfehler ist nicht in libparanoia sondern in cdda2wav :-( */
+    global.shmsize += HEADER_SIZE + ENTRY_SIZE_PAGE_AL * global.buffers;
 
 #if	defined (HAVE_FORK_AND_SHAREDMEM)
-#if	defined(HAVE_SMMAP) || defined(HAVE_USGSHM) || defined(HAVE_DOSALLOCSHAREDMEM)
-    he_fill_buffer = request_shm_sem(global.shmsize, (unsigned char **)&he_fill_buffer);
+	/*
+	 * The (void *) cast is to avoid a GCC warning like:
+	 * warning: dereferencing type-punned pointer will break strict-aliasing rules
+	 * which does not apply to this code. (void *) introduces a compatible
+	 * intermediate type in the cast list.
+	 */
+    he_fill_buffer = request_shm_sem(global.shmsize, (unsigned char **)(void *)&he_fill_buffer);
     if (he_fill_buffer == NULL) {
-#else /* have shared memory */
-    if (1) {
-#endif
 	fprintf( stderr, "no shared memory available!\n");
 	exit(SHMMEM_ERROR);
     }
@@ -2370,6 +2540,18 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
     if (he_fill_buffer == NULL) {
 	fprintf( stderr, "no buffer memory available!\n");
 	exit(NOMEM_ERROR);
+    }
+#endif
+#ifdef	USE_PARANOIA
+    {
+	int	i = 0;
+
+	para_stat = (struct paranoia_statistics *)he_fill_buffer;
+	while (i < sizeof (struct paranoia_statistics)) {
+			i += global.pagesize;
+			he_fill_buffer += global.pagesize;
+			global.shmsize -= global.pagesize;
+	}
     }
 #endif
 
@@ -2448,16 +2630,21 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
 
   FixupTOC(cdtracks + 1);
 
-  /* try to get some extra kicks */
-  needroot(0);
+#if	0
+  if (!global.paranoia_selected) {
+    error("NICE\n");
+    /* try to get some extra kicks */
+    needroot(0);
 #if defined HAVE_SETPRIORITY
-  setpriority(PRIO_PROCESS, 0, -20);
+    setpriority(PRIO_PROCESS, 0, -20);
 #else
 # if defined(HAVE_NICE) && (HAVE_NICE == 1)
-  nice(-20);
+    nice(-20);
 # endif
 #endif
-  dontneedroot();
+    dontneedroot();
+  }
+#endif
 
   /* switch cdrom to audio mode */
   EnableCdda (get_scsi_p(), 1, CD_FRAMESIZE_RAW);
@@ -2722,16 +2909,28 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
 #endif
 
 #ifdef	USE_PARANOIA
-	global.paranoia_parms.disable_paranoia = 
-	global.paranoia_parms.disable_extra_paranoia = 
-	global.paranoia_parms.disable_scratch_detect =
-	global.paranoia_parms.disable_scratch_repair = 0;
-	global.paranoia_parms.retries = 20;
 	if (global.paranoia_selected) {
 		long paranoia_mode;
 
 		global.cdp = paranoia_init(get_scsi_p(), global.nsectors);
-		paranoia_overlapset(global.cdp, global.overlap);
+
+		if (global.paranoia_parms.overlap >= 0) {
+			int	overlap = global.paranoia_parms.overlap;
+
+			if (overlap > global.nsectors - 1) 
+				overlap = global.nsectors - 1;
+			paranoia_overlapset(global.cdp, overlap);
+		}
+		/*
+		 * Default to a  minimum of dynamic overlapping == 0.5 sectors.
+		 * If we don't do this, we get the default from libparanoia
+		 * which is approx. 0.1.
+		 */
+		if (global.paranoia_parms.mindynoverlap < 0)
+			paranoia_dynoverlapset(global.cdp, CD_FRAMEWORDS/2, -1);
+		paranoia_dynoverlapset(global.cdp,
+			global.paranoia_parms.mindynoverlap * CD_FRAMEWORDS,
+			global.paranoia_parms.maxdynoverlap * CD_FRAMEWORDS);
 
 		paranoia_mode = PARANOIA_MODE_FULL ^ PARANOIA_MODE_NEVERSKIP;
 
@@ -2772,6 +2971,50 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
 	if (child_pid == 0) {
 		/* child WRITER section */
 
+#ifdef	HAVE_AREAS
+		/* Under BeOS a fork() with shared memory does not work as
+		 * it does under System V Rel. 4. The mapping of the child
+		 * works with copy on write semantics, so changes do not propagate
+		 * back and forth. The existing mapping has to be deleted
+		 * and replaced by an clone without copy on write semantics.
+		 * This is done with clone_area(...,B_CLONE_ADDRESS,...).
+		 * Thanks to file support.c from the postgreSQL project.
+		 */
+		area_info inf;
+		int32 cook = 0;
+		/* iterate over all mappings to find our shared memory mapping. */
+		while (get_next_area_info(0, &cook, &inf) == B_OK)
+		{
+			/* check the name of the mapping. */
+			if (!strcmp(inf.name, AREA_NAME))
+			{
+				void *area_address;
+				area_id area_parent;
+
+				/* kill the cow mapping. */
+				area_address = inf.address;
+				if (B_OK != delete_area(inf.area))
+				{
+					fprintf(stderr, "delete_area: no valid area.\n");
+					exit(SHMMEM_ERROR);
+				}
+				/* get the parent mapping. */
+				area_parent = find_area(inf.name);
+				if (area_parent == B_NAME_NOT_FOUND)
+				{
+					fprintf(stderr, "find_area: no such area name.\n");
+					exit(SHMMEM_ERROR);
+				}
+				/* clone the parent mapping without cow. */
+				if (B_OK > clone_area("shm_child", &area_address, B_CLONE_ADDRESS,
+					B_READ_AREA | B_WRITE_AREA, area_parent))
+				{
+					fprintf(stderr,"clone_area failed\n");
+					exit(SHMMEM_ERROR);
+				}
+			}
+		}
+#endif
 #ifdef	__EMX__
 		if (DosGetSharedMem(he_fill_buffer, 3)) {
 			comerr("DosGetSharedMem() failed.\n");
@@ -2784,7 +3027,7 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
 		_exit(NO_ERROR);
 		/* NOTREACHED */
 #endif
-		exit(NO_ERROR);
+		exit_wrapper(NO_ERROR);
 		/* NOTREACHED */
 	} else if (child_pid > 0) {
 		/* parent READER section */
@@ -2793,24 +3036,39 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
 		switch_to_realtime_priority();
 
 		forked_read();
+#ifdef	HAVE_AREAS
+		{
+			area_id aid;
+			aid = find_area(AREA_NAME);
+			if (aid < B_OK) {
+				comerr("find_area() failed.\n");
+			}
+			delete_area(aid);
+		}
+#endif
 #ifdef	__EMX__
 		DosFreeMem(he_fill_buffer);
 #endif
-		exit(NO_ERROR);
+		exit_wrapper(NO_ERROR);
 		/* NOTREACHED */
 	} else
-#else
+		perror("fork error.");
+
+#endif
 	/* version without fork */
 	{
 		global.have_forked = 0;
-		switch_to_realtime_priority();
-
+#if	0
+		if (!global.paranoia_selected) {
+			error("REAL\n");
+			switch_to_realtime_priority();
+		}
+#endif
 		fprintf(stderr, "a nonforking version is running...\n");
 		nonforked_loop();
-		exit(NO_ERROR);
+		exit_wrapper(NO_ERROR);
 		/* NOTREACHED */
 	}
-#endif
 #ifdef	USE_PARANOIA
 	if (global.paranoia_selected)
 		paranoia_free(global.cdp);

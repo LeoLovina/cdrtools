@@ -1,19 +1,19 @@
-/* @(#)isort.c	1.11 02/04/10 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)isort.c	1.14 04/02/20 J. Schilling from cdparanoia-III-alpha9.8 */
 #ifndef lint
-static char     sccsid[] =
-"@(#)isort.c	1.11 02/04/10 J. Schilling from cdparanoia-III-alpha9.8";
+static	char sccsid[] =
+"@(#)isort.c	1.14 04/02/20 J. Schilling from cdparanoia-III-alpha9.8";
 
 #endif
 /*
  *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
  */
-/***
+/*
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Monty (xiphmont@mit.edu)
  *
  * sorted vector abstraction for paranoia
  *
- ***/
+ */
 
 /*
  * Old isort got a bit complex.  This re-constrains complexity to
@@ -27,14 +27,20 @@ static char     sccsid[] =
 #include <strdefs.h>
 #include "p_block.h"
 #include "isort.h"
+#include "pmalloc.h"
 
 EXPORT	sort_info	*sort_alloc	__PR((long size));
 EXPORT	void		sort_unsortall	__PR((sort_info * i));
 EXPORT	void		sort_free	__PR((sort_info * i));
-LOCAL	void		sort_sort	__PR((sort_info * i, long sortlo, long sorthi));
-EXPORT	void		sort_setup	__PR((sort_info * i, Int16_t * vector, long *abspos, long size,
+LOCAL	void		sort_sort	__PR((sort_info * i,
 						long sortlo, long sorthi));
-EXPORT	sort_link	*sort_getmatch	__PR((sort_info * i, long post, long overlap, int value));
+EXPORT	void		sort_setup	__PR((sort_info * i,
+						Int16_t * vector,
+						long *abspos, long size,
+						long sortlo, long sorthi));
+EXPORT	sort_link	*sort_getmatch	__PR((sort_info * i,
+						long post, long overlap,
+						int value));
 EXPORT	sort_link	*sort_nextmatch	__PR((sort_info * i, sort_link * prev));
 
 
@@ -42,16 +48,16 @@ EXPORT sort_info *
 sort_alloc(size)
 	long	size;
 {
-	sort_info	*ret = calloc(1, sizeof(sort_info));
+	sort_info	*ret = _pcalloc(1, sizeof (sort_info));
 
 	ret->vector = NULL;
 	ret->sortbegin = -1;
 	ret->size = -1;
 	ret->maxsize = size;
 
-	ret->head = calloc(65536, sizeof(sort_link **));
-	ret->bucketusage = malloc(65536 * sizeof(long));
-	ret->revindex = calloc(size, sizeof(sort_link *));
+	ret->head = _pcalloc(65536, sizeof (sort_link *));
+	ret->bucketusage = _pmalloc(65536 * sizeof (long));
+	ret->revindex = _pcalloc(size, sizeof (sort_link));
 	ret->lastbucket = 0;
 
 	return (ret);
@@ -62,7 +68,7 @@ sort_unsortall(i)
 	sort_info	*i;
 {
 	if (i->lastbucket > 2000) {	/* a guess */
-		memset(i->head, 0, 65536 * sizeof(sort_link *));
+		memset(i->head, 0, 65536 * sizeof (sort_link *));
 	} else {
 		long	b;
 
@@ -78,10 +84,10 @@ EXPORT void
 sort_free(i)
 	sort_info	*i;
 {
-	free(i->revindex);
-	free(i->head);
-	free(i->bucketusage);
-	free(i);
+	_pfree(i->revindex);
+	_pfree(i->head);
+	_pfree(i->bucketusage);
+	_pfree(i);
 }
 
 LOCAL void
@@ -93,8 +99,8 @@ sort_sort(i, sortlo, sorthi)
 	long	j;
 
 	for (j = sorthi - 1; j >= sortlo; j--) {
-		sort_link     **hv = i->head + i->vector[j] + 32768;
-		sort_link      *l = i->revindex + j;
+		sort_link	**hv = i->head + i->vector[j] + 32768;
+		sort_link	 *l = i->revindex + j;
 
 		if (*hv == NULL) {
 			i->bucketusage[i->lastbucket] = i->vector[j] + 32768;

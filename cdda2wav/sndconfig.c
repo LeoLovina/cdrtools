@@ -1,16 +1,18 @@
-/* @(#)sndconfig.c	1.13 02/09/13 Copyright 1998,1999,2000 Heiko Eissfeldt */
+/* @(#)sndconfig.c	1.17 04/08/03 Copyright 1998-2004 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)sndconfig.c	1.13 02/09/13 Copyright 1998,1999,2000 Heiko Eissfeldt";
+"@(#)sndconfig.c	1.17 04/08/03 Copyright 1998-2004 Heiko Eissfeldt";
 
 #endif
 /* os dependent functions */
 #include "config.h"
 #include <stdio.h>
+#include <stdxlib.h>
 #include <strdefs.h>
 #include <fctldefs.h>
 #include <unixstd.h>
 #include <sys/ioctl.h>
+
 #if	!defined __CYGWIN32__
 # include <timedefs.h>
 #endif
@@ -44,9 +46,29 @@ static char     sccsid[] =
 
 #ifdef	ECHO_TO_SOUNDCARD
 #   if defined(__CYGWIN32__)
-#include <windows.h>
-#include "mmsystem.h"
-#endif
+#      include <windows.h>
+#      include "mmsystem.h"
+#   endif
+
+#   if	defined(__EMX__)
+#      define	INCL_DOS
+#      define	INCL_OS2MM
+#      include	<os2.h>
+#      define	PPFN	_PPFN
+#      include	<os2me.h>
+#      undef	PPFN
+static unsigned long	DeviceID;
+
+#      define	FRAGMENTS	2
+/* playlist-structure */
+typedef struct {
+        ULONG ulCommand;
+        ULONG ulOperand1, ulOperand2, ulOperand3;
+} PLAYLISTSTRUCTURE;
+
+static PLAYLISTSTRUCTURE PlayList[FRAGMENTS + 1];
+static unsigned BufferInd;
+#   endif /* defined __EMX__ */
 
 static char snd_device[200] = SOUND_DEV;
 
@@ -57,9 +79,9 @@ int set_snd_device(devicename)
 	return 0;
 }
 
-#if	defined __CYGWIN32__
+#   if	defined __CYGWIN32__
 static HWAVEOUT	DeviceID;
-#define WAVEHDRS	3
+#      define WAVEHDRS	3
 static WAVEHDR	wavehdr[WAVEHDRS];
 static unsigned lastwav = 0;
 
@@ -102,14 +124,23 @@ static int check_winsound_caps(bits, rate, channels)
 
   return result;
 }
-#endif
-#endif
+#   endif /* defined CYGWIN */
+#endif /* defined ECHO_TO_SOUNDCARD */
 
 #ifdef	HAVE_SUN_AUDIOIO_H
 # include <sun/audioio.h>
 #endif
 #ifdef	HAVE_SYS_AUDIOIO_H
 # include <sys/audioio.h>
+#endif
+
+#ifdef	HAVE_SYS_ASOUNDLIB_H
+# include <sys/asoundlib.h>
+snd_pcm_t	*pcm_handle;
+#endif
+
+#if	defined	HAVE_OSS && defined SNDCTL_DSP_GETOSPACE
+audio_buf_info abinfo;
 #endif
 
 int init_soundcard(rate, bits)
@@ -140,6 +171,13 @@ int init_soundcard(rate, bits)
 	    fprintf(stderr, "Cannot sync for %s\n", snd_device);
 	    global.echo = 0;
 	}
+
+#if	defined SNDCTL_DSP_GETOSPACE
+	if (ioctl(global.soundcard_fd, SNDCTL_DSP_GETOSPACE, &abinfo) == -1) {
+		fprintf(stderr, "Cannot get input buffersize for %s\n", snd_device);
+		abinfo.fragments  = 0;
+	}
+#endif
 
 	/* check, if the sound device can do the requested format */
 	if (ioctl(global.soundcard_fd, (int)SNDCTL_DSP_GETFMTS, &mask) == -1) {
@@ -236,13 +274,13 @@ int init_soundcard(rate, bits)
     wavform.nChannels = global.channels;
     wavform.nSamplesPerSec = (int)rate;
     wavform.wBitsPerSample = bits;
-    wavform.cbSize = 0;
+    wavform.cbSize = sizeof(wavform);
     wavform.nAvgBytesPerSec = (int)rate * global.channels *
 				(wavform.wBitsPerSample / 8);
     wavform.nBlockAlign = global.channels * (wavform.wBitsPerSample / 8);
   
     DeviceID = 0;
-    mmres = waveOutOpen(&DeviceID, 0, &wavform, 0, 0, 0);
+    mmres = waveOutOpen(&DeviceID, WAVE_MAPPER, &wavform, (unsigned long)WIN_CallBack, 0, CALLBACK_FUNCTION);
     if (mmres) {
 	char erstr[329];
 
@@ -267,12 +305,149 @@ int init_soundcard(rate, bits)
 		    return 1;
 	    }
 	    
+	    mmres = waveOutPrepareHeader(DeviceID, &wavehdr[i], sizeof(WAVEHDR));
+	    if (mmres) {
+		char erstr[129];
+
+		waveOutGetErrorText(mmres, erstr, sizeof(erstr));
+		fprintf( stderr, "soundcard prepare error: %s!\n", erstr);
+		return 1;
+	    }
+
 	    wavehdr[i].dwLoops = 0;
 	    wavehdr[i].dwFlags = WHDR_DONE;
 	    wavehdr[i].dwBufferLength = 0;
 	}
     }
 
+#   else
+#    if defined(__EMX__)
+#	if defined (HAVE_MMPM)
+    /* OS/2 MMPM/2 MCI sound info */
+
+    MCI_OPEN_PARMS mciOpenParms;
+    int i;
+
+    /* create playlist */
+    for (i = 0; i < FRAGMENTS; i++) {
+        PlayList[i].ulCommand = DATA_OPERATION; /* play data */
+        PlayList[i].ulOperand1 = 0;	/* address */
+        PlayList[i].ulOperand2 = 0;	/* size */
+        PlayList[i].ulOperand3 = 0;     /* offset */
+    }
+    PlayList[FRAGMENTS].ulCommand = BRANCH_OPERATION;       /* jump */
+    PlayList[FRAGMENTS].ulOperand1 = 0;
+    PlayList[FRAGMENTS].ulOperand2 = 0;     /* destination */
+    PlayList[FRAGMENTS].ulOperand3 = 0;
+
+    memset(&mciOpenParms, 0, sizeof(mciOpenParms));
+    mciOpenParms.pszDeviceType = (PSZ) (((unsigned long) MCI_DEVTYPE_WAVEFORM_AUDIO << 16) | (unsigned short) DeviceIndex);
+    mciOpenParms.pszElementName = (PSZ) & PlayList;
+
+    /* try to open the sound device */
+    if (mciSendCommand(0, MCI_OPEN,
+	 MCI_WAIT | MCI_OPEN_SHAREABLE | MCIOPEN_Type_ID, &mciOpenParms, 0)
+	 != MCIERR_SUCCESS) {
+	/* no sound */
+	fprintf( stderr, "no sound devices available!\n");
+	global.echo = 0;
+	return 1;
+    }
+    /* try to set the parameters */
+    DeviceID = mciOpenParms.usDeviceID;
+
+    {
+	MCI_WAVE_SET_PARMS mciWaveSetParms;
+
+	memset(&mciWaveSetParms, 0, sizeof(mciWaveSetParms));
+	mciWaveSetParms.ulSamplesPerSec = rate;
+	mciWaveSetParms.usBitsPerSample = bits;
+	mciWaveSetParms.usChannels = global.channels;
+	mciWaveSetParms.ulAudio = MCI_SET_AUDIO_ALL;
+
+	/* set play-parameters */
+	if (mciSendCommand(DeviceID, MCI_SET,
+			MCI_WAIT | MCI_WAVE_SET_SAMPLESPERSEC |
+			MCI_WAVE_SET_BITSPERSAMPLE | MCI_WAVE_SET_CHANNELS,
+			(PVOID) & mciWaveSetParms, 0)) {
+		MCI_GENERIC_PARMS mciGenericParms;
+		fprintf( stderr, "soundcard capabilities are not sufficient!\n");
+		global.echo = 0;
+		/* close */
+		mciSendCommand(DeviceID, MCI_CLOSE, MCI_WAIT, &mciGenericParms, 0);
+		return 1;
+	}
+    }
+
+#       endif /* EMX MMPM OS2 sound */
+#    else
+#      if defined(__QNX__)
+
+	int	card = -1;
+	int	dev = 0;
+	int	rtn;
+	snd_pcm_channel_info_t	pi;
+	snd_pcm_channel_params_t	pp;
+
+	if (card == -1) {
+		rtn = snd_pcm_open_preferred(&pcm_handle, 
+			&card, &dev, SND_PCM_OPEN_PLAYBACK);
+		if (rtn < 0) {
+			perror("sound device open");
+			return 1;
+		}
+	} else {
+		rtn = snd_pcm_open(&pcm_handle, 
+			card, dev, SND_PCM_OPEN_PLAYBACK);
+		if (rtn < 0) {
+			perror("sound device open");
+			return 1;
+		}
+	}
+
+	memset(&pi, 0, sizeof(pi));
+	pi.channel = SND_PCM_CHANNEL_PLAYBACK;
+	rtn = snd_pcm_plugin_info(pcm_handle, &pi);
+	if (rtn < 0) {
+		fprintf(stderr, "snd_pcm_plugin_info failed: %s\n", snd_strerror(rtn));
+		return 1;
+	}
+
+	memset(&pp, 0, sizeof(pp));
+	pp.mode = SND_PCM_MODE_BLOCK;
+	pp.channel = SND_PCM_CHANNEL_PLAYBACK;
+	pp.start_mode = SND_PCM_START_FULL;
+	pp.stop_mode = SND_PCM_STOP_STOP;
+
+	pp.buf.block.frag_size = pi.max_fragment_size;
+	pp.buf.block.frags_max = 1;
+	pp.buf.block.frags_min = 1;
+
+	pp.format.interleave = 1;
+	pp.format.rate = rate;
+	pp.format.voices = global.channels;
+	if (bits == 8) {
+		pp.format.format = SND_PCM_SFMT_U8;
+	} else {
+		pp.format.format = SND_PCM_SFMT_S16_LE;
+	}
+
+	rtn = snd_pcm_plugin_params(pcm_handle, &pp);
+	if (rtn < 0) {
+		fprintf(stderr, "snd_pcm_plugin_params failed: %s\n", snd_strerror(rtn));
+		return 1;
+	}
+
+	rtn = snd_pcm_plugin_prepare(pcm_handle, SND_PCM_CHANNEL_PLAYBACK);
+	if (rtn < 0) {
+		fprintf(stderr, "snd_pcm_plugin_prepare failed: %s\n", snd_strerror(rtn));
+		return 1;
+	}
+
+	global.soundcard_fd = snd_pcm_file_descriptor(pcm_handle, SND_PCM_CHANNEL_PLAYBACK);
+
+#      endif /* QNX sound */
+#    endif /* EMX OS2 sound */
 #   endif /* CYGWIN Windows sound */
 #  endif /* else SUN audio */
 # endif /* else HAVE_OSS */
@@ -283,14 +458,25 @@ int init_soundcard(rate, bits)
 
 int open_snd_device ()
 {
-#if	defined ECHO_TO_SOUNDCARD && !defined __CYGWIN32__
-	return (global.soundcard_fd = open(snd_device, O_WRONLY
+#if	defined(F_GETFL) && defined(F_SETFL) && defined(O_NONBLOCK)
+	int	fl;
+#endif
+
+#if	defined ECHO_TO_SOUNDCARD && !defined __CYGWIN32__ && !defined __EMX__
+	global.soundcard_fd = open(snd_device, O_WRONLY
 #ifdef	linux
 		/* Linux BUG: the sound driver open() blocks, if the device is in use. */
 		 | O_NONBLOCK
 #endif
-		, 0)) < 0;
+		, 0);
 
+#if	defined(F_GETFL) && defined(F_SETFL) && defined(O_NONBLOCK)
+	fl = fcntl(global.soundcard_fd, F_GETFL, 0);
+	fl &= ~O_NONBLOCK;
+	fcntl(global.soundcard_fd, F_SETFL, fl);
+#endif
+
+	return (global.soundcard_fd < 0);
 #else
 	return 0;
 #endif
@@ -298,16 +484,33 @@ int open_snd_device ()
 
 int close_snd_device ()
 {
-#if	defined __CYGWIN32__ && defined ECHO_TO_SOUNDCARD
- waveOutReset(0);
- return waveOutClose(DeviceID);
+#if	!defined ECHO_TO_SOUNDCARD
+	return 0;
 #else
-#ifdef	ECHO_TO_SOUNDCARD
- return close(global.soundcard_fd);
-#else
- return 0;
+
+# if	defined __CYGWIN32__
+	waveOutReset(0);
+	return waveOutClose(DeviceID);
+# else /* !Cygwin32 */
+
+#  if	defined __EMX__
+#   if	defined HAVE_MMPM
+	/* close the sound device */
+	MCI_GENERIC_PARMS mciGenericParms;
+	mciSendCommand(DeviceID, MCI_CLOSE, MCI_WAIT, &mciGenericParms, 0);
+#   else /* HAVE_MMPM */
+	return 0;
+#   endif /* HAVE_MMPM */
+#  else /* !EMX */
+#   if	defined	__QNX__
+	snd_pcm_plugin_flush(pcm_handle, SND_PCM_CHANNEL_PLAYBACK);
+	return snd_pcm_close(pcm_handle);
+#   else /* !QNX */
+	return close(global.soundcard_fd);
+#   endif /* !QNX */
+#  endif /* !EMX */
+# endif /* !Cygwin32 */
 #endif /* ifdef ECHO_TO_SOUNDCARD */
-#endif
 }
 
 int write_snd_device (buffer, todo)
@@ -322,15 +525,6 @@ int write_snd_device (buffer, todo)
 	wavehdr[lastwav].dwBufferLength = todo;
 	memcpy(wavehdr[lastwav].lpData, buffer, todo);
 
-	mmres = waveOutPrepareHeader(DeviceID, &wavehdr[lastwav], sizeof(WAVEHDR));
-	if (mmres) {
-		char erstr[129];
-
-		waveOutGetErrorText(mmres, erstr, sizeof(erstr));
-		fprintf( stderr, "soundcard prepare error: %s!\n", erstr);
-		return 1;
-	}
-
 	mmres = waveOutWrite(DeviceID, &wavehdr[lastwav], sizeof(WAVEHDR));
 	if (mmres) {
 		char erstr[129];
@@ -339,11 +533,33 @@ int write_snd_device (buffer, todo)
 		fprintf( stderr, "soundcard write error: %s!\n", erstr);
 		return 1;
 	}
-	lastwav = (lastwav + 1) % WAVEHDRS;
+	if (++lastwav >= WAVEHDRS)
+		 lastwav -= WAVEHDRS;
 	result = mmres;
 #else
-	int retval2;
+#if	defined __EMX__
+	Playlist[BufferInd].ulOperand1 = buffer;
+	Playlist[BufferInd].ulOperand2 = todo;
+	Playlist[BufferInd].ulOperand3 = 0;
+	if (++BufferInd >= FRAGMENTS)
+		BufferInd -= FRAGMENTS;
 
+	/* no MCI_WAIT here, because application program has to continue */
+	memset(&mciPlayParms, 0, sizeof(mciPlayParms));
+	if (mciSendCommand(DeviceID, MCI_PLAY, MCI_FROM, &mciPlayParms, 0)) {
+		fprintf( stderr, "soundcard write error: %s!\n", erstr);
+		return 1;
+	}
+	result = 0;
+#else
+	int retval2;
+	int towrite;
+
+#if	defined	HAVE_OSS && defined SNDCTL_DSP_GETOSPACE
+	towrite = abinfo.fragments * abinfo.fragsize;
+	if (towrite == 0)
+#endif
+	towrite = todo;
 	do {
 		fd_set writefds[1];
 		struct timeval timeout2;
@@ -365,7 +581,14 @@ int write_snd_device (buffer, todo)
 				goto outside_loop;
 			case 1: break;
 		}
-		wrote = write(global.soundcard_fd, buffer, todo);
+		if (towrite > todo) {
+			towrite = todo;
+		}
+#if		defined __QNX__ && defined HAVE_SYS_ASOUNDLIB_H
+		wrote = snd_pcm_plugin_write(pcm_handle, buffer, towrite);
+#else
+		wrote = write(global.soundcard_fd, buffer, towrite);
+#endif
 		if (wrote <= 0) {
 			perror( "cant write audio");
 			result = 1;
@@ -377,8 +600,9 @@ int write_snd_device (buffer, todo)
 	} while (todo > 0);
 outside_loop:
 	;
-#endif
-#endif
+#endif	/* !defined __EMX__ */
+#endif	/* !defined __CYGWIN32__ */
+#endif	/* ECHO_TO_SOUNDCARD */
 	return result;
 }
 

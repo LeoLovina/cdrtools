@@ -1,6 +1,6 @@
-/* @(#)printf.c	1.13 01/06/20 Copyright 1985 J. Schilling */
+/* @(#)printf.c	1.14 03/06/15 Copyright 1985, 1989, 1995-2003 J. Schilling */
 /*
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1989, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -43,7 +43,7 @@
 #	undef	fprintf
 #endif
 
-#define BFSIZ	256
+#define	BFSIZ	256
 
 typedef struct {
 	short	cnt;
@@ -58,36 +58,41 @@ LOCAL	void	_bput	__PR((char, long));
 EXPORT	int	fprintf	__PR((FILE *, const char *, ...))	__printflike__(2, 3);
 EXPORT	int	printf	__PR((const char *, ...))		__printflike__(1, 2);
 
-LOCAL void _bflush (bp)
+LOCAL void
+_bflush(bp)
 	register BUF	bp;
 {
 	bp->count += bp->ptr - bp->buf;
-	if (filewrite (bp->f, bp->buf, bp->ptr - bp->buf) < 0)
+	if (filewrite(bp->f, bp->buf, bp->ptr - bp->buf) < 0)
 		bp->count = EOF;
 	bp->ptr = bp->buf;
 	bp->cnt = BFSIZ;
 }
 
 #ifdef	PROTOTYPES
-LOCAL void _bput (char c, long l)
+LOCAL void
+_bput(char c, long l)
 #else
-LOCAL void _bput (c, l)
+LOCAL void
+_bput(c, l)
 		char	c;
 		long	l;
 #endif
-{ 
+{
 	register BUF	bp = (BUF)l;
 
 	*bp->ptr++ = c;
 	if (--bp->cnt <= 0)
-		_bflush (bp);
+		_bflush(bp);
 }
 
 /* VARARGS2 */
 #ifdef	PROTOTYPES
-EXPORT int printf(const char *form, ...)
+EXPORT int
+printf(const char *form, ...)
 #else
-EXPORT int printf(form, va_alist)
+EXPORT int
+printf(form, va_alist)
 	char	*form;
 	va_dcl
 #endif
@@ -107,15 +112,17 @@ EXPORT int printf(form, va_alist)
 	format(_bput, (long)&bb, form, args);
 	va_end(args);
 	if (bb.cnt < BFSIZ)
-		_bflush (&bb);
+		_bflush(&bb);
 	return (bb.count);
 }
 
 /* VARARGS3 */
 #ifdef	PROTOTYPES
-EXPORT int fprintf(FILE *file, const char *form, ...)
+EXPORT int
+fprintf(FILE *file, const char *form, ...)
 #else
-EXPORT int fprintf(file, form, va_alist)
+EXPORT int
+fprintf(file, form, va_alist)
 	FILE	*file;
 	char	*form;
 	va_dcl
@@ -136,6 +143,6 @@ EXPORT int fprintf(file, form, va_alist)
 	format(_bput, (long)&bb, form, args);
 	va_end(args);
 	if (bb.cnt < BFSIZ)
-		_bflush (&bb);
+		_bflush(&bb);
 	return (bb.count);
 }

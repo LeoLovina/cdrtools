@@ -1,7 +1,7 @@
-/* @(#)match.c	1.13 00/12/05 joerg */
+/* @(#)match.c	1.18 04/05/23 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)match.c	1.13 00/12/05 joerg";
+	"@(#)match.c	1.18 04/05/23 joerg";
 #endif
 /*
  * 27-Mar-96: Jan-Piet Mens <jpm@mens.de>
@@ -17,11 +17,10 @@ static	char sccsid[] =
 #include <stdxlib.h>
 #include <unixstd.h>
 #include <strdefs.h>
-#include "match.h"
 #include <standard.h>
 #include <schily.h>
-
-static	int	add_sort_match	__PR((char *fn, int val));
+#include <libport.h>
+#include "match.h"
 
 struct match {
 	struct match *next;
@@ -53,19 +52,19 @@ typedef struct sort_match sort_match;
 
 static sort_match	*s_mats;
 
-static int
+EXPORT int
 add_sort_match(fn, val)
 	char	*fn;
 	int	val;
 {
 	sort_match *s_mat;
 
-	s_mat = (sort_match *)malloc(sizeof(sort_match));
+	s_mat = (sort_match *)malloc(sizeof (sort_match));
 	if (s_mat == NULL) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for sort filename\n");
 #else
-		fprintf(stderr,"Can't allocate memory for sort filename\n");
+		fprintf(stderr, "Can't allocate memory for sort filename\n");
 #endif
 		return (0);
 	}
@@ -74,7 +73,7 @@ add_sort_match(fn, val)
 #ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for sort filename\n");
 #else
-		fprintf(stderr,"Can't allocate memory for sort filename\n");
+		fprintf(stderr, "Can't allocate memory for sort filename\n");
 #endif
 		return (0);
 	}
@@ -90,7 +89,7 @@ add_sort_match(fn, val)
 	return (1);
 }
 
-void
+EXPORT void
 add_sort_list(file)
 	char	*file;
 {
@@ -103,17 +102,20 @@ add_sort_list(file)
 #ifdef	USE_LIBSCHILY
 		comerr("Can't open sort file list %s\n", file);
 #else
-		fprintf(stderr,"Can't open hidden/exclude file list %s\n", file);
-		exit (1);
+		fprintf(stderr, "Can't open hidden/exclude file list %s\n", file);
+		exit(1);
 #endif
 	}
 
-	while (fgets(name, sizeof(name), fp) != NULL) {
+	while (fgets(name, sizeof (name), fp) != NULL) {
 		/*
 		 * look for the last space or tab character
 		 */
 		if ((p = strrchr(name, ' ')) == NULL)
 			p = strrchr(name, '\t');
+		else if (strrchr(p, '\t') != NULL)	/* Tab after space? */
+			p = strrchr(p, '\t');
+
 		if (p == NULL) {
 #ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD, "Incorrect sort file format\n\t%s", name);
@@ -134,28 +136,28 @@ add_sort_list(file)
 	fclose(fp);
 }
 
-int
+EXPORT int
 sort_matches(fn, val)
 	char	*fn;
 	int	val;
 {
 	register sort_match	*s_mat;
 
-	for (s_mat=s_mats; s_mat; s_mat=s_mat->next) {
+	for (s_mat = s_mats; s_mat; s_mat = s_mat->next) {
 		if (fnmatch(s_mat->name, fn, FNM_FILE_NAME) != FNM_NOMATCH) {
-		        return (s_mat->val); /* found sort value */
+			return (s_mat->val); /* found sort value */
 		}
 	}
 	return (val); /* not found - default sort value */
 }
 
-void
+EXPORT void
 del_sort()
 {
 	register sort_match * s_mat, *s_mat1;
 
 	s_mat = s_mats;
-	while(s_mat) {
+	while (s_mat) {
 		s_mat1 = s_mat->next;
 
 		free(s_mat->name);
@@ -170,7 +172,7 @@ del_sort()
 #endif /* SORTING */
 
 
-int
+EXPORT int
 gen_add_match(fn, n)
 	char	*fn;
 	int	n;
@@ -180,12 +182,12 @@ gen_add_match(fn, n)
 	if (n >= MAX_MAT)
 		return (0);
 
-	mat = (match *)malloc(sizeof(match));
+	mat = (match *)malloc(sizeof (match));
 	if (mat == NULL) {
 #ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for %s filename\n", mesg[n]);
 #else
-		fprintf(stderr,"Can't allocate memory for %s filename\n", mesg[n]);
+		fprintf(stderr, "Can't allocate memory for %s filename\n", mesg[n]);
 #endif
 		return (0);
 	}
@@ -194,7 +196,7 @@ gen_add_match(fn, n)
 #ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for %s filename\n", mesg[n]);
 #else
-		fprintf(stderr,"Can't allocate memory for %s filename\n", mesg[n]);
+		fprintf(stderr, "Can't allocate memory for %s filename\n", mesg[n]);
 #endif
 		return (0);
 	}
@@ -205,7 +207,7 @@ gen_add_match(fn, n)
 	return (1);
 }
 
-void
+EXPORT void
 gen_add_list(file, n)
 	char	*file;
 	int	n;
@@ -218,12 +220,12 @@ gen_add_list(file, n)
 #ifdef	USE_LIBSCHILY
 		comerr("Can't open %s file list %s\n", mesg[n], file);
 #else
-		fprintf(stderr,"Can't open %s file list %s\n", mesg[n], file);
-		exit (1);
+		fprintf(stderr, "Can't open %s file list %s\n", mesg[n], file);
+		exit(1);
 #endif
 	}
 
-	while (fgets(name, sizeof(name), fp) != NULL) {
+	while (fgets(name, sizeof (name), fp) != NULL) {
 		/*
 		 * strip of '\n'
 		 */
@@ -240,7 +242,8 @@ gen_add_list(file, n)
 	fclose(fp);
 }
 
-int gen_matches(fn, n)
+EXPORT int
+gen_matches(fn, n)
 	char	*fn;
 	int	n;
 {
@@ -249,7 +252,7 @@ int gen_matches(fn, n)
 	if (n >= MAX_MAT)
 		return (0);
 
-	for (mat=mats[n]; mat; mat=mat->next) {
+	for (mat = mats[n]; mat; mat = mat->next) {
 		if (fnmatch(mat->name, fn, FNM_FILE_NAME) != FNM_NOMATCH) {
 			return (1);	/* found -> excluded filename */
 		}
@@ -257,7 +260,8 @@ int gen_matches(fn, n)
 	return (0);			/* not found -> not excluded */
 }
 
-int gen_ishidden(n)
+EXPORT int
+gen_ishidden(n)
 	int	n;
 {
 	if (n >= MAX_MAT)
@@ -266,7 +270,7 @@ int gen_ishidden(n)
 	return ((int)(mats[n] != 0));
 }
 
-void
+EXPORT void
 gen_del_match(n)
 	int	n;
 {

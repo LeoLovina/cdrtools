@@ -1,7 +1,7 @@
-/* @(#)ifo_types.h	1.1 02/07/20 joerg */
+/* @(#)ifo_types.h	1.2 04/03/02 joerg */
 
-#ifndef _IFO_TYPES_H
-#define _IFO_TYPES_H
+#ifndef	_IFO_TYPES_H
+#define	_IFO_TYPES_H
 /*
  * Copyright (C) 2001, 2002 Billy Biggs <vektor@dumbterm.net>,
  *			    Håkan Hjort <d95hjort@dtek.chalmers.se>,

@@ -1,4 +1,4 @@
-/* @(#)apple.h	1.6 02/07/16 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)apple.h	1.7 04/03/02 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
  *
@@ -20,28 +20,28 @@
 /*
  * apple.h:	cut down macfile.h from CAP distribution
  */
-#ifndef _APPLE_H
-#define _APPLE_H
+#ifndef	_APPLE_H
+#define	_APPLE_H
 
 #include "mactypes.h"
 
-#ifndef O_BINARY
-#define O_BINARY 0
+#ifndef	O_BINARY
+#define	O_BINARY 0
 #endif /* O_BINARY */
 
-#ifdef _WIN32_TEST
-#undef UNICODE
+#ifdef	_WIN32_TEST
+#undef	UNICODE
 #include <windows.h>
 #endif /* _WIN32 */
 
-#ifndef MIN
-#define MIN(a,b) (((a)<(b))?(a):(b))
+#ifndef	MIN
+#define	MIN(a, b) (((a) < (b)) ? (a):(b))
 #endif /* MIN */
 
-#define CT_SIZE		4			/* Size of type/creator */
-#define NUMMAP		512			/* initial number of maps */
-#define BLANK		"    "			/* blank type/creator */
-#define DEFMATCH	"*"			/* default mapping extension */
+#define	CT_SIZE		4			/* Size of type/creator */
+#define	NUMMAP		512			/* initial number of maps */
+#define	BLANK		"    "			/* blank type/creator */
+#define	DEFMATCH	"*"			/* default mapping extension */
 
 typedef struct {
 	char		*extn;			/* filename extension */
@@ -65,7 +65,7 @@ typedef unsigned char byte;
 typedef unsigned char word[2];
 typedef unsigned char dword[4];
 
-#define INFOLEN 32		/* Finder info is 32 bytes */
+#define	INFOLEN 32		/* Finder info is 32 bytes */
 
 typedef struct {
 	/* base finder information */
@@ -102,7 +102,7 @@ typedef struct {
 
 /*
  * taken from the CAP distribution:
- * macfile.h - header file with Macintosh file definitions 
+ * macfile.h - header file with Macintosh file definitions
  *
  * AppleTalk package for UNIX (4.2 BSD).
  *
@@ -116,61 +116,61 @@ typedef struct {
  */
 
 
-#ifndef USE_MAC_DATES
+#ifndef	USE_MAC_DATES
 #define	USE_MAC_DATES
 #endif /* USE_MAC_DATES */
 
-#define MAXCLEN 199		/* max size of a comment string */
-#define FINFOLEN 32		/* Finder info is 32 bytes */
-#define MAXMACFLEN 31		/* max Mac file name length */
+#define	MAXCLEN 199		/* max size of a comment string */
+#define	FINFOLEN 32		/* Finder info is 32 bytes */
+#define	MAXMACFLEN 31		/* max Mac file name length */
 
 typedef struct {
-  byte finderinfo[INFOLEN];	/* Finder info */
-  word fi_attr;			/* attributes */
-#define FI_MAGIC1 255
-  byte fi_magic1;		/* was: length of comment */
-#define FI_VERSION 0x10		/* version major 1, minor 0 */
-				/* if we have more than 8 versions wer're */
-				/* doiong something wrong anyway */
-  byte fi_version;		/* version number */
-#define FI_MAGIC 0xda
-  byte fi_magic;		/* magic word check */
-  byte fi_bitmap;		/* bitmap of included info */
-#define FI_BM_SHORTFILENAME 0x1	/* is this included? */
-#define FI_BM_MACINTOSHFILENAME 0x2 /* is this included? */
-  byte fi_shortfilename[12+1];	/* possible short file name */
-  byte fi_macfilename[32+1];	/* possible macintosh file name */
-  byte fi_comln;		/* comment length */
-  byte fi_comnt[MAXCLEN+1];	/* comment string */
-#ifdef USE_MAC_DATES
-  byte fi_datemagic;		/* sanity check */
-#define FI_MDATE 0x01		/* mtime & utime are valid */
-#define FI_CDATE 0x02		/* ctime is valid */
-  byte fi_datevalid;		/* validity flags */
-  byte fi_ctime[4];		/* mac file create time */
-  byte fi_mtime[4];		/* mac file modify time */
-  byte fi_utime[4];		/* (real) time mtime was set */
+	byte	finderinfo[INFOLEN];	/* Finder info */
+	word	fi_attr;		/* attributes */
+#define	FI_MAGIC1 255
+	byte	fi_magic1;		/* was: length of comment */
+#define	FI_VERSION 0x10			/* version major 1, minor 0 */
+					/* if we have more than 8 versions wer're */
+					/* doiong something wrong anyway */
+	byte	fi_version;		/* version number */
+#define	FI_MAGIC 0xda
+	byte	fi_magic;		/* magic word check */
+	byte	fi_bitmap;		/* bitmap of included info */
+#define	FI_BM_SHORTFILENAME 0x1		/* is this included? */
+#define	FI_BM_MACINTOSHFILENAME 0x2	/* is this included? */
+	byte	fi_shortfilename[12+1];	/* possible short file name */
+	byte	fi_macfilename[32+1];	/* possible macintosh file name */
+	byte	fi_comln;		/* comment length */
+	byte	fi_comnt[MAXCLEN+1];	/* comment string */
+#ifdef	USE_MAC_DATES
+	byte	fi_datemagic;		/* sanity check */
+#define	FI_MDATE 0x01			/* mtime & utime are valid */
+#define	FI_CDATE 0x02			/* ctime is valid */
+	byte	fi_datevalid;		/* validity flags */
+	byte	fi_ctime[4];		/* mac file create time */
+	byte	fi_mtime[4];		/* mac file modify time */
+	byte	fi_utime[4];		/* (real) time mtime was set */
 #endif /* USE_MAC_DATES */
 } FileInfo;
 
 /* Atribute flags */
-#define FI_ATTR_SETCLEAR 0x8000 /* set-clear attributes */
-#define FI_ATTR_READONLY 0x20	/* file is read-only */
-#define FI_ATTR_ROPEN 0x10	/* resource fork in use */
-#define FI_ATTR_DOPEN 0x80	/* data fork in use */
-#define FI_ATTR_MUSER 0x2	/* multi-user */
-#define FI_ATTR_INVISIBLE 0x1	/* invisible */
+#define	FI_ATTR_SETCLEAR 0x8000 /* set-clear attributes */
+#define	FI_ATTR_READONLY 0x20	/* file is read-only */
+#define	FI_ATTR_ROPEN 0x10	/* resource fork in use */
+#define	FI_ATTR_DOPEN 0x80	/* data fork in use */
+#define	FI_ATTR_MUSER 0x2	/* multi-user */
+#define	FI_ATTR_INVISIBLE 0x1	/* invisible */
 
 /**** MAC STUFF *****/
 
 /* Flags */
-#define FNDR_fOnDesk 0x1
-#define FNDR_fHasBundle 0x2000
-#define FNDR_fInvisible 0x4000
+#define	FNDR_fOnDesk 0x1
+#define	FNDR_fHasBundle 0x2000
+#define	FNDR_fInvisible 0x4000
 /* locations */
-#define FNDR_fTrash -3	/* File in Trash */
-#define FNDR_fDesktop -2	/* File on desktop */
-#define FNDR_fDisk 0	/* File in disk window */
+#define	FNDR_fTrash -3	/* File in Trash */
+#define	FNDR_fDesktop -2	/* File on desktop */
+#define	FNDR_fDisk 0	/* File in disk window */
 
 /****** TYPE_ESHARE ******/
 
@@ -178,29 +178,31 @@ typedef struct {
  *	Information supplied by Jens-Uwe Mager (jum@helios.de)
  */
 
-#define ES_VERSION 	0x0102
-#define ES_MAGIC 	0x3681093
-#define ES_INFOLEN	32
-#define ES_INFO_SIZE	512
+#define	ES_VERSION 	0x0102
+#define	ES_MAGIC 	0x3681093
+#define	ES_INFOLEN	32
+#define	ES_INFO_SIZE	512
 
 typedef struct {
-	dword	  	magic;
-	dword	  	serno;			/* written only, never read */
-	word	  	version;
-	word	  	attr;			/* invisible... */
-	word	  	openMax;		/* max number of opens */
-	word	  	filler0;
-	dword	  	backupCleared;		/* time backup bit cleared */
+	dword		magic;
+	dword		serno;			/* written only, never read */
+	word		version;
+	word		attr;			/* invisible... */
+	word		openMax;		/* max number of opens */
+	word		filler0;
+	dword		backupCleared;		/* time backup bit cleared */
 	dword		id;			/* dir/file id */
-        dword		createTime;             /* unix format */
-        dword		backupTime;             /* unix format */
+	dword		createTime;		/* unix format */
+	dword		backupTime;		/* unix format */
 	byte		finderinfo[INFOLEN];	/* Finder info */
 } es_FileInfo;
 
 /****** TYPE_USHARE ******/
 
-/* similar to the EtherShare layout, but the finder info stuff is different
-   info provided by: Phil Sylvester <psylvstr@interaccess.com> */
+/*
+ * similar to the EtherShare layout, but the finder info stuff is different
+ * info provided by: Phil Sylvester <psylvstr@interaccess.com>
+ */
 
 typedef struct {
 	byte		finderinfo[INFOLEN];	/* Finder info */
@@ -232,21 +234,21 @@ typedef struct {
 	a_entry	entries[1];
 } a_hdr;
 
-#define A_HDR_SIZE	26
-#define A_ENTRY_SIZE	sizeof(a_entry)
+#define	A_HDR_SIZE	26
+#define	A_ENTRY_SIZE	sizeof (a_entry)
 
-#define A_VERSION1	0x00010000
-#define A_VERSION2	0x00020000
-#define APPLE_SINGLE	0x00051600
-#define APPLE_DOUBLE	0x00051607
-#define ID_DATA		1
-#define ID_RESOURCE	2
-#define ID_NAME		3
-#define ID_FILEI	7	/* v1 */
-#define ID_FILEDATESI	8	/* v2 */
-#define ID_FINDER	9
+#define	A_VERSION1	0x00010000
+#define	A_VERSION2	0x00020000
+#define	APPLE_SINGLE	0x00051600
+#define	APPLE_DOUBLE	0x00051607
+#define	ID_DATA		1
+#define	ID_RESOURCE	2
+#define	ID_NAME		3
+#define	ID_FILEI	7	/* v1 */
+#define	ID_FILEDATESI	8	/* v2 */
+#define	ID_FINDER	9
 
-#define A_DATE		16
+#define	A_DATE		16
 
 /****** TYPE_MACBIN ******/
 /*
@@ -255,8 +257,8 @@ typedef struct {
  */
 
 
-#define MB_NAMELEN 63              /* maximum legal Mac file name length */
-#define MB_SIZE 128
+#define	MB_NAMELEN 63		/* maximum legal Mac file name length */
+#define	MB_SIZE 128
 
 /*
  * Format of a bin file:
@@ -266,35 +268,35 @@ typedef struct {
  * proposal to follow with the text of the Get Info box has not been implemented,
  * to the best of my knowledge.  Version, zero1 and zero2 are what the receiving
  * program looks at to determine if a MacBinary transfer is being initiated.
- */ 
-typedef struct {     /* info file header (128 bytes). Unfortunately, these
-                        longs don't align to word boundaries */
-            byte version;           /* there is only a version 0 at this time */
-            byte nlen;              /* Length of filename. */
-            byte name[MB_NAMELEN];  /* Filename */
-            byte type[4];           /* File type. */
-            byte auth[4];           /* File creator. */
-            byte flags;             /* file flags: LkIvBnSyBzByChIt */
-            byte zero1;             /* Locked, Invisible,Bundle, System */
-                                    /* Bozo, Busy, Changed, Init */
-            byte icon_vert[2];      /* Vertical icon position within window */
-            byte icon_horiz[2];     /* Horizontal icon postion in window */
-            byte window_id[2];      /* Window or folder ID. */
-            byte protect;           /* = 1 for protected file, 0 otherwise */
-            byte zero2;
-            byte dflen[4];          /* Data Fork length (bytes) - most sig.  */
-            byte rflen[4];          /* Resource Fork length       byte first */
-            byte cdate[4];          /* File's creation date. */
-            byte mdate[4];          /* File's "last modified" date. */
-            byte ilen[2];           /* GetInfo message length */
-	    byte flags2;            /* Finder flags, bits 0-7 */
-	    byte unused[14];       
-	    byte packlen[4];        /* length of total files when unpacked */
-	    byte headlen[2];        /* length of secondary header */
-	    byte uploadvers;        /* Version of MacBinary II that the uploading program is written for */
-	    byte readvers;          /* Minimum MacBinary II version needed to read this file */
-            byte crc[2];            /* CRC of the previous 124 bytes */
-	    byte padding[2];        /* two trailing unused bytes */
+ */
+typedef struct {   		/* info file header (128 bytes). Unfortunately, these */
+				/* longs don't align to word boundaries */
+	byte version;		/* there is only a version 0 at this time */
+	byte nlen;		/* Length of filename. */
+	byte name[MB_NAMELEN];	/* Filename */
+	byte type[4];		/* File type. */
+	byte auth[4];		/* File creator. */
+	byte flags;		/* file flags: LkIvBnSyBzByChIt */
+	byte zero1;		/* Locked, Invisible,Bundle, System */
+				/* Bozo, Busy, Changed, Init */
+	byte icon_vert[2];	/* Vertical icon position within window */
+	byte icon_horiz[2];	/* Horizontal icon postion in window */
+	byte window_id[2];	/* Window or folder ID. */
+	byte protect;		/* = 1 for protected file, 0 otherwise */
+	byte zero2;
+	byte dflen[4];		/* Data Fork length (bytes) - most sig.  */
+	byte rflen[4];		/* Resource Fork length	byte first */
+	byte cdate[4];		/* File's creation date. */
+	byte mdate[4];		/* File's "last modified" date. */
+	byte ilen[2];		/* GetInfo message length */
+	byte flags2;		/* Finder flags, bits 0-7 */
+	byte unused[14];
+	byte packlen[4];	/* length of total files when unpacked */
+	byte headlen[2];	/* length of secondary header */
+	byte uploadvers;	/* Version of MacBinary II that the uploading program is written for */
+	byte readvers;		/* Minimum MacBinary II version needed to read this file */
+	byte crc[2];		/* CRC of the previous 124 bytes */
+	byte padding[2];	/* two trailing unused bytes */
 } mb_info;
 
 /****** TYPE_FE ******/
@@ -314,7 +316,7 @@ typedef struct {
 	byte	pad;
 } fe_info;
 
-#define FE_SIZE 92
+#define	FE_SIZE 92
 
 /****** TYPE_SGI ******/
 
@@ -326,12 +328,14 @@ typedef struct {
 	byte    unknown3[14];
 } sgi_info;
 
-#define SGI_SIZE 300
+#define	SGI_SIZE 300
 
 /****** TYPE_SFM ******/
 
-/* Information provided by Lou Rieger <lrieger@meridiancg.com> taken from
-   an email from Eddie Bowers <eddieb@microsoft.com> */
+/*
+ * Information provided by Lou Rieger <lrieger@meridiancg.com> taken from
+ * an email from Eddie Bowers <eddieb@microsoft.com>
+ */
 
 typedef struct {
 	byte	afpi_Signature[4];	/* Must be 0x00504641 */
@@ -343,8 +347,8 @@ typedef struct {
 	byte	afpi_Reserved2[6];
 } sfm_info;
 
-#define SFM_MAGIC	0x00504641
-#define SFM_VERSION	0x00010000
+#define	SFM_MAGIC	0x00504641
+#define	SFM_VERSION	0x00010000
 
 /****** TYPE_DHFS ******/
 

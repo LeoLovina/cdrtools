@@ -1,7 +1,6 @@
-/* @(#)semshm.c	1.11 02/11/28 Copyright 1998-2002 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)semshm.c	1.11 02/11/28 Copyright 1998-2002 Heiko Eissfeldt";
+"@(#)semshm.c	1.12 03/08/29 Copyright 1998-2002 Heiko Eissfeldt";
 
 #endif
 #define IPCTST
@@ -16,7 +15,7 @@ static char     sccsid[] =
 
 #include "config.h"
 
-#if     !defined(HAVE_SMMAP) && !defined(HAVE_USGSHM) && !defined(HAVE_DOSALLOCSHAREDMEM)
+#if     !defined(HAVE_SMMAP) && !defined(HAVE_USGSHM) && !defined(HAVE_DOSALLOCSHAREDMEM) && !defined(HAVE_AREAS)
 #undef  FIFO                    /* We cannot have a FIFO on this platform */
 #endif
 
@@ -37,6 +36,14 @@ static char     sccsid[] =
 #       undef   USE_MMAP
 #       undef   USE_USGSHM
 #	define	USE_OS2SHM
+#	undef	USE_BEOS_AREAS
+#endif
+
+#ifdef	HAVE_AREAS
+#       undef   USE_MMAP
+#       undef   USE_USGSHM
+#	undef	USE_OS2SHM
+#	define	USE_BEOS_AREAS
 #endif
 
 #include <stdio.h>
@@ -66,6 +73,10 @@ static char     sccsid[] =
 #endif
 
 #include <scg/scsitransp.h>
+
+#ifdef	USE_BEOS_AREAS
+#include	<be/kernel/OS.h>
+#endif
 
 #include "mytype.h"
 #include "interface.h"
@@ -408,6 +419,38 @@ static int shm_request(size, memptr)
          */
 	if(DosAllocSharedMem(&addr,NULL,size,0X100L | 0x1L | 0x2L | 0x10L))
       		comerr("DosAllocSharedMem() failed\n");
+
+	if (memptr != NULL)
+		*memptr = (unsigned char *)addr;
+
+	return 0;
+}
+#endif
+
+#ifdef	USE_BEOS_AREAS
+
+/* request a shared memory block */
+static int shm_request(size, memptr)
+	int size;
+	unsigned char **memptr;
+{
+	char    *addr;
+	area_id aid;	/* positive id of the mapping */
+
+	/* round up to a multiple of pagesize. */
+	size = ((size - 1) | (B_PAGE_SIZE - 1)) + 1;
+	/*
+	 * 	request a shared memory area in user space.
+         */
+	aid = create_area(AREA_NAME,	/* name of the mapping */
+		(void *)&addr,		/* address of shared memory */
+		B_ANY_ADDRESS,		/* type of address constraint */
+		size,			/* size in bytes (multiple of pagesize) */
+		B_NO_LOCK, /* B_FULL_LOCK, */ /* memory locking */
+		B_READ_AREA | B_WRITE_AREA);	/* read and write permissions */
+
+	if (aid < B_OK)
+      		comerr("create_area() failed\n");
 
 	if (memptr != NULL)
 		*memptr = (unsigned char *)addr;

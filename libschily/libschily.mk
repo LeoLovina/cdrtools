@@ -1,4 +1,4 @@
-#ident @(#)libschily.mk	1.2 00/02/10 
+#ident @(#)libschily.mk	1.3 03/07/13 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -10,6 +10,7 @@ VPATH=		.:stdio:$(ARCHDIR)
 INSDIR=		lib
 TARGETLIB=	schily
 CPPOPTS +=	-Istdio
+CPPOPTS +=	-DUSE_SCANSTACK
 include		Targets
 LIBS=		
 

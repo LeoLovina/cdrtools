@@ -1,4 +1,4 @@
-#ident %W% %E% %Q%
+#ident @(#)Makefile	1.2 04/01/23 
 ###########################################################################
 # Written 1998 by J. Schilling
 ###########################################################################
@@ -14,9 +14,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; see the file COPYING.  If not, write to
-# the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+# You should have received a copy of the GNU General Public License along with
+# this program; see the file COPYING.  If not, write to the Free Software
+# Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -38,7 +38,8 @@ distclean:
 						$(SRCROOT)/libs/* $(SRCROOT)/incs/*
 
 ###########################################################################
-include		$(SRCROOT)/$(RULESDIR)/rules.cnf
+# Now done in rules.top
+#include		$(SRCROOT)/$(RULESDIR)/rules.cnf
 ###########################################################################
 
 OTHERTARGETS=	clean install ibins depend rmdep \

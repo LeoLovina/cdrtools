@@ -1,12 +1,12 @@
-/* @(#)modes.c	1.24 01/10/29 Copyright 1988 J. Schilling */
+/* @(#)modes.c	1.25 04/03/02 Copyright 1988, 1997-2001, 2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)modes.c	1.24 01/10/29 Copyright 1988 J. Schilling";
+	"@(#)modes.c	1.25 04/03/02 Copyright 1988, 1997-2001, 2004 J. Schilling";
 #endif
 /*
  *	SCSI mode page handling
  *
- *	Copyright (c) 1988 J. Schilling
+ *	Copyright (c) 1988, 1997-2001, 2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -47,8 +47,8 @@ EXPORT	BOOL	set_mode_params	__PR((SCSI *scgp, char *pagename, Uchar *modep,
 #define	XXX
 
 #ifdef	XXX
-LOCAL
-BOOL has_mode_page(scgp, page, pagename, lenp)
+LOCAL BOOL
+has_mode_page(scgp, page, pagename, lenp)
 	SCSI	*scgp;
 	int	page;
 	char	*pagename;
@@ -71,14 +71,14 @@ BOOL has_mode_page(scgp, page, pagename, lenp)
 	 * drive I own does not have the problem.
 	 */
 	if ((scgp->dflags & DRF_MODE_DMA_OVR) != 0)
-		len = sizeof(struct scsi_mode_header);
+		len = sizeof (struct scsi_mode_header);
 again:
-	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+	fillbytes((caddr_t)mode, sizeof (mode), '\0');
 	if (lenp)
 		*lenp = 0;
 
 	scgp->silent++;
-	(void)unit_ready(scgp);
+	(void) unit_ready(scgp);
 /* Maxoptix bringt Aborted cmd 0x0B mit code 0x4E (overlapping cmds)*/
 
 	/*
@@ -87,8 +87,8 @@ again:
 	 */
 	if (mode_sense(scgp, mode, len, page, 0) < 0) {	/* Page n current */
 		scgp->silent--;
-		if (len < (int)sizeof(struct scsi_mode_header) && try == 0) {
-			len = sizeof(struct scsi_mode_header);
+		if (len < (int)sizeof (struct scsi_mode_header) && try == 0) {
+			len = sizeof (struct scsi_mode_header);
 			goto again;
 		}
 		return (FALSE);
@@ -112,7 +112,7 @@ again:
 	 * ATAPI drives as used by IOMEGA may receive a SCSI bus device reset
 	 * in between these two mode sense commands.
 	 */
-	(void)unit_ready(scgp);
+	(void) unit_ready(scgp);
 	if (mode_sense(scgp, mode, len, page, 0) < 0) {	/* Page n current */
 		scgp->silent--;
 		return (FALSE);
@@ -121,7 +121,7 @@ again:
 
 	if (scgp->verbose)
 		scg_prbytes("Mode Sense Data", mode, len - scg_getresid(scgp));
-	hdlen = sizeof(struct scsi_mode_header) +
+	hdlen = sizeof (struct scsi_mode_header) +
 			((struct scsi_mode_header *)mode)->blockdesc_len;
 	mp = (struct scsi_mode_page_header *)(mode + hdlen);
 	if (scgp->verbose)
@@ -169,8 +169,8 @@ again:
 }
 #endif
 
-EXPORT
-BOOL get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
+EXPORT BOOL
+get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
 	SCSI	*scgp;
 	int	page;
 	char	*pagename;
@@ -202,9 +202,9 @@ BOOL get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
 	if (modep) {
 		fillbytes(modep, 0x100, '\0');
 		scgp->silent++;
-		(void)unit_ready(scgp);
+		(void) unit_ready(scgp);
 		scgp->silent--;
-		if (mode_sense(scgp, modep, len, page, 0) < 0) {/* Page x current */
+		if (mode_sense(scgp, modep, len, page, 0) < 0) { /* Page x current */
 			errmsgno(EX_BAD, "Cannot get %s data.\n", pagename);
 			ret = FALSE;
 		} else if (scgp->verbose) {
@@ -215,9 +215,9 @@ BOOL get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
 	if (cmodep) {
 		fillbytes(cmodep, 0x100, '\0');
 		scgp->silent++;
-		(void)unit_ready(scgp);
+		(void) unit_ready(scgp);
 		scgp->silent--;
-		if (mode_sense(scgp, cmodep, len, page, 1) < 0) {/* Page x change */
+		if (mode_sense(scgp, cmodep, len, page, 1) < 0) { /* Page x change */
 			errmsgno(EX_BAD, "Cannot get %s mask.\n", pagename);
 			ret = FALSE;
 		} else if (scgp->verbose) {
@@ -228,9 +228,9 @@ BOOL get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
 	if (dmodep) {
 		fillbytes(dmodep, 0x100, '\0');
 		scgp->silent++;
-		(void)unit_ready(scgp);
+		(void) unit_ready(scgp);
 		scgp->silent--;
-		if (mode_sense(scgp, dmodep, len, page, 2) < 0) {/* Page x default */
+		if (mode_sense(scgp, dmodep, len, page, 2) < 0) { /* Page x default */
 			errmsgno(EX_BAD, "Cannot get default %s data.\n",
 								pagename);
 			ret = FALSE;
@@ -242,9 +242,9 @@ BOOL get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
 	if (smodep) {
 		fillbytes(smodep, 0x100, '\0');
 		scgp->silent++;
-		(void)unit_ready(scgp);
+		(void) unit_ready(scgp);
 		scgp->silent--;
-		if (mode_sense(scgp, smodep, len, page, 3) < 0) {/* Page x saved */
+		if (mode_sense(scgp, smodep, len, page, 3) < 0) { /* Page x saved */
 			errmsgno(EX_BAD, "Cannot get saved %s data.\n", pagename);
 			ret = FALSE;
 		} else if (scgp->verbose) {
@@ -255,8 +255,8 @@ BOOL get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
 	return (ret);
 }
 
-EXPORT
-BOOL set_mode_params(scgp, pagename, modep, len, save, secsize)
+EXPORT BOOL
+set_mode_params(scgp, pagename, modep, len, save, secsize)
 	SCSI	*scgp;
 	char	*pagename;
 	Uchar	*modep;
@@ -280,16 +280,17 @@ BOOL set_mode_params(scgp, pagename, modep, len, save, secsize)
 	}
 
 	scgp->silent++;
-	(void)unit_ready(scgp);
+	(void) unit_ready(scgp);
 	scgp->silent--;
 	if (save == 0 || mode_select(scgp, modep, len, save, scgp->inq->data_format >= 2) < 0) {
 		scgp->silent++;
-		(void)unit_ready(scgp);
+		(void) unit_ready(scgp);
 		scgp->silent--;
 		if (mode_select(scgp, modep, len, 0, scgp->inq->data_format >= 2) < 0) {
 			if (scgp->silent == 0) {
 				errmsgno(EX_BAD,
-				   "Warning: using default %s data.\n", pagename);
+					"Warning: using default %s data.\n",
+					pagename);
 				scg_prbytes("Mode Select Data", modep, len);
 			}
 			return (FALSE);

@@ -1,7 +1,7 @@
-/* @(#)volume.c	1.3 02/02/10 joerg */
+/* @(#)volume.c	1.4 04/06/17 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)volume.c	1.3 02/02/10 joerg";
+	"@(#)volume.c	1.4 04/06/17 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -222,7 +222,7 @@ int v_allocblocks(vol, blocks)
   if (request == 0)
     abort();
 
-  while (1)
+  for (;;)
     {
       unsigned int mark;
 
@@ -368,7 +368,7 @@ int v_resolve(vol, path, data, parid, fname, np)
 	}
     }
 
-  while (1)
+  for (;;)
     {
       while (*path == ':')
 	{
@@ -684,7 +684,7 @@ int v_scavenge(vol)
 
       n.rnum = 0;
 
-      while (1)
+      for (;;)
 	{
 	  ExtDataRec data;
 	  unsigned char *ptr;
@@ -725,7 +725,7 @@ int v_scavenge(vol)
 
       n.rnum = 0;
 
-      while (1)
+      for (;;)
 	{
 	  CatDataRec data;
 	  unsigned char *ptr;

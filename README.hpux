@@ -4,8 +4,34 @@ On HP-UX-11.x the maximal data size (allocated data) of a 32 bit program is
 64 MB.
 
 One solution is to build a 64 bit binary, for those the default process memory
-limit is 1 GB - but I have no idea what arguments are needed to make the HP-UX
-compiler create 64 bit binaries.
+limit is 1 GB.
+
+64bit binaries can be created with
+
+	cc +DA2.0w
+	cc +DD64
+
+if you have the HP C-ANSI-C compiler.
+
+To compile in 64 bit mode, first call ./.clean then call
+
+	make COPTX=+DD64 LDOPTX=+DD64 
+	make COPTX=+DD64 LDOPTX=+DD64  install
+
+
+If you have an older GNU gcc, you need a 64bit compiled gcc. Older GNU gcc versions
+are not capable of switching, so you need a separate compiler installation for either:
+
+l1:/u/usr/merijn 102 > file /usr/local/pa*/bin/gcc
+/usr/local/pa20_32/bin/gcc:     PA-RISC2.0 shared executable dynamically linked -not stripped
+/usr/local/pa20_64/bin/gcc:     ELF-64 executable object file - PA-RISC 2.0 (LP64)
+l1:/u/usr/merijn 103 >
+
+With a newer GCC, you may call ./.clean then call:
+
+	make COPTX=-mlp64 LDOPTX=-mlp64
+	make COPTX=-mlp64 LDOPTX=-mlp64  install
+
 
 The other way is to alter some kernel parameters which require a reboot.
 The default kernel parameter seem to look like:
@@ -72,3 +98,42 @@ the man pages for
     pfsd
     pfs_mount
 and anymore that they refer too.
+
+/*--------------------------------------------------------------------------*/
+
+From:
+H.Merijn Brand        Amsterdam Perl Mongers (http://amsterdam.pm.org/)
+
+As of Jun 2002, there are some patches available to HP-UX 11.00 and 11i that
+prevent the need for pfs, and these are highly recommended, since Rock-Ridge
+extensions are now supported from the kernel level.
+
+For 11.00:
+
+a5:/ 103 # swlist | grep -i rock
+  PHCO_26449   1.0  Add Rock Ridge extension to mount_cdfs(1M)
+  PHKL_26448   1.0  Y2k; Rock Ridge extension for ISO-9660
+  PHKL_26450   1.0  Rock Ridge extension for ISO-9660
+a5:/ 104 #
+
+PHKL_26448 is not recommended, but I never had any trouble with it. I still
+have to install PHKL_28060 over PHKL_26448
+
+  PHKL_28060   1.0  Y2k; Rock Ridge extension for ISO-9660
+
+For 11i:
+
+  PHKL_28025   1.0  Rock Ridge extension for ISO-9660 
+  PHKL_26269   1.0  Rock Ridge extension for ISO-9660 
+  PHCO_25841   1.0  Add Rock Ridge extension to mount_cdfs(1M) 
+
+I don't have 11i (yet), so I got this from HP-UX' patch database.
+
+The problem is that they did /not/ enable RR by default, but made it a mount
+option. D'uh! But you can add it in /etc/fstab, and never worry again :)
+
+a5:/ 104 # grep cd /etc/fstab
+/dev/cd0        /cdrom          cdfs    ro,rr,noauto    0 0
+a5:/ 105 #
+
+

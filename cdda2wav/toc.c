@@ -1,7 +1,7 @@
-/* @(#)toc.c	1.49 02/11/21 Copyright 1998-2002 Heiko Eissfeldt */
+/* @(#)toc.c	1.55 04/05/21 Copyright 1998-2003 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)toc.c	1.49 02/11/21 Copyright 1998-2002 Heiko Eissfeldt";
+"@(#)toc.c	1.55 04/05/21 Copyright 1998-2003 Heiko Eissfeldt";
 
 #endif
 /*
@@ -37,6 +37,7 @@ static char     sccsid[] =
 #include <fctldefs.h>
 #include <vadefs.h>
 #include <schily.h>
+#include <libport.h>
 #include <sys/ioctl.h>
 
 #define CD_TEXT
@@ -68,12 +69,22 @@ int Get_SCMS __PR(( unsigned long p_track ));
 
 #if	defined	USE_REMOTE
 /* tcp stuff */
+/* fix OS/2 compilation */
+#ifdef	__EMX__
+#define	gethostid	nogethostid
+#endif
 #include <sys/socket.h>
+#undef gethostid
 #include <netinet/in.h>
+#if	defined(HAVE_NETDB_H) && !defined(HOST_NOT_FOUND) && \
+				!defined(_INCL_NETDB_H)
 #include <netdb.h>
+#define	_INCL_NETDB_H
+#endif
 #endif
 
 int have_CD_text;
+int have_multisession;
 int have_CD_extra;
 int have_CDDB;
 
@@ -492,15 +503,16 @@ unsigned FixupTOC(no_tracks)
 	  long sj = Get_StartSector(j);
 	  if (sj > (long)real_end) {
 	    session_start = mult_off;
+		have_multisession = sj;
 
 #ifdef CD_EXTRA
 	    offset = Read_CD_Extra_Info(sj);
-#endif
 
 	    if (offset != 0) {
 		have_CD_extra = sj;
 		dump_extra_info(offset);
 	    }
+#endif
 	  }
       }
     }
@@ -535,7 +547,7 @@ unsigned FixupTOC(no_tracks)
 	    }
     }
 #endif
-    if (have_CD_extra) {
+    if (have_multisession) {
 	/* set start of track to beginning of lead-out */
 	patch_cd_extra(j, real_end);
 #if	defined CD_EXTRA && defined DEBUG_XTRA
@@ -812,7 +824,6 @@ static void emit_cddb_form(fname_baseval)
 }
 
 #if	defined	USE_REMOTE
-#include <sys/utsname.h>
 #include <pwd.h>
 
 int readn __PR((register int fd, register char *ptr, register int nbytes));
@@ -1112,7 +1123,7 @@ request_titles()
 	struct hostent *he;
 	struct servent *se;
 	struct passwd *pw = getpwuid(getuid());
-	struct utsname host;
+	char		hostname[HOST_NAME_MAX];
 	char		inbuff[SOCKBUFF];
 	char		outbuff[SOCKBUFF];
 	int		i;
@@ -1136,13 +1147,14 @@ request_titles()
 	if (global.cddbp_server != NULL)
 		he = gethostbyname(global.cddbp_server);
 	else
-		he = gethostbyname("freedb.freedb.org");
+		he = gethostbyname(CDDBHOST /*"freedb.freedb.org"*/);
 
 	if (he == NULL) {
 		perror("cddb cannot resolve freedb host: ");
 		he = malloc(sizeof(struct hostent));
 		memset(he, 0 , sizeof(struct hostent));
 		he->h_length = 4;
+		he->h_addrtype = AF_INET;
 		he->h_addr_list = malloc(4);
 		he->h_addr_list[0] = malloc(4);
 		((struct in_addr *)(he->h_addr_list[0]))->s_addr =
@@ -1155,6 +1167,11 @@ request_titles()
 #endif
 	}
 
+	/* save result data IMMEDIATELY!! */
+	memset(&sa, 0 , sizeof(struct sockaddr_in));
+	sa.sin_family 	   = he->h_addrtype;	/* AF_INET; */
+	sa.sin_addr.s_addr = ((struct in_addr *)((he->h_addr_list)[0]))->s_addr;
+
 	se = NULL;
 	if (global.cddbp_port == NULL)
 		se = getservbyname("cddbp-alt", "tcp");
@@ -1166,11 +1183,7 @@ request_titles()
 		if (se == NULL) {
 			se = malloc(sizeof(struct servent));
 			memset(se, 0 , sizeof(struct servent));
-			if (global.cddbp_port == NULL) {
-				se->s_port = htons(8880);
-			} else {
-				se->s_port = htons(atoi(global.cddbp_port));
-			}
+			se->s_port = htons(CDDBPORT /*8880*/);
 #if	0	
 			perror("cddb cannot resolve cddbp or cddbp-alt port:\n "); 
 			retval = -1;
@@ -1178,15 +1191,15 @@ request_titles()
 #endif
 		}
 	}
+	if (global.cddbp_port != NULL) {
+		se->s_port = htons(atoi(global.cddbp_port));
+	}
 
-	memset(&sa, 0 , sizeof(struct sockaddr));
-	sa.sin_family 	   = AF_INET;
-	sa.sin_port        = se->s_port; /* htons(8880) */
-	sa.sin_addr.s_addr = ((struct in_addr *)(he->h_addr_list[0]))->s_addr;
+	sa.sin_port        = se->s_port;
 
 /* TODO timeout */
 	if (0 > connect(sock_fd, (struct sockaddr *)&sa, 
-			sizeof(struct sockaddr))) {
+			sizeof(struct sockaddr_in))) {
 		perror("cddb connect failed: ");
 		retval = -1;
 		goto errout;
@@ -1202,15 +1215,35 @@ request_titles()
 	}
 
 	/* say hello */
-	memset(&host, 0, sizeof(host));
-	uname(&host);
+	hostname[0] = '\0'; 
+	if (0 > gethostname(hostname, sizeof(hostname)))
+		strcpy(hostname, "unknown_host"); 
+	hostname[sizeof(hostname)-1] = '\0';
 	writen(sock_fd, "cddb hello ", 11);
 	if (pw != NULL) {
+		BOOL	space_err = FALSE;
+		BOOL	ascii_err = FALSE;
 		/* change spaces to underscores */
 		char *q = pw->pw_name;
 		while (*q != '\0') {
-			if (*q == ' ')
+			if (*q == ' ') {
+				if (!space_err) {
+					space_err = TRUE;
+					errmsgno(EX_BAD,
+					"Warning: Space in user name '%s'.\n",
+					pw->pw_name);
+				}
 				*q = '_';
+			}
+			if (*q < ' ' || *q > '~') {
+				if (!ascii_err) {
+					ascii_err = TRUE;
+					errmsgno(EX_BAD,
+					"Warning: Nonascii character in user name '%s'.\n",
+					pw->pw_name);
+				}
+				*q = '_';
+			}
 			q++;
 		}
 		writen(sock_fd, pw->pw_name, strlen(pw->pw_name));
@@ -1221,15 +1254,34 @@ request_titles()
 
 	/* change spaces to underscores */
 	{
-		char *q = host.nodename;
+		char *q = hostname;
+		BOOL	space_err = FALSE;
+		BOOL	ascii_err = FALSE;
+
 		while (*q != '\0') {
-			if (*q == ' ')
+			if (*q == ' ') {
+				if (!space_err) {
+					space_err = TRUE;
+					errmsgno(EX_BAD,
+					"Warning: Space in hostname '%s'.\n",
+					hostname);
+				}
 				*q = '_';
+			}
+			if (*q < ' ' || *q > '~') {
+				if (!ascii_err) {
+					ascii_err = TRUE;
+					errmsgno(EX_BAD,
+					"Warning: Nonascii character in hostname '%s'.\n",
+					hostname);
+				}
+				*q = '_';
+			}
 			q++;
 		}
 	}
 
-	writen(sock_fd, host.nodename, strlen(host.nodename));
+	writen(sock_fd, hostname, strlen(hostname));
 	writen(sock_fd, " cdda2wav ", 10);
 	writen(sock_fd, VERSION, strlen(VERSION));
 	writen(sock_fd, "\n", 1);
@@ -1647,6 +1699,7 @@ static void dump_cdtext_info()
       cdtextpackdata *c = (cdtextpackdata *)p;
       int dbcc;
       int crc_error;
+      unsigned tracknr;
 
 #ifdef DEBUG_CDTEXT
       fprintf(stderr, "datalength =%d\n", datalength);
@@ -1658,6 +1711,7 @@ static void dump_cdtext_info()
 	lastitem = c->headerfield[0];
       }
 
+      tracknr = c->headerfield[1] & 0x7f;
       dbcc = ((unsigned)(c->headerfield[3] & 0x80)) >> 7; /* double byte character code */
 
 #if defined DEBUG_CDTEXT
@@ -1672,22 +1726,21 @@ static void dump_cdtext_info()
       block_number = ((unsigned)(c->headerfield[3] & 0x30)) >> 4; /* language */
       character_position = c->headerfield[3] & 0x0f;
 
-      fprintf(stderr, "CDText: ext_fl=%d, trnr=%d, seq_nr=%d, dbcc=%d, block_nr=%d, char_pos=%d\n",
-             extension_flag, (int)c->headerfield[1], sequence_number, dbcc, block_number, character_position);
+      fprintf(stderr, "CDText: ext_fl=%d, trnr=%u, seq_nr=%d, dbcc=%d, block_nr=%d, char_pos=%d\n",
+             extension_flag, tracknr, sequence_number, dbcc, block_number, character_position);
 	}
 #endif
-      c->headerfield[1] &= 0x7f;
 
       /* print ASCII information */
       memcpy(lastline+inlinecount, c->textdatafield, 12);
       inlinecount += 12;
       zeroposition = (unsigned char *)memchr(lastline+outlinecount, '\0', inlinecount-outlinecount);
       while (zeroposition != NULL) {
-	  process_header(c, dbcc, lastline+outlinecount);
+	  process_header(c, tracknr, dbcc, lastline+outlinecount);
 	  outlinecount += zeroposition - (lastline+outlinecount) + 1;
 
 #if defined DEBUG_CDTEXT
-	  fprintf(stderr, "\tin=%d, out=%d, items=%d, trcknum=%d\n", inlinecount, outlinecount, itemcount, (int) c->headerfield[1]);
+	  fprintf(stderr, "\tin=%d, out=%d, items=%d, trcknum=%u\n", inlinecount, outlinecount, itemcount, tracknr);
 { int q; for (q= outlinecount; q < inlinecount; q++) fprintf (stderr, "%c", lastline[q] ? lastline[q] : 'ß'); fputs("\n", stderr); }
 #else
 	  if (DETAILED) {
@@ -1703,7 +1756,7 @@ static void dump_cdtext_info()
 	    outlinecount = inlinecount;
 	    break;
 	  }
-	  c->headerfield[1]++;
+	  tracknr++;
 	  zeroposition = (unsigned char *)memchr(lastline+outlinecount, '\0', inlinecount-outlinecount);
       }
     }
@@ -1916,11 +1969,15 @@ static void DisplayToc_with_gui( dw )
 				/* Title */
 				if ( global.verbose & SHOW_TITLES ) {
 					fprintf(stderr,
-						" title '%s' from '%s'",
+						" title '%s' from ",
 
 						(void *) global.tracktitle[GETTRACK(o)] != NULL
-						? quote(global.tracktitle[GETTRACK(o)]) : "" ,
+						? quote(global.tracktitle[GETTRACK(o)]) : ""
+					);
 					
+					fprintf(stderr,
+						"'%s'",
+
 						(void *) global.trackcreator[GETTRACK(o)] != NULL
 						? quote(global.trackcreator[GETTRACK(o)]) : ""
 					);
@@ -2003,7 +2060,7 @@ static void DisplayToc_no_gui( dw )
 		}
 	}
 	if ((global.verbose & SHOW_STARTPOSITIONS) != 0) {
-		if (global.illleadout_cd != 0 && have_CD_extra == 0) {
+		if (global.illleadout_cd != 0 && have_multisession == 0) {
 
 			fprintf ( stderr, 
 				  "Table of Contents: total tracks:%u, (total time more than %u:%02u.%02u)\n",
@@ -2026,7 +2083,7 @@ static void DisplayToc_no_gui( dw )
 			if ( GETTRACK(o) <= MAXTRK ) {
 				unsigned char brace1, brace2;
 				unsigned trackbeg;
-				trackbeg = have_CD_extra && IS__DATA(o) ? have_CD_extra : GETSTART(o);
+				trackbeg = have_multisession && IS__DATA(o) ? have_multisession : GETSTART(o);
 			
 				dw = (unsigned long) (GETSTART(p) - trackbeg);
 				mins   =   dw / ( 60*75 );
@@ -2037,7 +2094,7 @@ static void DisplayToc_no_gui( dw )
 					/* data track display */
 					brace1 = '[';
 					brace2 = ']';
-				} else if (have_CD_extra
+				} else if (have_multisession
 					   && GETTRACK(o) == LastAudioTrack()) {
 					/* corrected length of
 					 * last audio track in cd extra
@@ -2082,9 +2139,9 @@ static void DisplayToc_no_gui( dw )
 				fprintf ( stderr,
 					  " %2u.(%8u)",
 					  GETTRACK(o),
-					  have_CD_extra
+					  have_multisession
 					   && GETTRACK(o) == FirstDataTrack()
-					    ? have_CD_extra
+					    ? have_multisession
 					    : GETSTART(o)
 #ifdef DEBUG_CDDB
 					  +150
@@ -2201,9 +2258,9 @@ void DisplayToc ( )
 
 	/* get total time */
 	if (global.illleadout_cd == 0)
-		dw = (unsigned long) Get_StartSector(CDROM_LEADOUT) + 150;
+		dw = (unsigned long) Get_StartSector(CDROM_LEADOUT) - Get_StartSector(1);
 	else
-		dw = (unsigned long) Get_StartSector(cdtracks     ) + 150;
+		dw = (unsigned long) Get_StartSector(cdtracks     ) - Get_StartSector(1);
 
 	if ( global.gui == 0 ) {
 		/* table formatting when in cmdline mode */
@@ -2665,7 +2722,7 @@ fprintf(stderr, "\nCommand not implemented: switching ReadSubChannels off !\n");
 			sub_ch->control_adr = 0xAA;
 		}
 
-		if ((sub_ch->control_adr & 0x0f) > 0x01) {
+		if ((int)(sub_ch->control_adr & 0x0f) > 0x01) {
 			/* this sector just has no position information.
 			 * we try the one before and then the one after.
 			 */
@@ -3171,6 +3228,35 @@ unsigned ScanIndices( track, cd_index, bulk )
 	  } /* for index */
 	  register_index_position(n_0_transition, &last_index_entry);
 
+	  /* sanity check. clear all consecutive nonindex entries (frameoffset -1) from the end. */
+	  {
+	  	index_list *p = global.trackindexlist[ii];
+		index_list *q = NULL;
+		index_list *lastgood = q;
+
+		while (p != NULL)
+		{
+			if (p->frameoffset == -1)
+			{
+				/* no index available */
+				if (lastgood == NULL)
+				{
+					/* if this is the first one in a sequence, store predecessor */
+					lastgood = q;
+				}
+			} else {
+				/* this is a valid index, reset marker */
+				lastgood = NULL;
+			}
+
+			q = p;
+			p = p->next;
+		}
+		/* terminate chain at the last well defined entry. */
+		if (lastgood != NULL)
+			lastgood->next = NULL;
+	  }
+
 	  if (global.gui == 0 && (global.verbose & SHOW_INDICES)
 	      && ii != endtrack)
 		  fputs("\n", stderr);
@@ -3232,7 +3318,7 @@ int TOC_entries ( tracks, a, b, binvalid )
 			g_toc[i].bFlags = p[1];
 			g_toc[i].bTrack = p[2];
 			g_toc[i].ISRC[0] = 0;
-			if ((p[5]*60 + p[6])*75 + p[7] >= 150) {
+			if ((int)((p[5]*60 + p[6])*75 + p[7]) >= 150) {
 				g_toc[i].dwStartSector = (p[5]*60 + p[6])*75 + p[7] -150;
 			} else {
 				g_toc[i].dwStartSector = 0;
@@ -3384,7 +3470,7 @@ int Get_Copyright ( p_track )
 {
 	if (p_track <= cdtracks) {
 		if (g_toc[p_track].SCMS) return 1;
-		return (g_toc[p_track].bFlags & 0x20) >> 4;
+		return ((int)g_toc[p_track].bFlags & 0x20) >> 4;
 	}
 	return -1;
 }

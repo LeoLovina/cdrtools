@@ -1,4 +1,4 @@
-/* @(#)stkframe.h	1.9 02/08/08 Copyright 1995 J. Schilling */
+/* @(#)stkframe.h	1.10 03/06/15 Copyright 1995 J. Schilling */
 /*
  * Common definitions for routines that parse the stack frame.
  *
@@ -17,19 +17,19 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _STKFRAME_H
-#define _STKFRAME_H
+#define	_STKFRAME_H
 
 #ifndef _MCONFIG_H
 #include <mconfig.h>
 #endif
 
-#if defined (sun) && (defined(SVR4) || defined(__SVR4) || defined(__SVR4__))
+#if defined(sun) && (defined(SVR4) || defined(__SVR4) || defined(__SVR4__))
 	/*
 	 * Solaris 2.x aka SunOS 5.x
 	 */
@@ -49,7 +49,7 @@
 #	endif
 
 #else
-# if	defined (sun)
+# if	defined(sun)
 	/*
 	 * SunOS 4.x
 	 */

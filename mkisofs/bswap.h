@@ -1,6 +1,6 @@
-/* @(#)bswap.h	1.1 02/07/20 Copyright 2002 J. Schilling */
+/* @(#)bswap.h	1.2 03/03/25 Copyright 2002 J. Schilling */
 #ifndef _BSWAP_H
-#define _BSWAP_H
+#define	_BSWAP_H
 
 /*
  *	Allow to use B2N_* macros found in libdvdread in a portable way.
@@ -24,9 +24,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -35,10 +35,10 @@
 
 #if defined(WORDS_BIGENDIAN)
 
-/* All bigendian systems are fine, just ignore the swaps. */  
-#define B2N_16(x) (void)(x)
-#define B2N_32(x) (void)(x)
-#define B2N_64(x) (void)(x)
+/* All bigendian systems are fine, just ignore the swaps. */
+#define	B2N_16(x) (void)(x)
+#define	B2N_32(x) (void)(x)
+#define	B2N_64(x) (void)(x)
 
 #else
 
@@ -47,9 +47,9 @@
  * In protocols, there is usually the additional problem that the
  * data is not properly aligned.
  */
-#define B2N_16(x) (x) = a_to_u_2_byte(&(x))
-#define B2N_32(x) (x) = a_to_u_4_byte(&(x))
-#define B2N_64(x) (x) = a_to_u_8_byte(&(x))
+#define	B2N_16(x) (x) = a_to_u_2_byte(&(x))
+#define	B2N_32(x) (x) = a_to_u_4_byte(&(x))
+#define	B2N_64(x) (x) = a_to_u_8_byte(&(x))
 
 #endif
 

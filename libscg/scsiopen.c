@@ -1,7 +1,7 @@
-/* @(#)scsiopen.c	1.94 03/05/08 Copyright 1995,2000 J. Schilling */
+/* @(#)scsiopen.c	1.95 04/01/14 Copyright 1995,2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsiopen.c	1.94 03/05/08 Copyright 1995,2000 J. Schilling";
+	"@(#)scsiopen.c	1.95 04/01/14 Copyright 1995,2000 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -56,14 +56,14 @@ static	char sccsid[] =
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
 
-#define	strbeg(s1,s2)	(strstr((s2), (s1)) == (s2))
+#define	strbeg(s1, s2)	(strstr((s2), (s1)) == (s2))
 
 extern	int	lverbose;
 
 EXPORT	SCSI	*scg_open	__PR((char *scsidev, char *errs, int slen, int debug,
 								int be_verbose));
 EXPORT	int	scg_help	__PR((FILE *f));
-LOCAL	int	scg_scandev	__PR((char *devp, char *errs, int slen, 
+LOCAL	int	scg_scandev	__PR((char *devp, char *errs, int slen,
 							int *busp, int *tgtp, int *lunp));
 EXPORT	int	scg_close	__PR((SCSI * scgp));
 
@@ -88,7 +88,7 @@ EXPORT	void	scg_sfree	__PR((SCSI *scgp));
  * or	dev=devicename (undocumented)
  *
  * NOTE: As the 'lun' is part of the SCSI command descriptor block, it
- * 	 must always be known. If the OS cannot map it, it must be
+ *	 must always be known. If the OS cannot map it, it must be
  *	 specified on command line.
  */
 EXPORT SCSI *
@@ -137,8 +137,8 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 			 * We must send the complete device spec to the remote
 			 * site to allow parsing on both sites.
 			 */
-			strncpy(devname, scsidev, sizeof(devname)-1);
-			devname[sizeof(devname)-1] = '\0';
+			strncpy(devname, scsidev, sizeof (devname)-1);
+			devname[sizeof (devname)-1] = '\0';
 			if (sdev[6] == '(' || sdev[6] == ':')
 				sdev = strchr(sdev, ':');
 			else
@@ -162,39 +162,39 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 				else
 					goto nulldevice;
 			}
-		} 
+		}
 		if ((devp = strchr(sdev, ':')) == NULL) {
 			if (strchr(sdev, ',') == NULL) {
-				/* Notation form: 'devname' (undocumented)   */
-				/* Forward complete name to scg__open()	     */
-				/* Fetch bus/tgt/lun values from OS	     */
-				/* We may come here too with 'USCSI'	     */
+				/* Notation form: 'devname' (undocumented)  */
+				/* Forward complete name to scg__open()	    */
+				/* Fetch bus/tgt/lun values from OS	    */
+				/* We may come here too with 'USCSI'	    */
 				n = -1;
-				lun  = -2;	/* Lun must be known	     */
+				lun  = -2;	/* Lun must be known	    */
 				if (devname[0] == '\0') {
 					strncpy(devname, scsidev,
-							sizeof(devname)-1);
-					devname[sizeof(devname)-1] = '\0';
+							sizeof (devname)-1);
+					devname[sizeof (devname)-1] = '\0';
 				}
 			} else {
-				/* Basic notation form: 'bus,tgt,lun'	     */
+				/* Basic notation form: 'bus,tgt,lun'	    */
 				devp = sdev;
 			}
 		} else {
-			/* Notation form: 'devname:bus,tgt,lun'/'devname:@'  */
-			/* We may come here too with 'USCSI:'		     */
+			/* Notation form: 'devname:bus,tgt,lun'/'devname:@' */
+			/* We may come here too with 'USCSI:'		    */
 			if (devname[0] == '\0') {
 				/*
 				 * Copy over the part before the ':'
 				 */
 				x1 = devp - scsidev;
-				if (x1 >= (int)sizeof(devname))
-					x1 = sizeof(devname)-1;
+				if (x1 >= (int)sizeof (devname))
+					x1 = sizeof (devname)-1;
 				strncpy(devname, scsidev, x1);
 				devname[x1] = '\0';
 			}
 			devp++;
-			/* Check for a notation in the form 'devname:@'	     */
+			/* Check for a notation in the form 'devname:@'	    */
 			if (devp[0] == '@') {
 				if (devp[1] == '\0') {
 					lun = -2;
@@ -220,13 +220,13 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 				 * Make sure not to call scg_scandev()
 				 */
 				devp = NULL;
-			} else if (strchr(sdev, ',') == NULL) { 
-				/* We may come here with 'ATAPI:/dev/hdc'    */
+			} else if (strchr(sdev, ',') == NULL) {
+				/* We may come here with 'ATAPI:/dev/hdc'   */
 				strncpy(devname, scsidev,
-						sizeof(devname)-1);
-				devname[sizeof(devname)-1] = '\0';
+						sizeof (devname)-1);
+				devname[sizeof (devname)-1] = '\0';
 				n = -1;
-				lun  = -2;	/* Lun must be known	     */
+				lun  = -2;	/* Lun must be known	    */
 				/*
 				 * Make sure not to call scg_scandev()
 				 */
@@ -401,24 +401,24 @@ scg_smalloc()
 	SCSI	*scgp;
 extern	scg_ops_t scg_dummy_ops;
 
-	scgp = (SCSI *)malloc(sizeof(*scgp));
+	scgp = (SCSI *)malloc(sizeof (*scgp));
 	if (scgp == NULL)
 		return ((SCSI *)0);
 
-	fillbytes(scgp, sizeof(*scgp), 0);
+	fillbytes(scgp, sizeof (*scgp), 0);
 	scgp->ops	= &scg_dummy_ops;
 	scg_settarget(scgp, -1, -1, -1);
 	scgp->fd	= -1;
 	scgp->deftimeout = 20;
 	scgp->running	= FALSE;
 
-	scgp->cmdstart = (struct timeval *)malloc(sizeof(struct timeval));
+	scgp->cmdstart = (struct timeval *)malloc(sizeof (struct timeval));
 	if (scgp->cmdstart == NULL)
 		goto err;
-	scgp->cmdstop = (struct timeval *)malloc(sizeof(struct timeval));
+	scgp->cmdstop = (struct timeval *)malloc(sizeof (struct timeval));
 	if (scgp->cmdstop == NULL)
 		goto err;
-	scgp->scmd = (struct scg_cmd *)malloc(sizeof(struct scg_cmd));
+	scgp->scmd = (struct scg_cmd *)malloc(sizeof (struct scg_cmd));
 	if (scgp->scmd == NULL)
 		goto err;
 	scgp->errstr = malloc(SCSI_ERRSTR_SIZE);
@@ -427,10 +427,10 @@ extern	scg_ops_t scg_dummy_ops;
 	scgp->errptr = scgp->errbeg = scgp->errstr;
 	scgp->errstr[0] = '\0';
 	scgp->errfile = (void *)stderr;
-	scgp->inq = (struct scsi_inquiry *)malloc(sizeof(struct scsi_inquiry));
+	scgp->inq = (struct scsi_inquiry *)malloc(sizeof (struct scsi_inquiry));
 	if (scgp->inq == NULL)
 		goto err;
-	scgp->cap = (struct scsi_capacity *)malloc(sizeof(struct scsi_capacity));
+	scgp->cap = (struct scsi_capacity *)malloc(sizeof (struct scsi_capacity));
 	if (scgp->cap == NULL)
 		goto err;
 

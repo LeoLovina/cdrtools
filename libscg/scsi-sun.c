@@ -1,7 +1,7 @@
-/* @(#)scsi-sun.c	1.76 02/10/19 Copyright 1988,1995,2000 J. Schilling */
+/* @(#)scsi-sun.c	1.82 04/01/14 Copyright 1988,1995,2000-2004 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sun.c	1.76 02/10/19 Copyright 1988,1995,2000 J. Schilling";
+	"@(#)scsi-sun.c	1.82 04/01/14 Copyright 1988,1995,2000-2004 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -13,7 +13,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1988,1995,2000 J. Schilling
+ *	Copyright (c) 1988,1995,2000-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -26,9 +26,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <scg/scgio.h>
@@ -54,25 +54,33 @@ static	char __sccsid[] =
  * Tht USCSI ioctl() is not usable on SunOS 4.x
  */
 #ifdef	__SVR4
+/*#define	VOLMGT_DEBUG*/
+#include <volmgt.h>
+#include <statdefs.h>
 #	define	USE_USCSI
 #endif
 
-LOCAL	char	_scg_trans_version[] = "scg-1.76";	/* The version for /dev/scg	*/
-LOCAL	char	_scg_utrans_version[] = "uscsi-1.76";	/* The version for USCSI	*/
+LOCAL	char	_scg_trans_version[] = "scg-1.82";	/* The version for /dev/scg	*/
+LOCAL	char	_scg_utrans_version[] = "uscsi-1.82";	/* The version for USCSI	*/
 
 #ifdef	USE_USCSI
 LOCAL	int	scgo_uhelp	__PR((SCSI *scgp, FILE *f));
 LOCAL	int	scgo_uopen	__PR((SCSI *scgp, char *device));
+LOCAL	int	scgo_volopen	__PR((SCSI *scgp, char *devname));
+LOCAL	int	scgo_openmedia	__PR((SCSI *scgp, char *mname));
 LOCAL	int	scgo_uclose	__PR((SCSI *scgp));
 LOCAL	int	scgo_ucinfo	__PR((int f, struct dk_cinfo *cp, int debug));
 LOCAL	int	scgo_ugettlun	__PR((int f, int *tgtp, int *lunp));
 LOCAL	long	scgo_umaxdma	__PR((SCSI *scgp, long amt));
+LOCAL	int	scgo_openide	__PR((void));
 LOCAL	BOOL	scgo_uhavebus	__PR((SCSI *scgp, int));
 LOCAL	int	scgo_ufileno	__PR((SCSI *scgp, int, int, int));
 LOCAL	int	scgo_uinitiator_id __PR((SCSI *scgp));
 LOCAL	int	scgo_uisatapi	__PR((SCSI *scgp));
 LOCAL	int	scgo_ureset	__PR((SCSI *scgp, int what));
 LOCAL	int	scgo_usend	__PR((SCSI *scgp));
+
+LOCAL	int	have_volmgt = -1;
 
 LOCAL scg_ops_t sun_uscsi_ops = {
 	scgo_usend,
@@ -129,8 +137,8 @@ struct scg_local {
 #endif
 	} u;
 };
-#define scglocal(p)	((struct scg_local *)((p)->local))
-#define scgfiles(p)	(scglocal(p)->u.SCG_files)
+#define	scglocal(p)	((struct scg_local *)((p)->local))
+#define	scgfiles(p)	(scglocal(p)->u.SCG_files)
 
 /*
  * Return version information for the low level SCSI transport code.
@@ -182,9 +190,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-/*		 int	tlun	= scg_lun(scgp);*/
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+/*		int	tlun	= scg_lun(scgp);*/
 	register int	f;
 	register int	i;
 	register int	nopen = 0;
@@ -212,26 +220,26 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL) {
 			if (scgp->errstr)
 				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE, "No memory for scg_local");
 			return (0);
 		}
 
-		for (i=0; i < MAX_SCG; i++) {
+		for (i = 0; i < MAX_SCG; i++) {
 			scgfiles(scgp)[i] = -1;
 		}
 	}
 
 
-	for (i=0; i < MAX_SCG; i++) {
+	for (i = 0; i < MAX_SCG; i++) {
 		/*
 		 * Skip unneeded devices if not in SCSI Bus scan open mode
 		 */
 		if (busno >= 0 && busno != i)
 			continue;
-		js_snprintf(devname, sizeof(devname), "/dev/scg%d", i);
+		js_snprintf(devname, sizeof (devname), "/dev/scg%d", i);
 		f = open(devname, O_RDWR);
 		if (f < 0) {
 			if (errno != ENOENT && errno != ENXIO) {
@@ -247,7 +255,7 @@ scgo_open(scgp, device)
 	}
 #ifdef	USE_USCSI
 	if (nopen <= 0) {
-		if (scgp->local != NULL) { 
+		if (scgp->local != NULL) {
 			free(scgp->local);
 			scgp->local = NULL;
 		}
@@ -267,7 +275,7 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (i=0; i < MAX_SCG; i++) {
+	for (i = 0; i < MAX_SCG; i++) {
 		if (scgfiles(scgp)[i] >= 0)
 			close(scgfiles(scgp)[i]);
 		scgfiles(scgp)[i] = -1;
@@ -339,7 +347,7 @@ scgo_fileno(scgp, busno, tgt, tlun)
 	if (scgp->local == NULL)
 		return (-1);
 
-	return (busno < 0 || busno >= MAX_SCG) ? -1 : scgfiles(scgp)[busno];
+	return ((busno < 0 || busno >= MAX_SCG) ? -1 : scgfiles(scgp)[busno]);
 }
 
 LOCAL int
@@ -457,9 +465,9 @@ scgo_uopen(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -467,31 +475,38 @@ scgo_uopen(scgp, device)
 	register int	nopen = 0;
 	char		devname[32];
 
+	if (have_volmgt < 0)
+		have_volmgt = volmgt_running();
+
 	if (scgp->overbose) {
 		js_fprintf((FILE *)scgp->errfile,
 				"Warning: Using USCSI interface.\n");
 	}
+	if (scgp->overbose > 0 && have_volmgt) {
+		js_fprintf((FILE *)scgp->errfile,
+		"Warning: Volume management is running, medialess managed drives are invisible.\n");
+	}
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
-		if (scgp->errstr)
-		    js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
-		       "Illegal value for busno, target or lun '%d,%d,%d'",
-		       busno, tgt, tlun);
-
+		if (scgp->errstr) {
+			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+				"Illegal value for busno, target or lun '%d,%d,%d'",
+					busno, tgt, tlun);
+		}
 		return (-1);
 	}
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL) {
 			if (scgp->errstr)
 				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE, "No memory for scg_local");
 			return (0);
 		}
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->u.scg_files[b][t][l] = (short)-1;
 			}
 		}
@@ -509,9 +524,11 @@ uscsiscan:
 		if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN)
 			return (-1);
 
-		js_snprintf(devname, sizeof(devname), "/dev/rdsk/c%dt%dd%ds2",
+		js_snprintf(devname, sizeof (devname), "/dev/rdsk/c%dt%dd%ds2",
 			busno, tgt, tlun);
 		f = open(devname, O_RDONLY | O_NDELAY);
+		if (f < 0 && geterrno() == EBUSY)
+			f = scgo_volopen(scgp, devname);
 		if (f < 0) {
 			js_snprintf(scgp->errstr,
 				    SCSI_ERRSTR_SIZE,
@@ -519,19 +536,29 @@ uscsiscan:
 			return (0);
 		}
 		scglocal(scgp)->u.scg_files[busno][tgt][tlun] = f;
-		return 1;
+		return (1);
 	} else {
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++) {
-					js_snprintf(devname, sizeof(devname),
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++) {
+					js_snprintf(devname, sizeof (devname),
 						"/dev/rdsk/c%dt%dd%ds2",
 						b, t, l);
 					f = open(devname, O_RDONLY | O_NDELAY);
-					if (f < 0 && errno != ENOENT
-							&& errno != ENXIO
-							&& errno != ENODEV) {
+					if (f < 0 && geterrno() == EBUSY) {
+						f = scgo_volopen(scgp, devname);
+						/*
+						 * Hack to mark inaccessible
+						 * drives with fd == -2
+						 */
+						if (f < 0 &&
+						    scglocal(scgp)->u.scg_files[b][t][l] < 0)
+							scglocal(scgp)->u.scg_files[b][t][l] = f;
+					}
+					if (f < 0 && errno != ENOENT &&
+						    errno != ENXIO &&
+						    errno != ENODEV) {
 						if (scgp->errstr)
 							js_snprintf(scgp->errstr,
 							    SCSI_ERRSTR_SIZE,
@@ -542,9 +569,9 @@ uscsiscan:
 					if (f >= 0) {
 						nopen ++;
 						if (scglocal(scgp)->u.scg_files[b][t][l] == -1)
-						scglocal(scgp)->u.scg_files[b][t][l] = f;
-					else
-						close(f);
+							scglocal(scgp)->u.scg_files[b][t][l] = f;
+						else
+							close(f);
 					}
 				}
 			}
@@ -561,6 +588,8 @@ openbydev:
 			return (0);
 
 		f = open(device, O_RDONLY | O_NDELAY);
+		if (f < 0)
+			f = scgo_volopen(scgp, device);
 		if (f < 0) {
 			js_snprintf(scgp->errstr,
 				    SCSI_ERRSTR_SIZE,
@@ -597,6 +626,149 @@ openbydev:
 }
 
 LOCAL int
+scgo_volopen(scgp, devname)
+	SCSI	*scgp;
+	char	*devname;
+{
+	int	oerr = geterrno();
+	int	f = -1;
+	char	*name   = NULL;	/* Volume symbolic device name		*/
+	char	*symdev = NULL;	/* /dev/... name based on "name" 	*/
+	char	*mname  = NULL;	/* Volume media name based on "name"	*/
+
+	if (!have_volmgt)
+		return (-1);
+
+#ifdef	VOLMGT_DEBUG
+	scgp->debug++;
+#endif
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"scgo_volopen(%s)\n", devname);
+	}
+
+	/*
+	 * We come here because trying to open "devname" did not work.
+	 * First try to translate between a symbolic name and a /dev/...
+	 * based device name. Then translate back to a symbolic name.
+	 */
+	symdev = volmgt_symdev(devname);
+	if (symdev)
+		name = volmgt_symname(symdev);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"volmgt_symdev(%s)=%s -> %s\n", devname, symdev, name);
+	}
+
+	/*
+	 * If "devname" is not a symbolic device name, then it must be
+	 * a /dev/... based device name. Try to translate it into a
+	 * symbolic name. Then translate back to a /dev/... name.
+	 */
+	if (name == NULL) {
+		name = volmgt_symname(devname);
+		if (name)
+			symdev = volmgt_symdev(name);
+	}
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"volmgt_symdev(%s)=%s -> %s\n", devname, symdev, name);
+	}
+
+	/*
+	 * If we have been able to translate to a symbolic device name,
+	 * translate this name into a volume management media name that
+	 * may be used for opening.
+	 */
+	if (name)
+		mname = media_findname(name);
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"symdev %s name %s mname %s\n", symdev, name, mname);
+	}
+
+	/*
+	 * Das scheint nur mit dem normierten /dev/rdsk/ *s2 Namen zu gehen.
+	 */
+	if (scgp->debug > 0) {
+		js_fprintf((FILE *)scgp->errfile,
+			"volmgt_inuse(%s) %d\n", symdev, volmgt_inuse(symdev));
+	}
+	if (mname)
+		f = scgo_openmedia(scgp, mname);
+	else if (name)
+		f = -2;	/* Mark inaccessible drives with fd == -2 */
+
+	/*
+	 * Besonderen Fehlertext oder fprintf/errfile bei non-scanbus Open und
+	 * wenn errrno == EBUSY && kein Mapping?
+	 */
+	if (name)
+		free(name);
+	if (symdev)
+		free(symdev);
+	if (mname)
+		free(mname);
+	seterrno(oerr);
+#ifdef	VOLMGT_DEBUG
+	scgp->debug--;
+#endif
+	return (f);
+}
+
+LOCAL int
+scgo_openmedia(scgp, mname)
+	SCSI	*scgp;
+	char	*mname;
+{
+	int	f = -1;
+	char	*device = NULL;
+	struct	stat sb;
+
+	if (mname == NULL)
+		return (-1);
+
+	/*
+	 * Check whether the media name refers to a directory.
+	 * In this case, the medium is partitioned and we need to
+	 * check all partitions.
+	 */
+	if (stat(mname, &sb) >= 0) {
+		if (S_ISDIR(sb.st_mode)) {
+			char    name[128];
+			int	i;
+
+			/*
+			 * First check partition '2', the whole disk.
+			 */
+			js_snprintf(name, sizeof (name), "%s/s2", mname);
+			f = open(name, O_RDONLY | O_NDELAY);
+			if (f >= 0)
+				return (f);
+			/*
+			 * Now try all other partitions.
+			 */
+			for (i = 0; i < 16; i++) {
+				if (i == 2)
+					continue;
+				js_snprintf(name, sizeof (name),
+							"%s/s%d", mname, i);
+				if (stat(name, &sb) >= 0)
+					break;
+			}
+			if (i < 16) {
+				device = mname;
+			}
+		} else {
+			device = mname;
+		}
+	}
+	if (device)
+		f = open(device, O_RDONLY | O_NDELAY);
+	return (f);
+}
+
+LOCAL int
 scgo_uclose(scgp)
 	SCSI	*scgp;
 {
@@ -608,9 +780,9 @@ scgo_uclose(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				f = scglocal(scgp)->u.scg_files[b][t][l];
 				if (f >= 0)
 					close(f);
@@ -627,7 +799,7 @@ scgo_ucinfo(f, cp, debug)
 	struct dk_cinfo *cp;
 	int		debug;
 {
-	fillbytes(cp, sizeof(*cp), '\0');
+	fillbytes(cp, sizeof (*cp), '\0');
 
 	if (ioctl(f, DKIOCINFO, cp) < 0)
 		return (-1);
@@ -685,24 +857,67 @@ scgo_umaxdma(scgp, amt)
 	long		maxdma = -1L;
 	int		f;
 	struct dk_cinfo ci;
+	BOOL		found_ide = FALSE;
 
 	if (scgp->local == NULL)
 		return (-1L);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				if ((f = scglocal(scgp)->u.scg_files[b][t][l]) < 0)
 					continue;
-				if (scgo_ucinfo(f, &ci, 0) < 0)
+				if (scgo_ucinfo(f, &ci, scgp->debug) < 0)
 					continue;
 				if (maxdma < 0)
 					maxdma = (long)(ci.dki_maxtransfer * DEV_BSIZE);
 				if (maxdma > (long)(ci.dki_maxtransfer * DEV_BSIZE))
 					maxdma = (long)(ci.dki_maxtransfer * DEV_BSIZE);
+				if (streql(ci.dki_cname, "ide"))
+					found_ide = TRUE;
 			}
 		}
 	}
+
+#if	defined(__i386_) || defined(i386)
+	/*
+	 * At least on Solaris 9 x86, DKIOCINFO returns a wrong value
+	 * for dki_maxtransfer if the target is an ATAPI drive.
+	 * Without DMA, it seems to work if we use 256 kB DMA size for ATAPI,
+	 * but if we allow DMA, only 68 kB will work (for more we get a silent
+	 * DMA residual count == DMA transfer count).
+	 * For this reason, we try to figure out the correct value for 'ide'
+	 * by retrieving the (correct) value from a ide hard disk.
+	 */
+	if (found_ide) {
+		if ((f = scgo_openide()) >= 0) {
+#ifdef	sould_we
+			long omaxdma = maxdma;
+#endif
+
+			if (scgo_ucinfo(f, &ci, scgp->debug) >= 0) {
+				if (maxdma < 0)
+					maxdma = (long)(ci.dki_maxtransfer * DEV_BSIZE);
+				if (maxdma > (long)(ci.dki_maxtransfer * DEV_BSIZE))
+					maxdma = (long)(ci.dki_maxtransfer * DEV_BSIZE);
+			}
+			close(f);
+#ifdef	sould_we
+			/*
+			 * The kernel returns 56 kB but we tested that 68 kB works.
+			 */
+			if (omaxdma > maxdma && maxdma == (112 * DEV_BSIZE))
+				maxdma = 136 * DEV_BSIZE;
+#endif
+		} else {
+			/*
+			 * No IDE disk on this system?
+			 */
+			if (maxdma == (512 * DEV_BSIZE))
+				maxdma = MAX_DMA_SUN386;
+		}
+	}
+#endif
 	/*
 	 * The Sun tape driver does not support to retrieve the max DMA count.
 	 * Use the knwoledge about default DMA sizes in this case.
@@ -712,6 +927,28 @@ scgo_umaxdma(scgp, amt)
 
 	return (maxdma);
 }
+
+#if	defined(__i386_) || defined(i386)
+LOCAL int
+scgo_openide()
+{
+	char	buf[20];
+	int	b;
+	int	t;
+	int	f = -1;
+
+	for (b = 0; b < 5; b++) {
+		for (t = 0; t < 2; t++) {
+			js_snprintf(buf, sizeof (buf),
+				"/dev/rdsk/c%dd%dp0", b, t);
+			if ((f = open(buf, O_RDONLY | O_NDELAY)) >= 0)
+				goto out;
+		}
+	}
+out:
+	return (f);
+}
+#endif
 
 LOCAL BOOL
 scgo_uhavebus(scgp, busno)
@@ -724,8 +961,8 @@ scgo_uhavebus(scgp, busno)
 	if (scgp->local == NULL || busno < 0 || busno >= MAX_SCG)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->u.scg_files[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -755,7 +992,7 @@ scgo_uinitiator_id(scgp)
 	return (-1);
 }
 
-LOCAL int 
+LOCAL int
 scgo_uisatapi(scgp)
 	SCSI	*scgp;
 {
@@ -767,11 +1004,11 @@ scgo_uisatapi(scgp)
 	if (ioctl(scgp->fd, DKIOCINFO, &ci) < 0)
 		return (-1);
 
-	js_snprintf(devname, sizeof(devname), "/dev/rdsk/c%dt%dd%ds2",
+	js_snprintf(devname, sizeof (devname), "/dev/rdsk/c%dt%dd%ds2",
 		scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 
 	symlinkname[0] = '\0';
-	len = readlink(devname, symlinkname, sizeof(symlinkname));
+	len = readlink(devname, symlinkname, sizeof (symlinkname));
 	if (len > 0)
 		symlinkname[len] = '\0';
 
@@ -791,12 +1028,12 @@ scgo_ureset(scgp, what)
 	if (what == SCG_RESET_NOP)
 		return (0);
 
-	fillbytes(&req, sizeof(req), '\0');
+	fillbytes(&req, sizeof (req), '\0');
 
 	if (what == SCG_RESET_TGT) {
 		req.uscsi_flags = USCSI_RESET | USCSI_SILENT;	/* reset target */
 	} else if (what != SCG_RESET_BUS) {
-		req.uscsi_flags = USCSI_RESET_ALL | USCSI_SILENT;/* reset bus */
+		req.uscsi_flags = USCSI_RESET_ALL | USCSI_SILENT; /* reset bus */
 	} else {
 		errno = EINVAL;
 		return (-1);
@@ -812,13 +1049,14 @@ scgo_usend(scgp)
 	struct scg_cmd	*sp = scgp->scmd;
 	struct uscsi_cmd req;
 	int		ret;
+static	uid_t		cureuid = 0;	/* XXX Hack until we have uid management */
 
 	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
 
-	fillbytes(&req, sizeof(req), '\0');
+	fillbytes(&req, sizeof (req), '\0');
 
 	req.uscsi_flags = USCSI_SILENT | USCSI_DIAGNOSE | USCSI_RQENABLE;
 
@@ -835,8 +1073,19 @@ scgo_usend(scgp)
 	req.uscsi_rqlen		= sp->sense_len;
 	req.uscsi_cdb		= (caddr_t) &sp->cdb;
 
+	if (cureuid != 0)
+		seteuid(0);
+again:
 	errno = 0;
 	ret = ioctl(scgp->fd, USCSICMD, &req);
+
+	if (ret < 0 && geterrno() == EPERM) {	/* XXX Hack until we have uid management */
+		cureuid = geteuid();
+		if (seteuid(0) >= 0)
+			goto again;
+	}
+	if (cureuid != 0)
+		seteuid(cureuid);
 
 	if (scgp->debug > 0) {
 		js_fprintf((FILE *)scgp->errfile, "ret: %d errno: %d (%s)\n", ret, errno, errmsgstr(errno));
@@ -861,7 +1110,7 @@ scgo_usend(scgp)
 
 			for (i = 0; i < len; i++) {
 				js_fprintf((FILE *)scgp->errfile, "0x%02X ", ((char *)req.uscsi_rqbuf)[i]);
-			}		
+			}
 			js_fprintf((FILE *)scgp->errfile, "\n");
 		} else {
 			js_fprintf((FILE *)scgp->errfile, "<data not available>\n");
@@ -905,7 +1154,7 @@ scgo_usend(scgp)
 		return (0);
 	}
 	if (req.uscsi_status & (STATUS_TERMINATED |
-				 STATUS_RESERVATION_CONFLICT)) {
+	    STATUS_RESERVATION_CONFLICT)) {
 		sp->error = SCG_FATAL;
 	}
 	if (req.uscsi_status != 0) {

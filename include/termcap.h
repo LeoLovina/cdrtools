@@ -1,4 +1,4 @@
-/* @(#)termcap.h	1.5 02/08/26 Copyright 1995 J. Schilling */
+/* @(#)termcap.h	1.6 03/06/15 Copyright 1995 J. Schilling */
 /*
  *	Copyright (c) 1995 J. Schilling
  */
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_TERMCAP_H
@@ -44,16 +44,16 @@ extern	char	*BC;		/* Backspace if not "\b" from "bc" capability*/
 extern	char	*UP;		/* Cursor up string from "up" capability */
 extern	short	ospeed;		/* output speed coded as in ioctl */
 
-extern	int	tgetent		__PR((char* bp, char* name));
+extern	int	tgetent		__PR((char *bp, char *name));
 extern	int	tcsetflags	__PR((int flags));
-extern	char*	tcgetbuf	__PR((void));
-extern	int	tgetnum		__PR((char* ent));
-extern	BOOL	tgetflag	__PR((char* ent));
-extern	char*	tgetstr		__PR((char* ent, char** array));
-extern	char*	tdecode		__PR((char* ep, char** array));
+extern	char	*tcgetbuf	__PR((void));
+extern	int	tgetnum		__PR((char *ent));
+extern	BOOL	tgetflag	__PR((char *ent));
+extern	char	*tgetstr		__PR((char *ent, char **array));
+extern	char	*tdecode		__PR((char *ep, char **array));
 
 extern	int	tputs		__PR((char *cp, int affcnt, int (*outc)(int c)));
-extern	char*	tgoto		__PR((char *cm, int destcol, int destline));
+extern	char	*tgoto		__PR((char *cm, int destcol, int destline));
 
 #ifdef	__cplusplus
 }

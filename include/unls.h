@@ -1,4 +1,4 @@
-/* @(#)unls.h	1.4 02/08/26 2000 J. Schilling */
+/* @(#)unls.h	1.5 03/06/15 2000 J. Schilling */
 /*
  *	Modifications to make the code portable Copyright (c) 2000 J. Schilling
  *
@@ -15,13 +15,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _UNLS_H
-#define _UNLS_H
+#define	_UNLS_H
 
 #ifndef _MCONFIG_H
 #include <mconfig.h>

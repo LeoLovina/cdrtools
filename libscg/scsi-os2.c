@@ -1,7 +1,7 @@
-/* @(#)scsi-os2.c	1.22 02/10/19 Copyright 1998 J. Schilling, C. Wohlgemuth */
+/* @(#)scsi-os2.c	1.25 04/01/15 Copyright 1998 J. Schilling, C. Wohlgemuth */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-os2.c	1.22 02/10/19 Copyright 1998 J. Schilling, C. Wohlgemuth";
+	"@(#)scsi-os2.c	1.25 04/01/15 Copyright 1998 J. Schilling, C. Wohlgemuth";
 #endif
 /*
  *	Interface for the OS/2 ASPI-Router ASPIROUT.SYS ((c) D. Dorau).
@@ -30,14 +30,14 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #undef	sense
 
-/*#define DEBUG*/
+/*#define	DEBUG*/
 
 /* For AspiRouter */
 #include "scg/srb_os2.h"
@@ -49,16 +49,16 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.22";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-os2.c-1.25";	/* The version for this transport*/
 
-#define FILE_OPEN			0x0001
-#define OPEN_SHARE_DENYREADWRITE	0x0010
-#define OPEN_ACCESS_READWRITE		0x0002
-#define DC_SEM_SHARED			0x01
-#define OBJ_TILE			0x0040
-#define PAG_READ			0x0001
-#define PAG_WRITE			0x0002
-#define PAG_COMMIT			0x0010
+#define	FILE_OPEN			0x0001
+#define	OPEN_SHARE_DENYREADWRITE	0x0010
+#define	OPEN_ACCESS_READWRITE		0x0002
+#define	DC_SEM_SHARED			0x01
+#define	OBJ_TILE			0x0040
+#define	PAG_READ			0x0001
+#define	PAG_WRITE			0x0002
+#define	PAG_COMMIT			0x0010
 
 typedef unsigned long LHANDLE;
 typedef unsigned long ULONG;
@@ -76,7 +76,7 @@ typedef ULONG	HEV;
 struct scg_local {
 	int	dummy;
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 #define	MAX_DMA_OS2	(63*1024) /* ASPI-Router allows up to 64k */
 
@@ -164,7 +164,7 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 	}
@@ -172,10 +172,10 @@ scgo_open(scgp, device)
 	if (!open_driver(scgp))	/* Try to open ASPI-Router */
 		return (-1);
 	atexit(exit_func);	/* Install Exit Function which closes the ASPI-Router */
-  
-	/* 
-	 * Success after all 
-	 */ 
+
+	/*
+	 * Success after all
+	 */
 	return (1);
 }
 
@@ -307,14 +307,14 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 	/*
 	 * XXX Does this reset TGT or BUS ???
 	 */
-	SRBlock.cmd	     = SRB_Reset;	/* reset device */
-	SRBlock.ha_num	     = scg_scsibus(scgp);/* host adapter number	*/
-	SRBlock.flags	     = SRB_Post;	/* posting enabled	*/
-	SRBlock.u.res.target = scg_target(scgp);/* target id		*/
-	SRBlock.u.res.lun    = scg_lun(scgp);	/* target LUN		*/
+	SRBlock.cmd		= SRB_Reset;		/* reset device		*/
+	SRBlock.ha_num		= scg_scsibus(scgp);	/* host adapter number	*/
+	SRBlock.flags		= SRB_Post;		/* posting enabled	*/
+	SRBlock.u.res.target	= scg_target(scgp);	/* target id		*/
+	SRBlock.u.res.lun	= scg_lun(scgp);	/* target LUN		*/
 
-	rc = DosDevIOCtl(driver_handle, 0x92, 0x02, (void*) &SRBlock, sizeof(SRB), &cbParam,
-			(void*) &SRBlock, sizeof(SRB), &cbreturn);
+	rc = DosDevIOCtl(driver_handle, 0x92, 0x02, (void*) &SRBlock, sizeof (SRB), &cbParam,
+			(void*) &SRBlock, sizeof (SRB), &cbreturn);
 	if (rc) {
 		js_fprintf((FILE *)scgp->errfile,
 				"DosDevIOCtl() failed in resetDevice.\n");
@@ -331,7 +331,7 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 		"resetDevice of host: %d target: %d lun: %d successful.\n", scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 	js_fprintf((FILE *)scgp->errfile,
 		"SRBlock.ha_status: 0x%x, SRBlock.target_status: 0x%x, SRBlock.satus: 0x%x\n",
-				 SRBlock.u.cmd.ha_status, SRBlock.u.cmd.target_status, SRBlock.status);
+				SRBlock.u.cmd.ha_status, SRBlock.u.cmd.target_status, SRBlock.status);
 #endif
 	return (0);
 }
@@ -346,16 +346,17 @@ set_error(srb, sp)
 {
 	switch (srb->status) {
 
-	case SRB_InvalidCmd:		/* 0x80 Invalid SCSI request	     */
-	case SRB_InvalidHA:		/* 0x81 Invalid host adapter number  */
-	case SRB_BadDevice:		/* 0x82 SCSI device not installed    */
+	case SRB_InvalidCmd:		/* 0x80 Invalid SCSI request	    */
+	case SRB_InvalidHA:		/* 0x81 Invalid host adapter number */
+	case SRB_BadDevice:		/* 0x82 SCSI device not installed   */
 		sp->error = SCG_FATAL;
-		sp->ux_errno = EINVAL;
+		sp->ux_errno = EINVAL;	/* Should we ever return != EIO	    */
+		sp->ux_errno = EIO;
 		break;
 
 
-	case SRB_Busy:			/* 0x00 SCSI request in progress     */
-	case SRB_Aborted:		/* 0x02 SCSI aborted by host	     */
+	case SRB_Busy:			/* 0x00 SCSI request in progress    */
+	case SRB_Aborted:		/* 0x02 SCSI aborted by host	    */
 	case SRB_BadAbort:		/* 0x03 Unable to abort SCSI request */
 	case SRB_Error:			/* 0x04 SCSI request completed with error */
 	default:
@@ -378,10 +379,10 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 
 	if (scgp->fd < 0) {			/* Set in scgo_open() */
 		sp->error = SCG_FATAL;
-		return (-1);
+		return (0);
 	}
 
-	if (sp->cdb_len > sizeof(SRBlock.u.cmd.cdb_st)) { /* commandsize too big */
+	if (sp->cdb_len > sizeof (SRBlock.u.cmd.cdb_st)) { /* commandsize too big */
 		sp->error = SCG_FATAL;
 		sp->ux_errno = EINVAL;
 		js_fprintf((FILE *)scgp->errfile,
@@ -390,7 +391,7 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 	}
 
 	/* clear command block */
-	fillbytes((caddr_t)&SRBlock.u.cmd.cdb_st, sizeof(SRBlock.u.cmd.cdb_st), '\0');
+	fillbytes((caddr_t)&SRBlock.u.cmd.cdb_st, sizeof (SRBlock.u.cmd.cdb_st), '\0');
 	/* copy cdrecord command into SRB */
 	movebytes(&sp->cdb, &SRBlock.u.cmd.cdb_st, sp->cdb_len);
 
@@ -400,11 +401,11 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 
 	SRBlock.flags = SRB_Post;		/* flags */
 
-	SRBlock.u.cmd.target	= scg_target(scgp);/* Target SCSI ID */
-	SRBlock.u.cmd.lun	= scg_lun(scgp);/* Target SCSI LUN */
+	SRBlock.u.cmd.target	= scg_target(scgp); /* Target SCSI ID */
+	SRBlock.u.cmd.lun	= scg_lun(scgp); /* Target SCSI LUN */
 	SRBlock.u.cmd.data_len	= sp->size;	/* # of bytes transferred */
 	SRBlock.u.cmd.data_ptr	= 0;		/* pointer to data buffer */
-	SRBlock.u.cmd.sense_len	= sp->sense_len;/* length of sense buffer */
+	SRBlock.u.cmd.sense_len	= sp->sense_len; /* length of sense buffer */
 
 	SRBlock.u.cmd.link_ptr	= 0;		/* pointer to next SRB */
 	SRBlock.u.cmd.cdb_len	= sp->cdb_len;	/* SCSI command length */
@@ -415,7 +416,7 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 	} else {
 		if (sp->size > 0) {
 			SRBlock.flags |= SRB_Write;
-			if (scgp->bufbase != sp->addr) {/* Copy only if data not in ASPI-Mem */
+			if (scgp->bufbase != sp->addr) { /* Copy only if data not in ASPI-Mem */
 				movebytes(sp->addr, scgp->bufbase, sp->size);
 			}
 		} else {
@@ -429,8 +430,8 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 
 	/* execute SCSI	command */
 	rc = DosDevIOCtl(driver_handle, 0x92, 0x02,
-			 (void*) &SRBlock, sizeof(SRB), &cbParam,
-			 (void*) &SRBlock, sizeof(SRB), &cbreturn);
+			(void*) &SRBlock, sizeof (SRB), &cbParam,
+			(void*) &SRBlock, sizeof (SRB), &cbreturn);
 
 	if (rc) {		/* An error occured */
 		js_fprintf((FILE *)scgp->errfile,
@@ -470,7 +471,7 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 					if (scgp->bufbase != sp->addr)	/* Copy only if data not in ASPI-Mem */
 						movebytes(scgp->bufbase, sp->addr, SRBlock.u.cmd.data_len);
 					ptr = (UCHAR*)sp->addr;
-					sp->resid = sp->size - SRBlock.u.cmd.data_len;/*nicht übertragene bytes. Korrekt berechnet???*/
+					sp->resid = sp->size - SRBlock.u.cmd.data_len; /*nicht übertragene bytes. Korrekt berechnet???*/
 				}
 			}	/* end of if (sp->flags & SCG_RECV_DATA) */
 			if (SRBlock.u.cmd.target_status == SRB_CheckStatus) { /* Sense data valid */
@@ -481,7 +482,7 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 				ptr = (UCHAR*)&SRBlock.u.cmd.cdb_st;
 				ptr += SRBlock.u.cmd.cdb_len;
 
-				fillbytes(&sp->u_sense.Sense, sizeof(sp->u_sense.Sense), '\0');
+				fillbytes(&sp->u_sense.Sense, sizeof (sp->u_sense.Sense), '\0');
 				movebytes(ptr, &sp->u_sense.Sense, sp->sense_len);
 
 				sp->u_scb.cmd_scb[0] = SRBlock.u.cmd.target_status;
@@ -500,7 +501,7 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 			ptr = (UCHAR*)&SRBlock.u.cmd.cdb_st;
 			ptr += SRBlock.u.cmd.cdb_len;
 
-			fillbytes(&sp->u_sense.Sense, sizeof(sp->u_sense.Sense), '\0');
+			fillbytes(&sp->u_sense.Sense, sizeof (sp->u_sense.Sense), '\0');
 			movebytes(ptr, &sp->u_sense.Sense, sp->sense_len);
 
 			sp->u_scb.cmd_scb[0] = SRBlock.u.cmd.target_status;
@@ -512,7 +513,7 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 			}
 		}
 #ifdef	really
-		sp->resid	= SRBlock.u.cmd.data_len;/* XXXXX Got no Data ????? */
+		sp->resid	= SRBlock.u.cmd.data_len; /* XXXXX Got no Data ????? */
 #else
 		sp->resid	= sp->size - SRBlock.u.cmd.data_len;
 #endif
@@ -521,16 +522,16 @@ static	SRB	SRBlock;			/* XXX makes it non reentrant */
 }
 
 /***************************************************************************
- *                                                                         *
- *  BOOL open_driver()                                                     *
- *                                                                         *
- *  Opens the ASPI Router device driver and sets device_handle.            *
- *  Returns:                                                               *
- *    TRUE - Success                                                       *
- *    FALSE - Unsuccessful opening of device driver                        *
- *                                                                         *
- *  Preconditions: ASPI Router driver has be loaded                        *
- *                                                                         *
+ *									   *
+ *  BOOL open_driver()							   *
+ *									   *
+ *  Opens the ASPI Router device driver and sets device_handle.		   *
+ *  Returns:								   *
+ *    TRUE - Success							   *
+ *    FALSE - Unsuccessful opening of device driver			   *
+ *									   *
+ *  Preconditions: ASPI Router driver has be loaded			   *
+ *									   *
  ***************************************************************************/
 LOCAL BOOL
 open_driver(scgp)
@@ -562,7 +563,7 @@ open_driver(scgp)
 
 	/* Init semaphore */
 	if (DosCreateEventSem(NULL, &postSema,	/* create event semaphore */
-				 DC_SEM_SHARED, 0)) {
+				DC_SEM_SHARED, 0)) {
 		DosClose(driver_handle);
 		js_fprintf((FILE *)scgp->errfile,
 				"Cannot create event semaphore!\n");
@@ -570,9 +571,9 @@ open_driver(scgp)
 		return (FALSE);
 	}
 	rc = DosDevIOCtl(driver_handle, 0x92, 0x03,	/* pass semaphore handle */
-			(void*) &postSema, sizeof(HEV),	/* to driver		 */
+			(void*) &postSema, sizeof (HEV), /* to driver		 */
 			&cbParam, (void*) &openSemaReturn,
-			sizeof(USHORT), &cbreturn);
+			sizeof (USHORT), &cbreturn);
 
 	if (rc||openSemaReturn) {			/* Error */
 		DosCloseEventSem(postSema);
@@ -583,16 +584,16 @@ open_driver(scgp)
 }
 
 /***************************************************************************
- *                                                                         *
- *  BOOL close_driver()                                                    *
- *                                                                         *
- *  Closes the device driver                                               *
- *  Returns:                                                               *
- *    TRUE - Success                                                       *
- *    FALSE - Unsuccessful closing of device driver                        *
- *                                                                         *
- *  Preconditions: ASPI Router driver has be opened with open_driver       *
- *                                                                         *
+ *									   *
+ *  BOOL close_driver()							   *
+ *									   *
+ *  Closes the device driver						   *
+ *  Returns:								   *
+ *    TRUE - Success							   *
+ *    FALSE - Unsuccessful closing of device driver			   *
+ *									   *
+ *  Preconditions: ASPI Router driver has be opened with open_driver	   *
+ *									   *
  ***************************************************************************/
 LOCAL BOOL
 close_driver()
@@ -627,7 +628,7 @@ wait_post(ULONG ulTimeOut)
 	return (rc);
 }
 
-LOCAL BOOL 
+LOCAL BOOL
 init_buffer(mem)
 	void	*mem;
 {
@@ -637,9 +638,9 @@ init_buffer(mem)
 	Ulong	cbParam;
 
 	rc = DosDevIOCtl(driver_handle, 0x92, 0x04,	/* pass buffers pointer */
-			(void*) mem, sizeof(void*),	/* to driver */
+			(void*) mem, sizeof (void*),	/* to driver */
 			&cbParam, (void*) &lockSegmentReturn,
-			sizeof(USHORT), &cbreturn);
+			sizeof (USHORT), &cbreturn);
 	if (rc)
 		return (FALSE);				/* DosDevIOCtl failed */
 	if (lockSegmentReturn)

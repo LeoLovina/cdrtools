@@ -1,4 +1,4 @@
-/* @(#)cd_text.c	1.4 02/04/06 Copyright 2000-2001 Heiko Eissfeldt */
+/* @(#)cd_text.c	1.5 03/12/31 Copyright 2000-2001 Heiko Eissfeldt */
 
 /* This is an include file! */
 /**************** CD-Text special treatment **********************************/
@@ -174,10 +174,11 @@ static void dump_binary(c)
 }
 #endif
 
-static int process_header __PR((cdtextpackdata *c, int dbcc, unsigned char *line));
+static int process_header __PR((cdtextpackdata *c, unsigned tracknr, int dbcc, unsigned char *line));
 
-static int process_header(c, dbcc, line)
+static int process_header(c, tracknr, dbcc, line)
 	cdtextpackdata *c;
+	unsigned tracknr;
 	int dbcc;
 	unsigned char *line;
 {
@@ -187,20 +188,20 @@ static int process_header(c, dbcc, line)
 #if	DETAILED
           fprintf (stderr, "Title");
 #endif
-	  if (c->headerfield[1] > 0 && c->headerfield[1] < 100
-	    && global.tracktitle[c->headerfield[1]] == NULL) {
+	  if (tracknr > 0 && tracknr < 100
+	    && global.tracktitle[tracknr] == NULL) {
 	    unsigned len;
 
 	    len = strlen((char *)line);
 
             if (len > 0)
-            	global.tracktitle[c->headerfield[1]] = malloc(len + 1);
-            if (global.tracktitle[c->headerfield[1]] != NULL) {
-               memcpy(global.tracktitle[c->headerfield[1]], line, len);
-               global.tracktitle[c->headerfield[1]][len] = '\0';
+            	global.tracktitle[tracknr] = malloc(len + 1);
+            if (global.tracktitle[tracknr] != NULL) {
+               memcpy(global.tracktitle[tracknr], line, len);
+               global.tracktitle[tracknr][len] = '\0';
             }
           } else 
-	  if (c->headerfield[1] == 0
+	  if (tracknr == 0
 	    && global.disctitle == NULL) {
 	    unsigned len;
 
@@ -218,21 +219,21 @@ static int process_header(c, dbcc, line)
 #if	DETAILED
           fprintf(stderr, "Performer(s)");
 #endif
-	  if (c->headerfield[1] > 0 && c->headerfield[1] < 100
-	    && global.trackcreator[c->headerfield[1]] == NULL) {
+	  if (tracknr > 0 && tracknr < 100
+	    && global.trackcreator[tracknr] == NULL) {
 	    unsigned len;
 
 	    len = strlen((char *)line);
 
             if (len > 0)
-		global.trackcreator[c->headerfield[1]] = malloc(len + 1);
+		global.trackcreator[tracknr] = malloc(len + 1);
 
-            if (global.trackcreator[c->headerfield[1]] != NULL) {
-               memcpy(global.trackcreator[c->headerfield[1]], line, len);
-               global.trackcreator[c->headerfield[1]][len] = '\0';
+            if (global.trackcreator[tracknr] != NULL) {
+               memcpy(global.trackcreator[tracknr], line, len);
+               global.trackcreator[tracknr][len] = '\0';
             }
           } else 
-	  if (c->headerfield[1] == 0
+	  if (tracknr == 0
 	    && global.creator == NULL) {
 	    unsigned len;
 
@@ -270,7 +271,7 @@ static int process_header(c, dbcc, line)
 #if	DETAILED
           fprintf(stderr, "Disc identification");
 #endif
-	  if (c->headerfield[1] == 0 && line[0] != '\0') {
+	  if (tracknr == 0 && line[0] != '\0') {
 	    fprintf(stderr, "Disc identification: %s\n", line);
 	  }
         break;
@@ -283,13 +284,12 @@ static int process_header(c, dbcc, line)
 #if	DETAILED
           fprintf(stderr, "UPC or ISRC");
 #endif
-	  if (c->headerfield[1] > 0 && c->headerfield[1] < 100) {
-	    Set_ISRC(c->headerfield[1], line);
+	  if (tracknr > 0 && tracknr < 100) {
+	    Set_ISRC(tracknr, line);
 	  } else
-	  if (c->headerfield[1] == 0 && line[0] != '\0') {
+	  if (tracknr == 0 && line[0] != '\0') {
 	    Set_MCN(line);
 	  }
-
         break;
         case 0x88: /* Table of Content information */
 #if	DETAILED
@@ -307,7 +307,7 @@ static int process_header(c, dbcc, line)
 #if	DETAILED == 0
 	  break;
 #else
-          switch (c->headerfield[1]) {
+          switch (tracknr) {
 	    case 0:
 	  fprintf(stderr, "first track is %d, last track is %d\n", 
 			c->textdatafield[1],
@@ -385,10 +385,10 @@ static int process_header(c, dbcc, line)
 #if !defined DEBUG_CDTEXT
       }
 #if	DETAILED
-      if (c->headerfield[1] == 0) {
+      if (tracknr == 0) {
             fprintf(stderr, " for album   : ->");
       } else {
-            fprintf(stderr, " for track %2u: ->", c->headerfield[1]);
+            fprintf(stderr, " for track %2u: ->", tracknr);
       }
       fputs ((char *) line, stderr);
       fputs ("<-", stderr);

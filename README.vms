@@ -83,7 +83,7 @@ Options:
         -nopreemp       Audio tracks are mastered with no preemphasis (default)
         -copy           Audio tracks have unlimited copy permission
         -nocopy         Audio tracks may only be copied once for personal use (default)
-        -scms           Audio tracks willl not not have any copy permission at all
+        -scms           Audio tracks will not have any copy permission at all
         -pad            Pad data tracks with 15 zeroed sectors
                         Pad audio tracks to a multiple of 2352 bytes
         -nopad          Do not pad data tracks (default)

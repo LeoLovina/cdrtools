@@ -1,7 +1,7 @@
-/* @(#)ifo_read.h	1.1 02/07/20 joerg */
+/* @(#)ifo_read.h	1.2 04/03/02 joerg */
 
-#ifndef _IFO_READ_H
-#define _IFO_READ_H
+#ifndef	_IFO_READ_H
+#define	_IFO_READ_H
 
 /*
  * Copyright (C) 2000, 2001, 2002 Björn Englund <d4bjorn@dtek.chalmers.se>,
@@ -46,7 +46,7 @@ extern "C" {
 #endif
 
 
-/**
+/*
  * handle = ifoOpen(dvd, title);
  *
  * Opens an IFO and reads a tiny fraction of the data for the IFO file
@@ -57,9 +57,9 @@ extern "C" {
 extern	ifo_handle_t *ifoOpen	__PR((dvd_reader_t *, int));
 
 
-/**
+/*
  * ifoClose(ifofile);
- * Cleans up the IFO information. This will free all data allocated. 
+ * Cleans up the IFO information. This will free all data allocated.
  */
 extern	void ifoClose		__PR((ifo_handle_t *));
 

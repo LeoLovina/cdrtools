@@ -1,7 +1,7 @@
-/* @(#)scsi-osf.c	1.25 02/11/30 Copyright 1998 J. Schilling */
+/* @(#)scsi-osf.c	1.26 04/01/15 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-osf.c	1.25 02/11/30 Copyright 1998 J. Schilling";
+	"@(#)scsi-osf.c	1.26 04/01/15 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Interface for Digital UNIX (OSF/1 generic SCSI implementation (/dev/cam).
@@ -37,7 +37,7 @@ static	char __sccsid[] =
 #include <sys/types.h>
 #include <io/common/iotypes.h>
 #include <io/cam/cam.h>
-#include <io/cam/uagt.h> 
+#include <io/cam/uagt.h>
 
 /*
  *	Warning: you may change this source, but if you do that
@@ -46,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.25";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-osf.c-1.26";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -56,7 +56,7 @@ struct scg_local {
 	int	scgfile;	/* Used for ioctl()	*/
 	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 LOCAL	BOOL	scsi_checktgt	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
 
@@ -112,9 +112,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	b;
 	register int	t;
 	register int	l;
@@ -137,14 +137,14 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 		scglocal(scgp)->scgfile = -1;
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = 0;
 			}
 		}
@@ -162,7 +162,7 @@ scgo_open(scgp, device)
 
 	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 		/* scsi_checktgt() ??? */
-		for (l=0; l < MAX_LUN ; l++)
+		for (l = 0; l < MAX_LUN; l++)
 			scglocal(scgp)->scgfiles[b][t][l] = 1;
 		return (1);
 	}
@@ -171,10 +171,10 @@ scgo_open(scgp, device)
 	 * a SCSI bus is present in the current system.
 	 * scsi_checktgt() is used as a workaround for this problem.
 	 */
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
 			if (scsi_checktgt(scgp, scglocal(scgp)->scgfile, b, t, 0)) {
-				for (l=0; l < MAX_LUN ; l++)
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = 1;
 				/*
 				 * Found a target on this bus.
@@ -225,7 +225,7 @@ scsi_checktgt(scgp, f, busno, tgt, tlun)
 	scgp->fd = f;
 
 	sc = *sp;
-	fillbytes((caddr_t)sp, sizeof(*sp), '\0');
+	fillbytes((caddr_t)sp, sizeof (*sp), '\0');
 	sp->addr = (caddr_t)0;
 	sp->size = 0;
 	sp->flags = SCG_DISRE_ENA | SCG_SILENT;
@@ -291,7 +291,7 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
+	for (t = 0; t < MAX_TGT; t++) {
 		if (scglocal(scgp)->scgfiles[busno][t][0] != 0)
 			return (TRUE);
 	}
@@ -309,7 +309,7 @@ scgo_fileno(scgp, busno, tgt, tlun)
 	if (scgp->local == NULL)
 		return (-1);
 
-	return (busno < 0 || busno >= MAX_SCG) ? -1 : scglocal(scgp)->scgfile;
+	return ((busno < 0 || busno >= MAX_SCG) ? -1 : scglocal(scgp)->scgfile);
 }
 
 LOCAL int
@@ -340,25 +340,25 @@ scgo_send(scgp)
 	SCSI		*scgp;
 {
 	struct scg_cmd	*sp = scgp->scmd;
-	CCB_SCSIIO ccb;
-	UAGT_CAM_CCB ua;
-	unsigned char  *cdb;
-	CCB_RELSIM relsim;
-	UAGT_CAM_CCB relua;
-	int             i;
+	CCB_SCSIIO	ccb;
+	UAGT_CAM_CCB	ua;
+	unsigned char	*cdb;
+	CCB_RELSIM	relsim;
+	UAGT_CAM_CCB	relua;
+	int		i;
 
 	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
 
-	fillbytes(&ua, sizeof(UAGT_CAM_CCB), 0);
-	fillbytes(&ccb, sizeof(CCB_SCSIIO), 0);
+	fillbytes(&ua, sizeof (UAGT_CAM_CCB), 0);
+	fillbytes(&ccb, sizeof (CCB_SCSIIO), 0);
 
 	ua.uagt_ccb = (CCB_HEADER *) &ccb;
-	ua.uagt_ccblen = sizeof(CCB_SCSIIO);
+	ua.uagt_ccblen = sizeof (CCB_SCSIIO);
 	ccb.cam_ch.my_addr = (CCB_HEADER *) &ccb;
-	ccb.cam_ch.cam_ccb_len = sizeof(CCB_SCSIIO);
+	ccb.cam_ch.cam_ccb_len = sizeof (CCB_SCSIIO);
 
 	ua.uagt_snsbuf = ccb.cam_sense_ptr = sp->u_sense.cmd_sense;
 	ua.uagt_snslen = ccb.cam_sense_len = AUTO_SENSE_LEN;
@@ -446,8 +446,8 @@ scgo_send(scgp)
 	 * But without this, we hang...
 	 */
 	if (ccb.cam_ch.cam_status & CAM_SIM_QFRZN) {
-		fillbytes(&relsim, sizeof(CCB_RELSIM), 0);
-		relsim.cam_ch.cam_ccb_len = sizeof(CCB_SCSIIO);
+		fillbytes(&relsim, sizeof (CCB_RELSIM), 0);
+		relsim.cam_ch.cam_ccb_len = sizeof (CCB_SCSIIO);
 		relsim.cam_ch.cam_func_code = XPT_REL_SIMQ;
 		relsim.cam_ch.cam_flags = CAM_DIR_IN | CAM_DIS_CALLBACK;
 		relsim.cam_ch.cam_path_id	= scg_scsibus(scgp);
@@ -455,12 +455,12 @@ scgo_send(scgp)
 		relsim.cam_ch.cam_target_lun	= scg_lun(scgp);
 
 		relua.uagt_ccb = (struct ccb_header *) & relsim;	/* wrong cast */
-		relua.uagt_ccblen = sizeof(relsim);
+		relua.uagt_ccblen = sizeof (relsim);
 		relua.uagt_buffer = NULL;
 		relua.uagt_buflen = 0;
 
 		if (ioctl(scgp->fd, UAGT_CAM_IO, (caddr_t) & relua) < 0)
 			errmsg("DEC CAM -> LMA\n");
 	}
-	return 0;
+	return (0);
 }

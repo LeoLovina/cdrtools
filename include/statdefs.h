@@ -1,4 +1,4 @@
-/* @(#)statdefs.h	1.8 03/03/08 Copyright 1998 J. Schilling */
+/* @(#)statdefs.h	1.9 03/06/15 Copyright 1998 J. Schilling */
 /*
  *	Definitions for stat() file mode
  *
@@ -337,4 +337,3 @@
 #endif
 
 #endif	/* _STATDEFS_H */
-

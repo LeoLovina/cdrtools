@@ -1,4 +1,4 @@
-/* @(#)standard.h	1.29 01/11/11 Copyright 1985 J. Schilling */
+/* @(#)standard.h	1.31 03/08/23 Copyright 1985 J. Schilling */
 /*
  *	standard definitions
  *
@@ -24,13 +24,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _STANDARD_H
-#define _STANDARD_H
+#define	_STANDARD_H
 
 #ifndef _MCONFIG_H
 #include <mconfig.h>
@@ -92,7 +92,9 @@
 typedef int __SBOOL;
 typedef int BOOL;
 #ifdef	JOS
+#	ifndef	__GNUC__
 #	define	NO_VOID
+#	endif
 #endif
 #ifdef	NO_VOID
 	typedef	int	VOID;
@@ -124,9 +126,9 @@ typedef int BOOL;
  * via the Schily SING include files so we know whether it has been included
  * before we come here.
  */
-#if	defined(_SIZE_T)     || defined(_T_SIZE_) || defined(_T_SIZE) || \
-	defined(__SIZE_T)    || defined(_SIZE_T_) || \
-	defined(_GCC_SIZE_T) || defined(_SIZET_)  || \
+#if	defined(_SIZE_T)	|| defined(_T_SIZE_)	|| defined(_T_SIZE) || \
+	defined(__SIZE_T)	|| defined(_SIZE_T_)	|| \
+	defined(_GCC_SIZE_T)	|| defined(_SIZET_)	|| \
 	defined(__sys_stdtypes_h) || defined(___int_size_t_h) || defined(size_t)
 
 #ifndef	FOUND_SIZE_T

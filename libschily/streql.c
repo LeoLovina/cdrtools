@@ -1,8 +1,8 @@
-/* @(#)streql.c	1.6 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)streql.c	1.7 03/06/15 Copyright 1985, 1995-2003 J. Schilling */
 /*
  *	Check if two strings are equal
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,15 +15,16 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <standard.h>
 #include <schily.h>
 
-int streql(a, b)
+EXPORT int
+streql(a, b)
 	const char	*a;
 	const char	*b;
 {

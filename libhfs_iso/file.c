@@ -1,7 +1,7 @@
-/* @(#)file.c	1.2 01/08/25 joerg */
+/* @(#)file.c	1.3 04/06/17 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)file.c	1.2 01/08/25 joerg";
+	"@(#)file.c	1.3 04/06/17 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -124,7 +124,7 @@ int f_doblock(file, number, bp, func)
   else
     abnum -= fabn;
 
-  while (1)
+  for (;;)
     {
       unsigned int num;
 

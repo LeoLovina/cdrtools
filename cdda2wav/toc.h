@@ -1,7 +1,8 @@
-/* @(#)toc.h	1.7 02/04/08 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)toc.h	1.8 03/03/31 Copyright 1998,1999 Heiko Eissfeldt */
 #define MAXTRK	100	/* maximum of audio tracks (without a hidden track) */
 
 extern unsigned cdtracks;
+extern int have_multisession;
 extern int have_CD_extra;
 extern int have_CD_text;
 extern int have_CDDB;

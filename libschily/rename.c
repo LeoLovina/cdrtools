@@ -1,7 +1,7 @@
-/* @(#)rename.c	1.2 03/03/08 Copyright 1998-2003 J. Schilling */
+/* @(#)rename.c	1.6 04/09/04 Copyright 1998-2003 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)rename.c	1.2 03/03/08 Copyright 1998-2003 J. Schilling";
+	"@(#)rename.c	1.6 04/09/04 Copyright 1998-2003 J. Schilling";
 #endif
 /*
  *	rename() for old systems that don't have it.
@@ -26,13 +26,18 @@ static	char sccsid[] =
 
 #define	rename	__nothing__
 #include <mconfig.h>
+
+#ifndef	HAVE_RENAME
+
 #include <stdio.h>	/* XXX not OK but needed for js_xx() in schily.h */
 #include <unixstd.h>
 #include <strdefs.h>
 #include <statdefs.h>
 #include <maxpath.h>
 #include <standard.h>
+#include <utypes.h>
 #include <schily.h>
+#include <errno.h>
 #undef	rename
 #include <libport.h>
 
@@ -49,7 +54,9 @@ static	char sccsid[] =
 
 #define	FILEDESC struct stat
 
-#ifndef	HAVE_RENAME
+#ifndef	HAVE_LSTAT
+#define	lstat	stat
+#endif
 
 EXPORT int
 rename(old, new)
@@ -61,10 +68,25 @@ rename(old, new)
 	char	strpid[32];
 	int	strplen;
 	BOOL	savpresent = FALSE;
+	BOOL	newpresent = FALSE;
 	int	serrno;
+	FILEDESC ostat;
 	FILEDESC xstat;
 
-	strplen = js_snprintf(strpid, sizeof(strpid), ".%d", getpid());
+	serrno = geterrno();
+
+	if (lstat(old, &ostat) < 0)
+		return (-1);
+
+	if (lstat(new, &xstat) >= 0) {
+		newpresent = TRUE;
+		if (ostat.st_dev == xstat.st_dev &&
+		    ostat.st_ino == xstat.st_ino)
+			return (0);		/* old == new we are done */
+	}
+
+	strplen = js_snprintf(strpid, sizeof (strpid), ".%lld",
+							(Llong)getpid());
 
 	if (strlen(new) <= (MAXNAME-strplen) ||
 	    strchr(&new[MAXNAME-strplen], '/') == NULL) {
@@ -73,14 +95,22 @@ rename(old, new)
 		 */
 		strncpy(nname, new, MAXNAME-strplen);
 		nname[MAXNAME-strplen] = '\0';
-		js_snprintf(bakname, sizeof(bakname), "%s%s", nname, strpid);
+		js_snprintf(bakname, sizeof (bakname), "%s%s", nname, strpid);
 		unlink(bakname);
 		if (link(new, bakname) >= 0)
 			savpresent = TRUE;
 	}
 
-	if (stat(new, &xstat) >= 0 && unlink(new) < 0)
-		return (-1);
+	if (newpresent) {
+		if (rmdir(new) < 0) {
+			if (geterrno() == ENOTDIR) {
+				if (unlink(new) < 0)
+					return (-1);
+			} else {
+				return (-1);
+			}
+		}
+	}
 
 	/*
 	 * Now add 'new' name to 'old'.
@@ -100,7 +130,8 @@ rename(old, new)
 	}
 	if (unlink(old) < 0)
 		return (-1);
-	unlink(bakname);
+	unlink(bakname);		/* Fails in most cases...	*/
+	seterrno(serrno);		/* ...so restore errno		*/
 	return (0);
 }
 #endif	/* HAVE_RENAME */

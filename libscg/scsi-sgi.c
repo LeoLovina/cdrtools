@@ -1,7 +1,7 @@
-/* @(#)scsi-sgi.c	1.35 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-sgi.c	1.36 04/01/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sgi.c	1.35 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-sgi.c	1.36 04/01/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the SGI generic SCSI implementation.
@@ -31,9 +31,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <dslib.h>
@@ -45,7 +45,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.35";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-sgi.c-1.36";	/* The version for this transport*/
 
 #ifdef	USE_DSLIB
 
@@ -61,7 +61,7 @@ struct dsreq * dsp = 0;
 struct scg_local {
 	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 #endif
 
@@ -116,9 +116,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -144,26 +144,26 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
 	}
 
-	if (busno >= 0 && tgt >= 0 && tlun >= 0) {	
+	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 
-		js_snprintf(devname, sizeof(devname),
+		js_snprintf(devname, sizeof (devname),
 				"/dev/scsi/sc%dd%dl%d", busno, tgt, tlun);
 #ifdef	USE_DSLIB
 		dsp = dsopen(devname, O_RDWR);
 		if (dsp == 0)
-			return(-1);
+			return (-1);
 #else
 		f = open(devname, O_RDWR);
 		if (f < 0) {
@@ -175,16 +175,16 @@ scgo_open(scgp, device)
 		}
 		scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
 #endif
-		return(1);
+		return (1);
 	} else {
 #ifdef	USE_DSLIB
-		return(-1);
+		return (-1);
 #else
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-/*				for (l=0; l < MAX_LUN ; l++) {*/
-				for (l=0; l < 1 ; l++) {
-					js_snprintf(devname, sizeof(devname),
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+/*				for (l = 0; l < MAX_LUN; l++) {*/
+				for (l = 0; l < 1; l++) {
+					js_snprintf(devname, sizeof (devname),
 							"/dev/scsi/sc%dd%dl%d", b, t, l);
 					f = open(devname, O_RDWR);
 					if (f >= 0) {
@@ -212,9 +212,9 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
@@ -233,7 +233,7 @@ scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
-	return	(MAX_DMA_SGI);
+	return (MAX_DMA_SGI);
 }
 
 LOCAL void *
@@ -272,8 +272,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -421,7 +421,7 @@ scgo_send(scgp)
 	dsp->ds_iovbuf = 0;
 	dsp->ds_iovlen = 0;
 #endif
-	
+
 	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
@@ -432,7 +432,7 @@ scgo_send(scgp)
 		flags |= DSRQ_READ;
 	else if (sp->size > 0)
 		flags |= DSRQ_WRITE;
-	
+
 	dsp->ds_flags	= flags;
 	dsp->ds_link	= 0;
 	dsp->ds_synch	= 0;
@@ -445,7 +445,7 @@ scgo_send(scgp)
 	SENSEBUF(dsp)	= (caddr_t)sp->u_sense.cmd_sense;
 	SENSELEN(dsp)	= sizeof (sp->u_sense.cmd_sense);
 	TIME(dsp)	= (sp->timeout * 1000) + 100;
-	
+
 	errno		= 0;
 	sp->ux_errno	= 0;
 	sp->sense_count	= 0;
@@ -475,17 +475,17 @@ scgo_send(scgp)
 			sp->sense_count = SCG_MAX_SENSE;
 
 	}
-	switch(RET(dsp)) {
+	switch (RET(dsp)) {
 
 	default:
 		sp->error = SCG_RETRYABLE;	break;
 
-	case 0:			/* OK		 		      */
-	case DSRT_SHORT:	/* not implemented 		      */
+	case 0:			/* OK					*/
+	case DSRT_SHORT:	/* not implemented			 */
 		sp->error = SCG_NO_ERROR;	break;
 
-	case DSRT_UNIMPL:	/* not implemented 		      */
-	case DSRT_REVCODE:	/* software obsolete must recompile   */
+	case DSRT_UNIMPL:	/* not implemented			*/
+	case DSRT_REVCODE:	/* software obsolete must recompile 	*/
 	case DSRT_NOSEL:
 		sp->u_scb.cmd_scb[0] = 0;
 		sp->error = SCG_FATAL;		break;

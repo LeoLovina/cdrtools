@@ -1,7 +1,7 @@
-/* @(#)scsi_cmds.c	1.27 02/12/08 Copyright 1998-2002 Heiko Eissfeldt */
+/* @(#)scsi_cmds.c	1.29 03/03/31 Copyright 1998-2002 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)scsi_cmds.c	1.27 02/12/08 Copyright 1998-2002 Heiko Eissfeldt";
+"@(#)scsi_cmds.c	1.29 03/03/31 Copyright 1998-2002 Heiko Eissfeldt";
 
 #endif
 /* file for all SCSI commands
@@ -121,6 +121,12 @@ get_orig_sectorsize(scgp, m4, m10, m11)
       /* FIXME: some drives dont deliver block descriptors !!! */
       if (modesense[3] == 0)
         return 0;
+
+#if	0
+	modesense[4] = 0x81;
+	modesense[10] = 0x08;
+	modesense[11] = 0x00;
+#endif
 
       if (m4 != NULL)                       /* density */
         *m4 = modesense[4];
@@ -386,6 +392,8 @@ struct outer {
 	struct tocdesc ent[1];
 };
 
+static unsigned long first_session_leadout = 0;
+
 static unsigned collect_tracks __PR((struct outer *po, unsigned entries, BOOL bcd_flag));
 
 static unsigned collect_tracks(po, entries, bcd_flag)
@@ -527,6 +535,9 @@ i, po->ent[i].adrctl);
 		{
 			unsigned leadout_start_tmp  = 
 				dvd_lba(&po->ent[i].padr2);
+
+			if (first_session_leadout  == 0)
+				first_session_leadout = leadout_start_tmp - 150;
 
 			if (leadout_start_tmp > leadout_start) {
 				leadout_start_orig = leadout_start_tmp;
@@ -717,6 +728,10 @@ unsigned ReadFirstSessionTOCSony ( scgp )
 	SCSI *scgp;
 {
 	unsigned return_length;
+	
+	if (first_session_leadout != 0)
+		return first_session_leadout;
+
 	return_length = ReadFullTOCSony(scgp);
         if (return_length >= 4 + (3 * 11) -2) {
           unsigned off;
@@ -791,6 +806,10 @@ unsigned ReadFirstSessionTOCMMC ( scgp )
 {
         unsigned off;
 	unsigned return_length;
+
+	if (first_session_leadout != 0)
+		return first_session_leadout;
+
 	return_length = ReadFullTOCMMC(scgp);
 
         /* We want the entry with POINT = 0xA2, which has the start position
@@ -973,7 +992,7 @@ static int ReadStandardLowlevel (scgp, p, lSector, SectorBurstVal, secsize )
 	scmd->cdb.g1_cdb.res |= (accepts_fua_bit == 1 ? 1 << 2 : 0);
         g1_cdbaddr(&scmd->cdb.g1_cdb, lSector);
         g1_cdblen(&scmd->cdb.g1_cdb, SectorBurstVal);
-        if (scgp->verbose) fprintf(stderr, "\nReadStandard10 CDDA...");
+        if (scgp->verbose) fprintf(stderr, "\nReadStandard10 %s (%u)...", secsize > 2048 ? "CDDA" : "CD_DATA", secsize);
 
 	scgp->cmdname = "ReadStandard10";
 
@@ -985,6 +1004,15 @@ static int ReadStandardLowlevel (scgp, p, lSector, SectorBurstVal, secsize )
 
 
 int ReadStandard (scgp, p, lSector, SectorBurstVal )
+	SCSI *scgp;
+	UINT4 *p;
+	unsigned lSector;
+	unsigned SectorBurstVal;
+{
+	return ReadStandardLowlevel(scgp, p, lSector, SectorBurstVal, CD_FRAMESIZE_RAW);
+}
+
+int ReadStandardData (scgp, p, lSector, SectorBurstVal )
 	SCSI *scgp;
 	UINT4 *p;
 	unsigned lSector;

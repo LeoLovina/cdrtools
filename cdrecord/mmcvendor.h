@@ -1,6 +1,6 @@
-/* @(#)mmcvendor.h	1.2 02/08/29 Copyright 2002 J. Schilling */
+/* @(#)mmcvendor.h	1.3 04/03/01 Copyright 2002-2004 J. Schilling */
 /*
- *	Copyright (c) 2002 J. Schilling
+ *	Copyright (c) 2002-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_MMCVENDOR_H
@@ -66,10 +66,10 @@ struct ricoh_mode_page_30 {
 #endif
 
 struct cd_mode_vendor {
-        struct scsi_mode_header header;
-        union cd_v_pagex  {
-                struct ricoh_mode_page_30 page30;
-        } pagex;
+	struct scsi_mode_header header;
+	union cd_v_pagex {
+		struct ricoh_mode_page_30 page30;
+	} pagex;
 };
 
 

@@ -1,4 +1,4 @@
-/* @(#)scgcmd.h	2.21 02/08/08 Copyright 1986 J. Schilling */
+/* @(#)scgcmd.h	2.22 04/09/04 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI 'scg_cmd' structure that has been created
  *	for the SCSI general driver 'scg' for SunOS and Solaris but
@@ -17,9 +17,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_SCG_SCGCMD_H
@@ -31,7 +31,7 @@
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 #else
 # if	defined(_BIT_FIELDS_HTOL)	/* Motorola byteorder */
-# else 
+# else
 /*
  * #error will not work for all compilers (e.g. sunos4)
  * The following line will abort compilation on all compilers
@@ -55,7 +55,7 @@ extern "C" {
  * OS define the same types as in scsireg.h
  */
 
-/* 
+/*
  * SCSI status bits.
  */
 #define	ST_VU_00	0x01	/* Vendor unique		*/
@@ -65,43 +65,43 @@ extern "C" {
 #define	ST_IS_SEND	0x10	/* Intermediate status send	*/
 #define	ST_VU_05	0x20	/* Vendor unique		*/
 #define	ST_VU_06	0x40	/* Vendor unique		*/
-#define	ST_RSVD_07	0x80	/* Reserved	 		*/
+#define	ST_RSVD_07	0x80	/* Reserved			*/
 
-/* 
+/*
  * Sense key values for extended sense.
  */
-#define SC_NO_SENSE		0x00
-#define SC_RECOVERABLE_ERROR	0x01
-#define SC_NOT_READY		0x02
-#define SC_MEDIUM_ERROR		0x03
-#define SC_HARDWARE_ERROR	0x04
-#define SC_ILLEGAL_REQUEST	0x05
-#define SC_UNIT_ATTENTION	0x06
-#define SC_WRITE_PROTECT	0x07
-#define SC_BLANK_CHECK		0x08
-#define SC_VENDOR_UNIQUE	0x09
-#define SC_COPY_ABORTED		0x0A
-#define SC_ABORTED_COMMAND	0x0B
-#define SC_EQUAL		0x0C
-#define SC_VOLUME_OVERFLOW	0x0D
-#define SC_MISCOMPARE		0x0E
-#define SC_RESERVED		0x0F
+#define	SC_NO_SENSE		0x00
+#define	SC_RECOVERABLE_ERROR	0x01
+#define	SC_NOT_READY		0x02
+#define	SC_MEDIUM_ERROR		0x03
+#define	SC_HARDWARE_ERROR	0x04
+#define	SC_ILLEGAL_REQUEST	0x05
+#define	SC_UNIT_ATTENTION	0x06
+#define	SC_WRITE_PROTECT	0x07
+#define	SC_BLANK_CHECK		0x08
+#define	SC_VENDOR_UNIQUE	0x09
+#define	SC_COPY_ABORTED		0x0A
+#define	SC_ABORTED_COMMAND	0x0B
+#define	SC_EQUAL		0x0C
+#define	SC_VOLUME_OVERFLOW	0x0D
+#define	SC_MISCOMPARE		0x0E
+#define	SC_RESERVED		0x0F
 
 /*
  * Messages that SCSI can send.
  */
-#define SC_COMMAND_COMPLETE	0x00
-#define SC_SYNCHRONOUS		0x01
-#define SC_SAVE_DATA_PTR	0x02
-#define SC_RESTORE_PTRS		0x03
-#define SC_DISCONNECT		0x04
-#define SC_ABORT		0x06
-#define SC_MSG_REJECT		0x07
-#define SC_NO_OP		0x08
-#define SC_PARITY		0x09
-#define SC_IDENTIFY		0x80
-#define SC_DR_IDENTIFY		0xc0
-#define SC_DEVICE_RESET		0x0c
+#define	SC_COMMAND_COMPLETE	0x00
+#define	SC_SYNCHRONOUS		0x01
+#define	SC_SAVE_DATA_PTR	0x02
+#define	SC_RESTORE_PTRS		0x03
+#define	SC_DISCONNECT		0x04
+#define	SC_ABORT		0x06
+#define	SC_MSG_REJECT		0x07
+#define	SC_NO_OP		0x08
+#define	SC_PARITY		0x09
+#define	SC_IDENTIFY		0x80
+#define	SC_DR_IDENTIFY		0xc0
+#define	SC_DEVICE_RESET		0x0c
 
 #define	SC_G0_CDBLEN	6	/* Len of Group 0 commands */
 #define	SC_G1_CDBLEN	10	/* Len of Group 1 commands */
@@ -133,7 +133,7 @@ struct	scg_cmd {
 XXX	struct	scsi_status scb; ???	/* Status returnd by command */
 #endif
 	union {
-		struct	scsi_status Scb;/* Status returnd by command */
+		struct	scsi_status Scb; /* Status returnd by command */
 		Uchar	cmd_scb[SCG_MAX_STATUS];
 	} u_scb;
 #define	scb	u_scb.Scb
@@ -141,18 +141,18 @@ XXX	struct	scsi_status scb; ???	/* Status returnd by command */
 XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
 #endif
 	union {
-		struct	scsi_sense Sense;/* Sense bytes from command */
+		struct	scsi_sense Sense; /* Sense bytes from command */
 		Uchar	cmd_sense[SCG_MAX_SENSE];
 	} u_sense;
 #define	sense	u_sense.Sense
 	int	sense_count;		/* Number of bytes valid in sense */
 	int	target;			/* SCSI target id */
-					/* NOTE: The SCSI target id field    */
+					/* NOTE: The SCSI target id field   */
 					/* does not need to be filled unless */
 					/* the low level transport is a real */
-					/* scg driver. In this case the low  */
+					/* scg driver. In this case the low */
 					/* level transport routine of libscg */
-					/* will fill in the needed value     */
+					/* will fill in the needed value    */
 	union {				/* SCSI command descriptor block */
 		struct	scsi_g0cdb g0_cdb;
 		struct	scsi_g1cdb g1_cdb;
@@ -180,17 +180,17 @@ XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
  * by checking the sense data.
  * The distinction between retryable and fatal is somewhat ad hoc.
  */
-#define SCG_NO_ERROR	0		/* cdb transported without error     */
+#define	SCG_NO_ERROR	0		/* cdb transported without error    */
 					/* SCG_NO_ERROR incudes all commands */
-					/* where the SCSI status is valid    */
+					/* where the SCSI status is valid   */
 
-#define SCG_RETRYABLE	1		/* any other case e.g. SCSI bus busy */
-					/* SCSI cdb could not be send,	     */
-					/* includes DMA errors other than    */
-					/* DMA underrun			     */
+#define	SCG_RETRYABLE	1		/* any other case e.g. SCSI bus busy */
+					/* SCSI cdb could not be send,	    */
+					/* includes DMA errors other than   */
+					/* DMA underrun			    */
 
-#define SCG_FATAL	2		/* could not select target	     */
-#define SCG_TIMEOUT	3		/* driver timed out		     */
+#define	SCG_FATAL	2		/* could not select target	    */
+#define	SCG_TIMEOUT	3		/* driver timed out		    */
 
 
 #ifdef	__cplusplus

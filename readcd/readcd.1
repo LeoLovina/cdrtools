@@ -1,4 +1,4 @@
-.\" @(#)readcd.1	1.12 02/12/24 Copyright 1996 J. Schilling
+.\" @(#)readcd.1	1.20 04/05/25 Copyright 1996 J. Schilling
 .\" 
 .\" This is free documentation; you can redistribute it and/or
 .\" modify it under the terms of the GNU General Public License as
@@ -267,6 +267,13 @@ If you find C2 errors you may want to reduce the speed using the
 .B speed=
 option as C2 errors may be a result of dynamic unbalance on the medium.
 .TP
+.B \-scanbus
+Scan all SCSI devices on all SCSI busses and print the inquiry
+strings. This option may be used to find SCSI address of the 
+devices on a system.
+The numbers printed out as labels are computed by: 
+.B "bus * 100 + target
+.TP
 .BI sectors= range
 Specify a sector range that should be read.
 The range is specified by the starting sector number, a minus sign and the
@@ -289,15 +296,34 @@ The speed of non MMC drives is not changed.
 .sp
 Using a lower speed may increase the readability of a CD or DVD.
 .TP
+.BR ts= #
+Set the maximum transfer size for a single SCSI command to #.
+The syntax for the 
+.B ts=
+option is the same as for cdrecord fs=# or sdd bs=#.
+.sp
+If no 
+.B ts=
+option has been specified,
+.B readcd
+defaults to a transfer size of 256 kB. If libscg gets lower values from the
+operating system, the value is reduced to the maimum value that is possible
+with the current operating system.
+Sometimes, it may help to further reduce the transfer size or to enhance it,
+but note that it may take a long time to find a better value by experimenting
+with the
+.B ts=
+option.
+.TP
 .B \-notrunc
-Do not truncate the outputfile when opening it.
+Do not truncate the output file when opening it.
 .TP
 .B \-fulltoc
 Retrieve a full TOC from the current disk and print it in hex.
 .TP
 .B \-clone
 Do a clone read. Read the CD with all sub-channel data and a full TOC.
-The full TOC data will be but into a file with similar name as with the
+The full TOC data will be put into a file with similar name as with the
 .B f=
 option but the suffix 
 .B .toc
@@ -329,6 +355,26 @@ Meter the SCSI command overhead time.
 This is done by executing several commands 1000 times and printing the
 total time used. If you divide the displayed times by 1000, you get 
 the average overhead time for a single command.
+.TP
+.BR meshpoints= #
+Print read-speed at # locations.
+The purpose of this option is to create a list of read speed values suitable
+for e.g.
+.BR gnuplot .
+The speed values are calculated assuming that 1000 bytes are one kilobyte
+as documented in the SCSI standard.
+The ouput data created for this purpose is written to 
+.IR stdout .
+.TP
+.B \-factor
+Output the speed values for
+.BR meshpoints= #
+as factor based on 
+.I "single speed
+of the current medium.
+This only works if
+.B readcd
+is able to determine the current medium type.
 .SH EXAMPLES
 .PP
 For all examples below, it will be assumed that the drive is
@@ -572,7 +618,7 @@ or
 .B
 other-cdwrite@lists.debian.org
 .PP
-Of you have definitely found a bug, send a mail to:
+If you have definitely found a bug, send a mail to:
 .PP
 .B
 cdrecord-developers@berlios.de

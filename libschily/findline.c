@@ -1,4 +1,4 @@
-/* @(#)findline.c	1.13 00/12/04 Copyright 1985 J. Schilling */
+/* @(#)findline.c	1.15 04/09/04 Copyright 1985, 1995-2003 J. Schilling */
 /*
  *	findline
  *	get a line from a file with matching string in a given field
@@ -11,7 +11,7 @@
  *
  *	all fill pointers into the given array, allocated to new storage
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -24,9 +24,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #define	USE_LARGEFILES	/* We must make this module large file aware */
@@ -39,20 +39,18 @@
 #include <strdefs.h>
 #include <schily.h>
 
-#define MAXLBUF		4096
+#define	MAXLBUF		4096
 
 /*
  * Return codes:
  */
 #define	SUCCESS		 1	/* Found match */
-#define	NO_MATCH	-1	/* Found no line with matching string */
-#define	ARG_ERROR	-2	/* Bad parameter combination:
-				 * calls raisecond("findline_arg_err") before
-				 */
+#define	NO_MATCH	-1	/* Found no line with matching string	*/
+#define	ARG_ERROR	-2	/* Bad parameter combination:		*/
+				/* calls raisecond("findline_arg_err") before */
 #define	OPEN_ERROR	-3	/* Cannot open file */
-#define	NO_MEM		-4	/* No memory:
-				 * calls raisescond("findline_storage") before
-				 */
+#define	NO_MEM		-4	/* No memory:				*/
+				/* calls raisescond("findline_storage") before */
 
 EXPORT	int	ofindline	__PR((FILE *, char, const char *, int,
 								char **, int));
@@ -64,7 +62,7 @@ LOCAL	char	*savestr	__PR((const char *));
 
 #ifdef	PROTOTYPES
 EXPORT int
-ofindline(	FILE	*f,
+ofindline(FILE	*f,
 		char	delim,
 		const char *string,
 		int	field,
@@ -90,12 +88,12 @@ ofindline(f, delim, string, field, array, arraysize)
 	}
 
 	fileseek(f, (off_t)0);	/* XXX ??? Interface ändern!!! */
-	for(;;) {
+	for (;;) {
 		if (getbroken(f, lbuf, delim, array, arraysize) < 0) {
 			return (NO_MATCH);
 		}
 		if (streql(string, array[field])) {
-			for(i = 0; i < arraysize; i++) {
+			for (i = 0; i < arraysize; i++) {
 				if ((array[i] = savestr(array[i])) == NULL) {
 					raisecond("findline_storage", 0L);
 					while (--i >= 0)
@@ -110,11 +108,11 @@ ofindline(f, delim, string, field, array, arraysize)
 
 #ifdef	PROTOTYPES
 EXPORT int
-findline(	const char *fname,
+findline(const char *fname,
 		char	delim,
 		const char *string,
 		int	field,
-		char	*array[], 
+		char	*array[],
 		int	arraysize)
 #else
 EXPORT int
@@ -140,7 +138,7 @@ findline(fname, delim, string, field, array, arraysize)
 
 #ifdef	PROTOTYPES
 EXPORT int
-getbroken(	FILE	*f,
+getbroken(FILE	*f,
 		char	*linebuf,
 		char	delim,
 		char	*array[],
@@ -167,7 +165,7 @@ savestr(s)
 	register const char	*s;
 {
 	register char	*p;
-		 char	*ret;
+		char	*ret;
 
 	if ((p = malloc(strlen(s)+1)) == NULL)
 		return (p);

@@ -1,10 +1,10 @@
-/* @(#)movesect.c	1.2 01/06/11 Copyright 2001 J. Schilling */
+/* @(#)movesect.c	1.3 04/03/02 Copyright 2001, 2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)movesect.c	1.2 01/06/11 Copyright 2001 J. Schilling";
+	"@(#)movesect.c	1.3 04/03/02 Copyright 2001, 2004 J. Schilling";
 #endif
 /*
- *	Copyright (c) 2001 J. Schilling
+ *	Copyright (c) 2001, 2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -17,9 +17,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -36,7 +36,7 @@ EXPORT	void	scatter_secs	__PR((track_t *trackp, char *bp, int nsecs));
  * Scatter input sector size records over buffer to make them
  * output sector size.
  *
- * If input sector size is less than output sector size, 
+ * If input sector size is less than output sector size,
  *
  *	| sector_0 || sector_1 || ... || sector_n ||
  *
@@ -48,7 +48,7 @@ EXPORT	void	scatter_secs	__PR((track_t *trackp, char *bp, int nsecs));
  *	Sector_1 must me moved 1 * grass_size forward
  *
  *
- * If output sector size is less than input sector size, 
+ * If output sector size is less than input sector size,
  *
  *	| sector_0 |grass|| sector_1 |grass|| ... || sector_n |grass||
  *
@@ -82,7 +82,7 @@ scatter_secs(trackp, bp, nsecs)
 		from = bp + isecsize;
 		to   = bp + secsize;
 
-		for (i=nsecs; i > 0; i--) {
+		for (i = nsecs; i > 0; i--) {
 			movebytes(from, to, secsize);
 			from += isecsize;
 			to   += secsize;
@@ -91,7 +91,7 @@ scatter_secs(trackp, bp, nsecs)
 		from = bp + (nsecs * isecsize);
 		to   = bp + (nsecs * secsize);
 
-		for (i=nsecs; i > 0; i--) {
+		for (i = nsecs; i > 0; i--) {
 			movebytes(from, to, isecsize);
 			from -= isecsize;
 			to   -= secsize;

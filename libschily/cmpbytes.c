@@ -1,12 +1,12 @@
-/* @(#)cmpbytes.c	1.14 02/02/28 Copyright 1988 J. Schilling */
+/* @(#)cmpbytes.c	1.15 03/06/15 Copyright 1988, 1995-2003 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cmpbytes.c	1.14 02/02/28 Copyright 1988 J. Schilling";
+	"@(#)cmpbytes.c	1.15 03/06/15 Copyright 1988, 1995-2003 J. Schilling";
 #endif  /* lint */
 /*
  *	compare data
  *
- *	Copyright (c) 1988 J. Schilling
+ *	Copyright (c) 1988, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,18 +19,19 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <standard.h>
 #include <align.h>
 #include <schily.h>
 
-#define	DO8(a)	a;a;a;a;a;a;a;a;
+#define	DO8(a)	a; a; a; a; a; a; a; a;
 
-int cmpbytes(fromp, top, cnt)
+EXPORT int
+cmpbytes(fromp, top, cnt)
 	const void	*fromp;
 	const void	*top;
 	int		cnt;
@@ -49,14 +50,14 @@ int cmpbytes(fromp, top, cnt)
 	/*
 	 * Compare byte-wise until properly aligned for a long pointer.
 	 */
-	i = sizeof(long) - 1;
+	i = sizeof (long) - 1;
 	while (--n >= 0 && --i >= 0 && !l2aligned(from, to)) {
 		if (*to++ != *from++)
 			goto cdiff;
 	}
 	n++;
 
-	if (n >= (int)(8 * sizeof(long))) {
+	if (n >= (int)(8 * sizeof (long))) {
 		if (l2aligned(from, to)) {
 			register const long *froml = (const long *)from;
 			register const long *tol   = (const long *)to;
@@ -64,7 +65,7 @@ int cmpbytes(fromp, top, cnt)
 
 			n /= (8 * sizeof (long));
 			do {
-				DO8 (
+				DO8(
 					if (*tol++ != *froml++)
 						break;
 				);
@@ -85,7 +86,7 @@ int cmpbytes(fromp, top, cnt)
 		if (n >= 8) {
 			n -= 8;
 			do {
-				DO8 (
+				DO8(
 					if (*to++ != *from++)
 						goto cdiff;
 				);
@@ -104,7 +105,7 @@ int cmpbytes(fromp, top, cnt)
 	} while (--n > 0);
 	return (cnt);
 ldiff:
-	n = sizeof(long);
+	n = sizeof (long);
 	do {
 		if (*to++ != *from++)
 			goto cdiff;

@@ -1,12 +1,12 @@
-/* @(#)subchan.c	1.14 02/09/11 Copyright 2000 J. Schilling */
+/* @(#)subchan.c	1.19 04/05/15 Copyright 2000-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)subchan.c	1.14 02/09/11 Copyright 2000 J. Schilling";
+	"@(#)subchan.c	1.19 04/05/15 Copyright 2000-2004 J. Schilling";
 #endif
 /*
  *	Subchannel processing
  *
- *	Copyright (c) 2000 J. Schilling
+ *	Copyright (c) 2000-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -36,9 +36,9 @@ static	char sccsid[] =
 #include "cdrecord.h"
 #include "crc16.h"
 
-EXPORT	int     do_leadin	__PR((track_t *trackp));
-EXPORT	int     write_leadin	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp, int leadinstart));
-EXPORT	int     write_leadout	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+EXPORT	int	do_leadin	__PR((track_t *trackp));
+EXPORT	int	write_leadin	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp, int leadinstart));
+EXPORT	int	write_leadout	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
 EXPORT	void	fillsubch	__PR((track_t *trackp, Uchar *sp, int secno, int nsecs));
 EXPORT	void	filltpoint	__PR((Uchar *sub, int ctrl_adr, int point, msf_t *mp));
 EXPORT	void	fillttime	__PR((Uchar *sub, msf_t *mp));
@@ -60,7 +60,7 @@ LOCAL	void	testcrc		__PR((void));
 
 /*Die 96 Bits == 12 Bytes haben folgendes Aussehen:*/
 
-struct q { 
+struct q {
 	Uchar ctrl_adr;	/*  0 (ctrl << 4) | adr		 */
 	Uchar track;	/*  1 current track #		 */
 	Uchar index;	/*  2 current index #		 */
@@ -92,7 +92,7 @@ do_leadin(trackp)
 	msf_t	m;
 	int	ctrl;
 	int	i;
-	int	toctype = trackp[0].tracktype;
+	int	toctype = trackp[0].tracktype & TOC_MASK;
 
 	if (_nsubh) {
 		if (xdebug)
@@ -100,9 +100,9 @@ do_leadin(trackp)
 		return (0);
 	}
 	if (xdebug)
-		printf("Leadin TOC Type: %d\n", trackp[0].tracktype);
+		printf("Leadin TOC Type: %d\n", trackp[0].tracktype & TOC_MASK);
 	if (lverbose > 1) {
-		for (i=1; i <= tracks+1; i++)
+		for (i = 1; i <= tracks+1; i++)
 			printf("Track %d start %ld\n", i, trackp[i].trackstart);
 	}
 
@@ -111,7 +111,7 @@ do_leadin(trackp)
 /*	exit(1);*/
 #endif
 
-	fillbytes(_subq, sizeof(_subq), '\0');
+	fillbytes(_subq, sizeof (_subq), '\0');
 
 	/*
 	 * Fill in point 0xA0 for first track # on disk
@@ -157,7 +157,7 @@ do_leadin(trackp)
 	/*
 	 * Fill in track start times.
 	 */
-	for (i=1; i <= tracks; i++) {
+	for (i = 1; i <= tracks; i++) {
 		lba_to_msf(trackp[i].trackstart, &m);
 		ctrl = (st2mode[trackp[i].sectype & ST_MASK]) << 4;
 		if (is_copy(&trackp[i]))
@@ -184,7 +184,7 @@ write_leadin(scgp, dp, trackp, leadinstart)
 {
 	msf_t	m;
 	int	i;
-	int	j;
+	Uint	j;
 	Uchar	*bp = scgp->bufptr;
 	Uchar	*subp;
 	Uchar	*sp;
@@ -221,7 +221,7 @@ write_leadin(scgp, dp, trackp, leadinstart)
 	startsec = leadinstart;
 	sp = bp;
 	subp = bp + 2352;
-	for (i=leadinstart,j=0; i < -150; i++,j++) {
+	for (i = leadinstart, j = 0; i < -150; i++, j++) {
 		/*
 		 * TOC hat folgende unterschiedliche Sub Q Frames:
 		 * A0		First Track
@@ -344,7 +344,7 @@ write_leadout(scgp, dp, trackp)
 	if (is_copy(trackp))
 		ctrl |= TM_ALLOW_COPY << 4;
 
-	for (i=leadoutstart,j=0; i < endsec; i++,j++) {
+	for (i = leadoutstart, j = 0; i < endsec; i++, j++) {
 
 		lba_to_msf((long)i, &m);
 		sec_to_msf((long)j, &mr);
@@ -412,7 +412,7 @@ fillsubch(trackp, sp, secno, nsecs)
 	int	secsize = trackp->secsize;
 	int	trackno = trackp->trackno;
 	int	nindex = trackp->nindex;
-	int	index;
+	int	curindex;
 	long	*tindex = NULL;
 	long	nextindex = 0L;
 	Uchar	sub[12];
@@ -453,7 +453,7 @@ static	Uchar	lastindex = 255;
 		 * while 'trackp' points to the curent track. For this reason,
 		 * the sectors are before the start of track 'n' index 0.
 		 */
-		index = 0;
+		curindex = 0;
 		end = trackp->trackstart;
 
 	} else if (rsecno > trackp->index0start) {
@@ -462,7 +462,7 @@ static	Uchar	lastindex = 255;
 		 * We currently are inside this pregap.
 		 */
 		trackno++;
-		index = 0;
+		curindex = 0;
 		end = trackp->trackstart + trackp->tracksecs;
 	} else {
 		/*
@@ -473,32 +473,32 @@ static	Uchar	lastindex = 255;
 		 * might be uninitialized.
 		 */
 		end = 0;
-		index = 1;
+		curindex = 1;
 		if (nindex > 1) {
 			tindex = trackp->tindex;
 			nextindex = trackp->tracksecs;
 			/*
 			 * find current index in list
 			 */
-			for (index=nindex; index >= 1; index--) {
-				if (rsecno >= tindex[index]) {
-					if (index < nindex)
-						nextindex = tindex[index+1];
+			for (curindex = nindex; curindex >= 1; curindex--) {
+				if (rsecno >= tindex[curindex]) {
+					if (curindex < nindex)
+						nextindex = tindex[curindex+1];
 					break;
 				}
 			}
 		}
 	}
 
-	for (i=0; i < nsecs; i++) {
+	for (i = 0; i < nsecs; i++) {
 
 		if (tindex != NULL && rsecno >= nextindex) {
 			/*
 			 * Skip to next index in list.
 			 */
-			if (index < nindex) {
-				index++;
-				nextindex = tindex[index+1];
+			if (curindex < nindex) {
+				curindex++;
+				nextindex = tindex[curindex+1];
 			}
 		}
 		if (rsecno == trackp->index0start) {
@@ -506,11 +506,11 @@ static	Uchar	lastindex = 255;
 			 * This track contains pregap of next track.
 			 */
 			trackno++;
-			index = 0;
+			curindex = 0;
 			end = trackp->trackstart + trackp->tracksecs;
 		}
 		lba_to_msf((long)secno, &m);
-		if (index == 0)
+		if (curindex == 0)
 			sec_to_msf((long)end-1 - secno, &mr);
 		else
 			sec_to_msf((long)rsecno, &mr);
@@ -521,9 +521,9 @@ static	Uchar	lastindex = 255;
 				ctrl |= TM_ALLOW_COPY << 4;
 			}
 		}
-		filldsubq(sub, ctrl|0x01, trackno, index, &mr, &m);
+		filldsubq(sub, ctrl|0x01, trackno, curindex, &mr, &m);
 		if (mcn && (secno == nextmcn)) {
-			if (index == lastindex) {
+			if (curindex == lastindex) {
 				fillmcn(sub, (Uchar *)mcn);
 				nextmcn = (secno+1)/100*100 + 99;
 			} else {
@@ -531,7 +531,7 @@ static	Uchar	lastindex = 255;
 			}
 		}
 		if (trackp->isrc && (secno == nextisrc)) {
-			if (index == lastindex) {
+			if (curindex == lastindex) {
 				fillisrc(sub, (Uchar *)trackp->isrc);
 				nextisrc = (secno+1)/100*100 + 49;
 			} else {
@@ -540,15 +540,15 @@ static	Uchar	lastindex = 255;
 		}
 		fillcrc(sub, 12);
 		if (xdebug > 2)
-			scg_prbytes(index==0?"P":" ", sub, 12);
+			scg_prbytes(curindex == 0 ? "P":" ", sub, 12);
 		if (is_raw16(trackp)) {
-			qpto16(sup, sub, index==0);
+			qpto16(sup, sub, curindex == 0);
 		} else {
-			qpto96(sup, sub, index==0);
+			qpto96(sup, sub, curindex == 0);
 /*			if (is_raw96p(trackp))*/
 /*				subinterleave(sup);*/
 		}
-		lastindex = index;
+		lastindex = curindex;
 		secno++;
 		rsecno++;
 		sup += secsize;
@@ -625,7 +625,7 @@ fillmcn(sub, mcn)
 	register int	c;
 
 	sub[0] = ADR_MCN;
-	for (i=1; i <= 8; i++) {
+	for (i = 1; i <= 8; i++) {
 		c = *mcn++;
 		if (c >= '0' && c <= '9')
 			sub[i] = (c - '0') << 4;
@@ -690,7 +690,7 @@ fillisrc(sub, isrc)
 	/*
 	 * Now 7 digits from e.g. "FI-BAR-99-00312"
 	 */
-	for (i=4, j=5; i < 8; i++) {
+	for (i = 4, j = 5; i < 8; i++) {
 		sp[i]  = tmp[j++] << 4;
 		sp[i] |= tmp[j++];
 	}
@@ -704,16 +704,16 @@ ascii2q(c)
 	int	c;
 {
 	if (c >= '0' && c <= '9')
-		return(c - '0');
+		return (c - '0');
 	else if (c >= '@' && c <= 'o')
-		return(0x10 + c - '@');
+		return (0x10 + c - '@');
 	return (0);
 }
 
 /*
  * Q-Sub auf 16 Bytes blähen und P-Sub addieren
  *
- * OUT: sub, IN: subqptr 
+ * OUT: sub, IN: subqptr
  */
 LOCAL void
 qpto16(sub, subqptr, dop)
@@ -735,7 +735,7 @@ qpto16(sub, subqptr, dop)
 /*
  * Q-Sub auf 96 Bytes blähen und P-Sub addieren
  *
- * OUT: sub, IN: subqptr 
+ * OUT: sub, IN: subqptr
  */
 EXPORT void
 qpto96(sub, subqptr, dop)
@@ -761,10 +761,10 @@ qpto96(sub, subqptr, dop)
 	 */
 	fillbytes(sub, 96, '\0');
 
-	if (dop) for (i=0, p = sub; i < 96; i++) {
+	if (dop) for (i = 0, p = sub; i < 96; i++) {
 		*p++ |= 0x80;
 	}
-	for (i=0, p = sub; i < 12; i++) {
+	for (i = 0, p = sub; i < 12; i++) {
 		c = subqptr[i] & 0xFF;
 /*printf("%02X\n", c);*/
 		if (c & 0x80)
@@ -805,7 +805,7 @@ qpto96(sub, subqptr, dop)
 /*
  * Add R-W-Sub (96 Bytes) to P-Q-Sub (96 Bytes)
  *
- * OUT: sub, IN: subrwptr 
+ * OUT: sub, IN: subrwptr
  */
 EXPORT void
 addrw(sub, subrwptr)
@@ -814,9 +814,9 @@ addrw(sub, subrwptr)
 {
 	register int	i;
 
-#define	DO8(a)	a;a;a;a;a;a;a;a;
+#define	DO8(a)	a; a; a; a; a; a; a; a;
 
-	for (i=0; i < 12; i++) {
+	for (i = 0; i < 12; i++) {
 		DO8(*sub++ |= *subrwptr++ & 0x3F);
 	}
 }
@@ -824,7 +824,7 @@ addrw(sub, subrwptr)
 /*
  * Q-W-Sub (96 Bytes) auf 16 Bytes schrumpfen
  *
- * OUT: subq, IN: subptr 
+ * OUT: subq, IN: subptr
  */
 EXPORT void
 qwto16(subq, subptr)
@@ -834,10 +834,10 @@ qwto16(subq, subptr)
 	register int	i;
 	register int	np = 0;
 	register Uchar	*p;
-		 Uchar	tmp[96];
+		Uchar	tmp[96];
 
 	p = subptr;
-	for (i=0; i < 96; i++)
+	for (i = 0; i < 96; i++)
 		if (*p++ & 0x80)
 			np++;
 	p = subptr;
@@ -850,7 +850,7 @@ qwto16(subq, subptr)
 		p = tmp;
 	}
 
-	for (i=0; i < 12; i++) {
+	for (i = 0; i < 12; i++) {
 		subq[i] = 0;
 		if (*p++ & 0x40)
 			subq[i] |= 0x80;
@@ -926,19 +926,19 @@ scrsectors(trackp, bp, address, nsecs)
 Uchar	tq[12] = { 0x01, 0x00, 0xA0, 0x98, 0x06, 0x12, 0x00, 0x01, 0x00, 0x00, 0xE3, 0x74 };
 
 /*
-01 00 A0 98 06 12 00 01 00 00 E3 74 
-01 00 A0 98 06 13 00 01 00 00 49 25 
-01 00 A1 98 06 14 00 13 00 00 44 21 
-01 00 A1 98 06 15 00 13 00 00 EE 70 
-01 00 A1 98 06 16 00 13 00 00 00 A2 
-01 00 A2 98 06 17 00 70 40 73 E3 85 
-01 00 A2 98 06 18 00 70 40 73 86 7C 
-01 00 A2 98 06 19 00 70 40 73 2C 2D 
-01 00 01 98 06 20 00 00 02 00 3B 71 
-01 00 01 98 06 21 00 00 02 00 91 20 
-01 00 01 98 06 22 00 00 02 00 7F F2 
-01 00 02 98 06 23 00 03 48 45 BE E0 
-01 00 02 98 06 24 00 03 48 45 D9 34 
+01 00 A0 98 06 12 00 01 00 00 E3 74
+01 00 A0 98 06 13 00 01 00 00 49 25
+01 00 A1 98 06 14 00 13 00 00 44 21
+01 00 A1 98 06 15 00 13 00 00 EE 70
+01 00 A1 98 06 16 00 13 00 00 00 A2
+01 00 A2 98 06 17 00 70 40 73 E3 85
+01 00 A2 98 06 18 00 70 40 73 86 7C
+01 00 A2 98 06 19 00 70 40 73 2C 2D
+01 00 01 98 06 20 00 00 02 00 3B 71
+01 00 01 98 06 21 00 00 02 00 91 20
+01 00 01 98 06 22 00 00 02 00 7F F2
+01 00 02 98 06 23 00 03 48 45 BE E0
+01 00 02 98 06 24 00 03 48 45 D9 34
 
 */
 
@@ -949,7 +949,7 @@ LOCAL int
 b(bcd)
 	int	bcd;
 {
- return ((bcd & 0x0F) + 10 * (((bcd)>> 4) & 0x0F));
+	return ((bcd & 0x0F) + 10 * (((bcd)>> 4) & 0x0F));
 }
 
 LOCAL void
@@ -1010,7 +1010,7 @@ subinterleave(sub)
 	Uchar	*p;
 	int	i;
 
-	for (i=0, p = sub; i < 4; i++) {
+	for (i = 0, p = sub; i < 4; i++) {
 		Uchar	save;
 
 		/*

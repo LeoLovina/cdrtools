@@ -8,7 +8,7 @@
 *										*
 *********************************************************************************
 
-If uname -a does print someting like:
+If uname -a does print something like:
 
 Darwin HOST 1.4 Darwin Kernel Version 1.4: Sun Sep  9 15:39:59 PDT 2001; root:xnu/xnu-201.obj~1/RELEASE_PPC  Power Macintosh powerpc
 

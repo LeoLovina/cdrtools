@@ -1,4 +1,4 @@
-/* @(#)patmatch.h	1.8 02/08/26 Copyright 1985 J. Schilling */
+/* @(#)patmatch.h	1.10 03/08/24 Copyright 1985 J. Schilling */
 
 #ifndef	_PATMATCH_H
 #define	_PATMATCH_H
@@ -18,15 +18,15 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 /*
  *	The pattern matching functions are based on the algorithm
  *	presented by Martin Richards in:
  *
- *	"A Compact Function for Regular Expression Pattern Matching", 
+ *	"A Compact Function for Regular Expression Pattern Matching",
  *	Software-Practice and Experience, Vol. 9, 527-534 (1979)
  *
  *	Several changes have been made to the original source which has been
@@ -68,9 +68,22 @@ extern "C" {
 #define	START	'^'	/* Begin of a line */
 #define	END	'$'	/* End of a line */
 
+/*
+ * A list of case statements that may be used for a issimple() or ispattern()
+ * funtion that checks whether a string conrtains characters that need the
+ * pattern matcher.
+ *
+ * Note that this list does not contain NOT or RANGE because you need
+ * LCLASS and RCLASS in addition.
+ */
+#define	casePAT	case ALT: case REP: case NIL: case STAR: case ANY:	\
+		case QUOTE: case LBRACK: case RBRACK:			\
+		case LCLASS: case RCLASS: case START: case END:
+
+
 #define	MAXPAT	128	/* Maximum length of pattern */
 
-extern	int	     patcompile	__PR((const unsigned char * __pat, int __patlen, int * __aux));
+extern	int	    patcompile	__PR((const unsigned char * __pat, int __patlen, int * __aux));
 
 extern	unsigned char *opatmatch	__PR((const unsigned char * __pat, const int * __aux,
 						const  unsigned char * __str, int __soff, int __slen,

@@ -1,4 +1,4 @@
-# @(#)rules.cnf.in	1.4 01/12/09 Copyright 1998 J. Schilling
+# @(#)rules.cnf.in	1.5 03/09/13 Copyright 1998-2003 J. Schilling
 
 EXEEXT= @EXEEXT@
 
@@ -7,3 +7,4 @@ LARGEFILE_CC_OPT= @largefile_cc_opt@
 SCSILIB= @scsi_lib@
 LIB_CRYPT= @lib_crypt@
 LIB_ACL= @lib_acl@
+LIB_ATTR = @lib_attr@

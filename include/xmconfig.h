@@ -1,4 +1,4 @@
-/* @(#)xmconfig.h	1.28 02/10/23 Copyright 1995 J. Schilling */
+/* @(#)xmconfig.h	1.29 03/06/15 Copyright 1995 J. Schilling */
 /*
  *	Manual generated static definitions for machine configuration
  *
@@ -21,13 +21,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _XMCONFIG_H
-#define _XMCONFIG_H
+#define	_XMCONFIG_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,7 +91,7 @@ extern "C" {
  * define HAVE_TERMIO_H	to use SV terminal control (termio.h) *- no setpgrp -*
  *			Else use BSD style sgttyb and setpgrp (ioctl.h)
  *			XXX session control should be another define XXX
- * 
+ *
  * define HAVE_SYS_TIME_H may include sys/time.h for struct timeval
  *			used internally in timedefs.h
  *
@@ -117,10 +117,10 @@ extern "C" {
  * define HAVE_MTGET_FILENO if struct mtget contains mt_fileno (file #)
  * define HAVE_MTGET_BLKNO if struct mtget contains mt_blkno (block #0
  *
- * define MAJOR_IN_MKDEV if we should include sys/mkdev.h to get 
+ * define MAJOR_IN_MKDEV if we should include sys/mkdev.h to get
  *			major(), minor() and makedev()
  *
- * define MAJOR_IN_SYSMACROS if we should include sys/sysmacros.h to get 
+ * define MAJOR_IN_SYSMACROS if we should include sys/sysmacros.h to get
  *			major(), minor() and makedev()
  *
  *			... else look in sys/types.h for major()
@@ -138,9 +138,9 @@ extern "C" {
  *			_flsbuf(unsigned char *, FILE * f) ... flush buffer
  *
  * define HAVE_BRK	may use brk()
- * 
+ *
  * define HAVE_SBRK	may use sbrk()
- * 
+ *
  *
  * define HAVE_DTOA	use the 4.4BSD function __dtoa() instead of
  *			the AT&T standard functions ecvt()/fcvt()/gcvt()
@@ -261,8 +261,9 @@ extern "C" {
 #	endif
 #endif
 
-#if	defined(SOL2) || defined(SOL2) || defined(S5R4) || defined(__S5R4) \
-							|| defined(SVR4)
+#if	defined(SOL2) || defined(SOL2) || \
+	defined(S5R4) || defined(__S5R4) || defined(SVR4)
+
 #	ifndef	__SVR4
 #		define	__SVR4
 #	endif
@@ -279,7 +280,7 @@ extern "C" {
  */
 #if defined(IS_SUN) && !defined(__SVR4)
 	/*
-	 * Sun C defines __STDC__ as zero. 
+	 * Sun C defines __STDC__ as zero.
 	 */
 #	ifdef __STDC__
 #		define	PROTOTYPES
@@ -339,8 +340,8 @@ extern "C" {
  */
 #if	defined(_IBMR2) || defined(_AIX)
 #	define	IS_UNIX		/* ??? really ??? */
-#	define	NO_FLOATINGPOINT/* XXX until isinf()/isnan() is solved*/
-#	define	USE_FLOATINGARGS/* Use up args from floatingpoint format */
+#	define	NO_FLOATINGPOINT /* XXX until isinf()/isnan() is solved */
+#	define	USE_FLOATINGARGS /* Use up args from floatingpoint format */
 #ifndef	PROTOTYPES
 #	define	PROTOTYPES
 #endif
@@ -1170,7 +1171,7 @@ extern "C" {
 #	define	HAVE_UNISTD_H
 /*  #	define	HAVE_SYS_TIME_H	*/
 #	define	HAVE_FCNTL_H
-#       define  HAVE_USLEEP
+#	define	HAVE_USLEEP
 #	define	HAVE_INTTYPES_H
 #	include <types.h>
 #	define HOST_CPU	"Alpha/VAX"
@@ -1215,7 +1216,7 @@ extern "C" {
 /*#	define	HAVE_USG_STDIO	*/
 /*#	define	HAVE_DTOA   */
 /*#	define	HAVE_STRERROR	*/
-#	define	HAVE_MEMMOVE	
+#	define	HAVE_MEMMOVE
 /*#	define	HAVE_MMAP   */
 /*#	define	HAVE_SMMAP  */
 /*#	define	HAVE_USGSHM */

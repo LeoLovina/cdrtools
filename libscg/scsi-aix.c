@@ -1,7 +1,7 @@
-/* @(#)scsi-aix.c	1.35 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-aix.c	1.36 04/01/14 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-aix.c	1.35 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-aix.c	1.36 04/01/14 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the AIX generic SCSI implementation.
@@ -28,9 +28,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <sys/scdisk.h>
@@ -42,7 +42,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-aix.c-1.35";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-aix.c-1.36";	/* The version for this transport*/
 
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
@@ -52,9 +52,9 @@ LOCAL	char	_scg_trans_version[] = "scsi-aix.c-1.35";	/* The version for this tra
 struct scg_local {
 	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
-#define MAX_DMA_AIX (64*1024)
+#define	MAX_DMA_AIX (64*1024)
 
 LOCAL	int	do_scg_cmd	__PR((SCSI *scgp, struct scg_cmd *sp));
 LOCAL	int	do_scg_sense	__PR((SCSI *scgp, struct scg_cmd *sp));
@@ -102,9 +102,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -112,7 +112,6 @@ scgo_open(scgp, device)
 	register int	nopen = 0;
 	char		devname[32];
 
-	
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
 		if (scgp->errstr)
@@ -123,13 +122,13 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
@@ -138,9 +137,9 @@ scgo_open(scgp, device)
 	if ((device != NULL && *device != '\0') || (busno == -2 && tgt == -2))
 		goto openbydev;
 
-	if (busno >= 0 && tgt >= 0 && tlun >= 0) {	
+	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 
-		js_snprintf(devname, sizeof(devname), "/dev/rcd%d", tgt);
+		js_snprintf(devname, sizeof (devname), "/dev/rcd%d", tgt);
 		f = openx(devname, 0, 0, SC_DIAGNOSTIC);
 		if (f < 0) {
 			if (scgp->errstr)
@@ -150,7 +149,7 @@ scgo_open(scgp, device)
 			return (0);
 		}
 		scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
-		return 1;
+		return (1);
 	} else {
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -188,9 +187,9 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
@@ -209,7 +208,7 @@ scgo_maxdma(scgp, amt)
 	return (MAX_DMA_AIX);
 }
 
-#define palign(x, a)	(((char *)(x)) + ((a) - 1 - (((UIntptr_t)((x)-1))%(a))))
+#define	palign(x, a)	(((char *)(x)) + ((a) - 1 - (((UIntptr_t)((x)-1))%(a))))
 
 LOCAL void *
 scgo_getbuf(scgp, amt)
@@ -262,8 +261,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -330,7 +329,7 @@ do_scg_cmd(scgp, sp)
 	if (sp->cdb_len > 12)
 		comerrno(EX_BAD, "Can't do %d byte command.\n", sp->cdb_len);
 
-	fillbytes(&req, sizeof(req), '\0');
+	fillbytes(&req, sizeof (req), '\0');
 
 	req.flags = SC_ASYNC;
 	if (sp->flags & SCG_RECV_DATA) {
@@ -375,8 +374,8 @@ do_scg_cmd(scgp, sp)
 	sp->sense_count = 0;
 	sp->resid = 0;		/* AIX is the same rubbish as Linux here */
 
-	fillbytes(&sp->scb, sizeof(sp->scb), '\0');
-	fillbytes(&sp->u_sense.cmd_sense, sizeof(sp->u_sense.cmd_sense), '\0');
+	fillbytes(&sp->scb, sizeof (sp->scb), '\0');
+	fillbytes(&sp->u_sense.cmd_sense, sizeof (sp->u_sense.cmd_sense), '\0');
 
 	if (req.status_validity == 0) {
 		sp->error = SCG_NO_ERROR;
@@ -409,7 +408,7 @@ do_scg_sense(scgp, sp)
 	int		ret;
 	struct scg_cmd	s_cmd;
 
-	fillbytes((caddr_t)&s_cmd, sizeof(s_cmd), '\0');
+	fillbytes((caddr_t)&s_cmd, sizeof (s_cmd), '\0');
 	s_cmd.addr = sp->u_sense.cmd_sense;
 	s_cmd.size = sp->sense_len;
 	s_cmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;

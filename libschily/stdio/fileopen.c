@@ -1,6 +1,6 @@
-/* @(#)fileopen.c	1.8 00/12/03 Copyright 1986, 1995 J. Schilling */
+/* @(#)fileopen.c	1.10 04/08/08 Copyright 1986, 1995-2003 J. Schilling */
 /*
- *	Copyright (c) 1986, 1995 J. Schilling
+ *	Copyright (c) 1986, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -13,15 +13,15 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include "io.h"
+#include "schilyio.h"
 
 EXPORT FILE *
-fileopen (name, mode)
+fileopen(name, mode)
 	const char	*name;
 	const char	*mode;
 {
@@ -29,11 +29,11 @@ fileopen (name, mode)
 	int	omode = 0;
 	int	flag = 0;
 
-	if (!_cvmod (mode, &omode, &flag))
-		return (FILE *) NULL;
+	if (!_cvmod(mode, &omode, &flag))
+		return ((FILE *) NULL);
 
 	if ((ret = _openfd(name, omode)) < 0)
-		return (FILE *) NULL;
+		return ((FILE *) NULL);
 
-	return _fcons ((FILE *)0, ret, flag);
+	return (_fcons((FILE *)0, ret, flag));
 }

@@ -17,7 +17,7 @@ Tips for MMC RAW mode writing.
 
 	Indices are fully supported in RAW mode.
 
-	MCN & ISRC are not yet suported in RAW mode, they are silently discarded.
+	MCN & ISRC are not yet supported in RAW mode, they are silently discarded.
 
 	If you find other problems in RAW mode or if you find
 	new bugs introduced in old write modes, please send a bug report.
@@ -33,7 +33,7 @@ Tips for MMC RAW mode writing.
 	This should help to make cdrecord work without manual static configuration.
 	My hope is still to have no need to know all drive properties in 
 	advance, so new drives will continue to work as long as they
-	are standard comliant enough for cdrecord.
+	are standard compliant enough for cdrecord.
 
 EXAMPLES:
 
@@ -62,7 +62,7 @@ IMPORTANT:
 
 		The packed raw mode (RAW/R96P) is buggy in Plextor drives and
 		the RAW/R16 mode is buggy in TEAC drives. Plextor creates
-		unreadble disks and TEAC hangs the drive.
+		unreadable disks and TEAC hangs the drive.
 
 		For this reason, it is important to select the raw writing
 		mode accoding to the notes above.

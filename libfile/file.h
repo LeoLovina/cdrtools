@@ -1,4 +1,4 @@
-/* @(#)file.h	1.5 01/02/17 joerg */
+/* @(#)file.h	1.7 04/05/15 joerg */
 /*
  * file.h - definitions for file(1) program
  * @(#)$Id: file.h,v 1.25 1997/01/15 19:28:35 christos Exp $
@@ -30,6 +30,9 @@
 #ifndef __file_h__
 #define __file_h__
 
+#ifndef	_MCONFIG_H
+#include <mconfig.h>
+#endif
 #include <utypes.h>
 
 #ifndef HOWMANY
@@ -79,41 +82,31 @@ struct magic {
 
 #include <stdio.h>	/* Include that here, to make sure __P gets defined */
 
-#ifndef __P
-# if __STDC__ || __cplusplus
-#  define __P(a) a
-# else
-#  define __P(a) ()
-#  define const
-# endif
-#endif
-
-extern int   init_magic		__P((char *));
-extern int   ascmagic		__P((unsigned char *, int));
-/*extern void  error		__P((const char *, ...));*/
-extern void  ckfputs		__P((const char *, FILE *));
+extern int   init_magic		__PR((char *));
+extern int   ascmagic		__PR((unsigned char *, int));
+/*extern void  error		__PR((const char *, ...));*/
+extern void  ckfputs		__PR((const char *, FILE *));
 struct stat;
-extern int   fsmagic		__P((const char *, struct stat *));
-extern int   is_compress	__P((const unsigned char *, int *));
-extern int   is_tar		__P((unsigned char *, int));
-extern void  magwarn		__P((const char *, ...));
-extern void  mdump		__P((struct magic *));
-extern char *get_magic_magic	__P((const char *));
-extern void  showstr		__P((FILE *, const char *, int));
-extern char *softmagic		__P((unsigned char *, int));
-extern int   tryit		__P((unsigned char *, int, int));
-extern int   zmagic		__P((unsigned char *, int));
-extern void  ckfprintf		__P((FILE *, const char *, ...));
+extern int   fsmagic		__PR((const char *, struct stat *));
+extern int   is_compress	__PR((const unsigned char *, int *));
+extern int   is_tar		__PR((unsigned char *, int));
+extern void  magwarn		__PR((const char *, ...));
+extern void  mdump		__PR((struct magic *));
+extern char *get_magic_magic	__PR((const char *));
+extern void  showstr		__PR((FILE *, const char *, int));
+extern char *softmagic		__PR((unsigned char *, int));
+extern int   tryit		__PR((unsigned char *, int, int));
+extern int   zmagic		__PR((unsigned char *, int));
+extern void  ckfprintf		__PR((FILE *, const char *, ...));
 #ifndef __BEOS__
-extern UInt32_t signextend	__P((struct magic *, UInt32_t));
+extern UInt32_t signextend	__PR((struct magic *, UInt32_t));
 #endif /* __BEOS__ */
-extern int internatmagic	__P((unsigned char *, int));
-extern void tryelf		__P((int, char *, int));
+extern int internatmagic	__PR((unsigned char *, int));
+extern void tryelf		__PR((int, char *, int));
 
 
 extern char *progname;		/* the program name 			*/
 extern char *magicfile;		/* name of the magic file		*/
-extern int lineno;		/* current line number in magic file	*/
 
 extern struct magic *__f_magic;	/* array of magic entries		*/
 extern int __f_nmagic;		/* number of valid magic[]s 		*/

@@ -1,8 +1,8 @@
-/* @(#)spawn.c	1.14 01/11/11 Copyright 1985 J. Schilling */
+/* @(#)spawn.c	1.16 03/07/13 Copyright 1985, 1989, 1995-2003 J. Schilling */
 /*
  *	Spawn another process/ wait for child process
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1989, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -38,7 +38,8 @@
 
 EXPORT	int	fspawnl	__PR((FILE *, FILE *, FILE *, ...));
 
-int fspawnv(in, out, err, argc, argv)
+EXPORT int
+fspawnv(in, out, err, argc, argv)
 	FILE	*in;
 	FILE	*out;
 	FILE	*err;
@@ -48,16 +49,18 @@ int fspawnv(in, out, err, argc, argv)
 	int	pid;
 
 	if ((pid = fspawnv_nowait(in, out, err, argv[0], argc, argv)) < 0)
-		return pid;
+		return (pid);
 
-	return wait_chld(pid);
+	return (wait_chld(pid));
 }
 
 /* VARARGS5 */
 #ifdef	PROTOTYPES
-int fspawnl(FILE *in, FILE *out, FILE *err, ...)
+EXPORT int
+fspawnl(FILE *in, FILE *out, FILE *err, ...)
 #else
-int fspawnl(in, out, err, va_alist)
+EXPORT int
+fspawnl(in, out, err, va_alist)
 	FILE	*in;
 	FILE	*out;
 	FILE	*err;
@@ -84,7 +87,7 @@ int fspawnl(in, out, err, va_alist)
 	if (ac < MAX_F_ARGS) {
 		pav = av = xav;
 	} else {
-		pav = av = (char **)malloc((ac+1)*sizeof(char *));
+		pav = av = (char **)malloc((ac+1)*sizeof (char *));
 		if (av == 0)
 			return (-1);
 	}
@@ -106,7 +109,8 @@ int fspawnl(in, out, err, va_alist)
 	return (ret);
 }
 
-int fspawnv_nowait(in, out, err, name, argc, argv)
+EXPORT int
+fspawnv_nowait(in, out, err, name, argc, argv)
 	FILE		*in;
 	FILE		*out;
 	FILE		*err;
@@ -114,16 +118,16 @@ int fspawnv_nowait(in, out, err, name, argc, argv)
 	int		argc;
 	char		* const argv[];
 {
-	int	pid;
+	int	pid = -1;	/* Initialization needed to make GCC happy */
 	int	i;
 
-	for (i=1;i<64;i*=2) {
+	for (i = 1; i < 64; i *= 2) {
 		if ((pid = fork()) >= 0)
 			break;
 		sleep(i);
 	}
 	if (pid != 0)
-		return pid;
+		return (pid);
 				/*
 				 * silly: fexecv must set av[ac] = NULL
 				 * so we have to cast argv tp (char **)
@@ -136,7 +140,8 @@ int fspawnv_nowait(in, out, err, name, argc, argv)
 #endif
 }
 
-int wait_chld(pid)
+EXPORT int
+wait_chld(pid)
 	int	pid;
 {
 	int	died;

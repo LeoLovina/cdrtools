@@ -1,7 +1,7 @@
-/* @(#)softmagic.c	1.5 01/11/11 joerg */
+/* @(#)softmagic.c	1.6 03/03/06 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)softmagic.c	1.5 01/11/11 joerg";
+	"@(#)softmagic.c	1.6 03/03/06 joerg";
 #endif
 /*
 **	find file types by using a modified "magic" file
@@ -56,16 +56,16 @@ int	debug = 1; 	/* debugging 				*/
 #define	debug	0 	/* debugging 				*/
 #endif /* DEBUG */
 
-/* static int match	__P((unsigned char *, int)); */
-static char *match	__P((unsigned char *, int));
-static int mget		__P((union VALUETYPE *,
+/* static int match	__PR((unsigned char *, int)); */
+static char *match	__PR((unsigned char *, int));
+static int mget		__PR((union VALUETYPE *,
 			     unsigned char *, struct magic *, int));
 /* QNX has a mcheck() prototyp in a public include file */
-static int magcheck	__P((union VALUETYPE *, struct magic *));
+static int magcheck	__PR((union VALUETYPE *, struct magic *));
 #ifdef	__used__
-static void mdebug	__P((Int32_t, char *, int));
+static void mdebug	__PR((Int32_t, char *, int));
 #endif
-static int mconvert	__P((union VALUETYPE *, struct magic *));
+static int mconvert	__PR((union VALUETYPE *, struct magic *));
 
 /*
  * softmagic - lookup one file in database 

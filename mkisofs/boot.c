@@ -1,13 +1,13 @@
-/* @(#)boot.c	1.9 02/05/30 Copyright 1999 J. Schilling */
+/* @(#)boot.c	1.13 04/02/22 Copyright 1999-2003 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)boot.c	1.9 02/05/30 Copyright 1999 J. Schilling";
+	"@(#)boot.c	1.13 04/02/22 Copyright 1999-2003 J. Schilling";
 #endif
 /*
  *	Support for generic boot (sector 0..16)
- *	and to boot Sun sparc systems.
+ *	and to boot Sun sparc and Sun x86 systems.
  *
- *	Copyright (c) 1999 J. Schilling
+ *	Copyright (c) 1999-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -20,9 +20,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -33,13 +33,21 @@ static	char sccsid[] =
 #include <schily.h>
 #include "sunlabel.h"
 
+extern	int	use_sunx86boot;
+
 LOCAL struct sun_label cd_label;
-LOCAL char	*boot_files[NDKMAP];
+LOCAL struct x86_label sx86_label;
+LOCAL struct pc_part	fdisk_part;
+LOCAL char	*boot_files[NDKMAP];	/* Change this for > 8 x86 parts */
 
 LOCAL	void	init_sparc_label	__PR((void));
+LOCAL	void	init_sunx86_label	__PR((void));
 EXPORT	void	sparc_boot_label	__PR((char *label));
+EXPORT	void	sunx86_boot_label	__PR((char *label));
 EXPORT	void	scan_sparc_boot		__PR((char *files));
+EXPORT	void	scan_sunx86_boot	__PR((char *files));
 EXPORT	int	make_sun_label		__PR((void));
+EXPORT	int	make_sunx86_label	__PR((void));
 LOCAL	void	dup_sun_label		__PR((int part));
 LOCAL	int	sunboot_write		__PR((FILE *outfile));
 LOCAL	int	sunlabel_size		__PR((int starting_extent));
@@ -55,7 +63,6 @@ LOCAL	int	genboot_write		__PR((FILE * outfile));
 LOCAL void
 init_sparc_label()
 {
-	
 	i_to_4_byte(cd_label.dkl_vtoc.v_version, V_VERSION);
 	i_to_2_byte(cd_label.dkl_vtoc.v_nparts, NDKMAP);
 	i_to_4_byte(cd_label.dkl_vtoc.v_sanity, VTOC_SANE);
@@ -73,6 +80,32 @@ init_sparc_label()
 	cd_label.dkl_magic[1] =	DKL_MAGIC_1;
 }
 
+LOCAL void
+init_sunx86_label()
+{
+	li_to_4_byte(sx86_label.dkl_vtoc.v_sanity, VTOC_SANE);
+	li_to_4_byte(sx86_label.dkl_vtoc.v_version, V_VERSION);
+	li_to_2_byte(sx86_label.dkl_vtoc.v_sectorsz, 512);
+	li_to_2_byte(sx86_label.dkl_vtoc.v_nparts, NX86MAP);
+
+	li_to_4_byte(sx86_label.dkl_pcyl, CD_PCYL);
+	li_to_4_byte(sx86_label.dkl_ncyl, CD_NCYL);
+	li_to_2_byte(sx86_label.dkl_acyl, CD_ACYL);
+	li_to_2_byte(sx86_label.dkl_bcyl, 0);
+
+	li_to_4_byte(sx86_label.dkl_nhead, CD_NHEAD);
+	li_to_4_byte(sx86_label.dkl_nsect, CD_NSECT);
+	li_to_2_byte(sx86_label.dkl_intrlv, CD_INTRLV);
+	li_to_2_byte(sx86_label.dkl_skew, 0);
+	li_to_2_byte(sx86_label.dkl_apc, CD_APC);
+	li_to_2_byte(sx86_label.dkl_rpm, CD_RPM);
+
+	li_to_2_byte(sx86_label.dkl_write_reinstruct, 0);
+	li_to_2_byte(sx86_label.dkl_read_reinstruct, 0);
+
+	li_to_2_byte(sx86_label.dkl_magic, DKL_MAGIC);
+}
+
 /*
  * For command line parser: set ASCII label.
  */
@@ -81,6 +114,15 @@ sparc_boot_label(label)
 	char	*label;
 {
 	strncpy(cd_label.dkl_ascilabel, label, 127);
+	cd_label.dkl_ascilabel[127] = '\0';
+}
+
+EXPORT void
+sunx86_boot_label(label)
+	char	*label;
+{
+	strncpy(sx86_label.dkl_vtoc.v_asciilabel, label, 127);
+	sx86_label.dkl_vtoc.v_asciilabel[127] = '\0';
 }
 
 /*
@@ -108,7 +150,7 @@ scan_sparc_boot(files)
 
 	i_to_2_byte(cd_label.dkl_vtoc.v_part[0].p_tag,  V_USR);
 	i_to_2_byte(cd_label.dkl_vtoc.v_part[0].p_flag, V_RONLY);
-	for (i=0; i < NDKMAP; i++) {
+	for (i = 0; i < NDKMAP; i++) {
 		p = boot_files[i];
 		if (p == NULL || *p == '\0')
 			continue;
@@ -124,6 +166,55 @@ scan_sparc_boot(files)
 
 		i_to_2_byte(cd_label.dkl_vtoc.v_part[i].p_tag,  V_ROOT);
 		i_to_2_byte(cd_label.dkl_vtoc.v_part[i].p_flag, V_RONLY);
+	}
+}
+
+EXPORT void
+scan_sunx86_boot(files)
+	char	*files;
+{
+	char		*p;
+	int		i = 0;
+	struct stat	statbuf;
+	int		status;
+
+	init_sunx86_label();
+
+	do {
+		if (i >= NDKMAP)
+			comerrno(EX_BAD, "Too many boot partitions.\n");
+		boot_files[i++] = files;
+		if ((p = strchr(files, ',')) != NULL)
+			*p++ = '\0';
+		files = p;
+	} while (p);
+
+	li_to_2_byte(sx86_label.dkl_vtoc.v_part[0].p_tag,  V_ROOT);  /* UFS */
+	li_to_2_byte(sx86_label.dkl_vtoc.v_part[0].p_flag, V_RONLY);
+	li_to_2_byte(sx86_label.dkl_vtoc.v_part[1].p_tag,  V_USR);   /* ISO */
+	li_to_2_byte(sx86_label.dkl_vtoc.v_part[1].p_flag, V_RONLY);
+	li_to_2_byte(sx86_label.dkl_vtoc.v_part[2].p_tag,  0);	    /* ALL */
+	li_to_2_byte(sx86_label.dkl_vtoc.v_part[2].p_flag, 0);
+	for (i = 0; i < NDKMAP; i++) {
+		p = boot_files[i];
+		if (p == NULL || *p == '\0')
+			continue;
+		if (i == 1 || i == 2) {
+			comerrno(EX_BAD,
+			"Partition %d may not have a filename.\n", i);
+		}
+
+		status = stat_filter(p, &statbuf);
+		if (status < 0 || access(p, R_OK) < 0)
+			comerr("Cannot access '%s'.\n", p);
+
+		li_to_4_byte(sx86_label.dkl_vtoc.v_part[i].p_size,
+			roundup(statbuf.st_size, CD_CYLSIZE)/512);
+
+		if (i > 2) {
+			li_to_2_byte(sx86_label.dkl_vtoc.v_part[i].p_tag,  V_USR);
+			li_to_2_byte(sx86_label.dkl_vtoc.v_part[i].p_flag, V_RONLY);
+		}
 	}
 }
 
@@ -148,7 +239,7 @@ make_sun_label()
 
 	i_to_4_byte(cd_label.dkl_map[0].dkl_nblk, last*4);
 	bsize = 0;
-	for (i=0; i < NDKMAP; i++) {
+	for (i = 0; i < NDKMAP; i++) {
 		p = boot_files[i];
 		if (p != NULL && strcmp(p, "...") == '\0') {
 			dup_sun_label(i);
@@ -162,6 +253,73 @@ make_sun_label()
 		if (i > 0)
 			bsize += nblk;
 	}
+	bsize /= 4;
+	return (last-last_extent+bsize);
+}
+
+/*
+ * A typical Solaris boot/install CD from a Sun CD set looks
+ * this way:
+ *
+ * UFS	Part 0 tag 2 flag 10 start 3839 size 1314560
+ * ISO	Part 1 tag 4 flag 10 start    0 size    3839
+ * ALL	Part 2 tag 0 flag  0 start    0 size 1318400
+ */
+EXPORT int
+make_sunx86_label()
+{
+	int	last;
+	int	cyl = 0;
+	int	nblk;
+	int	bsize;
+	int	i;
+	int	partoff = 1;	/* The offset of the Solaris 0x82 partition */
+	char	*p;
+
+	/*
+	 * Compute the size of the padding for the iso9660 image
+	 * to allow the next partition to start on a cylinder boundary.
+	 */
+	last = roundup(last_extent, (CD_CYLSIZE/SECTOR_SIZE));
+
+	li_to_4_byte(sx86_label.dkl_vtoc.v_part[1].p_size, last*4);
+
+	/*
+	 * Note that the Solaris fdisk partition with fdisk signature 0x82
+	 * is created at fixed offset 1 sector == 512 Bytes by this
+	 * implementation.
+	 * We need subtract this partition offset from all absolute
+	 * partition offsets in order to get offsets relative to the
+	 * Solaris primary partition.
+	 */
+	bsize = 0;
+	for (i = 0; i < NDKMAP; i++) {
+		if (i == 2)		/* Never include the whole disk in */
+			continue;	/* size/offset computations	   */
+		p = boot_files[i];
+
+		if ((nblk = la_to_4_byte(sx86_label.dkl_vtoc.v_part[i].p_size)) == 0)
+			continue;
+
+		li_to_4_byte(sx86_label.dkl_vtoc.v_part[i].p_start,
+						cyl*(CD_CYLSIZE/512)-partoff);
+		cyl += nblk / (CD_CYLSIZE/512);
+		if (i == 0 || i > 2)
+			bsize += nblk;
+	}
+	li_to_4_byte(sx86_label.dkl_vtoc.v_part[0].p_start, last*4-partoff);
+	li_to_4_byte(sx86_label.dkl_vtoc.v_part[1].p_start, 0);
+	li_to_4_byte(sx86_label.dkl_vtoc.v_part[1].p_size, last*4-partoff);
+	li_to_4_byte(sx86_label.dkl_vtoc.v_part[2].p_start, 0);
+	li_to_4_byte(sx86_label.dkl_vtoc.v_part[2].p_size, last*4+bsize);
+
+	fdisk_part.part[0].pr_status = STATUS_ACTIVE;
+	fdisk_part.part[0].pr_type   = TYPE_SOLARIS;
+	li_to_4_byte(fdisk_part.part[0].pr_partoff, partoff);
+	li_to_4_byte(fdisk_part.part[0].pr_nsect, last*4+bsize-partoff);
+	fdisk_part.magic[0] = 0x55;
+	fdisk_part.magic[1] = 0xAA;
+
 	bsize /= 4;
 	return (last-last_extent+bsize);
 }
@@ -183,7 +341,7 @@ dup_sun_label(part)
 	cyl = a_to_4_byte(cd_label.dkl_map[part-1].dkl_cylno);
 	nblk = a_to_4_byte(cd_label.dkl_map[part-1].dkl_nblk);
 
-	for (i=part; i < NDKMAP; i++) {
+	for (i = part; i < NDKMAP; i++) {
 		i_to_4_byte(cd_label.dkl_map[i].dkl_cylno, cyl);
 		i_to_4_byte(cd_label.dkl_map[i].dkl_nblk, nblk);
 
@@ -207,37 +365,51 @@ sunboot_write(outfile)
 	int	f;
 	char	*p;
 
-	memset(buffer, 0, sizeof(buffer));
+	memset(buffer, 0, sizeof (buffer));
 
 	/*
 	 * Write padding to the iso9660 image to allow the
 	 * boot partitions to start on a cylinder boundary.
 	 */
 	amt = roundup(last_extent_written, (CD_CYLSIZE/SECTOR_SIZE)) - last_extent_written;
-	for (n=0; n < amt; n++) {
-	 	xfwrite(buffer, 1, SECTOR_SIZE, outfile);
+	for (n = 0; n < amt; n++) {
+		xfwrite(buffer, SECTOR_SIZE, 1, outfile, 0, FALSE);
 		last_extent_written++;
 	}
-	for (i=1; i < NDKMAP; i++) {
+	if (use_sunx86boot)
+		i = 0;
+	else
+		i = 1;
+	for (; i < NDKMAP; i++) {
+		if (use_sunx86boot && (i == 1 || i == 2))
+			continue;
 		p = boot_files[i];
+		if (p == NULL || *p == '\0')
+			continue;
 		if (p != NULL && strcmp(p, "...") == '\0')
 			break;
-		if ((nblk = a_to_4_byte(cd_label.dkl_map[i].dkl_nblk)) == 0)
-			continue;
+		if (use_sunx86boot) {
+			if ((nblk = la_to_4_byte(sx86_label.dkl_vtoc.v_part[i].p_size)) == 0)
+				continue;
+		} else {
+			if ((nblk = a_to_4_byte(cd_label.dkl_map[i].dkl_nblk)) == 0)
+				continue;
+		}
 		if ((f = open(boot_files[i], O_RDONLY| O_BINARY)) < 0)
 			comerr("Cannot open '%s'.\n", boot_files[i]);
-		
+
 		amt = nblk / 4;
-		for (n=0; n < amt; n++) {
-			memset(buffer, 0, sizeof(buffer));
+		for (n = 0; n < amt; n++) {
+			memset(buffer, 0, sizeof (buffer));
 			if (read(f, buffer, SECTOR_SIZE) < 0)
 				comerr("Read error on '%s'.\n", boot_files[i]);
-		 	xfwrite(buffer, 1, SECTOR_SIZE, outfile);
+			xfwrite(buffer, SECTOR_SIZE, 1, outfile, 0, FALSE);
 			last_extent_written++;
 		}
 		close(f);
 	}
-	fprintf(stderr, "Total extents including sparc boot = %d\n", 
+	fprintf(stderr, "Total extents including %s boot = %d\n",
+				use_sunx86boot ? "Solaris x86":"sparc",
 				last_extent_written - session_start);
 	return (0);
 }
@@ -253,7 +425,7 @@ sunlabel_size(starting_extent)
 	if (last_extent != session_start)
 		comerrno(EX_BAD, "Cannot create sparc boot on offset != 0.\n");
 	last_extent++;
-	return 0;
+	return (0);
 }
 
 /*
@@ -266,12 +438,12 @@ LOCAL int
 sunlabel_write(outfile)
 	FILE	*outfile;
 {
-		 char	buffer[SECTOR_SIZE];
+		char	buffer[SECTOR_SIZE];
 	register char	*p;
 	register short	count = (512/2) - 1;
-		 int	f;
+		int	f;
 
-	memset(buffer, 0, sizeof(buffer));
+	memset(buffer, 0, sizeof (buffer));
 	if (genboot_image) {
 		if ((f = open(genboot_image, O_RDONLY| O_BINARY)) < 0)
 			comerr("Cannot open '%s'.\n", genboot_image);
@@ -281,30 +453,45 @@ sunlabel_write(outfile)
 		close(f);
 	}
 
-	/*
-	 * If we don't already have a Sun disk label text
-	 * set up the default.
-	 */
-	if (cd_label.dkl_ascilabel[0] == '\0')
-		strcpy(cd_label.dkl_ascilabel, CD_DEFLABEL);
+	if (use_sunx86boot) {
+		if (sx86_label.dkl_vtoc.v_asciilabel[0] == '\0')
+			strcpy(sx86_label.dkl_vtoc.v_asciilabel, CD_X86LABEL);
 
-	p = (char *)&cd_label;
-	cd_label.dkl_cksum[0] = 0;
-	cd_label.dkl_cksum[1] = 0; 
-	while (count--) {
-		cd_label.dkl_cksum[0] ^= *p++;
-		cd_label.dkl_cksum[1] ^= *p++; 
+		p = (char *)&sx86_label;
+		sx86_label.dkl_cksum[0] = 0;
+		sx86_label.dkl_cksum[1] = 0;
+		while (count-- > 0) {
+			sx86_label.dkl_cksum[0] ^= *p++;
+			sx86_label.dkl_cksum[1] ^= *p++;
+		}
+		memcpy(&buffer[0x1BE], &fdisk_part.part, 512-0x1BE);
+		memcpy(&buffer[1024], &sx86_label, 512);
+	} else {
+		/*
+		 * If we don't already have a Sun disk label text
+		 * set up the default.
+		 */
+		if (cd_label.dkl_ascilabel[0] == '\0')
+			strcpy(cd_label.dkl_ascilabel, CD_DEFLABEL);
+
+		p = (char *)&cd_label;
+		cd_label.dkl_cksum[0] = 0;
+		cd_label.dkl_cksum[1] = 0;
+		while (count--) {
+			cd_label.dkl_cksum[0] ^= *p++;
+			cd_label.dkl_cksum[1] ^= *p++;
+		}
+		memcpy(buffer, &cd_label, 512);
 	}
 
-	memcpy(buffer, &cd_label, 512);
- 	xfwrite(buffer, 1, SECTOR_SIZE, outfile);
+	xfwrite(buffer, SECTOR_SIZE, 1, outfile, 0, FALSE);
 	last_extent_written++;
 	return (0);
 }
 
 /*
  * Do size management for the generic boot code on sectors 0..16.
-  */
+ */
 LOCAL int
 genboot_size(starting_extent)
 	int	starting_extent;
@@ -312,7 +499,7 @@ genboot_size(starting_extent)
 	if (last_extent > (session_start + 1))
 		comerrno(EX_BAD, "Cannot create generic boot on offset != 0.\n");
 	last_extent = session_start + 16;
-	return 0;
+	return (0);
 }
 
 /*
@@ -330,13 +517,13 @@ genboot_write(outfile)
 	if ((f = open(genboot_image, O_RDONLY| O_BINARY)) < 0)
 		comerr("Cannot open '%s'.\n", genboot_image);
 
-	for(i=0; i < 16; i++) {
-		memset(buffer, 0, sizeof(buffer));
+	for (i = 0; i < 16; i++) {
+		memset(buffer, 0, sizeof (buffer));
 		if (read(f, buffer, SECTOR_SIZE) < 0)
 			comerr("Read error on '%s'.\n", genboot_image);
 
 		if (i != 0 || last_extent_written == session_start) {
-		 	xfwrite(buffer, 1, SECTOR_SIZE, outfile);
+			xfwrite(buffer, SECTOR_SIZE, 1, outfile, 0, FALSE);
 			last_extent_written++;
 		}
 	}

@@ -1,7 +1,7 @@
-/* @(#)align_test.c	1.16 02/10/17 Copyright 1995 J. Schilling */
+/* @(#)align_test.c	1.19 03/11/25 Copyright 1995 J. Schilling */
 #ifndef	lint
 static	char sccsid[] =
-	"@(#)align_test.c	1.16 02/10/17 Copyright 1995 J. Schilling";
+	"@(#)align_test.c	1.19 03/11/25 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Generate machine dependant align.h
@@ -19,20 +19,23 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
 #include <stdio.h>
 #include <standard.h>
 
+/*
+ * CHECK_ALIGN needs SIGBUS, but DJGPP has no SIGBUS
+ */
 /*#define	FORCE_ALIGN*/
 /*#define	OFF_ALIGN*/
 /*#define	CHECK_ALIGN*/
 
-EXPORT	int	main	__PR((int ac, char** av));
+EXPORT	int	main	__PR((int ac, char **av));
 
 #if	!defined(FORCE_ALIGN) && !defined(OFF_ALIGN) &&	!defined(CHECK_ALIGN)
 #define	OFF_ALIGN
@@ -75,7 +78,8 @@ char	*buf_aligned;
 #include <setjmp.h>
 LOCAL	jmp_buf	jb;
 
-LOCAL	int	check_align	__PR((int (*)(char*, int), void (*)(char*, int), int));
+LOCAL	int	check_align	__PR((int (*)(char *, int),
+					void (*)(char *, int), int));
 LOCAL	int	check_short	__PR((char *, int));
 LOCAL	int	check_int	__PR((char *, int));
 LOCAL	int	check_long	__PR((char *, int));
@@ -84,7 +88,8 @@ LOCAL	int	check_float	__PR((char *, int));
 LOCAL	int	check_double	__PR((char *, int));
 LOCAL	int	check_ptr	__PR((char *, int));
 
-LOCAL	int	speed_check	__PR((char *, void (*)(char*, int), int));
+LOCAL	int	speed_check	__PR((char *,
+					void (*)(char *, int), int));
 LOCAL	void	speed_short	__PR((char *, int));
 LOCAL	void	speed_int	__PR((char *, int));
 LOCAL	void	speed_long	__PR((char *, int));
@@ -148,18 +153,22 @@ sig(signo)
 
 #define	min_align(i)	(((i) < MIN_ALIGN) ? MIN_ALIGN : (i))
 
-char	al[] = "alignment value for ";
-char	ms[] = "alignment mask  for ";
-char	so[] = "sizeof ";
-char	sh[] = "short";
-char	in[] = "int";
-char	lo[] = "long";
-char	ll[] = "long long";
-char	fl[] = "float";
-char	db[] = "double";
-char	pt[] = "pointer";
+/*
+ * Make it LOCAL MacOS-X by default links against libcurses and
+ * so we totherwise have a double defined "al".
+ */
+LOCAL	char	al[] = "alignment value for ";
+LOCAL	char	ms[] = "alignment mask  for ";
+LOCAL	char	so[] = "sizeof ";
+LOCAL	char	sh[] = "short";
+LOCAL	char	in[] = "int";
+LOCAL	char	lo[] = "long";
+LOCAL	char	ll[] = "long long";
+LOCAL	char	fl[] = "float";
+LOCAL	char	db[] = "double";
+LOCAL	char	pt[] = "pointer";
 
-#define	xalign(x, a, m)		( ((char *)(x)) + ( (a) - (((UIntptr_t)(x))&(m))) )
+#define	xalign(x, a, m)		(((char *)(x)) + ((a) - (((UIntptr_t)(x))&(m))))
 
 EXPORT int
 main(ac, av)
@@ -171,7 +180,9 @@ main(ac, av)
 	int	s;
 
 #ifdef	CHECK_ALIGN
+#ifdef	SIGBUS
 	signal(SIGBUS, sig);
+#endif
 #endif
 
 	i = ((int)buf) % 1024;
@@ -193,7 +204,7 @@ main(ac, av)
 	printf("#include <utypes.h>\n");
 	printf("#endif\n");
 
-	s = sizeof(short);
+	s = sizeof (short);
 	i  = ALIGN_short;
 	i = min_align(i);
 	printf("\n");
@@ -201,7 +212,7 @@ main(ac, av)
 	printf("#define	ALIGN_SMASK	%d\t/* %s(%s *)\t*/\n", i-1, ms, sh);
 	printf("#define	SIZE_SHORT	%d\t/* %s(%s)\t\t\t*/\n", s, so, sh);
 
-	s = sizeof(int);
+	s = sizeof (int);
 	i  = ALIGN_int;
 	i = min_align(i);
 	printf("\n");
@@ -209,7 +220,7 @@ main(ac, av)
 	printf("#define	ALIGN_IMASK	%d\t/* %s(%s *)\t\t*/\n", i-1, ms, in);
 	printf("#define	SIZE_INT	%d\t/* %s(%s)\t\t\t\t*/\n", s, so, in);
 
-	s = sizeof(long);
+	s = sizeof (long);
 	i  = ALIGN_long;
 	i = min_align(i);
 	printf("\n");
@@ -218,7 +229,7 @@ main(ac, av)
 	printf("#define	SIZE_LONG	%d\t/* %s(%s)\t\t\t*/\n", s, so, lo);
 
 #ifdef	HAVE_LONGLONG
-	s = sizeof(long long);
+	s = sizeof (long long);
 	i  = ALIGN_longlong;
 	i = min_align(i);
 #endif
@@ -227,7 +238,7 @@ main(ac, av)
 	printf("#define	ALIGN_LLMASK	%d\t/* %s(%s *)\t*/\n", i-1, ms, ll);
 	printf("#define	SIZE_LLONG	%d\t/* %s(%s)\t\t\t*/\n", s, so, ll);
 
-	s = sizeof(float);
+	s = sizeof (float);
 	i  = ALIGN_float;
 	i = min_align(i);
 	printf("\n");
@@ -235,7 +246,7 @@ main(ac, av)
 	printf("#define	ALIGN_FMASK	%d\t/* %s(%s *)\t*/\n", i-1, ms, fl);
 	printf("#define	SIZE_FLOAT	%d\t/* %s(%s)\t\t\t*/\n", s, so, fl);
 
-	s = sizeof(double);
+	s = sizeof (double);
 	i  = ALIGN_double;
 	i = min_align(i);
 	printf("\n");
@@ -243,7 +254,7 @@ main(ac, av)
 	printf("#define	ALIGN_DMASK	%d\t/* %s(%s *)\t*/\n", i-1, ms, db);
 	printf("#define	SIZE_DOUBLE	%d\t/* %s(%s)\t\t\t*/\n", s, so, db);
 
-	s = sizeof(char *);
+	s = sizeof (char *);
 	i  = ALIGN_ptr;
 	i = min_align(i);
 	printf("\n");
@@ -319,14 +330,14 @@ check_align(cfunc, sfunc, tsize)
 	void	(*sfunc)();
 	int	tsize;
 {
-		 int	calign;
-		 int	align;
-		 int	tcheck;
-		 int	t;
+		int	calign;
+		int	align;
+		int	tcheck;
+		int	t;
 	register int	i;
 	register char	*p = buf_aligned;
 
-	for (i=1; i < 128; i++) {
+	for (i = 1; i < 128; i++) {
 		if (!setjmp(jb)) {
 			(cfunc)(p, i);
 			break;
@@ -464,7 +475,7 @@ speed_short(p, n)
 
 	sp = (short *)&p[n];
 
-	for (i = 1000000; --i >= 0;)
+	for (i = 1000000; --i >= 0; )
 		*sp = i;
 }
 
@@ -478,7 +489,7 @@ speed_int(p, n)
 
 	ip = (int *)&p[n];
 
-	for (i = 1000000; --i >= 0;)
+	for (i = 1000000; --i >= 0; )
 		*ip = i;
 }
 
@@ -492,7 +503,7 @@ speed_long(p, n)
 
 	lp = (long *)&p[n];
 
-	for (i = 1000000; --i >= 0;)
+	for (i = 1000000; --i >= 0; )
 		*lp = i;
 }
 
@@ -507,7 +518,7 @@ speed_longlong(p, n)
 
 	llp = (long long *)&p[n];
 
-	for (i = 1000000; --i >= 0;)
+	for (i = 1000000; --i >= 0; )
 		*llp = i;
 }
 #endif
@@ -522,7 +533,7 @@ speed_float(p, n)
 
 	fp = (float *)&p[n];
 
-	for (i = 1000000; --i >= 0;)
+	for (i = 1000000; --i >= 0; )
 		*fp = i;
 }
 
@@ -536,7 +547,7 @@ speed_double(p, n)
 
 	dp = (double *)&p[n];
 
-	for (i = 1000000; --i >= 0;)
+	for (i = 1000000; --i >= 0; )
 		*dp = i;
 }
 
@@ -550,7 +561,7 @@ speed_ptr(p, n)
 
 	pp = (char **)&p[n];
 
-	for (i = 1000000; --i >= 0;)
+	for (i = 1000000; --i >= 0; )
 		*pp = (char *)i;
 }
 

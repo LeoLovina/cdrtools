@@ -1,7 +1,7 @@
-/* @(#)nls_file.c	1.1 01/01/20 2000 J. Schilling */
+/* @(#)nls_file.c	1.2 03/02/28 2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)nls_file.c	1.1 01/01/20 2000 J. Schilling";
+	"@(#)nls_file.c	1.2 03/02/28 2000 J. Schilling";
 #endif
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -14,9 +14,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 /*
  *	Modifications to make the code portable Copyright (c) 2000 J. Schilling
@@ -34,6 +34,7 @@ static	char sccsid[] =
 #include <stdio.h>
 #include <stdxlib.h>
 #include <strdefs.h>
+#include <libport.h>
 #include "nls.h"
 
 #define NUM	256

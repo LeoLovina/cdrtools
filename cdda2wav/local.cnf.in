@@ -1,4 +1,4 @@
-# @(#)local.cnf.in       1.4 02/04/28 Copyright 1998-2002 Heiko Eissfeldt
+# @(#)local.cnf.in       1.6 03/09/04 Copyright 1998-2002 Heiko Eissfeldt
 #
 # Makefile for cdda2wav, a sampling utility.
 #
@@ -48,11 +48,14 @@ SUN_SOUND_DEV=	'"/dev/audio"'
 
 HAVE_OSS=	@HAVE_OSS@
 HAVE_SUNSOUND=	@HAVE_SUNSOUND@
-_HAVE_SOUND=	$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)
-#_HAVE_SOUND=	$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)$(HAVE_CYGWIN)
+HAVE_WINSOUND=	@HAVE_WINSOUND@
+HAVE_OS2SOUND=	@HAVE_OS2SOUND@
+HAVE_QNXSOUND=	@HAVE_SYS_ASOUNDLIB_H@
+#_HAVE_SOUND=	$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)
+_HAVE_SOUND=	$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)$(HAVE_WINSOUND)$(HAVE_OS2SOUND)$(HAVE_QNXSOUND)
 __HAVE_SOUND=	$(_HAVE_SOUND:$(_UNIQ)=)
-HAVE_SOUND=	$(__HAVE_SOUND:$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)=-DECHO_TO_SOUNDCARD)
-#HAVE_SOUND=	$(__HAVE_SOUND:$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)$(HAVE_CYGWIN)=-DECHO_TO_SOUNDCARD)
+#HAVE_SOUND=	$(__HAVE_SOUND:$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)=-DECHO_TO_SOUNDCARD)
+HAVE_SOUND=	$(__HAVE_SOUND:$(_UNIQ)$(HAVE_OSS)$(HAVE_SUNSOUND)$(HAVE_WINSOUND)$(HAVE_OS2SOUND)$(HAVE_QNXSOUND)=-DECHO_TO_SOUNDCARD)
 
 _SOUND_DEVICE=	$(_UNIQ)$(HAVE_OSS)$(HAVE_SOUND)$(HAVE_SUNSOUND)
 __SOUND_DEVICE=	$(_SOUND_DEVICE:$(_UNIQ)='""')
@@ -60,9 +63,11 @@ ___SOUND_DEVICE=	$(__SOUND_DEVICE:$(_UNIQ)$(HAVE_OSS)$(HAVE_SOUND)=$(OSS_SOUND_D
 ____SOUND_DEVICE=	$(___SOUND_DEVICE:$(_UNIQ)$(HAVE_SOUND)$(HAVE_SUNSOUND)=$(SUN_SOUND_DEV))
 SOUND_DEVICE=	$(____SOUND_DEVICE:$(_UNIQ)$(HAVE_OSS)$(HAVE_SOUND)$(HAVE_SUNSOUND)=$(OSS_SOUND_DEV))
 
-_EXTRALIB=	$(_UNIQ)$(HAVE_CYGWIN)
+_EXTRALIB=	$(_UNIQ)$(HAVE_WINSOUND)$(HAVE_OS2SOUND)$(HAVE_QNXSOUND)
 __EXTRALIB=	$(_EXTRALIB:$(_UNIQ)=@EXTRALIBS@)
-EXTRALIB=	$(__EXTRALIB:$(_UNIQ)$(HAVE_CYGWIN)=@EXTRALIBS@ -lwinmm)
+___EXTRALIB=	$(__EXTRALIB:$(_UNIQ)$(HAVE_WINSOUND)=@EXTRALIBS@ -lwinmm)
+____EXTRALIB=	$(___EXTRALIB:$(_UNIQ)$(HAVE_QNXSOUND)=@EXTRALIBS@ -lasound)
+EXTRALIB=	$(____EXTRALIB:$(_UNIQ)$(HAVE_OS2SOUND)=@EXTRALIBS@ -los2me)
 
 ############# sound file defaults
 # Defaults for wav/au/cdr output file formats
@@ -113,11 +118,11 @@ MD5OBJECTS=md5c.o
 # Comment out if you don't want a disk description file for the cdindex server
 WANT_CDINDEX_SUPPORT=-DCDINDEX_SUPPORT
 
-# CDDB server support (not yet implemented)
+# CDDB server support
 # Comment out if you don't want a network access to the cddb server
 WANT_CDDB_SUPPORT=-DCDDB_SUPPORT
-CDDB_SITES_SERVER=cddb.cddb.com
-CDDB_SITES_SERVERPORT=8880
+CDDB_SERVERHOST='"freedb.freedb.org"'
+CDDB_SERVERPORT=8880
 
 # end of tunable parameters
 #
@@ -126,7 +131,7 @@ CDDA2WAVDEFS=-DCD_DEVICE=$(DEF_DEVICE) -DFILENAME=$(DEF_FILE) \
 -DBITS_P_S=$(DEF_BITS) -DCHANNELS=$(DEF_CHANNELS) -DAUDIOTYPE=$(DEF_TYPE) \
 -DDURATION=$(DEF_TIME) -DDEF_INTERFACE=$(INTERFACE) -DUSE_PARANOIA=1 \
 -DDEFAULT_SPEED=$(DEF_SPEED) $(WANT_CDINDEX_SUPPORT) $(WANT_CDDB_SUPPORT) \
-$(HAVE_IOCTL) \
+-DCDDBHOST=$(CDDB_SERVERHOST) -DCDDBPORT=$(CDDB_SERVERPORT) $(HAVE_IOCTL) \
 $(HAVE_SOUND) -DSOUND_DEV=$(SOUND_DEVICE) -DNSECTORS=$(NSECTORS) \
 $(WANT_INFOFILES) $(WANT_MD5) -DAUX_DEVICE=$(AUX_DEVICE)
 
@@ -134,28 +139,3 @@ LIBS +=	@LIBS@
 
 VERSION_OS=@CDRTOOLS_VERSION@_$(O_ARCH)_$(OSREL)_$(K_ARCH)_$(P_ARCH)
 CUR_VERSION='"$(VERSION_OS)"'
-GNU_CC_WARNINGS=-W -Wall -Wtraditional -Wshadow -Wpointer-arith -Wcast-qual \
--Wcast-align -Wwrite-strings -Wstrict-prototypes -Wnested-externs -Wbad-function-cast \
--Winline -Wno-unused #-Wmissing-declarations -Wmissing-prototypes -Wconversion #-pedantic -Wredundant-decls -ansi
-#
-#AIX_C_WARNINGS=-qcheck=all -qextchk -qsrcmsg -qproto
-#GNU_CC_OPTIONS= -O2 -fomit-frame-pointer -finline-functions -fcaller-saves \
-#       -funroll-loops
-#AIX_C_OPTIONS=-O
-#HPUX_C_OPTIONS=-Ae -O
-#OPTIONS= -v
-##ifdef DO_NOT_USE_GCC
-#WARNINGS=$(GNU_CC_WARNINGS)
-#OPTIONS=$(GNU_CC_OPTIONS)
-##else
-#WARNINGS=
-#OPTIONS=-O
-##ifdef HAVE_AIX
-#WARNINGS=$(AIX_C_WARNINGS)
-#OPTIONS=$(AIX_C_OPTIONS)
-##endif
-##ifdef HAVE_HPUX
-#WARNINGS=
-#OPTIONS=$(HPUX_C_OPTIONS)
-##endif
-##endif

@@ -1,4 +1,4 @@
-/* @(#)libport.h	1.8 03/03/01 Copyright 1995 J. Schilling */
+/* @(#)libport.h	1.9 03/06/15 Copyright 1995 J. Schilling */
 /*
  *	Copyright (c) 1995 J. Schilling
  */
@@ -20,7 +20,7 @@
 
 
 #ifndef _LIBPORT_H
-#define _LIBPORT_H
+#define	_LIBPORT_H
 
 #ifndef	_MCONFIG_H
 #include <mconfig.h>

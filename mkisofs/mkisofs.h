@@ -1,25 +1,26 @@
-/* @(#)mkisofs.h	1.76 02/12/07 joerg */
+/* @(#)mkisofs.h	1.94 04/05/27 joerg */
 /*
  * Header file mkisofs.h - assorted structure definitions and typecasts.
-
-   Written by Eric Youngdale (1993).
-
-   Copyright 1993 Yggdrasil Computing, Incorporated
-   Copyright (c) 1999,2000,2001 J. Schilling
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ * Written by Eric Youngdale (1993).
+ *
+ * Copyright 1993 Yggdrasil Computing, Incorporated
+ * Copyright (c) 1999,2000-2003 J. Schilling
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
@@ -29,12 +30,11 @@
 #include <stdxlib.h>
 #include <unixstd.h>	/* Needed for for LARGEFILE support */
 #include <strdefs.h>
-#ifdef ultrix
-extern char    *strdup();
-#endif
 #include <dirdefs.h>
 #include <utypes.h>
 #include <standard.h>
+#include <libport.h>
+#include "scsi.h"
 
 #ifdef	DVD_VIDEO
 #ifndef	UDF
@@ -60,8 +60,8 @@ extern char    *strdup();
 #endif
 
 #ifndef __SVR4
-extern int      optind;
-extern char    *optarg;
+extern int	optind;
+extern char	*optarg;
 
 /* extern int getopt (int __argc, char **__argv, char *__optstring); */
 #endif
@@ -93,25 +93,25 @@ struct directory_entry {
 	struct directory_entry *next;
 	struct directory_entry *jnext;
 	struct iso_directory_record isorec;
-	unsigned int    starting_block;
+	unsigned int	starting_block;
 	off_t		size;
-	unsigned short  priority;
-	unsigned char   jreclen;	/* Joliet record len */
-	char           *name;
-	char           *table;
-	char           *whole_name;
+	unsigned short	priority;
+	unsigned char	jreclen;	/* Joliet record len */
+	char		*name;
+	char		*table;
+	char		*whole_name;
 	struct directory *filedir;
 	struct directory_entry *parent_rec;
-	unsigned int    de_flags;
-	ino_t           inode;		/* Used in the hash table */
-	dev_t           dev;		/* Used in the hash table */
-	unsigned char  *rr_attributes;
-	unsigned int    rr_attr_size;
-	unsigned int    total_rr_attr_size;
-	unsigned int    got_rr_name;
+	unsigned int	de_flags;
+	ino_t		inode;		/* Used in the hash table */
+	dev_t		dev;		/* Used in the hash table */
+	unsigned char	*rr_attributes;
+	unsigned int	rr_attr_size;
+	unsigned int	total_rr_attr_size;
+	unsigned int	got_rr_name;
 #ifdef APPLE_HYB
 	struct directory_entry *assoc;	/* entry has a resource fork */
-	hfsdirent      *hfs_ent;	/* HFS parameters */
+	hfsdirent	*hfs_ent;	/* HFS parameters */
 	off_t		hfs_off;	/* offset to real start of fork */
 	int		hfs_type;	/* type of HFS Unix file */
 #endif	/* APPLE_HYB */
@@ -125,9 +125,9 @@ struct directory_entry {
 
 struct file_hash {
 	struct file_hash *next;
-	ino_t           inode;		/* Used in the hash table */
-	dev_t           dev;		/* Used in the hash table */
-	unsigned int    starting_block;
+	ino_t		inode;		/* Used in the hash table */
+	dev_t		dev;		/* Used in the hash table */
+	unsigned int	starting_block;
 	off_t		size;
 #ifdef SORTING
 	struct directory_entry *de;
@@ -152,24 +152,25 @@ struct file_hash {
  * for that component.
  *
  * The 'generate' pass will adjust the contents and pointers as required now that extent
- * numbers are assigned.   In some cases, the contents of the record are also generated.
+ * numbers are assigned.  In some cases, the contents of the record are also generated.
  *
  * The 'write' pass actually writes the data to the disc.
  */
 struct output_fragment {
 	struct output_fragment *of_next;
-	int             (*of_size)	__PR((int));
-	int             (*of_generate)	__PR((void));
-	int             (*of_write)	__PR((FILE *));
-	char		*of_name;			/* Textual description*/
+	int		(*of_size)	__PR((int));
+	int		(*of_generate)	__PR((void));
+	int		(*of_write)	__PR((FILE *));
+	char		*of_name;			/* Textual description */
 	unsigned int	of_start_extent;		/* For consist check */
 };
 
 extern struct output_fragment *out_list;
 extern struct output_fragment *out_tail;
 
-extern struct output_fragment padblock_desc;
+extern struct output_fragment startpad_desc;
 extern struct output_fragment voldesc_desc;
+extern struct output_fragment xvoldesc_desc;
 extern struct output_fragment joliet_desc;
 extern struct output_fragment torito_desc;
 extern struct output_fragment end_vol;
@@ -181,10 +182,14 @@ extern struct output_fragment dirtree_clean;
 extern struct output_fragment jdirtree_desc;
 extern struct output_fragment extension_desc;
 extern struct output_fragment files_desc;
-extern struct output_fragment padend_desc;
+extern struct output_fragment interpad_desc;
+extern struct output_fragment endpad_desc;
 extern struct output_fragment sunboot_desc;
 extern struct output_fragment sunlabel_desc;
 extern struct output_fragment genboot_desc;
+extern struct output_fragment strfile_desc;
+extern struct output_fragment strdir_desc;
+extern struct output_fragment strpath_desc;
 
 #ifdef APPLE_HYB
 extern struct output_fragment hfs_desc;
@@ -216,7 +221,7 @@ typedef struct {
 typedef struct {
 	int		num_titles;
 	title_set_t	*title_set;
-} title_set_info_t; 
+} title_set_info_t;
 #endif /* DVD_VIDEO */
 
 /*
@@ -234,22 +239,22 @@ struct directory {
 	struct directory_entry *contents;
 	struct directory_entry *jcontents;
 	struct directory_entry *self;
-	char           *whole_name;	/* Entire path */
-	char           *de_name;	/* Entire path */
-	unsigned int    ce_bytes;	/* Number of bytes of CE entries read
-					   for this dir */
-	unsigned int    depth;
-	unsigned int    size;
-	unsigned int    extent;
-	unsigned int    jsize;
-	unsigned int    jextent;
-	unsigned int    path_index;
-	unsigned int    jpath_index;
-	unsigned short  dir_flags;
-	unsigned short  dir_nlink;
+	char		*whole_name;	/* Entire path */
+	char		*de_name;	/* Entire path */
+	unsigned int	ce_bytes;	/* Number of bytes of CE entries read */
+					/* for this dir */
+	unsigned int	depth;
+	unsigned int	size;
+	unsigned int	extent;
+	unsigned int	jsize;
+	unsigned int	jextent;
+	unsigned int	path_index;
+	unsigned int	jpath_index;
+	unsigned short	dir_flags;
+	unsigned short	dir_nlink;
 #ifdef APPLE_HYB
-	hfsdirent      *hfs_ent;	/* HFS parameters */
-	struct hfs_info *hfs_info;	/* list of info for all entries in dir */
+	hfsdirent	*hfs_ent;	/* HFS parameters */
+	struct hfs_info	*hfs_info;	/* list of info for all entries in dir */
 #endif	/* APPLE_HYB */
 #ifdef SORTING
 	int		sort;		/* sort weight for child files */
@@ -258,17 +263,17 @@ struct directory {
 
 struct deferred_write {
 	struct deferred_write *next;
-	char           *table;
-	unsigned int    extent;
-	unsigned int    size;
-	char           *name;
+	char		*table;
+	unsigned int	extent;
+	off_t		size;
+	char		*name;
 	struct directory_entry *s_entry;
-	unsigned int    pad;
+	unsigned int	pad;
 	off_t		off;
 };
 
 struct eltorito_boot_entry_info {
-	struct eltorito_boot_entry_info *next; 
+	struct eltorito_boot_entry_info *next;
 	char		*boot_image;
 	int		not_bootable;
 	int		no_emul_boot;
@@ -278,7 +283,7 @@ struct eltorito_boot_entry_info {
 	int		load_addr;
 };
 
-extern int      goof;
+extern int	goof;
 extern struct directory *root;
 extern struct directory *reloc_dir;
 extern unsigned int next_extent;
@@ -289,71 +294,73 @@ extern unsigned int session_start;
 extern unsigned int path_table_size;
 extern unsigned int path_table[4];
 extern unsigned int path_blocks;
-extern char    *path_table_l;
-extern char    *path_table_m;
+extern char	*path_table_l;
+extern char	*path_table_m;
 
 extern unsigned int jpath_table_size;
 extern unsigned int jpath_table[4];
 extern unsigned int jpath_blocks;
-extern char    *jpath_table_l;
-extern char    *jpath_table_m;
+extern char	*jpath_table_l;
+extern char	*jpath_table_m;
 
 extern struct iso_directory_record root_record;
 extern struct iso_directory_record jroot_record;
 
-extern int      check_oldnames;
-extern int      check_session;
-extern int      use_eltorito;
-extern int      hard_disk_boot;
-extern int      not_bootable;
-extern int      no_emul_boot;
-extern int      load_addr;
-extern int      load_size;
-extern int      boot_info_table;
-extern int      use_RockRidge;
-extern int      use_Joliet;
-extern int      rationalize;
-extern int      rationalize_uid;
-extern int      rationalize_gid;
-extern int      rationalize_filemode;
-extern int      rationalize_dirmode;
-extern uid_t    uid_to_use;
-extern gid_t    gid_to_use;
-extern int      filemode_to_use;
-extern int      dirmode_to_use;
-extern int      new_dir_mode;
-extern int      follow_links;
+extern int	check_oldnames;
+extern int	check_session;
+extern int	use_eltorito;
+extern int	hard_disk_boot;
+extern int	not_bootable;
+extern int	no_emul_boot;
+extern int	load_addr;
+extern int	load_size;
+extern int	boot_info_table;
+extern int	use_RockRidge;
+extern int	osecsize;
+extern int	use_XA;
+extern int	use_Joliet;
+extern int	rationalize;
+extern int	rationalize_uid;
+extern int	rationalize_gid;
+extern int	rationalize_filemode;
+extern int	rationalize_dirmode;
+extern uid_t	uid_to_use;
+extern gid_t	gid_to_use;
+extern int	filemode_to_use;
+extern int	dirmode_to_use;
+extern int	new_dir_mode;
+extern int	follow_links;
 extern int	cache_inodes;
-extern int      verbose;
-extern int      debug;
-extern int      gui;
-extern int      all_files;
-extern int      generate_tables;
-extern int      print_size;
-extern int      split_output;
+extern int	verbose;
+extern int	debug;
+extern int	gui;
+extern int	all_files;
+extern int	generate_tables;
+extern int	print_size;
+extern int	split_output;
 extern int	use_graft_ptrs;
-extern int      jhide_trans_tbl;
-extern int      hide_rr_moved;
-extern int      omit_period;
-extern int      omit_version_number;
-extern int      no_rr;
-extern int      transparent_compression;
+extern int	jhide_trans_tbl;
+extern int	hide_rr_moved;
+extern int	omit_period;
+extern int	omit_version_number;
+extern int	no_rr;
+extern int	transparent_compression;
 extern Uint	RR_relocation_depth;
 extern int	iso9660_level;
 extern int	iso9660_namelen;
-extern int      full_iso9660_filenames;
+extern int	full_iso9660_filenames;
 extern int	relaxed_filenames;
 extern int	allow_lowercase;
 extern int	allow_multidot;
 extern int	iso_translate;
 extern int	allow_leading_dots;
 extern int	use_fileversion;
-extern int      split_SL_component;
-extern int      split_SL_field;
-extern char    *trans_tbl;
+extern int	split_SL_component;
+extern int	split_SL_field;
+extern char	*trans_tbl;
 
-#define JMAX		64	/* maximum Joliet file name length (spec) */
-#define JLONGMAX	103	/* out of spec Joliet file name length */
+#define	JMAX		64	/* maximum Joliet file name length (spec) */
+#define	JLONGMAX	103	/* out of spec Joliet file name length */
 extern int	jlen;		/* selected maximum Joliet file name length */
 
 #ifdef DVD_VIDEO
@@ -362,43 +369,44 @@ extern int	dvd_video;
 
 
 #ifdef APPLE_HYB
-extern int      apple_hyb;	/* create HFS hybrid */
-extern int      apple_ext;	/* use Apple extensions */
-extern int      apple_both;	/* common flag (for above) */
-extern int      hfs_extra;	/* extra ISO extents (hfs_ce_size) */
-extern hce_mem *hce;		/* libhfs/mkisofs extras */
-extern int      use_mac_name;	/* use Mac name for ISO9660/Joliet/RR */
-extern int      create_dt;	/* create the Desktp files */
-extern char    *hfs_boot_file;	/* name of HFS boot file */
-extern char    *magic_file;	/* magic file for CREATOR/TYPE matching */
-extern int      hfs_last;	/* order in which to process map/magic files */
-extern char    *deftype;	/* default Apple TYPE */
-extern char    *defcreator;	/* default Apple CREATOR */
-extern int      gen_pt;		/* generate HFS partition table */
-extern char    *autoname;	/* Autostart filename */
-extern int      afe_size;	/* Apple File Exchange block size */
-extern char    *hfs_volume_id;	/* HFS volume ID */
-extern int      icon_pos;	/* Keep Icon position */
+extern int	apple_hyb;	/* create HFS hybrid */
+extern int	apple_ext;	/* use Apple extensions */
+extern int	apple_both;	/* common flag (for above) */
+extern int	hfs_extra;	/* extra ISO extents (hfs_ce_size) */
+extern hce_mem	*hce;		/* libhfs/mkisofs extras */
+extern int	use_mac_name;	/* use Mac name for ISO9660/Joliet/RR */
+extern int	create_dt;	/* create the Desktp files */
+extern char	*hfs_boot_file;	/* name of HFS boot file */
+extern char	*magic_file;	/* magic file for CREATOR/TYPE matching */
+extern int	hfs_last;	/* order in which to process map/magic files */
+extern char	*deftype;	/* default Apple TYPE */
+extern char	*defcreator;	/* default Apple CREATOR */
+extern int	gen_pt;		/* generate HFS partition table */
+extern char	*autoname;	/* Autostart filename */
+extern int	afe_size;	/* Apple File Exchange block size */
+extern char	*hfs_volume_id;	/* HFS volume ID */
+extern int	icon_pos;	/* Keep Icon position */
 extern int	hfs_lock;	/* lock HFS volume (read-only) */
-extern char    *hfs_bless;	/* name of folder to 'bless' (System Folder) */
-extern char    *hfs_parms;	/* low level HFS parameters */
+extern char	*hfs_bless;	/* name of folder to 'bless' (System Folder) */
+extern char	*hfs_parms;	/* low level HFS parameters */
 
-#define MAP_LAST	1	/* process magic then map file */
-#define MAG_LAST	2	/* process map then magic file */
+#define	MAP_LAST	1	/* process magic then map file */
+#define	MAG_LAST	2	/* process map then magic file */
 
 #ifndef PREP_BOOT
-#define PREP_BOOT
+#define	PREP_BOOT
 #endif	/* PREP_BOOT */
 
 #ifdef PREP_BOOT
-extern char    *prep_boot_image[4];
-extern int      use_prep_boot;
+extern char	*prep_boot_image[4];
+extern int	use_prep_boot;
+extern int	use_chrp_boot;
 
 #endif	/* PREP_BOOT */
 #endif	/* APPLE_HYB */
 
 #ifdef SORTING
-extern int      do_sort;
+extern int	do_sort;
 #endif /* SORTING */
 
 /* tree.c */
@@ -406,28 +414,28 @@ extern int stat_filter __PR((char *, struct stat *));
 extern int lstat_filter __PR((char *, struct stat *));
 extern int sort_tree __PR((struct directory *));
 extern struct directory *
-                find_or_create_directory __PR((struct directory *,
-		                const char *,
-		                struct directory_entry * self, int));
-extern void finish_cl_pl_entries __PR((void));
-extern int scan_directory_tree __PR((struct directory * this_dir,
-		                char *path,
-		                struct directory_entry * self));
+		find_or_create_directory __PR((struct directory *,
+				const char *,
+				struct directory_entry * self, int));
+extern void	finish_cl_pl_entries __PR((void));
+extern int	scan_directory_tree __PR((struct directory * this_dir,
+				char *path,
+				struct directory_entry * self));
 
 #ifdef APPLE_HYB
-extern int insert_file_entry __PR((struct directory *, char *,
-		                char *, int));
+extern int	insert_file_entry __PR((struct directory *, char *,
+				char *, int));
 
 #else
-extern int insert_file_entry __PR((struct directory *, char *,
-		                char *));
+extern int	insert_file_entry __PR((struct directory *, char *,
+				char *));
 
 #endif	/* APPLE_HYB */
 
 extern void generate_iso9660_directories __PR((struct directory *, FILE *));
 extern void dump_tree __PR((struct directory * node));
 extern struct directory_entry *search_tree_file __PR((struct
-		                directory * node, char *filename));
+				directory * node, char *filename));
 extern void update_nlink_field __PR((struct directory * node));
 extern void init_fstatbuf __PR((void));
 extern struct stat root_statbuf;
@@ -441,8 +449,11 @@ extern void new_boot_entry	__PR((void));
 
 /* boot.c */
 extern void sparc_boot_label __PR((char *label));
+extern void sunx86_boot_label __PR((char *label));
 extern void scan_sparc_boot __PR((char *files));
+extern void scan_sunx86_boot __PR((char *files));
 extern int make_sun_label __PR((void));
+extern int make_sunx86_label __PR((void));
 
 /* write.c */
 extern int get_731 __PR((char *));
@@ -458,7 +469,7 @@ extern void generate_one_directory __PR((struct directory *, FILE *));
 extern void memcpy_max __PR((char *, char *, int));
 extern int oneblock_size __PR((int starting_extent));
 extern struct iso_primary_descriptor vol_desc;
-extern void xfwrite __PR((void *buffer, int count, int size, FILE * file));
+extern void xfwrite __PR((void *buffer, int size, int count, FILE * file, int submode, BOOL islast));
 extern void set_732 __PR((char *pnt, unsigned int i));
 extern void set_722 __PR((char *pnt, unsigned int i));
 extern void outputlist_insert __PR((struct output_fragment * frag));
@@ -478,23 +489,16 @@ extern void gen_prepboot_label __PR((unsigned char *));
 
 /* multi.c */
 
-extern FILE    *in_image;
+extern FILE	*in_image;
 extern int open_merge_image __PR((char *path));
 extern int close_merge_image __PR((void));
 extern struct iso_directory_record *
-	                merge_isofs __PR((char *path));
-extern int free_mdinfo __PR((struct directory_entry **, int len));
-extern unsigned char *parse_xa __PR((unsigned char *pnt, int *lenp,
-		                struct directory_entry * dpnt));
+			merge_isofs __PR((char *path));
+extern unsigned char	*parse_xa __PR((unsigned char *pnt, int *lenp,
+				struct directory_entry * dpnt));
 extern int	rr_flags	__PR((struct iso_directory_record *idr));
-extern int	parse_rrflags	__PR((Uchar *pnt, int len, int cont_flag));
-extern void	find_rr		__PR((struct iso_directory_record *idr, Uchar **pntp, int *lenp));
-extern struct directory_entry **
-	                read_merging_directory __PR((struct iso_directory_record *, int *));
-extern void merge_remaining_entries __PR((struct directory *,
-		                struct directory_entry **, int));
 extern int merge_previous_session __PR((struct directory *,
-		                struct iso_directory_record *));
+				struct iso_directory_record *, char *, char *));
 extern int get_session_start __PR((int *));
 
 /* joliet.c */
@@ -512,13 +516,13 @@ extern int matches __PR((char *));
 extern int add_match __PR((char *));
 
 /* files.c */
-struct dirent  *readdir_add_files __PR((char **, char *, DIR *));
+struct dirent	*readdir_add_files __PR((char **, char *, DIR *));
 
 /* name.c */
 
-extern void iso9660_check	__PR((struct iso_directory_record *idr, struct directory_entry *ndr)); 
+extern void iso9660_check	__PR((struct iso_directory_record *idr, struct directory_entry *ndr));
 extern int iso9660_file_length __PR((const char *name,
-		                struct directory_entry * sresult, int flag));
+				struct directory_entry * sresult, int flag));
 
 /* various */
 extern int iso9660_date __PR((char *, time_t));
@@ -533,31 +537,23 @@ extern int delete_file_hash __PR((struct directory_entry *));
 extern struct directory_entry *find_file_hash __PR((char *));
 extern void add_file_hash __PR((struct directory_entry *));
 
-extern int generate_rock_ridge_attributes __PR((char *, char *,
-		                struct directory_entry *,
-		                struct stat *, struct stat *,
-		                int deep_flag));
-extern char    *generate_rr_extension_record __PR((char *id,
-		                char *descriptor,
-		                char *source, int *size));
+extern int	generate_xa_rr_attributes __PR((char *, char *,
+				struct directory_entry *,
+				struct stat *, struct stat *,
+				int deep_flag));
+extern char	*generate_rr_extension_record __PR((char *id,
+				char *descriptor,
+				char *source, int *size));
 
-extern int check_prev_session __PR((struct directory_entry **, int len,
-		                struct directory_entry *,
-		                struct stat *,
-		                struct stat *,
-		                struct directory_entry **));
+extern int	check_prev_session __PR((struct directory_entry **, int len,
+				struct directory_entry *,
+				struct stat *,
+				struct stat *,
+				struct directory_entry **));
 
-extern void match_cl_re_entries __PR((void));
-extern void finish_cl_pl_for_prev_session __PR((void));
-extern char    *find_rr_attribute __PR((unsigned char *pnt, int len, char *attr_type));
-
-#ifdef	USE_SCG
-/* scsi.c */
-extern int readsecs __PR((int startsecno, void *buffer, int sectorcount));
-extern int scsidev_open __PR((char *path));
-extern int scsidev_close __PR((void));
-
-#endif
+extern void	match_cl_re_entries __PR((void));
+extern void	finish_cl_pl_for_prev_session __PR((void));
+extern char	*find_rr_attribute __PR((unsigned char *pnt, int len, char *attr_type));
 
 #ifdef APPLE_HYB
 /* volume.c */
@@ -586,49 +582,49 @@ extern int make_desktop __PR((hfsvol *, int));
 
 #ifdef	_MAC_LABEL_H
 #ifdef PREP_BOOT
-extern void gen_prepboot_label __PR((MacLabel * mac_label));
+extern void	gen_prepboot_label __PR((MacLabel * mac_label));
 #endif
-extern int gen_mac_label __PR((defer *));
+extern int	gen_mac_label __PR((defer *));
 #endif
-extern int autostart __PR((void));
+extern int	autostart __PR((void));
 
 /* libfile */
 
-extern char    *get_magic_match __PR((const char *));
-extern void clean_magic __PR((void));
+extern char	*get_magic_match __PR((const char *));
+extern void	clean_magic __PR((void));
 
 #endif	/* APPLE_HYB */
 
-extern char    *extension_record;
-extern int      extension_record_extent;
-extern int      n_data_extents;
+extern char	*extension_record;
+extern int	extension_record_extent;
+extern int	n_data_extents;
 
 /*
- * These are a few goodies that can be specified on the command line, and  are
+ * These are a few goodies that can be specified on the command line, and are
  * filled into the root record
  */
-extern char    *preparer;
-extern char    *publisher;
-extern char    *copyright;
-extern char    *biblio;
-extern char    *abstract;
-extern char    *appid;
-extern char    *volset_id;
-extern char    *system_id;
-extern char    *volume_id;
-extern char    *boot_catalog;
-extern char    *boot_image;
-extern char    *genboot_image;
+extern char	*preparer;
+extern char	*publisher;
+extern char	*copyright;
+extern char	*biblio;
+extern char	*abstract;
+extern char	*appid;
+extern char	*volset_id;
+extern char	*system_id;
+extern char	*volume_id;
+extern char	*boot_catalog;
+extern char	*boot_image;
+extern char	*genboot_image;
 extern int	ucs_level;
-extern int      volume_set_size;
-extern int      volume_sequence_number;
+extern int	volume_set_size;
+extern int	volume_sequence_number;
 
 extern struct eltorito_boot_entry_info *first_boot_entry;
 extern struct eltorito_boot_entry_info *last_boot_entry;
 extern struct eltorito_boot_entry_info *current_boot_entry;
 
-extern char    *findgequal	__PR((char *));
-extern void    *e_malloc	__PR((size_t));
+extern char	*findgequal	__PR((char *));
+extern void	*e_malloc	__PR((size_t));
 
 /*
  * Note: always use these macros to avoid problems.
@@ -638,66 +634,88 @@ extern void    *e_malloc	__PR((size_t));
  *
  * ISO_BLOCKS(X)	is overflow safe. Prefer this when ever it is possible.
  */
-#define SECTOR_SIZE	(2048)
-#define ISO_ROUND_UP(X)	(((X) + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1))
-#define ISO_BLOCKS(X)	(((X) / SECTOR_SIZE) + (((X)%SECTOR_SIZE)?1:0))
+#define	SECTOR_SIZE	(2048)
+#define	ISO_ROUND_UP(X)	(((X) + (SECTOR_SIZE - 1)) & ~(SECTOR_SIZE - 1))
+#define	ISO_BLOCKS(X)	(((X) / SECTOR_SIZE) + (((X)%SECTOR_SIZE)?1:0))
 
-#define ROUND_UP(X,Y)	(((X + (Y - 1)) / Y) * Y)
+#define	ROUND_UP(X, Y)	(((X + (Y - 1)) / Y) * Y)
 
 #ifdef APPLE_HYB
 /*
  * ISO blocks == 2048, HFS blocks == 512
  */
-#define HFS_BLK_CONV	(SECTOR_SIZE/HFS_BLOCKSZ)
+#define	HFS_BLK_CONV	(SECTOR_SIZE/HFS_BLOCKSZ)
 
-#define HFS_ROUND_UP(X)	ISO_ROUND_UP(((X)*HFS_BLOCKSZ))	/* XXX ??? */
-#define HFS_BLOCKS(X)	(ISO_BLOCKS(X) * HFS_BLK_CONV)
+#define	HFS_ROUND_UP(X)	ISO_ROUND_UP(((X)*HFS_BLOCKSZ))	/* XXX ??? */
+#define	HFS_BLOCKS(X)	(ISO_BLOCKS(X) * HFS_BLK_CONV)
 
-#define USE_MAC_NAME(E)	(use_mac_name && ((E)->hfs_ent != NULL) && (E)->hfs_type)
+#define	USE_MAC_NAME(E)	(use_mac_name && ((E)->hfs_ent != NULL) && (E)->hfs_type)
 #endif	/* APPLE_HYB */
 
-#define NEED_RE		1
-#define NEED_PL		2
-#define NEED_CL		4
-#define NEED_CE		8
-#define NEED_SP		16
+/*
+ * Rock Ridge defines
+ */
+#define	NEED_RE		1	/* Need Relocated Direcotry	*/
+#define	NEED_PL		2	/* Need Parent link		*/
+#define	NEED_CL		4	/* Need Child link		*/
+#define	NEED_CE		8	/* Need Continuation Area	*/
+#define	NEED_SP		16	/* Need SUSP record		*/
 
-#define PREV_SESS_DEV	(sizeof(dev_t) >= 4 ? 0x7ffffffd : 0x7ffd)
-#define TABLE_INODE	(sizeof(ino_t) >= 4 ? 0x7ffffffe : 0x7ffe)
-#define UNCACHED_INODE	(sizeof(ino_t) >= 4 ? 0x7fffffff : 0x7fff)
-#define UNCACHED_DEVICE	(sizeof(dev_t) >= 4 ? 0x7fffffff : 0x7fff)
+#define	RR_FLAG_PX	1	/* POSIX attributes		*/
+#define	RR_FLAG_PN	2	/* POSIX device number		*/
+#define	RR_FLAG_SL	4	/* Symlink			*/
+#define	RR_FLAG_NM	8	/* Alternate Name		*/
+#define	RR_FLAG_CL	16	/* Child link			*/
+#define	RR_FLAG_PL	32	/* Parent link			*/
+#define	RR_FLAG_RE	64	/* Relocated Direcotry		*/
+#define	RR_FLAG_TF	128	/* Time stamp			*/
+
+#define	RR_FLAG_SP	1024	/* SUSP record			*/
+#define	RR_FLAG_AA	2048	/* Apple Signature record	*/
+#define	RR_FLAG_XA	4096	/* XA signature record		*/
+
+#define	RR_FLAG_CE	8192	/* SUSP Continuation aerea	*/
+#define	RR_FLAG_ER	16384	/* Extension record for RR signature */
+#define	RR_FLAG_RR	32768	/* RR Signature in every file	*/
+#define	RR_FLAG_ZF	65535	/* Linux compression extension	*/
+
+
+#define	PREV_SESS_DEV	(sizeof (dev_t) >= 4 ? 0x7ffffffd : 0x7ffd)
+#define	TABLE_INODE	(sizeof (ino_t) >= 4 ? 0x7ffffffe : 0x7ffe)
+#define	UNCACHED_INODE	(sizeof (ino_t) >= 4 ? 0x7fffffff : 0x7fff)
+#define	UNCACHED_DEVICE	(sizeof (dev_t) >= 4 ? 0x7fffffff : 0x7fff)
 
 #ifdef VMS
-#define STAT_INODE(X)	(X.st_ino[0])
-#define PATH_SEPARATOR	']'
-#define SPATH_SEPARATOR	""
+#define	STAT_INODE(X)	(X.st_ino[0])
+#define	PATH_SEPARATOR	']'
+#define	SPATH_SEPARATOR	""
 #else
-#define STAT_INODE(X)	(X.st_ino)
-#define PATH_SEPARATOR	'/'
-#define SPATH_SEPARATOR	"/"
+#define	STAT_INODE(X)	(X.st_ino)
+#define	PATH_SEPARATOR	'/'
+#define	SPATH_SEPARATOR	"/"
 #endif
 
 /*
  * When using multi-session, indicates that we can reuse the
- * TRANS.TBL information for this directory entry.  If this flag
+ * TRANS.TBL information for this directory entry. If this flag
  * is set for all entries in a directory, it means we can just
  * reuse the TRANS.TBL and not generate a new one.
  */
-#define SAFE_TO_REUSE_TABLE_ENTRY  0x01		/* de_flags only  */
-#define DIR_HAS_DOT		   0x02		/* dir_flags only */
-#define DIR_HAS_DOTDOT		   0x04		/* dir_flags only */
-#define INHIBIT_JOLIET_ENTRY	   0x08
-#define INHIBIT_RR_ENTRY	   0x10		/* not used       */
-#define RELOCATED_DIRECTORY	   0x20		/* de_flags only  */
-#define INHIBIT_ISO9660_ENTRY	   0x40
-#define MEMORY_FILE		   0x80		/* de_flags only  */
-#define HIDDEN_FILE		   0x100	/* de_flags only  */
-#define DIR_WAS_SCANNED		   0x200	/* dir_flags only */
+#define	SAFE_TO_REUSE_TABLE_ENTRY  0x01		/* de_flags only  */
+#define	DIR_HAS_DOT		   0x02		/* dir_flags only */
+#define	DIR_HAS_DOTDOT		   0x04		/* dir_flags only */
+#define	INHIBIT_JOLIET_ENTRY	   0x08
+#define	INHIBIT_RR_ENTRY	   0x10		/* not used	  */
+#define	RELOCATED_DIRECTORY	   0x20		/* de_flags only  */
+#define	INHIBIT_ISO9660_ENTRY	   0x40
+#define	MEMORY_FILE		   0x80		/* de_flags only  */
+#define	HIDDEN_FILE		   0x100	/* de_flags only  */
+#define	DIR_WAS_SCANNED		   0x200	/* dir_flags only */
 
 /*
  * Volume sequence number to use in all of the iso directory records.
  */
-#define DEF_VSN		1
+#define	DEF_VSN		1
 
 /*
  * Make sure we have a definition for this.  If not, take a very conservative
@@ -714,17 +732,17 @@ extern void    *e_malloc	__PR((size_t));
 #endif
 #ifndef NAME_MAX
 #ifdef FILENAME_MAX
-#define NAME_MAX	FILENAME_MAX
+#define	NAME_MAX	FILENAME_MAX
 #else
-#define NAME_MAX	256
+#define	NAME_MAX	256
 #endif
 #endif
 
 #ifndef PATH_MAX
 #ifdef FILENAME_MAX
-#define PATH_MAX	FILENAME_MAX
+#define	PATH_MAX	FILENAME_MAX
 #else
-#define PATH_MAX	1024
+#define	PATH_MAX	1024
 #endif
 #endif
 

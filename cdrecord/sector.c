@@ -1,12 +1,12 @@
-/* @(#)sector.c	1.11 02/10/12 Copyright 2001-2002 J. Schilling */
+/* @(#)sector.c	1.13 04/03/01 Copyright 2001-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)sector.c	1.11 02/10/12 Copyright 2001-2002 J. Schilling";
+	"@(#)sector.c	1.13 04/03/01 Copyright 2001-2004 J. Schilling";
 #endif
 /*
  *	Functions needed to use libedc_ecc from cdrecord
  *
- *	Copyright (c) 2001-2002 J. Schilling
+ *	Copyright (c) 2001-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -58,38 +58,38 @@ EXPORT	void	fillsector	__PR((Uchar *sp, int sectype, int address));
  */
 #ifdef	__comment__
 				/*   MMC					*/
-#define MODE_0	0		/* -> XX  12+4+2336	(12+4uuu von libedc)	*/
-#define MODE_1	1		/* -> 8   12+4+2048+288 (124+4uuu+288 von libedc)*/
-#define MODE_2	2		/* -> 9	  12+4+2336	(12+4uuu von libedc)	*/
-#define MODE_2_FORM_1	3	/* -> 10/11 12+4+8+2048+280 (12+4hhhuuu+280 von libedc)*/
-#define MODE_2_FORM_2	4	/* -> 12 (eher 13!) 12+4+8+2324+4 (12+4hhhuuu+4 von libedc)*/
-#define AUDIO	5
-#define UNKNOWN	6
+#define	MODE_0		0	/* -> XX  12+4+2336	(12+4uuu von libedc)	*/
+#define	MODE_1		1	/* -> 8   12+4+2048+288 (124+4uuu+288 von libedc)*/
+#define	MODE_2		2	/* -> 9	  12+4+2336	(12+4uuu von libedc)	*/
+#define	MODE_2_FORM_1	3	/* -> 10/11 12+4+8+2048+280 (12+4hhhuuu+280 von libedc)*/
+#define	MODE_2_FORM_2	4	/* -> 12 (eher 13!) 12+4+8+2324+4 (12+4hhhuuu+4 von libedc)*/
+#define	AUDIO		5
+#define	UNKNOWN		6
 #endif
 
 /*
  * known sector types
  */
-#ifndef EDC_MODE_0
-#define EDC_MODE_0	MODE_0
+#ifndef	EDC_MODE_0
+#define	EDC_MODE_0	MODE_0
 #endif
 #ifndef	EDC_MODE_1
-#define EDC_MODE_1	MODE_1
+#define	EDC_MODE_1	MODE_1
 #endif
-#ifndef EDC_MODE_2
-#define EDC_MODE_2	MODE_2
+#ifndef	EDC_MODE_2
+#define	EDC_MODE_2	MODE_2
 #endif
-#ifndef EDC_MODE_2_FORM_1
-#define EDC_MODE_2_FORM_1	MODE_2_FORM_1
+#ifndef	EDC_MODE_2_FORM_1
+#define	EDC_MODE_2_FORM_1	MODE_2_FORM_1
 #endif
-#ifndef EDC_MODE_2_FORM_2
-#define EDC_MODE_2_FORM_2	MODE_2_FORM_2
+#ifndef	EDC_MODE_2_FORM_2
+#define	EDC_MODE_2_FORM_2	MODE_2_FORM_2
 #endif
-#ifndef EDC_AUDIO
-#define EDC_AUDIO	AUDIO
+#ifndef	EDC_AUDIO
+#define	EDC_AUDIO	AUDIO
 #endif
-#ifndef EDC_UNKNOWN
-#define EDC_UNKNOWN	UNKNOWN
+#ifndef	EDC_UNKNOWN
+#define	EDC_UNKNOWN	UNKNOWN
 #endif
 
 /*
@@ -112,12 +112,12 @@ encspeed(be_verbose)
 	 * Set up a known non-null pattern in the sector before; to make
 	 * the result of this test independant of the current stack content.
 	 */
-	for (i=0; i < 2352; ) {
+	for (i = 0; i < 2352; ) {
 		sect[i++] = 'J';
 		sect[i++] = 'S';
 	}
 	gettimeofday(&tv, (struct timezone *)0);
-	for (i=0; i < 75000; i++) {		/* Goes up to 1000x */
+	for (i = 0; i < 75000; i++) {		/* Goes up to 1000x */
 		encsectors(t, sect, 12345, 1);
 		gettimeofday(&tv2, (struct timezone *)0);
 		if (tv2.tv_sec >= (tv.tv_sec+1) &&
@@ -154,6 +154,40 @@ encsectors(trackp, bp, address, nsecs)
 }
 
 
+#ifdef	CLONE_WRITE
+
+#define	IS_SECHDR(p)	((p)[0] == 0 &&				\
+			(p)[1] == 0xFF && (p)[2] == 0xFF &&	\
+			(p)[3] == 0xFF && (p)[4] == 0xFF &&	\
+			(p)[5] == 0xFF && (p)[6] == 0xFF &&	\
+			(p)[7] == 0xFF && (p)[8] == 0xFF &&	\
+			(p)[9] == 0xFF && (p)[10] == 0xFF &&	\
+			(p)[11] == 0)
+/*
+ * Scramble data sectors without coding (needed for clone writing)
+ */
+EXPORT void
+scrsectors(trackp, bp, address, nsecs)
+	track_t	*trackp;
+	Uchar	*bp;
+	int	address;
+	int	nsecs;
+{
+	/*
+	 * In Clone write mode, we cannot expect that the sector type
+	 * of a "track" which really is a file holding the whole disk
+	 * is flagged with something that makes sense.
+	 *
+	 * For this reason, we check each sector if it's a data sector
+	 * and needs scrambling.
+	 */
+	while (--nsecs >= 0) {
+		if (IS_SECHDR(bp))
+			scramble_L2(bp);
+		bp += trackp->secsize;
+	}
+}
+#else
 EXPORT void
 scrsectors(trackp, bp, address, nsecs)
 	track_t	*trackp;
@@ -163,6 +197,7 @@ scrsectors(trackp, bp, address, nsecs)
 {
 	comerrno(EX_BAD, "Cannot write in clone RAW mode.\n");
 }
+#endif
 
 /*
  * Encode one sector according to trackp->sectype
@@ -183,15 +218,15 @@ encodesector(sp, sectype, address)
 	switch (sectype & ST_MODE_MASK) {
 
 	case	ST_MODE_0:
-		do_encode_L2 (sp, EDC_MODE_0, _address);
+		do_encode_L2(sp, EDC_MODE_0, _address);
 		break;
 
 	case	ST_MODE_1:
-		do_encode_L2 (sp, EDC_MODE_1, _address);
+		do_encode_L2(sp, EDC_MODE_1, _address);
 		break;
 
 	case	ST_MODE_2:
-		do_encode_L2 (sp, EDC_MODE_2, _address);
+		do_encode_L2(sp, EDC_MODE_2, _address);
 		break;
 
 	case	ST_MODE_2_FORM_1:
@@ -200,14 +235,14 @@ encodesector(sp, sectype, address)
 		/* FALLTHROUGH */
 
 	case	ST_MODE_2_MIXED:
-		do_encode_L2 (sp, EDC_MODE_2_FORM_1, _address);
+		do_encode_L2(sp, EDC_MODE_2_FORM_1, _address);
 		break;
 
 	case	ST_MODE_2_FORM_2:
 		sp[16+2]   |= 0x20;	/* Form 2 sector */
 		sp[16+4+2] |= 0x20;	/* Form 2 sector 2nd copy */
 
-		do_encode_L2 (sp, EDC_MODE_2_FORM_2, _address);
+		do_encode_L2(sp, EDC_MODE_2_FORM_2, _address);
 		break;
 
 	case	ST_MODE_AUDIO:

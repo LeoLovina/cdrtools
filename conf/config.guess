@@ -690,6 +690,10 @@ EOF
 		echo ${UNAME_MACHINE}-pc-sysv${UNAME_RELEASE}
 	fi
 	exit 0 ;;
+    i?86:MS-DOS:5:50)
+    	# DJGPP v2
+	echo ${UNAME_MACHINE}-pc-msdos
+        exit 0 ;;
     i?86:*:5:*)
         # Fixed at (any) Pentium or better
         UNAME_MACHINE=i586

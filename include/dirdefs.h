@@ -1,4 +1,4 @@
-/* @(#)dirdefs.h	1.13 01/11/18 Copyright 1987, 1998 J. Schilling */
+/* @(#)dirdefs.h	1.15 04/06/16 Copyright 1987, 1998 J. Schilling */
 /*
  *	Copyright (c) 1987, 1998 J. Schilling
  */
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_DIRDEFS_H
@@ -39,9 +39,11 @@ extern "C" {
 #	define	_INCL_SYS_FILEDESC_H
 #	endif
 #	define	NEED_READDIR
+#	define 	dirent			_direct
+#	define	DIR_NAMELEN(dirent)	strlen((dirent)->d_name)
 #	define	DIRSIZE	30
 #	define	FOUND_DIRSIZE
-	typedef struct dirent {
+	typedef struct _dirent {
 		char	name[DIRSIZE];
 		short	ino;
 	} dirent;
@@ -111,15 +113,15 @@ extern "C" {
  * Don't use defaults here to allow recognition of problems.
  */
 #	ifdef	MAXNAMELEN
-#		define	DIRSIZE		MAXNAMELEN	/* From sys/param.h  */
+#		define	DIRSIZE		MAXNAMELEN	/* From sys/param.h */
 #		define	FOUND_DIRSIZE
 #	else
 #	ifdef	MAXNAMLEN
-#		define	DIRSIZE		MAXNAMLEN	/* From dirent.h     */
+#		define	DIRSIZE		MAXNAMLEN	/* From dirent.h    */
 #		define	FOUND_DIRSIZE
 #	else
 #	ifdef	DIRSIZ
-#		define	DIRSIZE		DIRSIZ		/* From sys/dir.h    */
+#		define	DIRSIZE		DIRSIZ		/* From sys/dir.h   */
 #		define	FOUND_DIRSIZE
 #	endif
 #	endif
@@ -128,6 +130,8 @@ extern "C" {
 
 #		define	NEED_DIRENT
 #		define	NEED_READDIR
+#		define 	dirent			_direct
+#		define	DIR_NAMELEN(dirent)	strlen((dirent)->d_name)
 
 #	endif	/* _FOUND_DIR_ */
 
@@ -139,7 +143,7 @@ extern "C" {
 #define	FOUND_DIRSIZE
 #endif
 
-typedef struct dirent {
+typedef struct _dirent {
 	short	ino;
 	char	name[DIRSIZE];
 } dirent;
@@ -162,7 +166,7 @@ typedef struct dirent {
 
 extern	DIR		*opendir();
 extern			closedir();
-extern	struct direct	*readdir();
+extern	struct dirent	*readdir();
 
 #endif	/* NEED_READDIR */
 

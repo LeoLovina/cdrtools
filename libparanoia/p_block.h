@@ -1,14 +1,11 @@
-/* @(#)p_block.h	1.14 02/04/10 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)p_block.h	1.16 04/02/20 J. Schilling from cdparanoia-III-alpha9.8 */
 /*
  *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
  */
 /*
- *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
- */
-/***
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Monty (xiphmont@mit.edu)
- ***/
+ */
 
 #ifndef	_p_block_h_
 #define	_p_block_h_
@@ -22,8 +19,8 @@
 #define	JIGGLE_MODULO		  15	/* sectors */
 #define	MIN_SILENCE_BOUNDARY	1024	/* 16 bit words */
 
-#define min(x,y) ((x)>(y)?(y):(x))
-#define max(x,y) ((x)<(y)?(y):(x))
+#define	min(x, y) ((x) > (y)?(y):(x))
+#define	max(x, y) ((x) < (y)?(y):(x))
 
 #include "isort.h"
 
@@ -48,14 +45,15 @@ typedef struct linked_element {
 	int			stamp;
 } linked_element;
 
-extern linked_list	*new_list	__PR((void *(*newp) (void), void (*freep) (void *)));
+extern linked_list	*new_list	__PR((void *(*newp) (void),
+						void (*freep) (void *)));
 extern linked_element	*new_elem	__PR((linked_list * list));
 extern linked_element	*add_elem	__PR((linked_list * list, void *elem));
 extern void		free_list	__PR((linked_list * list, int free_ptr));	/* unlink or free */
 extern void		free_elem	__PR((linked_element * e, int free_ptr));	/* unlink or free */
 extern void		*get_elem	__PR((linked_element * e));
-extern linked_list	*copy_list	__PR((linked_list * list));	/* shallow; doesn't copy
-									   contained structures */
+extern linked_list	*copy_list	__PR((linked_list * list));	/* shallow; doesn't copy */
+									/* contained structures */
 
 typedef struct c_block {
 	/* The buffer */
@@ -64,7 +62,9 @@ typedef struct c_block {
 	long		size;
 
 	/* auxiliary support structures */
-	unsigned char 	*flags;	/* 1    known boundaries in read data
+	unsigned char 	*flags;
+				/*
+				 * 1    known boundaries in read data
 				 * 2    known blanked data
 				 * 4    matched sample
 				 * 8    reserved
@@ -100,9 +100,11 @@ typedef struct v_fragment {
 
 } v_fragment;
 
-extern void 	free_v_fragment		__PR((v_fragment * c));
-extern v_fragment *new_v_fragment	__PR((struct cdrom_paranoia * p, c_block * one,
-	                			long begin, long end, int lastsector));
+extern void	free_v_fragment		__PR((v_fragment * c));
+extern v_fragment *new_v_fragment	__PR((struct cdrom_paranoia * p,
+						c_block * one,
+						long begin, long end,
+						int lastsector));
 extern Int16_t	*v_buffer		__PR((v_fragment * v));
 
 extern c_block	*c_first		__PR((struct cdrom_paranoia * p));
@@ -142,9 +144,8 @@ typedef struct cdrom_paranoia {
 	root_block	root;		/* verified/reconstructed cached data */
 	linked_list	*cache;		/* our data as read from the cdrom */
 	long		cache_limit;
-	linked_list	*fragments;	/* fragments of blocks that have been
-					 * 'verified'
-					 */
+	linked_list	*fragments;	/* fragments of blocks that have been */
+					/* 'verified' */
 	sort_info	*sortcache;
 
 	int		readahead;	/* sectors of readahead in each readop */
@@ -156,26 +157,33 @@ typedef struct cdrom_paranoia {
 	long		current_lastsector;
 	long		current_firstsector;
 
- /* statistics for drift/overlap */
+	/* statistics for drift/overlap */
 	struct offsets	stage1;
 	struct offsets	stage2;
 
+	long		mindynoverlap;
+	long		maxdynoverlap;
 	long		dynoverlap;
 	long		dyndrift;
 
- /* statistics for verification */
+	/* statistics for verification */
 
 } cdrom_paranoia;
 
-extern c_block	*c_alloc		__PR((Int16_t * vector, long begin, long size));
+extern c_block	*c_alloc		__PR((Int16_t * vector,
+						long begin, long size));
 extern void	c_set			__PR((c_block * v, long begin));
-extern void	c_insert		__PR((c_block * v, long pos, Int16_t * b, long size));
-extern void	c_remove		__PR((c_block * v, long cutpos, long cutsize));
-extern void	c_overwrite		__PR((c_block * v, long pos, Int16_t * b, long size));
-extern void	c_append		__PR((c_block * v, Int16_t * vector, long size));
+extern void	c_insert		__PR((c_block * v, long pos,
+						Int16_t * b, long size));
+extern void	c_remove		__PR((c_block * v, long cutpos,
+						long cutsize));
+extern void	c_overwrite		__PR((c_block * v, long pos,
+						Int16_t * b, long size));
+extern void	c_append		__PR((c_block * v, Int16_t * vector,
+						long size));
 extern void	c_removef		__PR((c_block * v, long cut));
 
-#define ce(v)	((v)->begin + (v)->size)
+#define	ce(v)	((v)->begin + (v)->size)
 #define	cb(v)	((v)->begin)
 #define	cs(v)	((v)->size)
 
@@ -192,5 +200,5 @@ extern void	i_paranoia_firstlast	__PR((cdrom_paranoia * p));
 #define	fs(f)	((f)->size)
 #define	fv(f)	(v_buffer(f))
 
-#define CDP_COMPILE
+#define	CDP_COMPILE
 #endif

@@ -1,14 +1,14 @@
-/* @(#)multi.c	1.54 02/12/25 joerg */
+/* @(#)multi.c	1.66 04/05/15 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)multi.c	1.54 02/12/25 joerg";
+	"@(#)multi.c	1.66 04/05/15 joerg";
 #endif
 /*
  * File multi.c - scan existing iso9660 image and merge into
  * iso9660 filesystem.  Used for multisession support.
  *
  * Written by Eric Youngdale (1996).
- * Copyright (c) 1999,2000 J. Schilling
+ * Copyright (c) 1999-2003 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,15 +38,13 @@ static	char sccsid[] =
 #include <sys/file.h>
 #include <vms/fabdef.h>
 #include "vms.h"
-extern char    *strdup(const char *);
-
 #endif
 
 #ifndef howmany
-#define howmany(x, y)   (((x)+((y)-1))/(y))
+#define	howmany(x, y)   (((x)+((y)-1))/(y))
 #endif
 #ifndef roundup
-#define roundup(x, y)   ((((x)+((y)-1))/(y))*(y))
+#define	roundup(x, y)   ((((x)+((y)-1))/(y))*(y))
 #endif
 
 /*
@@ -54,39 +52,45 @@ extern char    *strdup(const char *);
  */
 /*#define	memset(s, c, n)	fillbytes(s, n, c)*/
 
-#define TF_CREATE 1
-#define TF_MODIFY 2
-#define TF_ACCESS 4
-#define TF_ATTRIBUTES 8
+#define	TF_CREATE 1
+#define	TF_MODIFY 2
+#define	TF_ACCESS 4
+#define	TF_ATTRIBUTES 8
 
-static int	isonum_711	__PR((unsigned char *p));
-static int	isonum_721	__PR((unsigned char *p));
-static int	isonum_723	__PR((unsigned char *p));
-static int	isonum_731	__PR((unsigned char *p));
+LOCAL	int	isonum_711	__PR((unsigned char *p));
+LOCAL	int	isonum_721	__PR((unsigned char *p));
+LOCAL	int	isonum_723	__PR((unsigned char *p));
+LOCAL	int	isonum_731	__PR((unsigned char *p));
 
-static	void	printasc	__PR((char *txt, unsigned char *p, int len));
-static	void	prbytes		__PR((char *txt, unsigned char *p, int len));
+LOCAL	void	printasc	__PR((char *txt, unsigned char *p, int len));
+LOCAL	void	prbytes		__PR((char *txt, unsigned char *p, int len));
 unsigned char	*parse_xa	__PR((unsigned char *pnt, int *lenp,
 					struct directory_entry *dpnt));
 EXPORT	int	rr_flags	__PR((struct iso_directory_record *idr));
-EXPORT	int	parse_rrflags	__PR((Uchar *pnt, int len, int cont_flag));
-EXPORT	void	find_rr		__PR((struct iso_directory_record *idr, Uchar **pntp, int *lenp));
-static int	parse_rr	__PR((unsigned char *pnt, int len,
+LOCAL	int	parse_rrflags	__PR((Uchar *pnt, int len, int cont_flag));
+LOCAL	BOOL	find_rr		__PR((struct iso_directory_record *idr, Uchar **pntp, int *lenp));
+LOCAL	 int	parse_rr	__PR((unsigned char *pnt, int len,
 					struct directory_entry *dpnt));
-static int	check_rr_dates	__PR((struct directory_entry *dpnt,
+LOCAL	int	check_rr_dates	__PR((struct directory_entry *dpnt,
 					struct directory_entry *current,
 					struct stat *statbuf,
 					struct stat *lstatbuf));
-static void	free_directory_entry __PR((struct directory_entry * dirp));
-static int	merge_old_directory_into_tree __PR((struct directory_entry *,
-							struct directory *));
-static void	check_rr_relocation __PR((struct directory_entry * de));
+LOCAL	struct directory_entry **
+		read_merging_directory __PR((struct iso_directory_record *, int *));
+LOCAL	int	free_mdinfo	__PR((struct directory_entry **, int len));
+LOCAL	void	free_directory_entry __PR((struct directory_entry * dirp));
+LOCAL	void	merge_remaining_entries __PR((struct directory *,
+					struct directory_entry **, int));
 
-#ifdef	__STDC__
-static int
+LOCAL	int	merge_old_directory_into_tree __PR((struct directory_entry *,
+							struct directory *));
+LOCAL	void	check_rr_relocation __PR((struct directory_entry * de));
+
+#ifdef	PROTOTYPES
+LOCAL int
 isonum_711(unsigned char *p)
 #else
-static int
+LOCAL int
 isonum_711(p)
 	unsigned char	*p;
 #endif
@@ -94,11 +98,11 @@ isonum_711(p)
 	return (*p & 0xff);
 }
 
-#ifdef	__STDC__
-static int
+#ifdef	PROTOTYPES
+LOCAL int
 isonum_721(unsigned char *p)
 #else
-static int
+LOCAL int
 isonum_721(p)
 	unsigned char	*p;
 #endif
@@ -106,11 +110,11 @@ isonum_721(p)
 	return ((p[0] & 0xff) | ((p[1] & 0xff) << 8));
 }
 
-#ifdef	__STDC__
-static int
+#ifdef	PROTOTYPES
+LOCAL int
 isonum_723(unsigned char *p)
 #else
-static int
+LOCAL int
 isonum_723(p)
 	unsigned char	*p;
 #endif
@@ -128,11 +132,11 @@ isonum_723(p)
 	return (isonum_721(p));
 }
 
-#ifdef	__STDC__
-static int
+#ifdef	PROTOTYPES
+LOCAL int
 isonum_731(unsigned char *p)
 #else
-static int
+LOCAL int
 isonum_731(p)
 	unsigned char	*p;
 #endif
@@ -143,7 +147,7 @@ isonum_731(p)
 		| ((p[3] & 0xff) << 24));
 }
 
-#ifdef	__STDC__
+#ifdef	PROTOTYPES
 int
 isonum_733(unsigned char *p)
 #else
@@ -155,7 +159,7 @@ isonum_733(p)
 	return (isonum_731(p));
 }
 
-FILE           *in_image = NULL;
+FILE	*in_image = NULL;
 
 #ifndef	USE_SCG
 /*
@@ -172,11 +176,11 @@ FILE           *in_image = NULL;
  * Anyways, this allows the use of a scsi-generics type of interface on
  * Solaris.
  */
-#ifdef	__STDC__
-static int
+#ifdef	PROTOTYPES
+LOCAL int
 readsecs(int startsecno, void *buffer, int sectorcount)
 #else
-static int
+LOCAL int
 readsecs(startsecno, buffer, sectorcount)
 	int		startsecno;
 	void		*buffer;
@@ -202,12 +206,12 @@ readsecs(startsecno, buffer, sectorcount)
 		exit(10);
 #endif
 	}
-	return sectorcount * SECTOR_SIZE;
+	return (sectorcount * SECTOR_SIZE);
 }
 
 #endif
 
-static void
+LOCAL void
 printasc(txt, p, len)
 	char		*txt;
 	unsigned char	*p;
@@ -216,7 +220,7 @@ printasc(txt, p, len)
 	int		i;
 
 	error("%s ", txt);
-	for (i=0; i < len; i++) {
+	for (i = 0; i < len; i++) {
 		if (isprint(p[i]))
 			error("%c", p[i]);
 		else
@@ -225,7 +229,7 @@ printasc(txt, p, len)
 	error("\n");
 }
 
-static void
+LOCAL void
 prbytes(txt, p, len)
 		char	*txt;
 	register Uchar	*p;
@@ -253,8 +257,8 @@ static	int		did_xa = 0;
 		xadp = (struct iso_xa_dir_record *)pnt;
 
 /*		if (dpnt) prbytes("XA ", pnt, len);*/
-		if (xadp->signature[0] == 'X' && xadp->signature[1] == 'A'
-				&& xadp->reserved[0] == '\0') {
+		if (xadp->signature[0] == 'X' && xadp->signature[1] == 'A' &&
+				xadp->reserved[0] == '\0') {
 			len -= 14;
 			pnt += 14;
 			*lenp = len;
@@ -273,7 +277,10 @@ static	int		did_xa = 0;
 				prbytes("XA REC:", pnt, len);
 				printasc("XA REC:", pnt, len);
 			}
-			no_rr =1;
+			if (no_rr == 0) {
+				errmsgno(EX_BAD, "Disabling RR / XA / AA.\n");
+				no_rr = 1;
+			}
 			*lenp = 0;
 			if (cp) {
 				errmsgno(EX_BAD, "Problems with old ISO directory entry for file: '%s'.\n", &cp[33]);
@@ -290,7 +297,7 @@ static	int		did_xa = 0;
 	return (pnt);
 }
 
-EXPORT void
+LOCAL BOOL
 find_rr(idr, pntp, lenp)
 	struct iso_directory_record *idr;
 	Uchar		**pntp;
@@ -299,15 +306,16 @@ find_rr(idr, pntp, lenp)
 	struct iso_xa_dir_record *xadp;
 	int		len;
 	unsigned char	*pnt;
+	BOOL		ret = FALSE;
 
 	len = idr->length[0] & 0xff;
-	len -= sizeof(struct iso_directory_record);
-	len += sizeof(idr->name);
+	len -= sizeof (struct iso_directory_record);
+	len += sizeof (idr->name);
 	len -= idr->name_len[0];
 
 	pnt = (unsigned char *) idr;
-	pnt += sizeof(struct iso_directory_record);
-	pnt -= sizeof(idr->name);
+	pnt += sizeof (struct iso_directory_record);
+	pnt -= sizeof (idr->name);
 	pnt += idr->name_len[0];
 	if ((idr->name_len[0] & 1) == 0) {
 		pnt++;
@@ -316,17 +324,19 @@ find_rr(idr, pntp, lenp)
 	if (len >= 14) {
 		xadp = (struct iso_xa_dir_record *)pnt;
 
-		if (xadp->signature[0] == 'X' && xadp->signature[1] == 'A'
-				&& xadp->reserved[0] == '\0') {
+		if (xadp->signature[0] == 'X' && xadp->signature[1] == 'A' &&
+				xadp->reserved[0] == '\0') {
 			len -= 14;
 			pnt += 14;
+			ret = TRUE;
 		}
 	}
 	*pntp = pnt;
 	*lenp = len;
+	return (ret);
 }
 
-EXPORT int
+LOCAL int
 parse_rrflags(pnt, len, cont_flag)
 	Uchar	*pnt;
 	int	len;
@@ -354,7 +364,7 @@ parse_rrflags(pnt, len, cont_flag)
 				"**BAD RRVERSION (%d) for %c%c\n",
 				pnt[3], pnt[0], pnt[1]);
 #endif
-			return 0;	/* JS ??? Is this right ??? */
+			return (0);	/* JS ??? Is this right ??? */
 		}
 		ncount++;
 		if (pnt[0] == 'R' && pnt[1] == 'R')
@@ -385,7 +395,7 @@ parse_rrflags(pnt, len, cont_flag)
 /*			aa_version = pnt[3] & 0xff;*/
 		}
 
-		if(strncmp((char *)pnt, "CE", 2) == 0) {	/* Continuation Area */
+		if (strncmp((char *)pnt, "CE", 2) == 0) {	/* Continuation Area */
 			cont_extent = isonum_733(pnt+4);
 			cont_offset = isonum_733(pnt+12);
 			cont_size = isonum_733(pnt+20);
@@ -400,7 +410,7 @@ parse_rrflags(pnt, len, cont_flag)
 			flag2 |= parse_rrflags(&sector[cont_offset], cont_size, 1);
 		}
 	}
-	return flag2;
+	return (flag2);
 }
 
 int
@@ -409,15 +419,18 @@ rr_flags(idr)
 {
 	int		len;
 	unsigned char	*pnt;
+	int		ret = 0;
 
-	find_rr(idr, &pnt, &len);
-	return (parse_rrflags(pnt, len, 0));
+	if (find_rr(idr, &pnt, &len))
+		ret |= 4096;
+	ret |= parse_rrflags(pnt, len, 0);
+	return (ret);
 }
 
 /*
  * Parse the RR attributes so we can find the file name.
  */
-static int
+LOCAL int
 parse_rr(pnt, len, dpnt)
 	unsigned char	*pnt;
 	int		len;
@@ -430,7 +443,7 @@ parse_rr(pnt, len, dpnt)
 
 	cont_extent = cont_offset = cont_size = 0;
 
-	pnt = parse_xa(pnt, &len, dpnt /*0*/);
+	pnt = parse_xa(pnt, &len, dpnt /* 0 */);
 
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
@@ -443,20 +456,30 @@ parse_rr(pnt, len, dpnt)
 				"**BAD RRVERSION (%d) for %c%c\n",
 				pnt[3], pnt[0], pnt[1]);
 #endif
-			return -1;
-		};
+			return (-1);
+		}
 		if (strncmp((char *) pnt, "NM", 2) == 0) {
 			strncpy(name_buf, (char *) pnt + 5, pnt[2] - 5);
 			name_buf[pnt[2] - 5] = 0;
-			dpnt->name = strdup(name_buf);
-			dpnt->got_rr_name = 1;
-			return 0;
-		}
-		if (strncmp((char *) pnt, "CE", 2) == 0) {
+			if (dpnt->name) {
+				size_t nlen = strlen(dpnt->name);
+
+				/*
+				 * append to name from previous NM records
+				 */
+				dpnt->name = realloc(dpnt->name, nlen +
+							strlen(name_buf) + 1);
+				strcpy(dpnt->name + nlen, name_buf);
+			} else {
+				dpnt->name = strdup(name_buf);
+				dpnt->got_rr_name = 1;
+			}
+			/* continue searching for more NM records */
+		} else if (strncmp((char *) pnt, "CE", 2) == 0) {
 			cont_extent = isonum_733(pnt + 4);
 			cont_offset = isonum_733(pnt + 12);
 			cont_size = isonum_733(pnt + 20);
-		};
+		}
 
 		len -= pnt[2];
 		pnt += pnt[2];
@@ -467,12 +490,12 @@ parse_rr(pnt, len, dpnt)
 			if (parse_rr(&sector[cont_offset],
 							cont_size, dpnt) == -1)
 				return (-1);
-		};
-	};
+		}
+	}
 
 	/* Fall back to the iso name if no RR name found */
 	if (dpnt->name == NULL) {
-		char           *cp;
+		char	*cp;
 
 		strcpy(name_buf, dpnt->isorec.name);
 		cp = strchr(name_buf, ';');
@@ -481,7 +504,7 @@ parse_rr(pnt, len, dpnt)
 		}
 		dpnt->name = strdup(name_buf);
 	}
-	return 0;
+	return (0);
 }/* parse_rr */
 
 
@@ -489,7 +512,7 @@ parse_rr(pnt, len, dpnt)
  * Returns 1 if the two files are identical
  * Returns 0 if the two files differ
  */
-static int
+LOCAL int
 check_rr_dates(dpnt, current, statbuf, lstatbuf)
 	struct directory_entry *dpnt;
 	struct directory_entry *current;
@@ -518,7 +541,7 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 	 * We basically need to parse the rr attributes again, and dig out the
 	 * dates and file types.
 	 */
-	pnt = parse_xa(pnt, &len, /*dpnt*/ 0);
+	pnt = parse_xa(pnt, &len, /* dpnt */ 0);
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
 #ifdef	USE_LIBSCHILY
@@ -530,8 +553,8 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 				"**BAD RRVERSION (%d) for %c%c\n",
 				pnt[3], pnt[0], pnt[1]);
 #endif
-			return -1;
-		};
+			return (-1);
+		}
 
 		/*
 		 * If we have POSIX file modes, make sure that the file type is
@@ -566,7 +589,7 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 			cont_extent = isonum_733(pnt + 4);
 			cont_offset = isonum_733(pnt + 12);
 			cont_size = isonum_733(pnt + 20);
-		};
+		}
 
 		len -= pnt[2];
 		pnt += pnt[2];
@@ -574,11 +597,16 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 			unsigned char   sector[SECTOR_SIZE];
 
 			readsecs(cont_extent, sector, 1);
-			if (parse_rr(&sector[cont_offset],
-							cont_size, dpnt) == -1)
-				return (-1);
-		};
-	};
+			/*
+			 * Continue to scan the extension record.
+			 * Note that this has not been tested yet, but it is
+			 * definitely more correct that calling parse_rr()
+			 * as done in Eric's old code.
+			 */
+			pnt = &sector[cont_offset];
+			len = cont_size;
+		}
+	}
 
 	/*
 	 * If we have the same fundamental file type, then it is clearly safe
@@ -587,13 +615,13 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 	if (same_file_type) {
 		current->de_flags |= SAFE_TO_REUSE_TABLE_ENTRY;
 	}
-	return same_file;
+	return (same_file);
 }
 
-struct directory_entry **
-read_merging_directory(mrootp, nent)
+LOCAL struct directory_entry **
+read_merging_directory(mrootp, nentp)
 	struct iso_directory_record *mrootp;
-	int		*nent;
+	int		*nentp;
 {
 	unsigned char	*cpnt;
 	unsigned char	*cpnt1;
@@ -603,6 +631,7 @@ read_merging_directory(mrootp, nent)
 	struct iso_directory_record *idr;
 	int		len;
 	int		nbytes;
+	int		nent;
 	struct directory_entry **pnt;
 	int		rlen;
 	struct directory_entry **rtn;
@@ -635,14 +664,15 @@ read_merging_directory(mrootp, nent)
 	 */
 	len = isonum_733((unsigned char *) mrootp->size);
 	i = 0;
-	*nent = 0;
+	*nentp = 0;
+	nent = 0;
 	while (i < len) {
 		idr = (struct iso_directory_record *) & dirbuff[i];
 		if (idr->length[0] == 0) {
 			i = ISO_ROUND_UP(i);
 			continue;
 		}
-		(*nent)++;
+		nent++;
 		i += idr->length[0];
 	}
 
@@ -650,7 +680,7 @@ read_merging_directory(mrootp, nent)
 	 * Now allocate the buffer which will hold the array we are about to
 	 * return.
 	 */
-	rtn = (struct directory_entry **) e_malloc(*nent * sizeof(*rtn));
+	rtn = (struct directory_entry **) e_malloc(nent * sizeof (*rtn));
 
 	/*
 	 * Finally, scan the directory one last time, and pick out the relevant
@@ -668,7 +698,7 @@ read_merging_directory(mrootp, nent)
 			i = ISO_ROUND_UP(i);
 			continue;
 		}
-		*pnt = (struct directory_entry *) e_malloc(sizeof(**rtn));
+		*pnt = (struct directory_entry *) e_malloc(sizeof (**rtn));
 		(*pnt)->next = NULL;
 #ifdef	DEBUG
 		error("IDR name: '%s' ist: %d soll: %d\n",
@@ -717,7 +747,7 @@ read_merging_directory(mrootp, nent)
 		if ((idr->name_len[0] & 1) == 0) {
 			cpnt++;
 			rlen--;
-		};
+		}
 
 		if (no_rr)
 			rlen = 0;
@@ -734,14 +764,14 @@ read_merging_directory(mrootp, nent)
 			idr->name_len[0]);
 #endif
 
-		if (idr->name_len[0] < sizeof((*pnt)->isorec.name)) {
+		if (idr->name_len[0] < sizeof ((*pnt)->isorec.name)) {
 			/*
 			 * Now zero out the remainder of the name field.
 			 */
 			cpnt = (unsigned char *) (*pnt)->isorec.name;
 			cpnt += idr->name_len[0];
 			memset(cpnt, 0,
-				sizeof((*pnt)->isorec.name) - idr->name_len[0]);
+				sizeof ((*pnt)->isorec.name) - idr->name_len[0]);
 		} else {
 			/*
 			 * Simple sanity work to make sure that we have no
@@ -772,9 +802,9 @@ read_merging_directory(mrootp, nent)
 			exit(1);
 #endif
 		}
-		if (((*pnt)->isorec.name_len[0] == 1)
-			&& (((*pnt)->isorec.name[0] == 0)	/* "."  entry*/
-			||((*pnt)->isorec.name[0] == 1))) {	/* ".." entry*/
+		if (((*pnt)->isorec.name_len[0] == 1) &&
+		    (((*pnt)->isorec.name[0] == 0) ||	/* "."  entry */
+		    ((*pnt)->isorec.name[0] == 1))) {	/* ".." entry */
 
 			if ((*pnt)->name != NULL) {
 				free((*pnt)->name);
@@ -809,6 +839,43 @@ read_merging_directory(mrootp, nent)
 		pnt++;
 		i += idr->length[0];
 	}
+#ifdef APPLE_HYB
+	/*
+	 * If we find an associated file, check if there is a file
+	 * with same ISO name and link it to this entry
+	 */
+	for (pnt = rtn, i = 0; i < nent; i++, pnt++) {
+		int	j;
+
+		rlen = isonum_711((*pnt)->isorec.name_len);
+		if ((*pnt)->isorec.flags[0] & ISO_ASSOCIATED) {
+			for (j = 0; j < nent; j++) {
+				if (strncmp(rtn[j]->isorec.name,
+				    (*pnt)->isorec.name, rlen) == 0 &&
+				    (rtn[j]->isorec.flags[0] & ISO_ASSOCIATED) == 0) {
+					rtn[j]->assoc = *pnt;
+
+					/*
+					 * don't want this entry to be
+					 * in the Joliet tree
+					 */
+					(*pnt)->de_flags |= INHIBIT_JOLIET_ENTRY;
+
+					/*
+					 * as we have associated files, then
+					 * assume we are are dealing with
+					 * Apple's extensions - if not already
+					 * set
+					 */
+					if (apple_both == 0) {
+						apple_both = apple_ext = 1;
+					}
+					break;
+				}
+			}
+		}
+	}
+#endif	/* APPLE_HYB */
 
 	/*
 	 * If there was a TRANS.TBL;1 entry, then grab it, read it, and use it
@@ -830,9 +897,9 @@ read_merging_directory(mrootp, nent)
 		cpnt1 = tt_buf;
 		while (cpnt - tt_buf < tt_size) {
 			/* Skip to a line terminator, or end of the file. */
-			while ((cpnt1 - tt_buf < tt_size)
-				&& (*cpnt1 != '\n')
-				&& (*cpnt1 != '\0')) {
+			while ((cpnt1 - tt_buf < tt_size) &&
+				(*cpnt1 != '\n') &&
+				(*cpnt1 != '\0')) {
 				cpnt1++;
 			}
 			/* Zero terminate this particular line. */
@@ -843,7 +910,7 @@ read_merging_directory(mrootp, nent)
 			 * Now dig through the actual directories, and try and
 			 * find the attachment for this particular filename.
 			 */
-			for (pnt = rtn, i = 0; i < *nent; i++, pnt++) {
+			for (pnt = rtn, i = 0; i < nent; i++, pnt++) {
 				rlen = isonum_711((*pnt)->isorec.name_len);
 
 				/*
@@ -859,9 +926,9 @@ read_merging_directory(mrootp, nent)
 				 * that the character at the end is a ' '.
 				 */
 				if (strncmp((char *) cpnt + 2,
-					(*pnt)->isorec.name, rlen) == 0
-					&& cpnt[2 + rlen] == ' '
-					&& (p = strchr((char *)&cpnt[2 + rlen], '\t'))) {
+					(*pnt)->isorec.name, rlen) == 0 &&
+					cpnt[2 + rlen] == ' ' &&
+					(p = strchr((char *)&cpnt[2 + rlen], '\t'))) {
 					p++;
 					/*
 					 * This is a keeper. Now determine the
@@ -870,7 +937,7 @@ read_merging_directory(mrootp, nent)
 					 */
 					if (strlen(p) > 0) {
 						(*pnt)->table =
-						   e_malloc(strlen(p) + 4);
+						    e_malloc(strlen(p) + 4);
 						sprintf((*pnt)->table,
 							"%c\t%s\n",
 							*cpnt, p);
@@ -906,13 +973,14 @@ read_merging_directory(mrootp, nent)
 	if (dirbuff != NULL) {
 		free(dirbuff);
 	}
-	return rtn;
+	*nentp = nent;
+	return (rtn);
 }/* read_merging_directory */
 
 /*
  * Free any associated data related to the structures.
  */
-int
+LOCAL int
 free_mdinfo(ptr, len)
 	struct directory_entry **ptr;
 	int		len;
@@ -922,9 +990,11 @@ free_mdinfo(ptr, len)
 
 	p = ptr;
 	for (i = 0; i < len; i++, p++) {
-	/* If the tree-handling code decided that it needed an entry, it will
-	   have removed it from the list.  Thus we must allow for null
-	   pointers here. */
+		/*
+		 * If the tree-handling code decided that it needed an entry, it
+		 * will have removed it from the list.  Thus we must allow for
+		 * null pointers here.
+		 */
 		if (*p == NULL) {
 			continue;
 		}
@@ -932,10 +1002,10 @@ free_mdinfo(ptr, len)
 	}
 
 	free(ptr);
-	return 0;
+	return (0);
 }
 
-static void
+LOCAL void
 free_directory_entry(dirp)
 	struct directory_entry *dirp;
 {
@@ -961,7 +1031,7 @@ free_directory_entry(dirp)
  */
 int
 check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
-	struct directory_entry **ptr;
+	struct directory_entry	**ptr;
 	int		len;
 	struct directory_entry *curr_entry;
 	struct stat	*statbuf;
@@ -977,12 +1047,12 @@ check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
 			continue;
 		}
 #if 0
-		if (ptr[i]->name != NULL && ptr[i]->isorec.name_len[0] == 1
-			&& ptr[i]->name[0] == '\0') {
+		if (ptr[i]->name != NULL && ptr[i]->isorec.name_len[0] == 1 &&
+		    ptr[i]->name[0] == '\0') {
 			continue;
 		}
-		if (ptr[i]->name != NULL && ptr[i]->isorec.name_len[0] == 1
-			&& ptr[i]->name[0] == 1) {
+		if (ptr[i]->name != NULL && ptr[i]->isorec.name_len[0] == 1 &&
+		    ptr[i]->name[0] == 1) {
 			continue;
 		}
 #else
@@ -994,8 +1064,8 @@ check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
 		}
 #endif
 
-		if (ptr[i]->name != NULL
-			&& strcmp(ptr[i]->name, curr_entry->name) != 0) {
+		if (ptr[i]->name != NULL &&
+		    strcmp(ptr[i]->name, curr_entry->name) != 0) {
 			/* Not the same name continue */
 			continue;
 		}
@@ -1048,7 +1118,7 @@ check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
 		curr_entry->de_flags |= SAFE_TO_REUSE_TABLE_ENTRY;
 		goto found_it;
 	}
-	return retcode;
+	return (retcode);
 
 found_it:
 	if (odpnt != NULL) {
@@ -1057,7 +1127,7 @@ found_it:
 		free(ptr[i]);
 	}
 	ptr[i] = NULL;
-	return retcode;
+	return (retcode);
 }
 
 /*
@@ -1070,16 +1140,16 @@ open_merge_image(path)
 #ifndef	USE_SCG
 	in_image = fopen(path, "rb");
 	if (in_image == NULL) {
-		return -1;
+		return (-1);
 	}
 #else
 	in_image = fopen(path, "rb");
 	if (in_image == NULL) {
 		if (scsidev_open(path) < 0)
-			return -1;
+			return (-1);
 	}
 #endif
-	return 0;
+	return (0);
 }
 
 /*
@@ -1119,7 +1189,7 @@ merge_isofs(path)
 
 	for (i = 0; i < 100; i++) {
 		if (readsecs(file_addr, buffer,
-				sizeof(buffer) / SECTOR_SIZE) != sizeof(buffer)) {
+				sizeof (buffer) / SECTOR_SIZE) != sizeof (buffer)) {
 #ifdef	USE_LIBSCHILY
 			comerr(" Read error on old image %s\n", path);
 #else
@@ -1129,33 +1199,41 @@ merge_isofs(path)
 		}
 		vdp = (struct iso_volume_descriptor *) buffer;
 
-		if ((strncmp(vdp->id, ISO_STANDARD_ID, sizeof vdp->id) == 0)
-			&& (isonum_711((unsigned char *) vdp->type) == ISO_VD_PRIMARY)) {
+		if ((strncmp(vdp->id, ISO_STANDARD_ID, sizeof (vdp->id)) == 0) &&
+		    (isonum_711((unsigned char *) vdp->type) == ISO_VD_PRIMARY)) {
 			break;
 		}
 		file_addr += 1;
 	}
 
 	if (i == 100) {
-		return NULL;
+		return (NULL);
 	}
 	pri = (struct iso_primary_descriptor *) vdp;
 
 	/* Check the blocksize of the image to make sure it is compatible. */
-	if ((isonum_723((unsigned char *) pri->logical_block_size) != SECTOR_SIZE)
-		|| (isonum_723((unsigned char *) pri->volume_set_size) != 1)) {
-		return NULL;
+	if (isonum_723((unsigned char *) pri->logical_block_size) != SECTOR_SIZE) {
+		errmsgno(EX_BAD,
+			"Previous session has incompatible sector size %d.\n",
+			isonum_723((unsigned char *) pri->logical_block_size));
+		return (NULL);
+	}
+	if (isonum_723((unsigned char *) pri->volume_set_size) != 1) {
+		errmsgno(EX_BAD,
+			"Previous session has volume set size %d (must be 1).\n",
+			isonum_723((unsigned char *) pri->volume_set_size));
+		return (NULL);
 	}
 	/* Get the location and size of the root directory. */
 	rootp = (struct iso_directory_record *)
-		e_malloc(sizeof(struct iso_directory_record));
+		e_malloc(sizeof (struct iso_directory_record));
 
-	memcpy(rootp, pri->root_directory_record, sizeof(*rootp));
+	memcpy(rootp, pri->root_directory_record, sizeof (*rootp));
 
-	return rootp;
+	return (rootp);
 }
 
-void
+LOCAL void
 merge_remaining_entries(this_dir, pnt, n_orig)
 	struct directory *this_dir;
 	struct directory_entry **pnt;
@@ -1166,9 +1244,6 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 	unsigned int	ttbl_extent = 0;
 	unsigned int	ttbl_index = 0;
 	char		whole_path[PATH_MAX];
-#ifdef APPLE_HYB
-	struct directory_entry *assoc = NULL;
-#endif /* APPLE_HYB */
 
 	/*
 	 * Whatever is leftover in the list needs to get merged back into the
@@ -1186,48 +1261,14 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 
 			pnt[i]->whole_name = strdup(whole_path);
 		}
-		if (pnt[i]->name != NULL
-/*	  		&& strcmp(pnt[i]->name, "<translation table>") == 0 )*/
-			&& strcmp(pnt[i]->name, trans_tbl) == 0) {
+		if (pnt[i]->name != NULL &&
+/*			strcmp(pnt[i]->name, "<translation table>") == 0 )*/
+			strcmp(pnt[i]->name, trans_tbl) == 0) {
 			ttbl_extent =
-			   isonum_733((unsigned char *) pnt[i]->isorec.extent);
+			    isonum_733((unsigned char *)pnt[i]->isorec.extent);
 			ttbl_index = i;
 			continue;
 		}
-#ifdef APPLE_HYB
-		/*
-		 * If we have previously found an associated file, check
-		 * it has the same ISO name and link it to this entry
-		 */
-		if (assoc &&
-			((pnt[i]->isorec.flags[0] & ISO_ASSOCIATED) == 0) &&
-			(assoc->isorec.name_len[0] ==
-			    pnt[i]->isorec.name_len[0]) &&
-			(strcmp(assoc->isorec.name, pnt[i]->isorec.name)
-			    == 0)) {
-
-			pnt[i]->assoc = assoc;
-
-			/* don't want this entry to be in the Joliet tree */
-			assoc->de_flags |= INHIBIT_JOLIET_ENTRY;
-
-			/*
-			 * as we have associated files, then assume we are
-			 * are dealing with Apple's extensions - if not already
-			 * set
-			 */
-			if (apple_both == 0) {
-				apple_both = apple_ext = 1;
-			}
-		}
-
-		assoc = NULL;
-
-		/* flag this entry if it's associated */
-		if ((pnt[i]->isorec.flags[0] & ISO_ASSOCIATED) != 0) {
-			assoc = pnt[i];
-		}
-#endif /* APPLE_HYB */
 
 		/*
 		 * Skip directories for now - these need to be treated
@@ -1239,8 +1280,8 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 			 * tree, so that the path tables we generate will be
 			 * correct.
 			 */
-			if ((strcmp(pnt[i]->name, ".") == 0)
-				|| (strcmp(pnt[i]->name, "..") == 0)) {
+			if ((strcmp(pnt[i]->name, ".") == 0) ||
+				(strcmp(pnt[i]->name, "..") == 0)) {
 				free_directory_entry(pnt[i]);
 				pnt[i] = NULL;
 				continue;
@@ -1282,7 +1323,7 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 		if (s_entry->name != NULL && strcmp(s_entry->name, "..") == 0) {
 			continue;
 		}
-/*		if( strcmp(s_entry->name, "<translation table>") == 0)*/
+/*		if (strcmp(s_entry->name, "<translation table>") == 0)*/
 		if (strcmp(s_entry->name, trans_tbl) == 0) {
 			continue;
 		}
@@ -1297,7 +1338,7 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 	 * try and muddle through the best we can.
 	 */
 	for (s_entry = this_dir->contents; s_entry; s_entry = s_entry->next) {
-/*      	if( strcmp(s_entry->name, "<translation table>") == 0)*/
+/*		if (strcmp(s_entry->name, "<translation table>") == 0)*/
 		if (strcmp(s_entry->name, trans_tbl) == 0) {
 			fprintf(stderr, "Should never get here\n");
 			set_733(s_entry->isorec.extent, ttbl_extent);
@@ -1321,7 +1362,7 @@ merge_remaining_entries(this_dir, pnt, n_orig)
  * incorrectly pick it up and attempt to merge it back into the old
  * location.  FIXME(eric).
  */
-static int
+LOCAL int
 merge_old_directory_into_tree(dpnt, parent)
 	struct directory_entry	*dpnt;
 	struct directory *parent;
@@ -1333,8 +1374,8 @@ merge_old_directory_into_tree(dpnt, parent)
 			*next_brother;
 	char		whole_path[PATH_MAX];
 
-	this_dir = (struct directory *) e_malloc(sizeof(struct directory));
-	memset(this_dir, 0, sizeof(struct directory));
+	this_dir = (struct directory *) e_malloc(sizeof (struct directory));
+	memset(this_dir, 0, sizeof (struct directory));
 	this_dir->next = NULL;
 	this_dir->subdir = NULL;
 	this_dir->self = dpnt;
@@ -1374,8 +1415,8 @@ merge_old_directory_into_tree(dpnt, parent)
 		 */
 		contents[i]->de_flags |= SAFE_TO_REUSE_TABLE_ENTRY;
 
-		if (((contents[i]->isorec.flags[0] & ISO_DIRECTORY) != 0)
-			&& (i >= 2)) {
+		if (((contents[i]->isorec.flags[0] & ISO_DIRECTORY) != 0) &&
+							(i >= 2)) {
 			continue;
 		}
 		/* If we have a directory, don't reuse the extent number. */
@@ -1392,7 +1433,7 @@ merge_old_directory_into_tree(dpnt, parent)
 		 * for regilar files, we do it here.
 		 * If it has CL or RE attributes, remember its extent
 		 */
-		check_rr_relocation(contents[i]); 
+		check_rr_relocation(contents[i]);
 
 		/*
 		 * Set the whole name for this file.
@@ -1434,11 +1475,11 @@ merge_old_directory_into_tree(dpnt, parent)
 	sort_n_finish(this_dir);
 #endif
 
-	return 0;
+	return (0);
 }
 
 
-char           *cdrecord_data = NULL;
+char	*cdrecord_data = NULL;
 
 int
 get_session_start(file_addr)
@@ -1503,7 +1544,7 @@ get_session_start(file_addr)
 	*pnt = ',';
 
 #endif
-	return 0;
+	return (0);
 }
 
 /*
@@ -1512,9 +1553,11 @@ get_session_start(file_addr)
  * directory entries, so that we can determine how large each directory is.
  */
 int
-merge_previous_session(this_dir, mrootp)
+merge_previous_session(this_dir, mrootp, reloc_root, reloc_old_root)
 	struct directory *this_dir;
 	struct iso_directory_record *mrootp;
+	char *reloc_root;
+	char *reloc_old_root;
 {
 	struct directory_entry **orig_contents = NULL;
 	struct directory_entry *odpnt = NULL;
@@ -1522,9 +1565,17 @@ merge_previous_session(this_dir, mrootp)
 	struct directory_entry *s_entry;
 	int		status;
 	int		lstatus;
-	struct stat     statbuf,
+	struct stat	statbuf,
 			lstatbuf;
 	int		retcode;
+
+	/* skip leading slash */
+	while (reloc_old_root && reloc_old_root[0] == PATH_SEPARATOR) {
+		reloc_old_root++;
+	}
+	while (reloc_root && reloc_root[0] == PATH_SEPARATOR) {
+		reloc_root++;
+	}
 
 	/*
 	 * Parse the same directory in the image that we are merging for
@@ -1532,8 +1583,128 @@ merge_previous_session(this_dir, mrootp)
 	 */
 	orig_contents = read_merging_directory(mrootp, &n_orig);
 	if (orig_contents == NULL) {
+		if (reloc_old_root) {
+#ifdef	USE_LIBSCHILY
+			comerrno(EX_BAD,
+			"Reading old session failed, cannot execute -old-root.\n");
+#else
+			fprintf(stderr,
+			"Reading old session failed, cannot execute -old-root.\n");
+			exit(1);
+#endif
+		}
 		return (0);
 	}
+
+	if (reloc_old_root && reloc_old_root[0]) {
+		struct directory_entry	**new_orig_contents = orig_contents;
+		int			new_n_orig = n_orig;
+
+		/* decend until we reach the original root */
+		while (reloc_old_root[0]) {
+			int	i;
+			char	*next;
+			int	last;
+
+			for (next = reloc_old_root; *next && *next != PATH_SEPARATOR; next++);
+			if (*next) {
+				last = 0;
+				*next = 0;
+				next++;
+			} else {
+				last = 1;
+			}
+			while (*next == PATH_SEPARATOR) {
+				next++;
+			}
+
+			for (i = 0; i < new_n_orig; i++) {
+				struct iso_directory_record subroot;
+
+				if (new_orig_contents[i]->name != NULL &&
+				    strcmp(new_orig_contents[i]->name, reloc_old_root) != 0) {
+					/* Not the same name continue */
+					continue;
+				}
+				/*
+				 * enter directory, free old one only if not the top level,
+				 * which is still needed
+				 */
+				subroot = new_orig_contents[i]->isorec;
+				if (new_orig_contents != orig_contents) {
+					free_mdinfo(new_orig_contents, new_n_orig);
+				}
+				new_orig_contents = read_merging_directory(&subroot, &new_n_orig);
+
+				if (!new_orig_contents) {
+#ifdef	USE_LIBSCHILY
+					comerrno(EX_BAD,
+					"Reading directory %s in old session failed, cannot execute -old-root.\n",
+							reloc_old_root);
+#else
+					fprintf(stderr,
+					"Reading directory %s in old session failed, cannot execute -old-root.\n",
+							reloc_old_root);
+					exit(1);
+#endif
+				}
+				i = -1;
+				break;
+			}
+
+			if (i == new_n_orig) {
+#ifdef	USE_LIBSCHILY
+				comerrno(EX_BAD,
+				"-old-root (sub)directory %s not found in old session.\n",
+						reloc_old_root);
+#else
+				fprintf(stderr,
+				"-old-root (sub)directory %s not found in old session.\n",
+						reloc_old_root);
+				exit(1);
+#endif
+			}
+
+			/* restore string, proceed to next sub directory */
+			if (!last) {
+				reloc_old_root[strlen(reloc_old_root)] = PATH_SEPARATOR;
+			}
+			reloc_old_root = next;
+		}
+
+		/*
+		 * preserve the old session, skipping those dirs/files that are found again
+		 * in the new root
+		 */
+		for (s_entry = this_dir->contents; s_entry; s_entry = s_entry->next) {
+			status = stat_filter(s_entry->whole_name, &statbuf);
+			lstatus = lstat_filter(s_entry->whole_name, &lstatbuf);
+
+			/*
+			 * check_prev_session() will search for s_entry and remove it from
+			 * orig_contents if found
+			 */
+			retcode = check_prev_session(orig_contents, n_orig, s_entry,
+			    &statbuf, &lstatbuf, NULL);
+			if (retcode == -1)
+				return (-1);
+		}
+		merge_remaining_entries(this_dir, orig_contents, n_orig);
+
+		/* use new directory */
+		free_mdinfo(orig_contents, n_orig);
+		orig_contents = new_orig_contents;
+		n_orig = new_n_orig;
+
+		if (reloc_root && reloc_root[0]) {
+			/* also decend into new root before searching for files */
+			this_dir = find_or_create_directory(this_dir, reloc_root, NULL, TRUE);
+			if (!this_dir) {
+				return (-1);
+			}
+		}
+	}
+
 
 	/*
 	 * Now we scan the directory itself, and look at what is inside of it.
@@ -1555,7 +1726,7 @@ merge_previous_session(this_dir, mrootp)
 		 * directory has a '..' entry, all of them will need to be
 		 * rewritten too, and since the parent directory of the
 		 * modified directory will have an extent pointer to the
-	   	 * directory it too will need to be rewritten.  Thus we will
+		 * directory it too will need to be rewritten.  Thus we will
 		 * never be able to reuse any directory information when
 		 * writing new sessions.
 		 *
@@ -1576,7 +1747,7 @@ merge_previous_session(this_dir, mrootp)
 			return (-1);
 
 		if (retcode == 2 && odpnt != NULL) {
-			int             dflag;
+			int	dflag;
 
 			if (strcmp(s_entry->name, ".") != 0 &&
 					strcmp(s_entry->name, "..") != 0) {
@@ -1595,7 +1766,8 @@ merge_previous_session(this_dir, mrootp)
 					s_entry->whole_name,
 					s_entry, 1);
 				dflag = merge_previous_session(child,
-					&odpnt->isorec);
+					&odpnt->isorec,
+					NULL, reloc_old_root);
 				if (dflag == -1) {
 					return (-1);
 				}
@@ -1605,18 +1777,20 @@ merge_previous_session(this_dir, mrootp)
 		}
 	}
 
-	/*
-	 * Whatever is left over, are things which are no longer in the tree on
-	 * disk. We need to also merge these into the tree.
-	 */
-	merge_remaining_entries(this_dir, orig_contents, n_orig);
+	if (!reloc_old_root) {
+		/*
+		 * Whatever is left over, are things which are no longer in the tree on
+		 * disk. We need to also merge these into the tree.
+		 */
+		merge_remaining_entries(this_dir, orig_contents, n_orig);
+	}
 	free_mdinfo(orig_contents, n_orig);
 	return (1);
 }
 
 /*
- * This code deals with relocated directories which may exist 
- * in the previous session. 
+ * This code deals with relocated directories which may exist
+ * in the previous session.
  */
 struct dir_extent_link  {
 	unsigned int		extent;
@@ -1627,18 +1801,18 @@ struct dir_extent_link  {
 static struct dir_extent_link	*cl_dirs = NULL;
 static struct dir_extent_link	*re_dirs = NULL;
 
-static void
+LOCAL void
 check_rr_relocation(de)
 	struct directory_entry *de;
 {
-	unsigned char   sector[SECTOR_SIZE];
-	unsigned char  *pnt = de->rr_attributes;
-		 int    len = de->rr_attr_size;
-	int             cont_extent = 0,
-	                cont_offset = 0,
-	                cont_size = 0;
+	unsigned char	sector[SECTOR_SIZE];
+	unsigned char	*pnt = de->rr_attributes;
+		int	len = de->rr_attr_size;
+		int	cont_extent = 0,
+			cont_offset = 0,
+			cont_size = 0;
 
-	pnt = parse_xa(pnt, &len, /*dpnt*/ 0);
+	pnt = parse_xa(pnt, &len, /* dpnt */ 0);
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
 #ifdef USE_LIBSCHILY
@@ -1648,7 +1822,7 @@ check_rr_relocation(de)
 #endif
 		}
 		if (strncmp((char *) pnt, "CL", 2) == 0) {
-			struct dir_extent_link *dlink = e_malloc(sizeof(*dlink));
+			struct dir_extent_link *dlink = e_malloc(sizeof (*dlink));
 
 			dlink->extent = isonum_733(pnt + 4);
 			dlink->de = de;
@@ -1656,7 +1830,7 @@ check_rr_relocation(de)
 			cl_dirs = dlink;
 
 		} else if (strncmp((char *) pnt, "RE", 2) == 0) {
-			struct dir_extent_link *dlink = e_malloc(sizeof(*dlink));
+			struct dir_extent_link *dlink = e_malloc(sizeof (*dlink));
 
 			dlink->extent = de->starting_block;
 			dlink->de = de;
@@ -1745,7 +1919,7 @@ finish_cl_pl_for_prev_session()
 				if (d_entry->self == s_entry)
 					break;
 				d_entry = d_entry->next;
-			};
+			}
 			if (!d_entry) {
 #ifdef USE_LIBSCHILY
 				comerrno(EX_BAD, "Unable to locate directory parent\n");
@@ -1753,10 +1927,10 @@ finish_cl_pl_for_prev_session()
 				fprintf(stderr, "Unable to locate directory parent\n");
 				exit(1);
 #endif
-			};
+			}
 
 			if (s_entry->filedir != NULL && s_entry->parent_rec != NULL) {
-				char           *rr_attr;
+				char	*rr_attr;
 
 				/*
 				 * First fix the PL pointer in the directory in the

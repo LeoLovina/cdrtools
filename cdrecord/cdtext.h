@@ -1,8 +1,8 @@
-/* @(#)cdtext.h	1.3 02/05/29 Copyright 1999-2002 J. Schilling */
+/* @(#)cdtext.h	1.5 04/03/02 Copyright 1999-2004 J. Schilling */
 /*
  *	Generic CD-Text support definitions
  *
- *	Copyright (c) 1999-2002 J. Schilling
+ *	Copyright (c) 1999-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,10 +15,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
+
+#ifndef	CDTEXT_H
+#define	CDTEXT_H
 
 /*
  * Strings for the CD-Text Pack Type indicators 0x80...0x8F
@@ -55,35 +58,35 @@ typedef struct textcodes {
 /*
  * Genre codes from Enhanced CD Specification page 21
  */
-#define	GENRE_UNUSED		0	/* not used			     */
-#define	GENRE_UNDEFINED		1	/* not defined			     */
-#define	GENRE_ADULT_CONTEMP	2	/* Adult Contemporary		     */
-#define	GENRE_ALT_ROCK		3	/* Alternative Rock		     */
-#define	GENRE_CHILDRENS		4	/* Childrens Music		     */
-#define	GENRE_CLASSIC		5	/* Classical			     */
-#define	GENRE_CHRIST_CONTEMP	6	/* Contemporary Christian	     */
-#define	GENRE_COUNTRY		7	/* Country			     */
-#define	GENRE_DANCE		8	/* Dance			     */
-#define	GENRE_EASY_LISTENING	9	/* Easy Listening		     */
-#define	GENRE_EROTIC		10	/* Erotic			     */
-#define	GENRE_FOLK		11	/* Folk				     */
-#define	GENRE_GOSPEL		12	/* Gospel			     */
-#define	GENRE_HIPHOP		13	/* Hip Hop			     */
-#define	GENRE_JAZZ		14	/* Jazz				     */
-#define	GENRE_LATIN		15	/* Latin			     */
-#define	GENRE_MUSICAL		16	/* Musical			     */
-#define	GENRE_NEWAGE		17	/* New Age			     */
-#define	GENRE_OPERA		18	/* Opera			     */
-#define	GENRE_OPERETTA		19	/* Operetta			     */
-#define	GENRE_POP		20	/* Pop Music			     */
-#define	GENRE_RAP		21	/* RAP				     */
-#define	GENRE_REGGAE		22	/* Reggae			     */
-#define	GENRE_ROCK		23	/* Rock Music			     */
-#define	GENRE_RYTHMANDBLUES	24	/* Rhythm & Blues		     */
-#define	GENRE_SOUNDEFFECTS	25	/* Sound Effects		     */
-#define	GENRE_SPOKEN_WORD	26	/* Spoken Word			     */
-#define	GENRE_WORLD_MUSIC	28	/* World Music			     */
-#define	GENRE_RESERVED		29	/* Reserved is 29..32767	     */
+#define	GENRE_UNUSED		0	/* not used			    */
+#define	GENRE_UNDEFINED		1	/* not defined			    */
+#define	GENRE_ADULT_CONTEMP	2	/* Adult Contemporary		    */
+#define	GENRE_ALT_ROCK		3	/* Alternative Rock		    */
+#define	GENRE_CHILDRENS		4	/* Childrens Music		    */
+#define	GENRE_CLASSIC		5	/* Classical			    */
+#define	GENRE_CHRIST_CONTEMP	6	/* Contemporary Christian	    */
+#define	GENRE_COUNTRY		7	/* Country			    */
+#define	GENRE_DANCE		8	/* Dance			    */
+#define	GENRE_EASY_LISTENING	9	/* Easy Listening		    */
+#define	GENRE_EROTIC		10	/* Erotic			    */
+#define	GENRE_FOLK		11	/* Folk				    */
+#define	GENRE_GOSPEL		12	/* Gospel			    */
+#define	GENRE_HIPHOP		13	/* Hip Hop			    */
+#define	GENRE_JAZZ		14	/* Jazz				    */
+#define	GENRE_LATIN		15	/* Latin			    */
+#define	GENRE_MUSICAL		16	/* Musical			    */
+#define	GENRE_NEWAGE		17	/* New Age			    */
+#define	GENRE_OPERA		18	/* Opera			    */
+#define	GENRE_OPERETTA		19	/* Operetta			    */
+#define	GENRE_POP		20	/* Pop Music			    */
+#define	GENRE_RAP		21	/* RAP				    */
+#define	GENRE_REGGAE		22	/* Reggae			    */
+#define	GENRE_ROCK		23	/* Rock Music			    */
+#define	GENRE_RYTHMANDBLUES	24	/* Rhythm & Blues		    */
+#define	GENRE_SOUNDEFFECTS	25	/* Sound Effects		    */
+#define	GENRE_SPOKEN_WORD	26	/* Spoken Word			    */
+#define	GENRE_WORLD_MUSIC	28	/* World Music			    */
+#define	GENRE_RESERVED		29	/* Reserved is 29..32767	    */
 #define	GENRE_RIAA		32768	/* Registration by RIAA 32768..65535 */
 
 /*
@@ -125,3 +128,5 @@ typedef struct textcodes {
 #define	LANG_JAPANESE	105		/* 0x69				*/
 #define	LANG_GREEK	112		/* 0x70				*/
 #define	LANG_CHINESE	117		/* 0x75				*/
+
+#endif

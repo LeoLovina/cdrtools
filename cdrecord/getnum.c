@@ -1,12 +1,12 @@
-/* @(#)getnum.c	1.1 02/03/05 Copyright 1984-2002 J. Schilling */
+/* @(#)getnum.c	1.2 04/03/02 Copyright 1984-2002, 2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getnum.c	1.1 02/03/05 Copyright 1984-2002 J. Schilling";
+	"@(#)getnum.c	1.2 04/03/02 Copyright 1984-2002, 2004 J. Schilling";
 #endif
 /*
  *	Number conversion routines to implement 'dd' like options.
  *
- *	Copyright (c) 1984-2002 J. Schilling
+ *	Copyright (c) 1984-2002, 2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -29,9 +29,9 @@ static	char sccsid[] =
 #include <utypes.h>
 #include <schily.h>
 
-LOCAL	Llong	number		__PR((char* arg, int* retp));
-EXPORT	int	getnum		__PR((char* arg, long* valp));
-EXPORT	int	getllnum	__PR((char *arg, Llong* lvalp));
+LOCAL	Llong	number		__PR((char *arg, int *retp));
+EXPORT	int	getnum		__PR((char *arg, long *valp));
+EXPORT	int	getllnum	__PR((char *arg, Llong *lvalp));
 
 LOCAL Llong
 number(arg, retp)

@@ -1,7 +1,7 @@
-/* @(#)p_block.c	1.15 02/04/10 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)p_block.c	1.19 04/02/23 J. Schilling from cdparanoia-III-alpha9.8 */
 #ifndef lint
-static char     sccsid[] =
-"@(#)p_block.c	1.15 02/04/10 J. Schilling from cdparanoia-III-alpha9.8";
+static	char sccsid[] =
+"@(#)p_block.c	1.19 04/02/23 J. Schilling from cdparanoia-III-alpha9.8";
 
 #endif
 /*
@@ -14,12 +14,16 @@ static char     sccsid[] =
 #include <strdefs.h>
 #include "p_block.h"
 #include "cdda_paranoia.h"
+#include "pmalloc.h"
 
-EXPORT	linked_list	*new_list	__PR((void *(*newp) (void), void (*freep) (void *)));
+EXPORT	linked_list	*new_list	__PR((void *(*newp) (void),
+						void (*freep) (void *)));
 EXPORT	linked_element	*add_elem	__PR((linked_list * l, void *elem));
 EXPORT	linked_element	*new_elem	__PR((linked_list * list));
-EXPORT	void		free_elem	__PR((linked_element * e, int free_ptr));
-EXPORT	void		free_list	__PR((linked_list * list, int free_ptr));
+EXPORT	void		free_elem	__PR((linked_element * e,
+						int free_ptr));
+EXPORT	void		free_list	__PR((linked_list * list,
+						int free_ptr));
 EXPORT	void		*get_elem	__PR((linked_element * e));
 EXPORT	linked_list	*copy_list	__PR((linked_list * list));
 LOCAL	c_block	*i_cblock_constructor	__PR((void));
@@ -28,7 +32,8 @@ EXPORT	c_block		*new_c_block	__PR((cdrom_paranoia * p));
 EXPORT	void		free_c_block	__PR((c_block * c));
 LOCAL	v_fragment *i_vfragment_constructor	__PR((void));
 LOCAL	void	i_v_fragment_destructor	__PR((v_fragment * v));
-EXPORT	v_fragment	*new_v_fragment	__PR((cdrom_paranoia * p, c_block * one,
+EXPORT	v_fragment	*new_v_fragment	__PR((cdrom_paranoia * p,
+					c_block * one,
 					long begin, long end, int last));
 EXPORT	void		free_v_fragment	__PR((v_fragment * v));
 EXPORT	c_block		*c_first	__PR((cdrom_paranoia * p));
@@ -41,11 +46,16 @@ EXPORT	v_fragment	*v_next		__PR((v_fragment * v));
 EXPORT	v_fragment	*v_prev		__PR((v_fragment * v));
 EXPORT	void		recover_cache	__PR((cdrom_paranoia * p));
 EXPORT	Int16_t		*v_buffer	__PR((v_fragment * v));
-EXPORT	c_block		*c_alloc	__PR((Int16_t * vector, long begin, long size));
+EXPORT	c_block		*c_alloc	__PR((Int16_t * vector,
+						long begin, long size));
 EXPORT	void		c_set		__PR((c_block * v, long begin));
-EXPORT	void		c_remove	__PR((c_block * v, long cutpos, long cutsize));
-EXPORT	void		c_overwrite	__PR((c_block * v, long pos, Int16_t * b, long size));
-EXPORT	void		c_append	__PR((c_block * v, Int16_t * vector, long size));
+EXPORT	void		c_remove	__PR((c_block * v,
+						long cutpos, long cutsize));
+EXPORT	void		c_overwrite	__PR((c_block * v,
+						long pos, Int16_t * b,
+						long size));
+EXPORT	void		c_append	__PR((c_block * v,
+						Int16_t * vector, long size));
 EXPORT	void		c_removef	__PR((c_block * v, long cut));
 EXPORT	void		i_paranoia_firstlast	__PR((cdrom_paranoia * p));
 EXPORT	cdrom_paranoia	*paranoia_init	__PR((void * d, int nsectors));
@@ -55,7 +65,7 @@ new_list(newp, freep)
 	void	*(*newp) __PR((void));
 	void	(*freep) __PR((void *));
 {
-	linked_list	*ret = calloc(1, sizeof(linked_list));
+	linked_list	*ret = _pcalloc(1, sizeof (linked_list));
 
 	ret->new_poly = newp;
 	ret->free_poly = freep;
@@ -68,7 +78,7 @@ add_elem(l, elem)
 	void		*elem;
 {
 
-	linked_element	*ret = calloc(1, sizeof(linked_element));
+	linked_element	*ret = _pcalloc(1, sizeof (linked_element));
 
 	ret->stamp = l->current++;
 	ret->ptr = elem;
@@ -116,7 +126,7 @@ free_elem(e, free_ptr)
 		e->next->prev = e->prev;
 
 	l->active--;
-	free(e);
+	_pfree(e);
 }
 
 EXPORT void
@@ -126,7 +136,7 @@ free_list(list, free_ptr)
 {
 	while (list->head)
 		free_elem(list->head, free_ptr);
-	free(list);
+	_pfree(list);
 }
 
 EXPORT void *
@@ -156,7 +166,7 @@ copy_list(list)
 LOCAL c_block *
 i_cblock_constructor()
 {
-	c_block		*ret = calloc(1, sizeof(c_block));
+	c_block		*ret = _pcalloc(1, sizeof (c_block));
 
 	return (ret);
 }
@@ -168,11 +178,11 @@ i_cblock_destructor(c)
 {
 	if (c) {
 		if (c->vector)
-			free(c->vector);
+			_pfree(c->vector);
 		if (c->flags)
-			free(c->flags);
+			_pfree(c->flags);
 		c->e = NULL;
-		free(c);
+		_pfree(c);
 	}
 }
 
@@ -195,10 +205,10 @@ free_c_block(c)
 	/*
 	 * also rid ourselves of v_fragments that reference this block
 	 */
-	v_fragment     *v = v_first(c->p);
+	v_fragment		*v = v_first(c->p);
 
 	while (v) {
-		v_fragment     *next = v_next(v);
+		v_fragment	*next = v_next(v);
 
 		if (v->one == c)
 			free_v_fragment(v);
@@ -212,7 +222,7 @@ free_c_block(c)
 LOCAL v_fragment *
 i_vfragment_constructor()
 {
-	v_fragment	*ret = calloc(1, sizeof(v_fragment));
+	v_fragment	*ret = _pcalloc(1, sizeof (v_fragment));
 
 	return (ret);
 }
@@ -222,7 +232,7 @@ LOCAL void
 i_v_fragment_destructor(v)
 	v_fragment	*v;
 {
-	free(v);
+	_pfree(v);
 }
 
 EXPORT v_fragment *
@@ -366,7 +376,7 @@ c_alloc(vector, begin, size)
 	long	begin;
 	long	size;
 {
-	c_block		*c = calloc(1, sizeof(c_block));
+	c_block		*c = _pcalloc(1, sizeof (c_block));
 
 	c->vector = vector;
 	c->begin = begin;
@@ -398,14 +408,14 @@ c_insert(v, pos, b, size)
 		return;
 
 	if (v->vector)
-		v->vector = realloc(v->vector, sizeof(Int16_t) * (size + vs));
+		v->vector = _prealloc(v->vector, sizeof (Int16_t) * (size + vs));
 	else
-		v->vector = malloc(sizeof(Int16_t) * size);
+		v->vector = _pmalloc(sizeof (Int16_t) * size);
 
 	if (pos < vs)
 		memmove(v->vector + pos + size, v->vector + pos,
-			(vs - pos) * sizeof(Int16_t));
-	memcpy(v->vector + pos, b, size * sizeof(Int16_t));
+			(vs - pos) * sizeof (Int16_t));
+	memcpy(v->vector + pos, b, size * sizeof (Int16_t));
 
 	v->size += size;
 }
@@ -428,7 +438,7 @@ c_remove(v, cutpos, cutsize)
 		return;
 
 	memmove(v->vector + cutpos, v->vector + cutpos + cutsize,
-		(vs - cutpos - cutsize) * sizeof(Int16_t));
+		(vs - cutpos - cutsize) * sizeof (Int16_t));
 
 	v->size -= cutsize;
 }
@@ -447,7 +457,7 @@ c_overwrite(v, pos, b, size)
 	if (pos + size > vs)
 		size = vs - pos;
 
-	memcpy(v->vector + pos, b, size * sizeof(Int16_t));
+	memcpy(v->vector + pos, b, size * sizeof (Int16_t));
 }
 
 EXPORT void
@@ -462,10 +472,10 @@ c_append(v, vector, size)
 	 * update the vector
 	 */
 	if (v->vector)
-		v->vector = realloc(v->vector, sizeof(Int16_t) * (size + vs));
+		v->vector = _prealloc(v->vector, sizeof (Int16_t) * (size + vs));
 	else
-		v->vector = malloc(sizeof(Int16_t) * size);
-	memcpy(v->vector + vs, vector, sizeof(Int16_t) * size);
+		v->vector = _pmalloc(sizeof (Int16_t) * size);
+	memcpy(v->vector + vs, vector, sizeof (Int16_t) * size);
 
 	v->size += size;
 }
@@ -482,7 +492,7 @@ c_removef(v, cut)
 
 
 /*
- * Initialization 
+ * Initialization
  */
 EXPORT void
 i_paranoia_firstlast(p)
@@ -512,7 +522,7 @@ paranoia_init(d, nsectors)
 	void	*d;
 	int	nsectors;
 {
-	cdrom_paranoia	*p = calloc(1, sizeof(cdrom_paranoia));
+	cdrom_paranoia	*p = _pcalloc(1, sizeof (cdrom_paranoia));
 
 	p->cache = new_list(vp_cblock_constructor_func,
 				vp_cblock_destructor_func);
@@ -524,6 +534,9 @@ paranoia_init(d, nsectors)
 	p->readahead = 150;
 	p->sortcache = sort_alloc(p->readahead * CD_FRAMEWORDS);
 	p->d = d;
+	p->mindynoverlap = MIN_SECTOR_EPSILON;
+	p->maxdynoverlap = MAX_SECTOR_OVERLAP * CD_FRAMEWORDS;
+	p->maxdynoverlap = (nsectors - 1) * CD_FRAMEWORDS;
 	p->dynoverlap = MAX_SECTOR_OVERLAP * CD_FRAMEWORDS;
 	p->cache_limit = JIGGLE_MODULO;
 	p->enable = PARANOIA_MODE_FULL;
@@ -536,4 +549,19 @@ paranoia_init(d, nsectors)
 	i_paranoia_firstlast(p);
 
 	return (p);
+}
+
+EXPORT void
+paranoia_dynoverlapset(p, minoverlap, maxoverlap)
+	cdrom_paranoia	*p;
+	int		minoverlap;
+	int		maxoverlap;
+{
+	if (minoverlap >= 0)
+		p->mindynoverlap = minoverlap;
+	if (maxoverlap > minoverlap)
+		p->maxdynoverlap = maxoverlap;
+
+	if (p->maxdynoverlap < p->mindynoverlap)
+		p->maxdynoverlap = p->mindynoverlap;
 }

@@ -1,14 +1,14 @@
-/* @(#)scsi_scan.c	1.14 01/03/12 Copyright 1997 J. Schilling */
+/* @(#)scsi_scan.c	1.19 04/04/16 Copyright 1997-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_scan.c	1.14 01/03/12 Copyright 1997 J. Schilling";
+	"@(#)scsi_scan.c	1.19 04/04/16 Copyright 1997-2004 J. Schilling";
 #endif
 /*
  *	Scan SCSI Bus.
  *	Stolen from sformat. Need a more general form to
  *	re-use it in sformat too.
  *
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -21,9 +21,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -51,9 +51,9 @@ print_product(f, ip)
 	FILE			*f;
 	struct	scsi_inquiry	*ip;
 {
-	fprintf(f, "'%.8s' ", ip->info);
-	fprintf(f, "'%.16s' ", ip->ident);
-	fprintf(f, "'%.4s' ", ip->revision);
+	fprintf(f, "'%.8s' ", ip->vendor_info);
+	fprintf(f, "'%.16s' ", ip->prod_ident);
+	fprintf(f, "'%.4s' ", ip->prod_revision);
 	if (ip->add_len < 31) {
 		fprintf(f, "NON CCS ");
 	}
@@ -82,7 +82,7 @@ select_target(scgp, f)
 
 	scgp->silent++;
 
-	for (bus=0; bus < 16; bus++) {
+	for (bus = 0; bus < 256; bus++) {
 		scg_settarget(scgp, bus, 0, 0);
 
 		if (!scg_havebus(scgp, bus))
@@ -91,7 +91,7 @@ select_target(scgp, f)
 		initiator = scg_initiator_id(scgp);
 		fprintf(f, "scsibus%d:\n", bus);
 
-		for (tgt=0; tgt < 16; tgt++) {
+		for (tgt = 0; tgt < 16; tgt++) {
 			n = bus*100 + tgt;
 
 			scg_settarget(scgp, bus, tgt, lun);
@@ -121,7 +121,10 @@ select_target(scgp, f)
 				continue;
 			}
 			if (!have_tgt) {
-				fprintf(f, "*\n");
+				/*
+				 * Hack: fd -> -2 means no access
+				 */
+				fprintf(f, "%c\n", scgp->fd == -2 ? '?':'*');
 				continue;
 			}
 			amt++;
@@ -141,7 +144,7 @@ select_target(scgp, f)
 	}
 	n = -1;
 #ifdef	FMT
-	getint("Select target", &n, low, high); 
+	getint("Select target", &n, low, high);
 	bus = n/100;
 	tgt = n%100;
 	scg_settarget(scgp, bus, tgt, lun);
@@ -168,7 +171,7 @@ select_unit(scgp, f)
 	fprintf(f, "scsibus%d target %d:\n", scg_scsibus(scgp), scg_target(scgp));
 
 	initiator = scg_initiator_id(scgp);
-	for (lun=0; lun < 8; lun++) {
+	for (lun = 0; lun < 8; lun++) {
 
 #ifdef	FMT
 		if (print_disknames(scg_scsibus(scgp), scg_target(scgp), lun) < 8)
@@ -177,7 +180,7 @@ select_unit(scgp, f)
 			fprintf(f, " ");
 #else
 		fprintf(f, "\t");
-#endif		
+#endif
 		if (fprintf(f, "%d,%d,%d", scg_scsibus(scgp), scg_target(scgp), lun) < 8)
 			fprintf(f, "\t");
 		else
@@ -214,12 +217,12 @@ select_unit(scgp, f)
 	}
 	lun = -1;
 #ifdef	FMT
-	getint("Select lun", &lun, low, high); 
+	getint("Select lun", &lun, low, high);
 	scg_settarget(scgp, scg_scsibus(scgp), scg_target(scgp), lun);
 	format_one(scgp);
 	return (1);
 #endif
-	
+
 	scg_settarget(scgp, scg_scsibus(scgp), scg_target(scgp), clun);
 	return (1);
 }

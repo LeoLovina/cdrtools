@@ -1,7 +1,7 @@
-/* @(#)rscsi.c	1.23 02/11/30 Copyright 1994,2000-2002 J. Schilling*/
+/* @(#)rscsi.c	1.28 03/11/26 Copyright 1994,2000-2002 J. Schilling*/
 #ifndef lint
 static	char sccsid[] =
-	"@(#)rscsi.c	1.23 02/11/30 Copyright 1994,2000-2002 J. Schilling";
+	"@(#)rscsi.c	1.28 03/11/26 Copyright 1994,2000-2002 J. Schilling";
 #endif
 /*
  *	Remote SCSI server
@@ -27,6 +27,7 @@ static	char sccsid[] =
 /*#define	FORCE_DEBUG*/
 
 #include <mconfig.h>
+
 #include <stdio.h>
 #include <stdxlib.h>
 #include <unixstd.h>	/* includes <sys/types.h> */
@@ -34,7 +35,10 @@ static	char sccsid[] =
 #include <fctldefs.h>
 #include <statdefs.h>
 #include <strdefs.h>
+#ifdef	HAVE_SYS_SOCKET_H
+#define	USE_REMOTE
 #include <sys/socket.h>
+#endif
 #ifdef	 HAVE_SYS_PARAM_H
 #include <sys/param.h>	/* BSD-4.2 & Linux need this for MAXHOSTNAMELEN */
 #endif
@@ -53,9 +57,12 @@ static	char sccsid[] =
 #ifdef	HAVE_ARPA_INET_H
 #include <arpa/inet.h>		/* BeOS does not have <arpa/inet.h> */
 #endif				/* but inet_ntaoa() is in <netdb.h> */
+#ifdef	HAVE_NETDB_H
 #include <netdb.h>
+#endif
 
 EXPORT	int	main		__PR((int argc, char **argv));
+#ifdef	USE_REMOTE
 LOCAL	void	checkuser	__PR((void));
 LOCAL	char	*getpeer	__PR((void));
 LOCAL	BOOL	checktarget	__PR((void));
@@ -105,6 +112,7 @@ LOCAL	FILE	*debug_file;
 #define	DEBUG4(fmt,a1,a2,a3,a4)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4)
 #define	DEBUG5(fmt,a1,a2,a3,a4,a5)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4, a5)
 #define	DEBUG6(fmt,a1,a2,a3,a4,a5,a6)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4, a5, a6)
+#endif	/* USE_REMOTE */
 
 EXPORT int
 main(argc, argv)
@@ -112,6 +120,9 @@ main(argc, argv)
 	char	**argv;
 {
 	save_args(argc, argv);
+#ifndef	USE_REMOTE
+	comerrno(EX_BAD, "No remote SCSI support on this platform.\n");
+#else
 	argc--, argv++;
 	if (argc > 0 && strcmp(*argv, "-c") == 0) {
 		/*
@@ -143,8 +154,14 @@ main(argc, argv)
 	if (debug_name == NULL && argc <= 0)
 		debug_name = "/tmp/RSCSI";
 #endif
-	if (argc > 0)
+#ifdef	NONONO
+	/*
+	 * Should we allow root to shoot himself into the foot?
+	 * Allowing to write arbitrary files may be a security risk.
+	 */
+	if (argc > 0 && getuid() == 0)
 		debug_name = *argv;
+#endif
 
 	if (debug_name != NULL)
 		debug_file = fopen(debug_name, "w");
@@ -159,9 +176,11 @@ main(argc, argv)
 	checkuser();		/* Check if we are called by a bad guy	*/
 	peername = getpeer();	/* Get host name of caller		*/
 	dorscsi();
+#endif	/* USE_REMOTE */
 	return (0);
 }
 
+#ifdef	USE_REMOTE
 LOCAL void
 checkuser()
 {
@@ -193,20 +212,34 @@ notfound:
 	exit(EX_BAD);
 }
 
+#ifndef	NI_MAXHOST
+#ifdef	MAXHOSTNAMELEN			/* XXX remove this and sys/param.h */
+#define	NI_MAXHOST	MAXHOSTNAMELEN
+#else
+#define	NI_MAXHOST	64
+#endif
+#endif
+
 LOCAL char *
 getpeer()
 {
-	struct	sockaddr sa;
-	struct	sockaddr_in *s;
-	socklen_t	 sasize = sizeof(sa);
-	struct hostent	*he;
-#ifdef	MAXHOSTNAMELEN			/* XXX remove this and sys/param.h */
-static	char		buffer[MAXHOSTNAMELEN];
+#ifdef	HAVE_GETNAMEINFO
+#ifdef	HAVE_SOCKADDR_STORAGE
+	struct sockaddr_storage sa;
 #else
-static	char		buffer[64];
+	char			sa[256];
 #endif
+#else
+	struct	sockaddr sa;
+	struct hostent	*he;
+#endif
+	struct	sockaddr *sap;
+	struct	sockaddr_in *s;
+	socklen_t	 sasize = sizeof (sa);
+static	char		buffer[NI_MAXHOST];
 
-	if (getpeername(STDIN_FILENO, &sa, &sasize) < 0) {
+	sap = (struct  sockaddr *)&sa;
+	if (getpeername(STDIN_FILENO, sap, &sasize) < 0) {
 		int		errsav = geterrno();
 		struct stat	sb;
 
@@ -215,14 +248,18 @@ static	char		buffer[64];
 				DEBUG("rmt: stdin is a PIPE\n");
 				return ("PIPE");
 			}
-			DEBUG1("rscsid: stdin st_mode %0o\n", sb.st_mode);
+			DEBUG1("rscsid: stdin st_mode %0llo\n", (Llong)sb.st_mode);
 		}
 
 		DEBUG1("rscsid: peername %s\n", errmsgstr(errsav));
 		return ("ILLEGAL_SOCKET");
 	} else {
 		s = (struct sockaddr_in *)&sa;
+#ifdef	AF_INET6
+		if (s->sin_family != AF_INET && s->sin_family != AF_INET6) {
+#else
 		if (s->sin_family != AF_INET) {
+#endif
 #ifdef	AF_UNIX
 			/*
 			 * AF_UNIX is not defined on BeOS
@@ -237,6 +274,21 @@ static	char		buffer[64];
 			return ("NOT_IP");
 		}
                
+#ifdef	HAVE_GETNAMEINFO
+		buffer[0] = '\0';
+		if (debug_file &&
+		    getnameinfo(sap, sasize, buffer, sizeof (buffer), NULL, 0,
+		    NI_NUMERICHOST) == 0) {
+			DEBUG1("rmt: peername %s\n", buffer);
+		}
+		buffer[0] = '\0';
+		if (getnameinfo(sap, sasize, buffer, sizeof (buffer), NULL, 0,
+		    0) == 0) {
+			DEBUG1("rmt: peername %s\n", buffer);
+			return (buffer);
+		}
+		return ("CANNOT_MAP_ADDRESS");
+#else	/* HAVE_GETNAMEINFO */
 #ifdef	HAVE_INET_NTOA
 		(void) js_snprintf(buffer, sizeof(buffer), "%s", inet_ntoa(s->sin_addr));
 #else
@@ -248,6 +300,7 @@ static	char		buffer[64];
 		if (he != NULL)
 			return (he->h_name);
 		return (buffer);
+#endif	/* HAVE_GETNAMEINFO */
 	}
 }
 
@@ -948,3 +1001,4 @@ rscsierror(err, str, xstr)
 	if (xlen > 0)
 		(void) _nixwrite(STDOUT_FILENO, xstr, xlen);
 }
+#endif	/* USE_REMOTE */

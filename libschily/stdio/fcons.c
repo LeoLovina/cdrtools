@@ -1,6 +1,6 @@
-/* @(#)fcons.c	2.14 03/03/09 Copyright 1986, 1995 J. Schilling */
+/* @(#)fcons.c	2.17 04/08/08 Copyright 1986, 1995-2003 J. Schilling */
 /*
- *	Copyright (c) 1986, 1995  J. Schilling
+ *	Copyright (c) 1986, 1995-2003  J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -18,10 +18,10 @@
  * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include "io.h"
+#include "schilyio.h"
 
 /*
- * Note that because of a definition in io.h we are using fseeko()/ftello()
+ * Note that because of a definition in schilyio.h we are using fseeko()/ftello()
  * instead of fseek()/ftell() if available.
  */
 
@@ -56,13 +56,14 @@ LOCAL	char	*fmtab[] = {
 EXPORT FILE *
 _fcons(fd, f, flag)
 	register FILE	*fd;
-		 int	f;
-		 int	flag;
+		int	f;
+		int	flag;
 {
 	int	my_gflag = _io_glflag;
 
 	if (fd == (FILE *)NULL)
-		fd = fdopen(f, fmtab[flag&(FI_READ|FI_WRITE|FI_BINARY | FI_APPEND)]);
+		fd = fdopen(f,
+			fmtab[flag&(FI_READ|FI_WRITE|FI_BINARY | FI_APPEND)]);
 
 	if (fd != (FILE *)NULL) {
 		if (flag & FI_APPEND) {

@@ -1,4 +1,4 @@
-/* @(#)ccomdefs.h	1.2 00/11/08 Copyright 2000 J. Schilling */
+/* @(#)ccomdefs.h	1.3 03/06/15 Copyright 2000 J. Schilling */
 /*
  *	Various compiler dependant macros.
  *
@@ -15,13 +15,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _CCOMDEFS_H
-#define _CCOMDEFS_H
+#define	_CCOMDEFS_H
 
 #ifdef	__cplusplus
 extern "C" {
@@ -35,16 +35,16 @@ extern "C" {
  */
 #if __GNUC__ < 2 || __GNUC__ == 2 && __GNUC_MINOR__ < 7
 
-#define __printflike__(fmtarg, firstvararg)
-#define __printf0like__(fmtarg, firstvararg)
-#define __scanflike__(fmtarg, firstvararg)
+#define	__printflike__(fmtarg, firstvararg)
+#define	__printf0like__(fmtarg, firstvararg)
+#define	__scanflike__(fmtarg, firstvararg)
 
 #else /* We found GCC that supports __attribute__ */
 
-#define __printflike__(fmtarg, firstvararg) \
-            __attribute__((__format__ (__printf__, fmtarg, firstvararg)))
-#define __printf0like__(fmtarg, firstvararg) \
-            __attribute__((__format__ (__printf0__, fmtarg, firstvararg)))
+#define	__printflike__(fmtarg, firstvararg) \
+		__attribute__((__format__(__printf__, fmtarg, firstvararg)))
+#define	__printf0like__(fmtarg, firstvararg) \
+		__attribute__((__format__(__printf0__, fmtarg, firstvararg)))
 
 /*
  * FreeBSD GCC implements printf0 that allows the format string to
@@ -52,11 +52,11 @@ extern "C" {
  */
 #if	__FreeBSD_cc_version < 300001
 #undef	__printf0like__
-#define __printf0like__	__printflike__
+#define	__printf0like__	__printflike__
 #endif
 
-#define __scanflike__(fmtarg, firstvararg) \
-            __attribute__((__format__ (__scanf__, fmtarg, firstvararg)))
+#define	__scanflike__(fmtarg, firstvararg) \
+		__attribute__((__format__(__scanf__, fmtarg, firstvararg)))
 
 #endif /* GNUC */
 

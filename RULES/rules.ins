@@ -1,4 +1,4 @@
-#ident @(#)rules.ins	1.12 03/03/06 
+#ident @(#)rules.ins	1.13 04/01/23 
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -25,27 +25,27 @@ $(INS_BASE)/$(INSDIR):
 $(SRCROOT)/bins/$(OARCH):
 			$(MKDIR) -p $@
 
-$(INS_BASE)/$(INSDIR)/$(TARGET):	$(PTARGET)
+$(INS_BASE)/$(INSDIR)/$(TARGET)$(_EXEEXT):	$(PTARGET)
 			$(INSTALL) $(PTARGET) $@
 
-$(SRCROOT)/bins/$(OARCH)/$(TARGET):	$(PTARGET)
+$(SRCROOT)/bins/$(OARCH)/$(TARGET)$(_EXEEXT):	$(PTARGET)
 			$(INSTALL) $(PTARGET) $@
 
-PHARDLINKS=	$(HARDLINKS:%=$(INS_BASE)/$(INSDIR)/%)
+PHARDLINKS=	$(HARDLINKS:%=$(INS_BASE)/$(INSDIR)/%$(_EXEEXT))
 hardlinks:	$(PHARDLINKS)
 
-PSYMLINKS=	$(SYMLINKS:%=$(INS_BASE)/$(INSDIR)/%)
+PSYMLINKS=	$(SYMLINKS:%=$(INS_BASE)/$(INSDIR)/%$(_EXEEXT))
 symlinks:	$(PSYMLINKS)
 
 _INSMODEINS=	$(_UNIQ)$(INSMODEI)
 __INSMODEINS=	$(_INSMODEINS:$(_UNIQ)=$(INSMODEX))
 INSMODEINS=	$(__INSMODEINS:$(_UNIQ)%=%)
 
-dummy $(PHARDLINKS):	$(INS_BASE)/$(INSDIR)/$(TARGET)
-	@echo "	==> INSTALLING link \"$@\""; $(RM) $(RM_FORCE) $@; $(LN) $(INS_BASE)/$(INSDIR)/$(TARGET) $@
+dummy $(PHARDLINKS):	$(INS_BASE)/$(INSDIR)/$(TARGET)$(_EXEEXT)
+	@echo "	==> INSTALLING link \"$@\""; $(RM) $(RM_FORCE) $@; $(LN) $(INS_BASE)/$(INSDIR)/$(TARGET)$(_EXEEXT) $@
 
-symdummy $(PSYMLINKS):	$(INS_BASE)/$(INSDIR)/$(TARGET)
-	@echo "	==> INSTALLING symlink \"$@\""; $(RM) $(RM_FORCE) $@; $(SYMLINK) $(TARGET) $@
+symdummy $(PSYMLINKS):	$(INS_BASE)/$(INSDIR)/$(TARGET)$(_EXEEXT)
+	@echo "	==> INSTALLING symlink \"$@\""; $(RM) $(RM_FORCE) $@; $(SYMLINK) $(TARGET)$(_EXEEXT) $@
 
 xinstall:
 	@if [ ".$(XMK_FILE)" != . ] ; then				\
@@ -64,9 +64,9 @@ xinstall:
 	fi
 
 install:	all	$(INS_BASE)/$(INSDIR) \
-			$(INS_BASE)/$(INSDIR)/$(TARGET) \
+			$(INS_BASE)/$(INSDIR)/$(TARGET)$(_EXEEXT) \
 			hardlinks symlinks \
 			xinstall
 
 ibins:		all	$(SRCROOT)/bins/$(OARCH) \
-			$(SRCROOT)/bins/$(OARCH)/$(TARGET)
+			$(SRCROOT)/bins/$(OARCH)/$(TARGET)$(_EXEEXT)

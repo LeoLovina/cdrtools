@@ -1,7 +1,7 @@
-/* @(#)default.c	1.3 00/09/04 Copyright 1997 J. Schilling */
+/* @(#)default.c	1.5 04/09/04 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)default.c	1.3 00/09/04 Copyright 1997 J. Schilling";
+	"@(#)default.c	1.5 04/09/04 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1997 J. Schilling
@@ -17,9 +17,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -47,6 +47,7 @@ defltopen(name)
 		fclose(dfltfile);
 
 	if (name == (char *)NULL) {
+		fclose(dfltfile);
 		dfltfile = NULL;
 		return (0);
 	}
@@ -103,7 +104,7 @@ defltnext(name)
 	}
 	namelen = strlen(name);
 
-	while (fgets(buf, sizeof(buf), dfltfile)) {
+	while (fgets(buf, sizeof (buf), dfltfile)) {
 		len = strlen(buf);
 		if (buf[len-1] == '\n') {
 			buf[len-1] = 0;

@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd-os.c	1.27 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd-os.c	1.28 04/01/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd-os.c	1.27 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd-os.c	1.28 04/01/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the BSD/OS user-land raw SCSI implementation.
@@ -28,15 +28,15 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #undef	sense
 
-#define scsi_sense	bsdi_scsi_sense
-#define scsi_inquiry	bsdi_scsi_inquiry
+#define	scsi_sense	bsdi_scsi_sense
+#define	scsi_inquiry	bsdi_scsi_inquiry
 
 /*
  * Must use -I/sys...
@@ -52,7 +52,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd-os.c-1.27";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd-os.c-1.28";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -61,7 +61,7 @@ LOCAL	char	_scg_trans_version[] = "scsi-bsd-os.c-1.27";	/* The version for this 
 struct scg_local {
 	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 #include <machine/param.h>
 
@@ -113,9 +113,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -133,13 +133,13 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
@@ -150,19 +150,19 @@ scgo_open(scgp, device)
 
 	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 
-		js_snprintf(devname, sizeof(devname),
+		js_snprintf(devname, sizeof (devname),
 					"/dev/su%d-%d-%d", busno, tgt, tlun);
 		f = open(devname, O_RDWR|O_NONBLOCK);
 		if (f < 0) {
 			goto openbydev;
 		}
 		scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
-		return(1);
+		return (1);
 
-	} else for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
-				js_snprintf(devname, sizeof(devname),
+	} else for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
+				js_snprintf(devname, sizeof (devname),
 						"/dev/su%d-%d-%d", b, t, l);
 				f = open(devname, O_RDWR|O_NONBLOCK);
 /*				error("open (%s) = %d\n", devname, f);*/
@@ -227,9 +227,9 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
@@ -333,8 +333,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -400,7 +400,7 @@ scgo_send(scgp)
 	}
 
 	/* Zero the structure... */
-	fillbytes(&suc, sizeof(suc), '\0');
+	fillbytes(&suc, sizeof (suc), '\0');
 
 	/* Read or write? */
 	if (sp->flags & SCG_RECV_DATA) {
@@ -427,8 +427,8 @@ scgo_send(scgp)
 		if (suc.suc_sus.sus_status != STS_GOOD)
 			sp->ux_errno = EIO;
 	}
-	fillbytes(&sp->scb, sizeof(sp->scb), '\0');
-	fillbytes(&sp->u_sense.cmd_sense, sizeof(sp->u_sense.cmd_sense), '\0');
+	fillbytes(&sp->scb, sizeof (sp->scb), '\0');
+	fillbytes(&sp->u_sense.cmd_sense, sizeof (sp->u_sense.cmd_sense), '\0');
 #if 0
 	/*
 	 * Unfortunalety, BSD/OS has no idea of DMA residual count.
@@ -437,7 +437,7 @@ scgo_send(scgp)
 	sp->sense_count = req.senselen_used;
 #else
 	sp->resid = 0;
-	sp->sense_count = sizeof(suc.suc_sus.sus_sense);
+	sp->sense_count = sizeof (suc.suc_sus.sus_sense);
 #endif
 	if (sp->sense_count > SCG_MAX_SENSE)
 		sp->sense_count = SCG_MAX_SENSE;

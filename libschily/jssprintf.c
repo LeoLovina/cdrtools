@@ -1,6 +1,6 @@
-/* @(#)jssprintf.c	1.14 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)jssprintf.c	1.15 03/06/15 Copyright 1985, 1995-2003 J. Schilling */
 /*
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -41,9 +41,11 @@ static void _cput(c, ba)
 
 /* VARARGS2 */
 #ifdef	PROTOTYPES
-int js_sprintf(char *buf, const char *form, ...)
+EXPORT int
+js_sprintf(char *buf, const char *form, ...)
 #else
-int js_sprintf(buf, form, va_alist)
+EXPORT int
+js_sprintf(buf, form, va_alist)
 	char	*buf;
 	char	*form;
 	va_dcl

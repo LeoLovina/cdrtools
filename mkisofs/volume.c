@@ -1,7 +1,7 @@
-/* @(#)volume.c	1.12 02/10/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)volume.c	1.14 04/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)volume.c	1.12 02/10/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+	"@(#)volume.c	1.14 04/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
@@ -40,21 +40,22 @@ static	char sccsid[] =
 #include "mkisofs.h"
 #include <errno.h>
 
-#define HFS_MIN_SIZE	1600	/* 800k == 1600 HFS blocks */
+#define	HFS_MIN_SIZE	1600	/* 800k == 1600 HFS blocks */
 
-static hfsvol  *vol_save = 0;	/* used to "destroy" an HFS volume */
+LOCAL hfsvol  *vol_save = 0;	/* used to "destroy" an HFS volume */
 
-static int	AlcSiz		__PR((Ulong));
-static int	XClpSiz		__PR((Ulong));
-static int	get_vol_size	__PR((int));
-	int	make_mac_volume	__PR((struct directory *, int));
-static int	copy_to_mac_vol	__PR((hfsvol *, struct directory *));
-static void	set_dir_info	__PR((hfsvol *, struct directory *));
+LOCAL	int	AlcSiz		__PR((Ulong));
+LOCAL	int	XClpSiz		__PR((Ulong));
+LOCAL	int	get_vol_size	__PR((int));
+EXPORT	int	write_fork	__PR((hfsfile * hfp, long tot));
+EXPORT	int	make_mac_volume	__PR((struct directory *, int));
+LOCAL	int	copy_to_mac_vol	__PR((hfsvol *, struct directory *));
+LOCAL void	set_dir_info	__PR((hfsvol *, struct directory *));
 
 /*
  *	AlcSiz: find allocation size for given volume size
  */
-static int
+LOCAL int
 AlcSiz(vlen)
 	Ulong	vlen;
 {
@@ -77,7 +78,7 @@ AlcSiz(vlen)
 /*
  *	XClpSiz: find the default size of the catalog/extent file
  */
-static int
+LOCAL int
 XClpSiz(vlen)
 	Ulong	vlen;
 {
@@ -121,7 +122,7 @@ XClpSiz(vlen)
 /*
  *	get_vol_size: get the size of the volume including the extent/catalog
  */
-static int
+LOCAL int
 get_vol_size(vblen)
 	int	vblen;
 {
@@ -156,7 +157,7 @@ get_vol_size(vblen)
  *	but no data is actually written (it's trapped deep down in
  *	libhfs).
  */
-int
+EXPORT int
 write_fork(hfp, tot)
 	hfsfile	*hfp;
 	long	tot;
@@ -199,7 +200,7 @@ write_fork(hfp, tot)
  *	size, so we may have to update the ISO structures to add in any
  *	padding.
  */
-int
+EXPORT int
 make_mac_volume(dpnt, start_extent)
 	struct directory	*dpnt;
 	int			start_extent;
@@ -259,8 +260,8 @@ make_mac_volume(dpnt, start_extent)
 				return (-1);
 			}
 			vblen +=
-			 ROUND_UP((start_extent - session_start) * HFS_BLK_CONV,
-								Csize);
+				ROUND_UP((start_extent - session_start) *
+						HFS_BLK_CONV, Csize);
 			lastCsize = Csize;
 		}
 	}
@@ -325,17 +326,18 @@ make_mac_volume(dpnt, start_extent)
 	return (Csize);
 }
 
-#define TEN 10	/* well, it is! */
-#define LCHAR "_"
+#define	TEN 10	/* well, it is! */
+#define	LCHAR "_"
 
-/*	copy_to_mac_vol: copy all files in a directory to corresponding
+/*
+ *	copy_to_mac_vol: copy all files in a directory to corresponding
  *			 Mac folder.
  *
  *	Files are copied recursively to corresponding folders on the Mac
  *	volume. The caller routine needs to do a hfs_chdir before calling this
  *	routine.
  */
-static int
+LOCAL int
 copy_to_mac_vol(vol, node)
 	hfsvol		*vol;
 	struct directory *node;
@@ -511,12 +513,12 @@ copy_to_mac_vol(vol, node)
 	 * real directory_entry, and then finding it's directory info
 	 */
 
-	 /* following code taken from joliet.c */
+	/* following code taken from joliet.c */
 	for (s_entry = node->contents; s_entry; s_entry = s_entry->next) {
 		if ((s_entry->de_flags & RELOCATED_DIRECTORY) != 0) {
 			/*
 			 * if the directory has been reloacted, then search the
-		   	 * relocated directory for the real entry
+			 * relocated directory for the real entry
 			 */
 			for (s_entry1 = reloc_dir->contents; s_entry1;
 						s_entry1 = s_entry1->next) {
@@ -589,7 +591,7 @@ copy_to_mac_vol(vol, node)
 						 * HFS_MAX_FLEN chars
 						 */
 						sprintf(hce->error,
-						   "can't HFS create folder %s",
+						    "can't HFS create folder %s",
 							s_entry->whole_name);
 						return (-1);
 					} else if (i == 0) {
@@ -672,7 +674,7 @@ copy_to_mac_vol(vol, node)
 
 #define	ICON	"Icon"
 
-static void
+LOCAL void
 set_dir_info(vol, de)
 	hfsvol			*vol;
 	struct directory	*de;
@@ -682,7 +684,7 @@ set_dir_info(vol, de)
 	char		name[HFS_MAX_FLEN + 1];
 	unsigned short	flags = 0;
 
-	memset(&ent1, 0, sizeof(hfsdirent));
+	memset(&ent1, 0, sizeof (hfsdirent));
 
 	sprintf(name, "%s\r", ICON);
 
@@ -707,10 +709,10 @@ set_dir_info(vol, de)
 	/* may not have an hfs_ent for this directory */
 	if (ent == NULL) {
 		ent = &ent1;
-		memset(ent, 0, sizeof(hfsdirent));
+		memset(ent, 0, sizeof (hfsdirent));
 
 		/* get the attributes for the folder */
-		if(hfs_stat(vol, ":", ent) < 0)
+		if (hfs_stat(vol, ":", ent) < 0)
 			return;
 	}
 
@@ -718,8 +720,12 @@ set_dir_info(vol, de)
 	ent->fdflags |= flags;
 
 	/* set the new attributes for the folder */
-	if (hfs_setattr(vol, ":", ent) < 0)
-	    return;
+	if (hfs_setattr(vol, ":", ent) < 0) {
+		/*
+		 * Only needed if we add things after this if statement.
+		 */
+/*		return;*/
+	}
 }
 
 #endif	/* APPLE_HYB */

@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd.c	1.41 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd.c	1.42 04/01/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd.c	1.41 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd.c	1.42 04/01/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the NetBSD/FreeBSD/OpenBSD generic SCSI implementation.
@@ -31,9 +31,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef HAVE_CAMLIB_H
@@ -48,7 +48,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.41";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.42";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -57,7 +57,7 @@ LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.41";	/* The version for this tra
 struct scg_local {
 	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 /*#define	MAX_DMA_BSD	(32*1024)*/
 #define	MAX_DMA_BSD	(60*1024)	/* More seems to make problems */
@@ -131,9 +131,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -151,13 +151,13 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
@@ -168,19 +168,19 @@ scgo_open(scgp, device)
 
 	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 
-		js_snprintf(devname, sizeof(devname),
-				"/dev/su%d-%d-%d", busno, tgt, tlun); 
+		js_snprintf(devname, sizeof (devname),
+				"/dev/su%d-%d-%d", busno, tgt, tlun);
 		f = open(devname, O_RDWR);
 		if (f < 0) {
 			goto openbydev;
 		}
 		scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
-		return(1);
+		return (1);
 
-	} else for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
-				js_snprintf(devname, sizeof(devname),
+	} else for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
+				js_snprintf(devname, sizeof (devname),
 							"/dev/su%d-%d-%d", b, t, l);
 				f = open(devname, O_RDWR);
 /*				error("open (%s) = %d\n", devname, f);*/
@@ -254,9 +254,9 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
@@ -363,8 +363,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -462,9 +462,9 @@ scgo_send(scgp)
 	req.databuf = sp->addr;
 	req.datalen = sp->size;
 	req.datalen_used = 0;
-	fillbytes(req.sense, sizeof(req.sense), '\0');
-	if (sp->sense_len > sizeof(req.sense))
-		req.senselen = sizeof(req.sense);
+	fillbytes(req.sense, sizeof (req.sense), '\0');
+	if (sp->sense_len > sizeof (req.sense))
+		req.senselen = sizeof (req.sense);
 	else if (sp->sense_len < 0)
 		req.senselen = 0;
 	else
@@ -484,8 +484,8 @@ scgo_send(scgp)
 		if (req.retsts != SCCMD_OK)
 			sp->ux_errno = EIO;
 	}
-	fillbytes(&sp->scb, sizeof(sp->scb), '\0');
-	fillbytes(&sp->u_sense.cmd_sense, sizeof(sp->u_sense.cmd_sense), '\0');
+	fillbytes(&sp->scb, sizeof (sp->scb), '\0');
+	fillbytes(&sp->u_sense.cmd_sense, sizeof (sp->u_sense.cmd_sense), '\0');
 	sp->resid = req.datalen - req.datalen_used;
 	sp->sense_count = req.senselen_used;
 	if (sp->sense_count > SCG_MAX_SENSE)
@@ -545,8 +545,8 @@ scgo_send(scgp)
  */
 
 #undef	sense
-#define scsi_sense CAM_scsi_sense
-#define scsi_inquiry CAM_scsi_inquiry
+#define	scsi_sense CAM_scsi_sense
+#define	scsi_inquiry CAM_scsi_inquiry
 #include <sys/param.h>
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -561,13 +561,13 @@ scgo_send(scgp)
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.41";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.42";	/* The version for this transport*/
 
-#define CAM_MAXDEVS	128
+#define	CAM_MAXDEVS	128
 struct scg_local {
 	struct cam_device *cam_devices[CAM_MAXDEVS + 1];
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 /*
  * Return version information for the low level SCSI transport code.
@@ -635,7 +635,7 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
@@ -651,9 +651,9 @@ scgo_open(scgp, device)
 	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 		scglocal(scgp)->cam_devices[0] = cam_open_btl(busno, tgt, tlun, O_RDWR, NULL);
 		if (scglocal(scgp)->cam_devices[0] == NULL)
-			return(-1);
+			return (-1);
 		nopen++;
-		return(nopen);
+		return (nopen);
 	}
 
 	/*
@@ -665,9 +665,9 @@ scgo_open(scgp, device)
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 				"Open of %s failed", XPT_DEVICE);
-		return(-1);
+		return (-1);
 	}
-	fillbytes(&ccb, sizeof(union ccb), '\0');
+	fillbytes(&ccb, sizeof (union ccb), '\0');
 
 	/*
 	 * Get a list of up to CAM_MAXDEVS passthrough devices in the
@@ -678,7 +678,7 @@ scgo_open(scgp, device)
 	/*
 	 * Setup the result buffer.
 	 */
-	bufsize = sizeof(struct dev_match_result) * CAM_MAXDEVS;
+	bufsize = sizeof (struct dev_match_result) * CAM_MAXDEVS;
 	ccb.cdm.match_buf_len = bufsize;
 	ccb.cdm.matches = (struct dev_match_result *)malloc(bufsize);
 	if (ccb.cdm.matches == NULL) {
@@ -686,7 +686,7 @@ scgo_open(scgp, device)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 				"Couldn't malloc match buffer");
 		close(fd);
-		return(-1);
+		return (-1);
 	}
 	ccb.cdm.num_matches = 0;
 
@@ -695,20 +695,20 @@ scgo_open(scgp, device)
 	 * peripherals named "pass".
 	 */
 	ccb.cdm.num_patterns = 1;
-	ccb.cdm.pattern_buf_len = sizeof(struct dev_match_pattern);
+	ccb.cdm.pattern_buf_len = sizeof (struct dev_match_pattern);
 	ccb.cdm.patterns = (struct dev_match_pattern *)malloc(
-		sizeof(struct dev_match_pattern));
+		sizeof (struct dev_match_pattern));
 	if (ccb.cdm.patterns == NULL) {
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 				"Couldn't malloc pattern buffer");
 		close(fd);
 		free(ccb.cdm.matches);
-		return(-1);
+		return (-1);
 	}
 	ccb.cdm.patterns[0].type = DEV_MATCH_PERIPH;
 	match_pat = &ccb.cdm.patterns[0].pattern.periph_pattern;
-	js_snprintf(match_pat->periph_name, sizeof(match_pat->periph_name),
+	js_snprintf(match_pat->periph_name, sizeof (match_pat->periph_name),
 								"pass");
 	match_pat->flags = PERIPH_MATCH_NAME;
 
@@ -719,12 +719,12 @@ scgo_open(scgp, device)
 		close(fd);
 		free(ccb.cdm.matches);
 		free(ccb.cdm.patterns);
-		return(-1);
+		return (-1);
 	}
 
-	if ((ccb.ccb_h.status != CAM_REQ_CMP)
-	 || ((ccb.cdm.status != CAM_DEV_MATCH_LAST)
-	    && (ccb.cdm.status != CAM_DEV_MATCH_MORE))) {
+	if ((ccb.ccb_h.status != CAM_REQ_CMP) ||
+	    ((ccb.cdm.status != CAM_DEV_MATCH_LAST) &&
+	    (ccb.cdm.status != CAM_DEV_MATCH_MORE))) {
 /*		errmsgno(EX_BAD, "Got CAM error 0x%X, CDM error %d.\n",*/
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -733,7 +733,7 @@ scgo_open(scgp, device)
 		close(fd);
 		free(ccb.cdm.matches);
 		free(ccb.cdm.patterns);
-		return(-1);
+		return (-1);
 	}
 
 	free(ccb.cdm.patterns);
@@ -754,11 +754,11 @@ scgo_open(scgp, device)
 					"Kernel error! got periph match type %d!!",
 					ccb.cdm.matches[unit].type);
 			free(ccb.cdm.matches);
-			return(-1);
+			return (-1);
 		}
 		periph_result = &ccb.cdm.matches[unit].result.periph_result;
 
-		js_snprintf(name, sizeof(name),
+		js_snprintf(name, sizeof (name),
 				"/dev/%s%d", periph_result->periph_name,
 			periph_result->unit_number);
 
@@ -809,12 +809,12 @@ scgo_close(scgp)
 		if (scglocal(scgp)->cam_devices[i] != (struct cam_device *)-1)
 			cam_close_device(scglocal(scgp)->cam_devices[i]);
 		scglocal(scgp)->cam_devices[i] = (struct cam_device *)-1;
-        }
+	}
 	return (0);
 }
 
-LOCAL
-long scgo_maxdma(scgp, amt)
+LOCAL long
+scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
@@ -938,21 +938,21 @@ scgo_send(scgp)
 	}
 
 	dev = scglocal(scgp)->cam_devices[scgp->fd];
-	fillbytes(&ccb->ccb_h, sizeof(struct ccb_hdr), '\0');
+	fillbytes(&ccb->ccb_h, sizeof (struct ccb_hdr), '\0');
 	ccb->ccb_h.path_id = dev->path_id;
 	ccb->ccb_h.target_id = dev->target_id;
 	ccb->ccb_h.target_lun = dev->target_lun;
 
 	/* Build the CCB */
-	fillbytes(&(&ccb->ccb_h)[1], sizeof(struct ccb_scsiio), '\0');
+	fillbytes(&(&ccb->ccb_h)[1], sizeof (struct ccb_scsiio), '\0');
 	movebytes(sp->cdb.cmd_cdb, &ccb->csio.cdb_io.cdb_bytes, sp->cdb_len);
 
 	/*
 	 * Set the data direction flags.
 	 */
 	if (sp->size != 0) {
-		ccb_flags = (sp->flags & SCG_RECV_DATA) ? CAM_DIR_IN :
-							   CAM_DIR_OUT;
+		ccb_flags = (sp->flags & SCG_RECV_DATA) ?   CAM_DIR_IN :
+							    CAM_DIR_OUT;
 	} else {
 		ccb_flags = CAM_DIR_NONE;
 	}
@@ -964,20 +964,20 @@ scgo_send(scgp)
 	 * we don't need to do anything to cdrecord.  If you want to send
 	 * tagged commands to those devices that support it, we'll need to set
 	 * the tag action valid field like this in scgo_send():
- 	 *         
-	 *        ccb_flags |= CAM_DEV_QFRZDIS | CAM_TAG_ACTION_VALID;
+	 *
+	 *	ccb_flags |= CAM_DEV_QFRZDIS | CAM_TAG_ACTION_VALID;
 	 */
 
 	cam_fill_csio(&ccb->csio,
-		      /* retries */ 1,
-		      /* cbfncp */ NULL,
-		      /* flags */ ccb_flags,
-		      /* tag_action */ MSG_SIMPLE_Q_TAG,
-		      /* data_ptr */ (u_int8_t *)sp->addr,
-		      /* dxfer_len */ sp->size,
-		      /* sense_len */ SSD_FULL_SIZE,
-		      /* cdb_len */ sp->cdb_len,
-		      /* timeout */ sp->timeout * 1000);
+			/* retries */	1,
+			/* cbfncp */	NULL,
+			/* flags */	ccb_flags,
+			/* tag_action */ MSG_SIMPLE_Q_TAG,
+			/* data_ptr */	(u_int8_t *)sp->addr,
+			/* dxfer_len */	sp->size,
+			/* sense_len */	SSD_FULL_SIZE,
+			/* cdb_len */	sp->cdb_len,
+			/* timeout */	sp->timeout * 1000);
 
 	/* Run the command */
 	errno = 0;
@@ -990,7 +990,7 @@ scgo_send(scgp)
 		 * error.  If we completed successfully, there's (obviously)
 		 * no error.  We declare anything else "retryable".
 		 */
-		switch(ccb->ccb_h.status & CAM_STATUS_MASK) {
+		switch (ccb->ccb_h.status & CAM_STATUS_MASK) {
 			case CAM_SEL_TIMEOUT:
 				result = SCG_FATAL;
 				break;
@@ -1011,8 +1011,8 @@ scgo_send(scgp)
 		sp->ux_errno = EIO;
 
 	/* Pass the result back up */
-	fillbytes(&sp->scb, sizeof(sp->scb), '\0');
-	fillbytes(&sp->u_sense.cmd_sense, sizeof(sp->u_sense.cmd_sense), '\0');
+	fillbytes(&sp->scb, sizeof (sp->scb), '\0');
+	fillbytes(&sp->u_sense.cmd_sense, sizeof (sp->u_sense.cmd_sense), '\0');
 	sp->resid = ccb->csio.resid;
 	sp->sense_count = SSD_FULL_SIZE - ccb->csio.sense_resid;
 
@@ -1032,6 +1032,6 @@ scgo_send(scgp)
 
 #undef scsi_sense
 #undef scsi_inquiry
-#define sense u_sense.Sense
+#define	sense u_sense.Sense
 
 #endif /* BSD_CAM */

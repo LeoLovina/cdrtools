@@ -1,10 +1,10 @@
-/* @(#)usleep.c	1.16 03/03/08 Copyright 1995 J. Schilling */
+/* @(#)usleep.c	1.17 03/06/15 Copyright 1995-2003 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)usleep.c	1.16 03/03/08 Copyright 1995 J. Schilling";
+	"@(#)usleep.c	1.17 03/06/15 Copyright 1995-2003 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1995 J. Schilling
+ *	Copyright (c) 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -74,7 +74,7 @@ usleep(usec)
 	 * Need to check apollo before HAVE_SELECT, because Apollo has select,
 	 * but it's time wait feature is also broken :-(
 	 */
-#define HAVE_USLEEP
+#define	HAVE_USLEEP
 	/*
 	 * XXX Do these vars need to be static on Domain/OS ???
 	 */
@@ -89,7 +89,7 @@ usleep(usec)
 	 */
 	DomainDelay.c2.high16 = 0;
 	DomainDelay.c2.low32 = usec / 4;
-	time_$wait (time_$relative, DomainDelay, &DomainStatus);
+	time_$wait(time_$relative, DomainDelay, &DomainStatus);
 #endif	/* Apollo */
 
 #if	defined(HAVE_SELECT) && !defined(HAVE_USLEEP)

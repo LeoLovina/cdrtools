@@ -1,6 +1,6 @@
 #!/bin/sh
 ###########################################################################
-#ident "@(#)MKLINKS	1.50 03/03/04 "
+#ident "@(#)MKLINKS	1.53 04/09/08 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -117,6 +117,8 @@ ln -s	i586-linux-cc.rul	parisc64-linux-cc.rul
 ln -s	i586-linux-gcc.rul	parisc64-linux-gcc.rul
 ln -s	i586-linux-cc.rul	ia64-linux-cc.rul
 ln -s	i586-linux-gcc.rul	ia64-linux-gcc.rul
+ln -s	i586-linux-cc.rul	x86_64-linux-cc.rul
+ln -s	i586-linux-gcc.rul	x86_64-linux-gcc.rul
 ln -s	os-cygwin32_nt.id	os-cygwin_95-4.0.id
 ln -s	os-cygwin32_nt.id	os-cygwin_98-4.0.id
 ln -s	os-cygwin32_nt.id	os-cygwin_98-4.10.id
@@ -125,9 +127,11 @@ ln -s	os-cygwin32_nt.id	os-cygwin_nt-4.0.id
 ln -s	os-cygwin32_nt.id	os-cygwin_nt-5.0.id
 ln -s	os-cygwin32_nt.id	os-cygwin_nt-5.1.id
 ln -s	os-unixware.id		os-openunix.id
+ln -s	i486-cygwin32_nt-cc.rul	i386-cygwin32_nt-cc.rul
 ln -s	i486-cygwin32_nt-cc.rul	i586-cygwin32_nt-cc.rul
 ln -s	i486-cygwin32_nt-cc.rul	i686-cygwin32_nt-cc.rul
 ln -s	i486-cygwin32_nt-cc.rul	i786-cygwin32_nt-cc.rul
+ln -s	i486-cygwin32_nt-gcc.rul	i386-cygwin32_nt-gcc.rul
 ln -s	i486-cygwin32_nt-gcc.rul	i586-cygwin32_nt-gcc.rul
 ln -s	i486-cygwin32_nt-gcc.rul	i686-cygwin32_nt-gcc.rul
 ln -s	i486-cygwin32_nt-gcc.rul	i786-cygwin32_nt-gcc.rul
@@ -157,6 +161,10 @@ ln -s	i386-unixware-cc.rul	pentium-iii-unixware-cc.rul
 ln -s	i386-unixware-gcc.rul	pentium-iii-unixware-gcc.rul
 ln -s	i386-unixware-cc.rul	pentium-pro-unixware-cc.rul
 ln -s	i386-unixware-gcc.rul	pentium-pro-unixware-gcc.rul
+ln -s	i386-ms-dos-gcc.rul	i486-ms-dos-gcc.rul
+ln -s	i386-ms-dos-gcc.rul	i586-ms-dos-gcc.rul
+ln -s	i386-ms-dos-gcc.rul	i686-ms-dos-gcc.rul
+ln -s	i386-ms-dos-gcc.rul	i786-ms-dos-gcc.rul
 #
 ln -s	mk-smake.id		mk-build.id
 ln -s	r-smake.c4x		r-build.c4x

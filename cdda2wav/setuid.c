@@ -1,7 +1,7 @@
-/* @(#)setuid.c	1.7 02/11/21 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)setuid.c	1.8 04/01/06 Copyright 1998,1999,2004 Heiko Eissfeldt */
 #ifndef lint
 static char     sccsid[] =
-"@(#)setuid.c	1.7 02/11/21 Copyright 1998,1999 Heiko Eissfeldt";
+"@(#)setuid.c	1.8 04/01/06 Copyright 1998,1999,2004 Heiko Eissfeldt";
 
 #endif
 /* Security functions by zblaxell
@@ -32,7 +32,8 @@ static char     sccsid[] =
 #include "exitcodes.h"
 #include "setuid.h"
 
-#undef DEBUG
+/*#undef DEBUG*/
+/*#define DEBUG*/
 
 /* True at return from initsecurity */
 static uid_t real_uid = (uid_t) (-1);
@@ -76,7 +77,8 @@ void needroot(necessary)
 	int necessary;
 {
 #ifdef DEBUG
-    fprintf(stderr, "call to     needroot (_euid_=%d, uid=%d), current=%d\n",effective_uid, real_uid, geteuid());
+    fprintf(stderr, "call to     needroot (_euid_=%d, uid=%d), current=%d/%d, pid=%d\n",
+			effective_uid, real_uid, geteuid(), getuid(), getpid());
 #endif
     if (effective_uid) {
         if (necessary) {
@@ -109,6 +111,10 @@ void needroot(necessary)
 	fprintf(stderr, "Fatal error:  did not get root privilege.\n");
 	exit(PERM_ERROR);
     }
+#ifdef DEBUG
+    fprintf(stderr, "exit of     needroot (_euid_=%d, uid=%d), current=%d/%d, pid=%d\n",
+			effective_uid, real_uid, geteuid(), getuid(), getpid());
+#endif
 }
 
 /* Temporarily drop root privileges.  */
@@ -116,7 +122,8 @@ void needroot(necessary)
 void dontneedroot()
 {
 #ifdef DEBUG
-    fprintf(stderr, "call to dontneedroot (euid=%d, _uid_=%d), current=%d\n",effective_uid, real_uid, geteuid());
+    fprintf(stderr, "call to dontneedroot (_euid_=%d, uid=%d), current=%d/%d, pid=%d\n",
+			effective_uid, real_uid, geteuid(), getuid(), getpid());
 #endif
     if (real_uid == (uid_t) (-1)) {
 	fprintf(stderr, "Fatal error:  initsecurity() not called.\n");
@@ -141,6 +148,10 @@ void dontneedroot()
 #endif
     if (geteuid() != real_uid) {
 	fprintf(stderr, "Fatal error:  did not drop root privilege.\n");
+#ifdef DEBUG
+    fprintf(stderr, "in   to dontneedroot (_euid_=%d, uid=%d), current=%d/%d, pid=%d\n",
+			effective_uid, real_uid, geteuid(), getuid(), getpid());
+#endif
 	exit(PERM_ERROR);
     }
 }
@@ -150,7 +161,8 @@ void dontneedroot()
 void neverneedroot()
 {
 #ifdef DEBUG
-    fprintf(stderr, "call to neverneedroot (euid=%d, uid=%d), current=%d\n",effective_uid, real_uid, geteuid());
+    fprintf(stderr, "call to neverneedroot (_euid_=%d, uid=%d), current=%d/%d, pid=%d\n",
+			effective_uid, real_uid, geteuid(), getuid(), getpid());
 #endif
     if (real_uid == (uid_t) (-1)) {
 	fprintf(stderr, "Fatal error:  initsecurity() not called.\n");
@@ -164,11 +176,29 @@ void neverneedroot()
       }
 #endif
     }
+#if	defined(__FreeBSD__)	/* XXX this is a big hack and and not a permanent solution */
+    else {
+#if defined (HAVE_SETUID)
+	if (setuid(real_uid)) {
+		perror("setuid in neverneedroot()");
+		exit(PERM_ERROR);
+	}
+#endif
+    }
+#endif
     if (geteuid() != real_uid || getuid() != real_uid) {
 	fprintf(stderr, "Fatal error:  did not drop root privilege.\n");
+#ifdef DEBUG
+    fprintf(stderr, "in  to neverneedroot (_euid_=%d, uid=%d), current=%d/%d, pid=%d\n",
+			effective_uid, real_uid, geteuid(), getuid(), getpid());
+#endif
 	exit(PERM_ERROR);
     }
     effective_uid = real_uid;
+#ifdef DEBUG
+    fprintf(stderr, "exit of neverneedroot (_euid_=%d, uid=%d), current=%d/%d, pid=%d\n",
+			effective_uid, real_uid, geteuid(), getuid(), getpid());
+#endif
 }
 
 /* Temporarily gain group privileges. */
@@ -177,7 +207,8 @@ void needgroup(necessary)
 	int necessary;
 {
 #ifdef DEBUG
-    fprintf(stderr, "call to     needgroup (egid=%d, gid=%d), current=%d\n",effective_gid, real_gid, getegid());
+    fprintf(stderr, "call to     needgroup (egid=%d, gid=%d), current=%d/%d, pid=%d\n",
+			effective_gid, real_gid, getegid(), getgid(), getpid());
 #endif
     if (real_gid == (gid_t) (-1)) {
 	fprintf(stderr, "Fatal error:  initsecurity() not called.\n");
@@ -210,7 +241,8 @@ void needgroup(necessary)
 void dontneedgroup()
 {
 #ifdef DEBUG
-    fprintf(stderr, "call to dontneedgroup (egid=%d, gid=%d), current=%d\n",effective_gid, real_gid, getegid());
+    fprintf(stderr, "call to dontneedgroup (egid=%d, gid=%d), current=%d/%d, pid=%d\n",
+			effective_gid, real_gid, getegid(), getgid(), getpid());
 #endif
     if (real_gid == (gid_t) (-1)) {
 	fprintf(stderr, "Fatal error:  initsecurity() not called.\n");
@@ -234,6 +266,10 @@ void dontneedgroup()
 	fprintf(stderr, "Fatal error:  did not drop group privilege.\n");
 	exit(PERM_ERROR);
     }
+#ifdef DEBUG
+    fprintf(stderr, "exit if dontneedgroup (egid=%d, gid=%d), current=%d/%d, pid=%d\n",
+			effective_gid, real_gid, getegid(), getgid(), getpid());
+#endif
 }
 
 /* Permanently drop group privileges.  */
@@ -241,20 +277,31 @@ void dontneedgroup()
 void neverneedgroup()
 {
 #ifdef DEBUG
-    fprintf(stderr, "call to neverneedgroup (egid=%d, gid=%d), current=%d\n",effective_gid, real_gid, getegid());
+    fprintf(stderr, "call to neverneedgroup (egid=%d, gid=%d), current=%d/%d, pid=%d\n",
+			effective_gid, real_gid, getegid(), getgid(), getpid());
 #endif
     if (real_gid == (gid_t) (-1)) {
 	fprintf(stderr, "Fatal error:  initsecurity() not called.\n");
 	exit(INTERNAL_ERROR);
     }
     if (getegid() == effective_gid) {
-#if defined (HAVE_SETUID)
+#if defined (HAVE_SETGID)
       if (setgid(real_gid)) {
 	  perror("setgid in neverneedgroup()");
 	  exit(PERM_ERROR);
       }
 #endif
     }
+#if	defined(__FreeBSD__)	/* XXX this is a big hack and and not a permanent solution */
+    else {
+#if defined (HAVE_SETGID)
+	if (setgid(real_gid)) {
+		perror("setgid in neverneedgroup()");
+		exit(PERM_ERROR);
+	}
+#endif
+    }
+#endif
     if (getegid() != real_gid || getgid() != real_gid) {
 	fprintf(stderr, "Fatal error:  did not drop group privilege.\n");
 	exit(PERM_ERROR);

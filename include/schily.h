@@ -1,4 +1,4 @@
-/* @(#)schily.h	1.48 02/12/24 Copyright 1985-2002 J. Schilling */
+/* @(#)schily.h	1.52 04/03/05 Copyright 1985-2002 J. Schilling */
 /*
  *	Definitions for libschily
  *
@@ -37,7 +37,7 @@
  */
 
 #ifndef _SCHILY_H
-#define _SCHILY_H
+#define	_SCHILY_H
 
 #ifndef _STANDARD_H
 #include <standard.h>
@@ -71,9 +71,9 @@ extern "C" {
  * via the Schily SING include files so we know whether it has been included
  * before we come here.
  */
-#if	defined(_SIZE_T)     || defined(_T_SIZE_) || defined(_T_SIZE) || \
-	defined(__SIZE_T)    || defined(_SIZE_T_) || \
-	defined(_GCC_SIZE_T) || defined(_SIZET_)  || \
+#if	defined(_SIZE_T)	|| defined(_T_SIZE_)	|| defined(_T_SIZE) || \
+	defined(__SIZE_T)	|| defined(_SIZE_T_)	|| \
+	defined(_GCC_SIZE_T)	|| defined(_SIZET_)	|| \
 	defined(__sys_stdtypes_h) || defined(___int_size_t_h) || defined(size_t)
 
 #ifndef	FOUND_SIZE_T
@@ -87,6 +87,7 @@ extern "C" {
 #	define	fdup		fdup64
 #	define	fileluopen	fileluopen64
 #	define	fileopen	fileopen64
+#	define	filemopen	filemopen64
 #	define	filepos		filepos64
 #	define	filereopen	filereopen64
 #	define	fileseek	fileseek64
@@ -120,6 +121,9 @@ extern	void	file_raise __PR((FILE *, int));
 extern	int	fileclose __PR((FILE *));
 extern	FILE	*fileluopen __PR((int, const char *));
 extern	FILE	*fileopen __PR((const char *, const char *));
+#ifdef	_INCL_SYS_TYPES_H
+extern	FILE	*filemopen __PR((const char *, const char *, mode_t));
+#endif
 #ifdef	FOUND_OFF_T
 extern	off_t	filepos __PR((FILE *));
 #endif
@@ -198,7 +202,7 @@ extern	char	*astollb __PR((const char *, Llong *, int base));
 #endif
 
 /*extern	void	handlecond __PR((const char *, SIGBLK *, int(*)(const char *, long, long), long));*/
-extern	void	unhandlecond __PR((void));
+/*extern	void	unhandlecond __PR((SIGBLK *));*/
 
 extern	int		patcompile __PR((const unsigned char *, int, int *));
 extern	unsigned char	*patmatch __PR((const unsigned char *, const int *,
@@ -209,7 +213,7 @@ extern	unsigned char	*patlmatch __PR((const unsigned char *, const int *,
 /*extern	int	printf __PR((const char *, ...)) __printflike__(1, 2);*/
 extern	char	*movebytes __PR((const void *, void *, int));
 
-extern	void	save_args __PR((int, char**));
+extern	void	save_args __PR((int, char **));
 extern	int	saved_ac __PR((void));
 extern	char	**saved_av __PR((void));
 extern	char	*saved_av0 __PR((void));
@@ -258,12 +262,13 @@ extern	int	js_snprintf	__PR((char *, size_t, const char *, ...)) __printflike__(
 extern	int	js_sprintf	__PR((char *, const char *, ...)) __printflike__(2, 3);
 #endif	/* EOF */
 
-extern	void	swabbytes __PR((void *, int));
-extern	char	*getav0 __PR((void));
-extern	char	**getavp __PR((void));
-extern	void	**getfp __PR((void));
+extern	void	swabbytes	__PR((void *, int));
+extern	char	**getmainfp	__PR((void));
+extern	char	**getavp	__PR((void));
+extern	char	*getav0		__PR((void));
+extern	void	**getfp		__PR((void));
 extern	int	flush_reg_windows __PR((int));
-extern	int	cmpbytes __PR((const void *, const void *, int));
+extern	int	cmpbytes	__PR((const void *, const void *, int));
 extern	int	cmpnullbytes	__PR((const void *, int));
 
 #ifdef	nonono

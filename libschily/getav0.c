@@ -1,12 +1,12 @@
-/* @(#)getav0.c	1.10 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)getav0.c	1.16 04/05/09 Copyright 1985, 1995-2004 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getav0.c	1.10 00/05/07 Copyright 1985 J. Schilling";
+	"@(#)getav0.c	1.16 04/05/09 Copyright 1985, 1995-2004 J. Schilling";
 #endif
 /*
  *	Get arg vector by scanning the stack
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1995-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -35,11 +35,6 @@ static	char sccsid[] =
 #	undef	HAVE_SCANSTACK
 #	endif
 #endif
-#ifdef	NO_SCANSTACK
-#	ifdef	HAVE_SCANSTACK
-#	undef	HAVE_SCANSTACK
-#	endif
-#endif
 
 #ifdef	HAVE_SCANSTACK
 
@@ -48,62 +43,104 @@ static	char sccsid[] =
 #define	is_even(p)	((((long)(p)) & 1) == 0)
 #define	even(p)		(((long)(p)) & ~1L)
 #ifdef	__future__
-#define	even(p)		(((long)(p)) - 1)/* will this work with 64 bit ?? */
+#define	even(p)		(((long)(p)) - 1) /* will this work with 64 bit ?? */
 #endif
 
-char **getavp()
+EXPORT	char	**getmainfp	__PR((void));
+EXPORT	char	**getavp	__PR((void));
+EXPORT	char	*getav0		__PR((void));
+
+
+EXPORT char **
+getmainfp()
 {
 	register struct frame *fp;
-	register struct frame *ofp;
-		 char	**av;
+		char	**av;
 #if	FP_INDIR > 0
 	register int	i = 0;
 #endif
 
-	ofp = fp = (struct frame *)getfp();
-	while (fp) {
+	/*
+	 * As the SCO OpenServer C-Compiler has a bug that may cause
+	 * the first function call to getfp() been done before the
+	 * new stack frame is created, we call getfp() twice.
+	 */
+	(void) getfp();
+	fp = (struct frame *)getfp();
+	if (fp == NULL)
+		return (NULL);
+
+	while (fp->fr_savfp) {
+		if (fp->fr_savpc == NULL)
+			break;
+
+		if (!is_even(fp->fr_savfp)) {
+			fp = (struct frame *)even(fp->fr_savfp);
+			if (fp == NULL)
+				break;
+			fp = (struct frame *)((SIGBLK *)fp)->sb_savfp;
+			continue;
+		}
+		fp = (struct frame *)fp->fr_savfp;
 
 #if	FP_INDIR > 0
 		i++;
 #endif
-		ofp = fp;
-		if (!is_even(fp->fr_savfp)) {
-			fp = (struct frame *)even(fp->fr_savfp);
-			fp = (struct frame *)((SIGBLK *)fp)->sb_savfp;
-			continue;
-		}
-		fp = fp->fr_savfp;
 	}
 
 #if	FP_INDIR > 0
 	i -= FP_INDIR;
-        ofp = fp = (struct frame *)getfp();
-	while (fp) {
-		if (--i < 0)
+	fp = (struct frame *)getfp();
+	if (fp == NULL)
+		return (NULL);
+
+	while (fp->fr_savfp) {
+		if (fp->fr_savpc == NULL)
 			break;
-		ofp = fp;
+
 		if (!is_even(fp->fr_savfp)) {
 			fp = (struct frame *)even(fp->fr_savfp);
+			if (fp == NULL)
+				break;
 			fp = (struct frame *)((SIGBLK *)fp)->sb_savfp;
 			continue;
 		}
-		fp = fp->fr_savfp;
+		fp = (struct frame *)fp->fr_savfp;
+
+		if (--i <= 0)
+			break;
 	}
 #endif
 
-        av = (char **)ofp + AV_OFFSET;	/* aus avoffset.h */
-					/* (wird generiert mit av_offset) */
+	av = (char **)fp;
 	return (av);
 }
 
-char *getav0()
+EXPORT char **
+getavp()
+{
+	register struct frame *fp;
+		char	**av;
+
+	fp = (struct frame *)getmainfp();
+	if (fp == NULL)
+		return (NULL);
+
+	av = (char **)(((char *)fp) + AV_OFFSET);	/* aus avoffset.h */
+							/* -> avoffset.c  */
+	return (av);
+}
+
+EXPORT char *
+getav0()
 {
 	return (getavp()[0]);
 }
 
 #else
 
-char *getav0()
+EXPORT char *
+getav0()
 {
 	return ("???");
 }

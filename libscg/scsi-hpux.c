@@ -1,7 +1,7 @@
-/* @(#)scsi-hpux.c	1.30 02/10/19 Copyright 1997 J. Schilling */
+/* @(#)scsi-hpux.c	1.31 04/01/15 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-hpux.c	1.30 02/10/19 Copyright 1997 J. Schilling";
+	"@(#)scsi-hpux.c	1.31 04/01/15 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for the HP-UX generic SCSI implementation.
@@ -25,9 +25,9 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #undef	sense
@@ -40,7 +40,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-hpux.c-1.30";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-hpux.c-1.31";	/* The version for this transport*/
 
 #define	MAX_SCG		16	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
@@ -49,7 +49,7 @@ LOCAL	char	_scg_trans_version[] = "scsi-hpux.c-1.30";	/* The version for this tr
 struct scg_local {
 	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
 };
-#define scglocal(p)	((struct scg_local *)((p)->local)) 
+#define	scglocal(p)	((struct scg_local *)((p)->local))
 
 #ifdef	SCSI_MAXPHYS
 #	define	MAX_DMA_HP	SCSI_MAXPHYS
@@ -101,9 +101,9 @@ scgo_open(scgp, device)
 	SCSI	*scgp;
 	char	*device;
 {
-		 int	busno	= scg_scsibus(scgp);
-		 int	tgt	= scg_target(scgp);
-		 int	tlun	= scg_lun(scgp);
+		int	busno	= scg_scsibus(scgp);
+		int	tgt	= scg_target(scgp);
+		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	b;
 	register int	t;
@@ -129,33 +129,33 @@ scgo_open(scgp, device)
 	}
 
 	if (scgp->local == NULL) {
-		scgp->local = malloc(sizeof(struct scg_local));
+		scgp->local = malloc(sizeof (struct scg_local));
 		if (scgp->local == NULL)
 			return (0);
 
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-				for (l=0; l < MAX_LUN ; l++)
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+				for (l = 0; l < MAX_LUN; l++)
 					scglocal(scgp)->scgfiles[b][t][l] = (short)-1;
 			}
 		}
 	}
 
-	if (busno >= 0 && tgt >= 0 && tlun >= 0) {	
+	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 
-		js_snprintf(devname, sizeof(devname),
+		js_snprintf(devname, sizeof (devname),
 				"/dev/rscsi/c%xt%xl%x", busno, tgt, tlun);
 		f = open(devname, O_RDWR);
 		if (f < 0)
-			return(-1);
+			return (-1);
 		scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
-		return(1);
+		return (1);
 	} else {
-		for (b=0; b < MAX_SCG; b++) {
-			for (t=0; t < MAX_TGT; t++) {
-/*				for (l=0; l < MAX_LUN ; l++) {*/
-				for (l=0; l < 1 ; l++) {
-					js_snprintf(devname, sizeof(devname),
+		for (b = 0; b < MAX_SCG; b++) {
+			for (t = 0; t < MAX_TGT; t++) {
+/*				for (l = 0; l < MAX_LUN; l++) {*/
+				for (l = 0; l < 1; l++) {
+					js_snprintf(devname, sizeof (devname),
 							"/dev/rscsi/c%xt%xl%x", b, t, l);
 /*error("name: '%s'\n", devname);*/
 					f = open(devname, O_RDWR);
@@ -184,9 +184,9 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b=0; b < MAX_SCG; b++) {
-		for (t=0; t < MAX_TGT; t++) {
-			for (l=0; l < MAX_LUN ; l++) {
+	for (b = 0; b < MAX_SCG; b++) {
+		for (t = 0; t < MAX_TGT; t++) {
+			for (l = 0; l < MAX_LUN; l++) {
 				f = scglocal(scgp)->scgfiles[b][t][l];
 				if (f >= 0)
 					close(f);
@@ -241,8 +241,8 @@ scgo_havebus(scgp, busno)
 	if (scgp->local == NULL)
 		return (FALSE);
 
-	for (t=0; t < MAX_TGT; t++) {
-		for (l=0; l < MAX_LUN ; l++)
+	for (t = 0; t < MAX_TGT; t++) {
+		for (l = 0; l < MAX_LUN; l++)
 			if (scglocal(scgp)->scgfiles[busno][t][l] >= 0)
 				return (TRUE);
 	}
@@ -304,12 +304,12 @@ scgo_send(scgp)
 	int		flags;
 	struct sctl_io	sctl_io;
 
-	if ((scgp->fd < 0) || (sp->cdb_len > sizeof(sctl_io.cdb))) {
+	if ((scgp->fd < 0) || (sp->cdb_len > sizeof (sctl_io.cdb))) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
 
-	fillbytes((caddr_t)&sctl_io, sizeof(sctl_io), '\0');
+	fillbytes((caddr_t)&sctl_io, sizeof (sctl_io), '\0');
 
 	flags = 0;
 /*	flags = SCTL_INIT_WDTR|SCTL_INIT_SDTR;*/

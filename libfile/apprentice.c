@@ -1,7 +1,7 @@
-/* @(#)apprentice.c	1.4 01/02/17 joerg */
+/* @(#)apprentice.c	1.5 03/03/06 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)apprentice.c	1.4 01/02/17 joerg";
+	"@(#)apprentice.c	1.5 03/03/06 joerg";
 #endif
 /*
 **	find file types by using a modified "magic" file
@@ -59,15 +59,15 @@ struct  magic *__f_magic;	/* array of magic entries		*/
 			tolower((unsigned char) (l)) : (l))
 
 
-static int getvalue	__P((struct magic *, char **));
-static int hextoint	__P((int));
-static char *getstr	__P((char *, char *, int, int *));
-static int parse	__P((char *, int *, int));
-static void eatsize	__P((char **));
+static int getvalue	__PR((struct magic *, char **));
+static int hextoint	__PR((int));
+static char *getstr	__PR((char *, char *, int, int *));
+static int parse	__PR((char *, int *, int));
+static void eatsize	__PR((char **));
 
 static int maxmagic = 0;
 
-static int apprentice_1	__P((char *, int));
+static int apprentice_1	__PR((char *, int));
 
 /*
  * init_magic - read magic file and set up mapping

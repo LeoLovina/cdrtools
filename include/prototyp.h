@@ -1,4 +1,4 @@
-/* @(#)prototyp.h	1.10 01/10/27 Copyright 1995 J. Schilling */
+/* @(#)prototyp.h	1.11 03/08/23 Copyright 1995 J. Schilling */
 /*
  *	Definitions for dealing with ANSI / KR C-Compilers
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 /*
@@ -66,6 +66,7 @@
 #		define	HAVE_STDARG_H
 #	endif
 #endif
+#ifndef	JOS
 #	ifndef	HAVE_STDLIB_H
 #		define	HAVE_STDLIB_H
 #	endif
@@ -78,6 +79,7 @@
 #	ifndef	STDC_HEADERS
 #		define	STDC_HEADERS	/* GNU name */
 #	endif
+#endif
 #endif
 
 #ifdef	NO_PROTOTYPES		/* Force not to use prototypes */

@@ -1,10 +1,10 @@
-/* @(#)udf_fs.h	1.1 01/11/22 Copyright 2001 J. Schilling */
+/* @(#)udf_fs.h	1.2 04/03/01 Copyright 2001-2004 J. Schilling */
 /*
  * udf_fs.h - UDF structure definitions for mkisofs
  *
  * Written by Ben Rudiak-Gould (2001).
  *
- * Copyright 2001 J. Schilling.
+ * Copyright 2001-2004 J. Schilling.
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -17,13 +17,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef _UDF_FS_H
-#define _UDF_FS_H
+#ifndef	_UDF_FS_H
+#define	_UDF_FS_H
 
 /*
  * Abbreviations:
@@ -46,13 +46,19 @@ typedef char udf_zerobyte;
 
 /* Is this safe? Are there compilers so perverse as to pad these structs? */
 typedef struct udf_Uint16_ {
-	char l,h;
+	char	l;
+	char	h;
 } udf_Uint16;
+
 typedef struct udf_Uint32_ {
-	char l,ml,mh,h;
+	char	l;
+	char	ml;
+	char	mh;
+	char	h;
 } udf_Uint32;
 typedef struct udf_Uint64_ {
-	udf_Uint32 l,h;
+	udf_Uint32	l;
+	udf_Uint32	h;
 } udf_Uint64;
 
 typedef struct udf_tag_ {			/* ECMA-167 3/7.2 */
@@ -67,18 +73,18 @@ typedef struct udf_tag_ {			/* ECMA-167 3/7.2 */
 /*16*/
 } udf_tag;
 
-#define UDF_TAGID_PRIMARY_VOLUME_DESC		1
-#define UDF_TAGID_ANCHOR_VOLUME_DESC_PTR	2
-#define UDF_TAGID_IMPL_USE_VOLUME_DESC		4
-#define UDF_TAGID_PARTITION_DESC		5
-#define UDF_TAGID_LOGICAL_VOLUME_DESC		6
-#define UDF_TAGID_UNALLOCATED_SPACE_DESC	7
-#define UDF_TAGID_TERMINATING_DESC		8
-#define UDF_TAGID_LOGICAL_VOLUME_INTEGRITY_DESC	9
-#define UDF_TAGID_FILE_SET_DESC			256
-#define UDF_TAGID_FILE_IDENT_DESC		257
-#define UDF_TAGID_FILE_ENTRY			261
-#define UDF_TAGID_EXT_ATTRIBUTE_HEADER_DESC	262
+#define	UDF_TAGID_PRIMARY_VOLUME_DESC		1
+#define	UDF_TAGID_ANCHOR_VOLUME_DESC_PTR	2
+#define	UDF_TAGID_IMPL_USE_VOLUME_DESC		4
+#define	UDF_TAGID_PARTITION_DESC		5
+#define	UDF_TAGID_LOGICAL_VOLUME_DESC		6
+#define	UDF_TAGID_UNALLOCATED_SPACE_DESC	7
+#define	UDF_TAGID_TERMINATING_DESC		8
+#define	UDF_TAGID_LOGICAL_VOLUME_INTEGRITY_DESC	9
+#define	UDF_TAGID_FILE_SET_DESC			256
+#define	UDF_TAGID_FILE_IDENT_DESC		257
+#define	UDF_TAGID_FILE_ENTRY			261
+#define	UDF_TAGID_EXT_ATTRIBUTE_HEADER_DESC	262
 
 typedef struct udf_extent_ad_ {			/* ECMA-167 3/7.1 */
 /*0*/	udf_Uint32	extent_length;
@@ -99,7 +105,7 @@ typedef struct udf_EntityID_ {			/* ECMA-167 1/7.4 */
 /*32*/
 } udf_EntityID;
 
-#define UDF_ENTITYID_FLAG_PROTECTED	2	/* ECMA-167 1/7.4.1 */
+#define	UDF_ENTITYID_FLAG_PROTECTED	2	/* ECMA-167 1/7.4.1 */
 
 typedef struct udf_lb_addr_ {			/* ECMA-167 4/7.1 */
 /*0*/	udf_Uint32	logical_block_number;
@@ -216,8 +222,8 @@ typedef struct udf_partition_desc_ {		/* TR/71 2.6.4 */
 /*512*/
 } udf_partition_desc;
 
-#define UDF_PARTITION_FLAG_ALLOCATED	1	/* ECMA-167 3/10.5.3 */
-#define UDF_ACCESSTYPE_READONLY		1	/* ECMA-167 3/10.5.7 */
+#define	UDF_PARTITION_FLAG_ALLOCATED	1	/* ECMA-167 3/10.5.3 */
+#define	UDF_ACCESSTYPE_READONLY		1	/* ECMA-167 3/10.5.7 */
 
 typedef struct udf_type_1_partition_map_ {	/* TR/71 2.6.8 */
 /*0*/	udf_Uint8	partition_map_type;
@@ -227,7 +233,7 @@ typedef struct udf_type_1_partition_map_ {	/* TR/71 2.6.8 */
 /*6*/
 } udf_type_1_partition_map;
 
-#define UDF_PARTITION_MAP_TYPE_1	1
+#define	UDF_PARTITION_MAP_TYPE_1	1
 
 typedef struct udf_logical_volume_desc_ {	/* TR/71 2.6.7 */
 /*  0*/	udf_tag		desc_tag;
@@ -287,7 +293,7 @@ typedef struct udf_logical_volume_integrity_desc_ {	/* TR/71 2.7.1 */
 /*88*/	udf_logical_volume_integrity_desc_impl_use_field	impl_use;
 } udf_logical_volume_integrity_desc;
 
-#define UDF_INTEGRITY_TYPE_CLOSE	1	/* ECMA-167 3/10.10.3 */
+#define	UDF_INTEGRITY_TYPE_CLOSE	1	/* ECMA-167 3/10.10.3 */
 
 typedef struct udf_file_set_desc_ {		/* TR/71 3.3.1 */
 /* 0*/	udf_tag		desc_tag;
@@ -323,10 +329,10 @@ typedef struct udf_file_ident_desc_ {		/* TR/71 3.4.1 */
 	/*udf_zerobyte	padding[0/1/2/3];*/
 } udf_file_ident_desc;
 
-#define UDF_FILE_CHARACTERISTIC_HIDDEN		1	/* ECMA-167 4/14.4.3 */
-#define UDF_FILE_CHARACTERISTIC_DIRECTORY	2
-#define UDF_FILE_CHARACTERISTIC_DELETED		4
-#define UDF_FILE_CHARACTERISTIC_PARENT		8
+#define	UDF_FILE_CHARACTERISTIC_HIDDEN		1	/* ECMA-167 4/14.4.3 */
+#define	UDF_FILE_CHARACTERISTIC_DIRECTORY	2
+#define	UDF_FILE_CHARACTERISTIC_DELETED		4
+#define	UDF_FILE_CHARACTERISTIC_PARENT		8
 
 typedef struct udf_icbtag_ {			/* TR/71 3.5.2 */
 /* 0*/	udf_Uint32	prior_recorded_number_of_direct_entries;
@@ -340,21 +346,21 @@ typedef struct udf_icbtag_ {			/* TR/71 3.5.2 */
 /*20*/
 } udf_icbtag;
 
-#define UDF_ICBTAG_FILETYPE_DIRECTORY	4	/* ECMA-167 4/14.6.6 */
-#define UDF_ICBTAG_FILETYPE_BYTESEQ	5
+#define	UDF_ICBTAG_FILETYPE_DIRECTORY	4	/* ECMA-167 4/14.6.6 */
+#define	UDF_ICBTAG_FILETYPE_BYTESEQ	5
 
-#define UDF_ICBTAG_FLAG_MASK_AD_TYPE	7	/* TR/71 3.5.3 */
-#define UDF_ICBTAG_FLAG_SHORT_AD	0
-#define UDF_ICBTAG_FLAG_DIRECTORY_SORT	8
-#define UDF_ICBTAG_FLAG_NONRELOCATABLE	16
-#define UDF_ICBTAG_FLAG_ARCHIVE		32
-#define UDF_ICBTAG_FLAG_SETUID		64
-#define UDF_ICBTAG_FLAG_SETGID		128
-#define UDF_ICBTAG_FLAG_STICKY		256
-#define UDF_ICBTAG_FLAG_CONTIGUOUS	512
-#define UDF_ICBTAG_FLAG_SYSTEM		1024
-#define UDF_ICBTAG_FLAG_TRANSFORMED	2048
-#define UDF_ICBTAG_FLAG_MULTI_VERSIONS	4096
+#define	UDF_ICBTAG_FLAG_MASK_AD_TYPE	7	/* TR/71 3.5.3 */
+#define	UDF_ICBTAG_FLAG_SHORT_AD	0
+#define	UDF_ICBTAG_FLAG_DIRECTORY_SORT	8
+#define	UDF_ICBTAG_FLAG_NONRELOCATABLE	16
+#define	UDF_ICBTAG_FLAG_ARCHIVE		32
+#define	UDF_ICBTAG_FLAG_SETUID		64
+#define	UDF_ICBTAG_FLAG_SETGID		128
+#define	UDF_ICBTAG_FLAG_STICKY		256
+#define	UDF_ICBTAG_FLAG_CONTIGUOUS	512
+#define	UDF_ICBTAG_FLAG_SYSTEM		1024
+#define	UDF_ICBTAG_FLAG_TRANSFORMED	2048
+#define	UDF_ICBTAG_FLAG_MULTI_VERSIONS	4096
 
 typedef struct udf_ext_attribute_header_desc_ {	/* TR/71 3.6.1 */
 /* 0*/	udf_tag		desc_tag;
@@ -389,10 +395,10 @@ typedef struct udf_ext_attribute_dvd_cgms_info_ {	/* TR/71 3.6.{2,4} */
 /*56*/
 } udf_ext_attribute_dvd_cgms_info;
 
-#define UDF_CGMSINFO_NO_COPIES			48	/* TR/71 3.6.4 */
-#define UDF_CGMSINFO_ONE_GENERATION		32
-#define UDF_CGMSINFO_UNLIMITED_COPIES		0
-#define UDF_CGMSINFO_FLAG_COPYRIGHTED_MATERIAL	128
+#define	UDF_CGMSINFO_NO_COPIES			48	/* TR/71 3.6.4 */
+#define	UDF_CGMSINFO_ONE_GENERATION		32
+#define	UDF_CGMSINFO_UNLIMITED_COPIES		0
+#define	UDF_CGMSINFO_FLAG_COPYRIGHTED_MATERIAL	128
 
 typedef struct udf_file_entry_ {		/* TR/71 3.5.1 */
 /* 0*/	udf_tag		desc_tag;
@@ -434,12 +440,12 @@ typedef struct udf_file_entry_ {		/* TR/71 3.5.1 */
  * There are Write, Change Attribute and Delete permissions also,
  * but it is not permitted to set them on DVD Read-Only media.
  */
-#define UDF_FILEENTRY_PERMISSION_OX	1	/* TR/71 3.5.4 */
-#define UDF_FILEENTRY_PERMISSION_OR	4
-#define UDF_FILEENTRY_PERMISSION_GX	32
-#define UDF_FILEENTRY_PERMISSION_GR	128
-#define UDF_FILEENTRY_PERMISSION_UX	1024
-#define UDF_FILEENTRY_PERMISSION_UR	4096
+#define	UDF_FILEENTRY_PERMISSION_OX	1	/* TR/71 3.5.4 */
+#define	UDF_FILEENTRY_PERMISSION_OR	4
+#define	UDF_FILEENTRY_PERMISSION_GX	32
+#define	UDF_FILEENTRY_PERMISSION_GR	128
+#define	UDF_FILEENTRY_PERMISSION_UX	1024
+#define	UDF_FILEENTRY_PERMISSION_UR	4096
 
 
 #endif	/* _UDF_FS_H */

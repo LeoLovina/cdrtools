@@ -1,4 +1,4 @@
-/* @(#)unixstd.h	1.10 03/03/06 Copyright 1996 J. Schilling */
+/* @(#)unixstd.h	1.12 04/06/17 Copyright 1996 J. Schilling */
 /*
  *	Definitions for unix system interface
  *
@@ -75,6 +75,21 @@
 #define	X_OK	1	/* Test for eXecute permission */
 #define	F_OK	0	/* Test for existence of File */
 #endif
+#ifndef	E_OK
+#ifdef	HAVE_ACCESS_E_OK
+#ifdef	EFF_ONLY_OK
+#define	E_OK	EFF_ONLY_OK /* Irix */
+#else
+#ifdef	EUID_OK
+#define	E_OK	EUID_OK	/* UNICOS (0400) */
+#else
+#define	E_OK	010	/* Test effective uids */
+#endif	/* EUID_OK */
+#endif	/* EFF_ONLY_OK */
+#else
+#define	E_OK	0
+#endif	/* HAVE_ACCESS_E_OK */
+#endif	/* !E_OK */
 
 /* Symbolic constants for the "lseek" routine: */
 #ifndef	SEEK_SET

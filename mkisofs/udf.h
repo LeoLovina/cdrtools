@@ -1,8 +1,8 @@
-/* @(#)udf.h	1.1 01/11/22 Copyright 2001 J. Schilling */
+/* @(#)udf.h	1.2 04/03/01 Copyright 2001-2004 J. Schilling */
 /*
  *	UDF external definitions for mkisofs
  *
- *	Copyright (c) 2001 J. Schilling
+ *	Copyright (c) 2001-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,13 +15,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef _UDF_H
-#define _UDF_H
+#ifndef	_UDF_H
+#define	_UDF_H
 
 extern struct output_fragment udf_vol_recognition_area_frag;
 extern struct output_fragment udf_main_seq_frag;

@@ -1,10 +1,10 @@
-/* @(#)scsihelp.c	1.3 02/10/21 Copyright 2002 J. Schilling */
+/* @(#)scsihelp.c	1.4 04/01/14 Copyright 2002 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsihelp.c	1.3 02/10/21 Copyright 2002 J. Schilling";
+	"@(#)scsihelp.c	1.4 04/01/14 Copyright 2002 J. Schilling";
 #endif
 /*
- *	scg Library 
+ *	scg Library
  *	Help subsystem
  *
  *	Copyright (c) 2002 J. Schilling
@@ -20,9 +20,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>

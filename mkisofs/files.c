@@ -1,29 +1,30 @@
-/* @(#)files.c	1.11 02/12/25 joerg */
+/* @(#)files.c	1.12 04/03/04 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)files.c	1.11 02/12/25 joerg";
+	"@(#)files.c	1.12 04/03/04 joerg";
 
 #endif
 /*
  * File files.c - Handle ADD_FILES related stuff.
-
-   Written by Eric Youngdale (1993).
-
-   Copyright 1993 Yggdrasil Computing, Incorporated
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ * Written by Eric Youngdale (1993).
+ *
+ * Copyright 1993 Yggdrasil Computing, Incorporated
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 /* ADD_FILES changes made by Ross Biro biro@yggdrasil.com 2/23/95 */
 
@@ -44,13 +45,14 @@ void	nuke_duplicates	__PR((char *path, struct dirent **de));
 struct dirent  *readdir_add_files __PR((char **pathp, char *path, DIR *dir));
 
 struct file_adds {
-	char           *name;
-	struct file_adds *child;
-	struct file_adds *next;
-	int             add_count;
-	int             used;
+	char			*name;
+	struct file_adds	*child;
+	struct file_adds	*next;
+	int			add_count;
+	int			used;
 	union diru {
-	/* XXX Struct dirent is not guaranteed to be any size on a POSIX
+	/*
+	 * XXX Struct dirent is not guaranteed to be any size on a POSIX
 	 * XXX compliant system.
 	 * XXX We need to allocate enough space here, to allow the hacky
 	 * XXX code in tree.c made by Ross Biro biro@yggdrasil.com
@@ -63,12 +65,12 @@ struct file_adds {
 	 * XXX	+	2   bytes for directory record length
 	 * XXX	+	2*8 bytes for inode number & offset (64 for future exp)
 	 */
-		struct dirent   de;
-		char            dspace[NAME_MAX + 2 + 2 * 8];
+		struct dirent	de;
+		char		dspace[NAME_MAX + 2 + 2 * 8];
 	} du;
 	struct {
-		char           *path;
-		char           *name;
+		char		*path;
+		char		*name;
 	} *adds;
 };
 extern struct file_adds *root_file_adds;
@@ -90,10 +92,10 @@ add_one_file(addpath, path)
 	char	*addpath;
 	char	*path;
 {
-	char           *cp;
-	char           *name;
-	struct file_adds *f;
-	struct file_adds *tmp;
+	char			*cp;
+	char			*name;
+	struct file_adds	*f;
+	struct file_adds	*tmp;
 
 	f = root_file_adds;
 	tmp = NULL;
@@ -109,7 +111,7 @@ add_one_file(addpath, path)
 
 	while (cp != NULL && strcmp(name, cp)) {
 		if (f == NULL) {
-			root_file_adds = e_malloc(sizeof *root_file_adds);
+			root_file_adds = e_malloc(sizeof (*root_file_adds));
 			f = root_file_adds;
 			f->name = NULL;
 			f->child = NULL;
@@ -131,7 +133,7 @@ add_one_file(addpath, path)
 				goto next;
 			}
 			/* add a new node. */
-			tmp->next = e_malloc(sizeof(*tmp->next));
+			tmp->next = e_malloc(sizeof (*tmp->next));
 			f = tmp->next;
 			f->name = strdup(cp);
 			f->child = NULL;
@@ -141,7 +143,7 @@ add_one_file(addpath, path)
 			f->used = 0;
 		} else {
 			/* no children. */
-			f->child = e_malloc(sizeof(*f->child));
+			f->child = e_malloc(sizeof (*f->child));
 			f = f->child;
 			f->name = strdup(cp);
 			f->child = NULL;
@@ -156,7 +158,7 @@ next:
 	}
 	/* Now f if non-null points to where we should add things */
 	if (f == NULL) {
-		root_file_adds = e_malloc(sizeof *root_file_adds);
+		root_file_adds = e_malloc(sizeof (*root_file_adds));
 		f = root_file_adds;
 		f->name = NULL;
 		f->child = NULL;
@@ -166,7 +168,7 @@ next:
 	}
 	/* Now f really points to where we should add this name. */
 	f->add_count++;
-	f->adds = realloc(f->adds, sizeof(*f->adds) * f->add_count);
+	f->adds = realloc(f->adds, sizeof (*f->adds) * f->add_count);
 	f->adds[f->add_count - 1].path = strdup(path);
 	f->adds[f->add_count - 1].name = strdup(name);
 }
@@ -184,8 +186,8 @@ add_file_list(argc, argv, ind)
 	char	**argv;
 	int	ind;
 {
-	char           *ptr;
-	char           *dup_arg;
+	char	*ptr;
+	char	*dup_arg;
 
 	while (ind < argc) {
 		dup_arg = strdup(argv[ind]);
@@ -206,11 +208,11 @@ void
 add_file(filename)
 	char	*filename;
 {
-	char            buff[PATH_MAX];
-	FILE           *f;
-	char           *ptr;
-	char           *p2;
-	int             count = 0;
+	char	buff[PATH_MAX];
+	FILE	*f;
+	char	*ptr;
+	char	*p2;
+	int	count = 0;
 
 	if (strcmp(filename, "-") == 0) {
 		f = stdin;
@@ -225,7 +227,7 @@ add_file(filename)
 #endif
 		}
 	}
-	while (fgets(buff, sizeof(buff), f)) {
+	while (fgets(buff, sizeof (buff), f)) {
 		count++;
 		ptr = buff;
 		while (isspace(*ptr))
@@ -263,14 +265,14 @@ look_up_addition(newpath, path, de)
 	char		*path;
 	struct dirent	**de;
 {
-	char           *dup_path;
-	char           *cp;
-	struct file_adds *f;
-	struct file_adds *tmp = NULL;
+	char			*dup_path;
+	char			*cp;
+	struct file_adds	*f;
+	struct file_adds	*tmp = NULL;
 
 	f = root_file_adds;
 	if (!f)
-		return NULL;
+		return (NULL);
 
 	/* I don't trust strtok */
 	dup_path = strdup(path);
@@ -313,10 +315,10 @@ nuke_duplicates(path, de)
 	char		*path;
 	struct dirent	**de;
 {
-	char           *dup_path;
-	char           *cp;
-	struct file_adds *f;
-	struct file_adds *tmp;
+	char			*dup_path;
+	char			*cp;
+	struct file_adds	*f;
+	struct file_adds	*tmp;
 
 	f = root_file_adds;
 	if (!f)
@@ -351,7 +353,6 @@ nuke_duplicates(path, de)
 	*de = &(tmp->du.de);
 	return (tmp->adds[tmp->used - 1].name);
 #endif
-	return;
 }
 
 /*
@@ -368,8 +369,8 @@ readdir_add_files(pathp, path, dir)
 {
 	struct dirent  *de;
 
-	char           *addpath;
-	char           *name;
+	char	*addpath;
+	char	*name;
 
 	de = readdir(dir);
 	if (de) {
@@ -379,7 +380,7 @@ readdir_add_files(pathp, path, dir)
 	name = look_up_addition(&addpath, path, &de);
 
 	if (!name) {
-		return NULL;
+		return (NULL);
 	}
 	*pathp = addpath;
 

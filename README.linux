@@ -17,6 +17,14 @@ Then compile the system by calling:
 /usr/bin/Gmake
 or ./Gmake.linux
 
+NOTE for all Linux 2.5.x versions and all Linux versions before 2.6.8:
+
+	Linux did ship with defective kernel include files starting
+	with 2.5.x. These defective kernel include files did prevent
+	compilation. If you have problems compiling software and see
+	error messages related to include/scsi/scsi.h & include/scsi/sg.h
+	either upgrade to Linux-2.6.8 or newer or remove /usr/src/linux
+
 NOTE for all Linux versions using libc.so.6:
 
 	Libc.so.6 is definitely a big problem in binary compatibility.
@@ -44,8 +52,8 @@ NOTE for all Linux versions using libc.so.6:
 	See below for more information.
 
 
-NOTES for S.u.S.E distributions: you must unset an environment variable
-called PROMPT_COMMAND
+NOTES for S.u.S.E distributions: If the "make" run aborts with strange messages,
+then you need to unset an environment variable called PROMPT_COMMAND
 It contains illegal values for a make file system.
 
 		I M P O R T A N T

@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.39 01/10/27 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.50 04/07/11 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -23,13 +23,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _MCONFIG_H
-#define _MCONFIG_H
+#define	_MCONFIG_H
 
 /*
  * Tell our users that this is a Schily SING compile environment.
@@ -65,7 +65,7 @@ extern "C" {
 #endif
 
 #ifndef	IS_UNIX
-#	if defined(unix) || defined(__unix) || defined(__unix__)
+#	if (defined(unix) || defined(__unix) || defined(__unix__)) && !defined(__DJGPP__)
 #		define	IS_UNIX
 #	endif
 #endif
@@ -87,11 +87,11 @@ extern "C" {
 #endif
 
 #if defined(__CYGWIN32__) || defined(__CYGWIN__)
-#       define IS_GCC_WIN32
-#       define IS_CYGWIN
+#	define	IS_GCC_WIN32
+#	define	IS_CYGWIN
 
 #if	defined(unix) || defined(_X86)
-#       define IS_CYGWIN_1
+#	define	IS_CYGWIN_1
 #endif
 #endif
 
@@ -127,10 +127,56 @@ extern "C" {
  */
 #ifndef	USE_SCANSTACK
 #	undef	HAVE_SCANSTACK
+#else
+/*
+ * But ....
+ * The tests are much better now, so always give it a chance.
+ */
+#ifndef	HAVE_SCANSTACK
+#	define	HAVE_SCANSTACK
+#endif
 #endif
 
-#if	defined(SOL2) || defined(SOL2) || defined(S5R4) || defined(__S5R4) \
-							|| defined(SVR4)
+/*
+ * Allow to overwrite the defines in the makefiles by calling
+ *
+ *	make COPTX=-DFORCE_SCANSTACK
+ */
+#ifdef	FORCE_SCANSTACK
+#	undef	NO_SCANSTACK
+#ifndef	HAVE_SCANSTACK
+#	define	HAVE_SCANSTACK
+#endif
+#ifndef	USE_SCANSTACK
+#	define	USE_SCANSTACK
+#endif
+#endif
+
+/*
+ * This is the global switch to deactivate stack scanning
+ */
+#ifdef	NO_SCANSTACK
+#	ifdef	HAVE_SCANSTACK
+#	undef	HAVE_SCANSTACK
+#	endif
+#endif
+
+#ifdef	NO_FORK
+#	ifdef	HAVE_FORK
+#	undef	HAVE_FORK
+#	endif
+#	ifdef	HAVE_VFORK
+#	undef	HAVE_VFORK
+#	endif
+#endif
+#ifdef	NO_VFORK
+#	ifdef	HAVE_VFORK
+#	undef	HAVE_VFORK
+#	endif
+#endif
+
+#if	defined(SOL2) || defined(SOL2) || \
+	defined(S5R4) || defined(__S5R4) || defined(SVR4)
 #	ifndef	__SVR4
 #		define	__SVR4
 #	endif
@@ -203,7 +249,7 @@ extern "C" {
  * Apple Rhapsody (This is the name for Mac OS X beta)
  */
 #if defined(__NeXT__) && defined(__TARGET_OSNAME) && __TARGET_OSNAME == rhapsody
-#	define HAVE_OSDEF /* prevent later definitions to overwrite current */
+#	define	HAVE_OSDEF /* prevent later definitions to overwrite current */
 #	ifndef	IS_UNIX
 #	define	IS_UNIX
 #	endif
@@ -215,7 +261,7 @@ extern "C" {
 #if defined(__NeXT__) && !defined(HAVE_OSDEF)
 #define	NO_PRINT_OVR
 #undef	HAVE_USG_STDIO		/*
-				 *  NeXT Step 3.x uses __flsbuf(unsigned char , FILE *)
+				 * NeXT Step 3.x uses __flsbuf(unsigned char, FILE *)
 				 * instead of __flsbuf(int, FILE *)
 				 */
 #	ifndef	IS_UNIX
@@ -253,10 +299,10 @@ extern "C" {
  * through fcntl record locking.
  */
 #ifndef HAVE_FLOCK
-#define LOCK_SH         1       /* shared lock */
-#define LOCK_EX         2       /* exclusive lock */
-#define LOCK_NB         4       /* don't block when locking */
-#define LOCK_UN         8       /* unlock */
+#define	LOCK_SH		1	/* shared lock */
+#define	LOCK_EX		2	/* exclusive lock */
+#define	LOCK_NB		4	/* don't block when locking */
+#define	LOCK_UN		8	/* unlock */
 #endif
 
 #ifndef	_PROTOTYP_H
@@ -274,7 +320,7 @@ extern "C" {
 #	endif
 #endif
 
-#ifdef	__CHAR_UNSIGNED__	/* GNU GCC define     (dynamic)	*/
+#ifdef	__CHAR_UNSIGNED__	/* GNU GCC define (dynamic)	*/
 #ifndef CHAR_IS_UNSIGNED
 #define	CHAR_IS_UNSIGNED	/* Sing Schily define (static)	*/
 #endif
@@ -299,54 +345,120 @@ extern "C" {
 
 #ifdef	IS_UNIX
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	'/'
-#	define	PATH_DELIM_STR	"/"
+#	define	PATH_DELIM		'/'
+#	define	PATH_DELIM_STR		"/"
+#	define	PATH_ENV_DELIM		':'
+#	define	PATH_ENV_DELIM_STR	":"
 #	define	far
 #	define	near
 #endif
 
+/*
+ * Win32 with Gygwin
+ */
 #ifdef	IS_GCC_WIN32
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	'/'
-#	define	PATH_DELIM_STR	"/"
+#	define	PATH_DELIM		'/'
+#	define	PATH_DELIM_STR		"/"
+#	define	PATH_ENV_DELIM		':'
+#	define	PATH_ENV_DELIM_STR	":"
+#	define	HAVE_DOS_DRIVELETTER
 #	define	far
 #	define	near
+#	define	NEED_O_BINARY
 #endif
 
-#ifdef	__EMX__				/* We don't want to call it UNIX */
+/*
+ * Win32 with Mingw32
+ */
+#ifdef	__MINGW32__
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	'/'
-#	define	PATH_DELIM_STR	"/"
+#	define	PATH_DELIM		'/'
+#	define	PATH_DELIM_STR		"/"
+#	define	PATH_ENV_DELIM		';'
+#	define	PATH_ENV_DELIM_STR	";"
+#	define	HAVE_DOS_DRIVELETTER
 #	define	far
 #	define	near
+#	define	NEED_O_BINARY
+#endif
+
+/*
+ * OS/2 EMX
+ */
+#ifdef	__EMX__				/* We don't want to call it UNIX */
+#	define	HAVE_PATH_DELIM
+#	define	PATH_DELIM		'/'
+#	define	PATH_DELIM_STR		"/"
+#	define	PATH_ENV_DELIM		';'
+#	define	PATH_ENV_DELIM_STR	";"
+#	define	HAVE_DOS_DRIVELETTER
+#	define	far
+#	define	near
+#	define	NEED_O_BINARY
 #endif
 
 #ifdef	__BEOS__			/* We don't want to call it UNIX */
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	'/'
-#	define	PATH_DELIM_STR	"/"
+#	define	PATH_DELIM		'/'
+#	define	PATH_DELIM_STR		"/"
+#	define	PATH_ENV_DELIM		':'
+#	define	PATH_ENV_DELIM_STR	":"
 #	define	far
 #	define	near
 #endif
 
-#ifdef	IS_MSDOS
+/*
+ * DOS with DJGPP
+ */
+#ifdef	__DJGPP__			/* We don't want to call it UNIX */
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	'\\'
-#	define	PATH_DELIM_STR	"\\"
+#	define	PATH_DELIM		'/'
+#	define	PATH_DELIM_STR		"/"
+#	define	PATH_ENV_DELIM		';'
+#	define	PATH_ENV_DELIM_STR	";"
+#	define	HAVE_DOS_DRIVELETTER
+
+#	define	NEED_O_BINARY
 #endif
 
+/*
+ * Vanilla DOS
+ */
+#if	defined(IS_MSDOS) && !defined(__DJGPP__)
+#	define	HAVE_PATH_DELIM
+#	define	PATH_DELIM		'\\'
+#	define	PATH_DELIM_STR		"\\"
+#	define	PATH_ENV_DELIM		';'
+#	define	PATH_ENV_DELIM_STR	";"
+#	define	HAVE_DOS_DRIVELETTER
+
+#	define	NEED_O_BINARY
+#endif
+
+/*
+ * ATARI TOS
+ */
 #ifdef	IS_TOS
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	'\\'
-#	define	PATH_DELIM_STR	"\\"
+#	define	PATH_DELIM		'\\'
+#	define	PATH_DELIM_STR		"\\"
+#	define	PATH_ENV_DELIM		','
+#	define	PATH_ENV_DELIM_STR	","
+#	define	HAVE_DOS_DRIVELETTER
 #	define	far
 #	define	near
 #endif
 
+/*
+ * Mac OS 9
+ */
 #ifdef	IS_MAC
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	':'
-#	define	PATH_DELIM_STR	":"
+#	define	PATH_DELIM		':'
+#	define	PATH_DELIM_STR		":"
+#	define	PATH_ENV_DELIM		';'	/* ??? */
+#	define	PATH_ENV_DELIM_STR	";"	/* ??? */
 #	define	far
 #	define	near
 #endif
@@ -356,8 +468,10 @@ extern "C" {
  */
 #ifndef	HAVE_PATH_DELIM			/* Default to POSIX rules */
 #	define	HAVE_PATH_DELIM
-#	define	PATH_DELIM	'/'
-#	define	PATH_DELIM_STR	"/"
+#	define	PATH_DELIM		'/'
+#	define	PATH_DELIM_STR		"/"
+#	define	PATH_ENV_DELIM		':'
+#	define	PATH_ENV_DELIM_STR	":"
 #	define	far
 #	define	near
 #endif

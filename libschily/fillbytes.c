@@ -1,8 +1,8 @@
-/* @(#)fillbytes.c	1.12 02/02/28 Copyright 1987 J. Schilling */
+/* @(#)fillbytes.c	1.13 03/06/15 Copyright 1987, 1995-2003 J. Schilling */
 /*
  *	fill memory with data
  *
- *	Copyright (c) 1987 J. Schilling
+ *	Copyright (c) 1987, 1995-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -15,23 +15,25 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <standard.h>
 #include <align.h>
 #include <schily.h>
 
-#define	DO8(a)	a;a;a;a;a;a;a;a;
+#define	DO8(a)	a; a; a; a; a; a; a; a;
 
 #define	cval	((char) lval)
 
 #ifdef	PROTOTYPES
-char *fillbytes(void *tov, int cnt, char val)
+EXPORT char *
+fillbytes(void *tov, int cnt, char val)
 #else
-char *fillbytes(tov, cnt, val)
+EXPORT char *
+fillbytes(tov, cnt, val)
 	void	*tov;
 	int	cnt;
 	char	val;
@@ -57,7 +59,7 @@ char *fillbytes(tov, cnt, val)
 	}
 	n++;
 
-	if (n >= (int)(8 * sizeof(long))) {
+	if (n >= (int)(8 * sizeof (long))) {
 		register int rem = n % (8 * sizeof (long));
 
 		lval |= (lval<<8);

@@ -1,12 +1,12 @@
-/* @(#)cdda_paranoia.h	1.18 02/05/05 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)cdda_paranoia.h	1.20 04/02/20 J. Schilling from cdparanoia-III-alpha9.8 */
 /*
  *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
  */
-/***
+/*
  * CopyPolicy: GNU Public License 2 applies
  * Copyright (C) by Monty (xiphmont@mit.edu)
  *
- ***/
+ */
 
 #ifndef	_CDROM_PARANOIA_H
 #define	_CDROM_PARANOIA_H
@@ -28,19 +28,19 @@
 /*
  * Second parameter of the callback function
  */
-#define	PARANOIA_CB_READ		 0
-#define	PARANOIA_CB_VERIFY		 1
-#define	PARANOIA_CB_FIXUP_EDGE		 2
-#define	PARANOIA_CB_FIXUP_ATOM		 3
-#define	PARANOIA_CB_SCRATCH		 4
-#define	PARANOIA_CB_REPAIR		 5
-#define	PARANOIA_CB_SKIP		 6
-#define	PARANOIA_CB_DRIFT		 7
-#define	PARANOIA_CB_BACKOFF		 8
-#define	PARANOIA_CB_OVERLAP		 9
-#define	PARANOIA_CB_FIXUP_DROPPED	10
-#define	PARANOIA_CB_FIXUP_DUPED		11
-#define	PARANOIA_CB_READERR		12
+#define	PARANOIA_CB_READ		 0	/* Read off adjust ??? */
+#define	PARANOIA_CB_VERIFY		 1	/* Verifying jitter */
+#define	PARANOIA_CB_FIXUP_EDGE		 2	/* Fixed edge jitter */
+#define	PARANOIA_CB_FIXUP_ATOM		 3	/* Fixed atom jitter */
+#define	PARANOIA_CB_SCRATCH		 4	/* Unsupported */
+#define	PARANOIA_CB_REPAIR		 5	/* Unsupported */
+#define	PARANOIA_CB_SKIP		 6	/* Skip exhausted retry */
+#define	PARANOIA_CB_DRIFT		 7	/* Drift detected */
+#define	PARANOIA_CB_BACKOFF		 8	/* Unsupported */
+#define	PARANOIA_CB_OVERLAP		 9	/* Dyn Overlap adjust */
+#define	PARANOIA_CB_FIXUP_DROPPED	10	/* Fixed dropped bytes */
+#define	PARANOIA_CB_FIXUP_DUPED		11	/* Fixed duplicate bytes */
+#define	PARANOIA_CB_READERR		12	/* Hard read error */
 
 /*
  * Cdparanoia modes to be set with paranoia_modeset()
@@ -53,7 +53,7 @@
 #define	PARANOIA_MODE_OVERLAP		 4	/* Perform overlapped reads */
 #define	PARANOIA_MODE_SCRATCH		 8	/* unsupported */
 #define	PARANOIA_MODE_REPAIR		16	/* unsupported */
-#define	PARANOIA_MODE_NEVERSKIP		32	/* Do nit skip failed reads (retry maxretries)*/
+#define	PARANOIA_MODE_NEVERSKIP		32	/* Do not skip failed reads (retry maxretries) */
 
 
 #ifndef	CDP_COMPILE
@@ -64,6 +64,9 @@ typedef	void    cdrom_paranoia;
  * The interface from libcdparanoia to the high level caller
  */
 extern cdrom_paranoia	*paranoia_init	__PR((void * d, int nsectors));
+extern void	paranoia_dynoverlapset	__PR((cdrom_paranoia * p,
+							int minoverlap,
+							int maxoverlap));
 extern void	paranoia_modeset	__PR((cdrom_paranoia * p, int mode));
 extern long	paranoia_seek		__PR((cdrom_paranoia * p, long seek, int mode));
 extern Int16_t	*paranoia_read		__PR((cdrom_paranoia * p, void (*callback) (long, int)));
@@ -82,10 +85,10 @@ extern void	paranoia_overlapset	__PR((cdrom_paranoia * p, long overlap));
 extern long	cdda_disc_firstsector	__PR((void *d));		/* -> long sector */
 extern long	cdda_disc_lastsector	__PR((void *d));		/* -> long sector */
 extern long	cdda_read		__PR((void *d, void *buffer, long beginsector, long sectors));	/* -> long sectors */
-extern int	cdda_sector_gettrack	__PR((void *d,long sector));	/* -> int trackno */
-extern int	cdda_track_audiop	__PR((void *d,int track));	/* -> int Is audiotrack */
-extern long	cdda_track_firstsector	__PR((void *d,int track));	/* -> long sector */
-extern long	cdda_track_lastsector	__PR((void *d,int track));	/* -> long sector */
+extern int	cdda_sector_gettrack	__PR((void *d, long sector));	/* -> int trackno */
+extern int	cdda_track_audiop	__PR((void *d, int track));	/* -> int Is audiotrack */
+extern long	cdda_track_firstsector	__PR((void *d, int track));	/* -> long sector */
+extern long	cdda_track_lastsector	__PR((void *d, int track));	/* -> long sector */
 extern int	cdda_tracks		__PR((void *d));		/* -> int tracks */
 
 #endif	/* _CDROM_PARANOIA_H */

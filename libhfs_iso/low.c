@@ -1,7 +1,7 @@
-/* @(#)low.c	1.3 02/02/10 joerg */
+/* @(#)low.c	1.4 04/06/17 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)low.c	1.3 02/02/10 joerg";
+	"@(#)low.c	1.4 04/06/17 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -136,7 +136,7 @@ int l_readpm(vol)
   bnum = 1;
   pnum = vol->pnum;
 
-  while (1)
+  for (;;)
     {
       if (b_readlb(vol, bnum, &b) < 0)
 	return -1;

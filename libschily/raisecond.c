@@ -1,4 +1,4 @@
-/* @(#)raisecond.c	1.12 00/05/07 Copyright 1985 J. Schilling */
+/* @(#)raisecond.c	1.18 04/05/09 Copyright 1985, 1989, 1995-2004 J. Schilling */
 /*
  *	raise a condition (software signal)
  */
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 /*
  *	Check for installed condition handlers.
@@ -23,7 +23,7 @@
  *	If no handler is found or no handler signals success,
  *	the program will be aborted.
  *
- *	Copyright (c) 1985 J. Schilling
+ *	Copyright (c) 1985, 1989, 1995-2004 J. Schilling
  */
 #include <mconfig.h>
 #include <stdio.h>
@@ -40,11 +40,6 @@
 #	undef	HAVE_SCANSTACK
 #	endif
 #endif
-#ifdef	NO_SCANSTACK
-#	ifdef	HAVE_SCANSTACK
-#	undef	HAVE_SCANSTACK
-#	endif
-#endif
 
 /*
  * Macros to print to stderr without stdio, to avoid screwing up.
@@ -52,21 +47,38 @@
 #ifndef	STDERR_FILENO
 #define	STDERR_FILENO	2
 #endif
-#define	eprints(a)	(void)write(STDERR_FILENO, (a), sizeof(a)-1)
+#define	eprints(a)	(void)write(STDERR_FILENO, (a), sizeof (a)-1)
 #define	eprintl(a)	(void)write(STDERR_FILENO, (a), strlen(a))
 
 #define	is_even(p)	((((long)(p)) & 1) == 0)
 #define	even(p)		(((long)(p)) & ~1L)
 #ifdef	__future__
-#define	even(p)		(((long)(p)) - 1)/* will this work with 64 bit ?? */
+#define	even(p)		(((long)(p)) - 1) /* will this work with 64 bit ?? */
 #endif
 
 
 LOCAL	void raiseabort  __PR((const char *));
 
 #ifdef	HAVE_SCANSTACK
-
 #include <stkframe.h>
+#define	next_frame(vp)	do {						    \
+				if (((struct frame *)(vp))->fr_savfp == 0) { \
+					vp = (void *)0;			    \
+					break;				    \
+				}					    \
+				if (((struct frame *)(vp))->fr_savpc == 0) { \
+					vp = (void *)0;			    \
+					break;				    \
+				}					    \
+				vp =					    \
+				    (void *)((struct frame *)(vp))->fr_savfp; \
+			} while (vp != NULL && is_even(vp));		    \
+			vp = (struct frame *)even(vp);
+#else
+EXPORT	SIGBLK	*__roothandle;
+
+#define	next_frame(vp)	vp = (((SIGBLK *)(vp))->sb_savfp);
+#endif
 
 LOCAL	BOOL framehandle __PR((SIGBLK *, const char *, const char *, long));
 
@@ -80,22 +92,35 @@ LOCAL	BOOL framehandle __PR((SIGBLK *, const char *, const char *, long));
  *	The SIGBLK mentioned above may me the start of a chain of SIGBLK's,
  *	containing different handlers.
  */
-void raisecond(signame, arg2)
+EXPORT void
+raisecond(signame, arg2)
 	const char	*signame;
 	long		arg2;
 {
-	register struct frame *fp = (struct frame *)getfp();
+	register void	*vp = NULL;
 
-	for(; fp; fp = (struct frame *)fp->fr_savfp) {
-		if (is_even(fp))
-			continue;
-		fp = (struct frame *)even(fp);	/* really is (SIGBLK *) */
+#ifdef	HAVE_SCANSTACK
+	/*
+	 * As the SCO OpenServer C-Compiler has a bug that may cause
+	 * the first function call to getfp() been done before the
+	 * new stack frame is created, we call getfp() twice.
+	 */
+	(void) getfp();
+	vp = getfp();
+	next_frame(vp);
+#else
+	vp = __roothandle;
+#endif
 
-		if (framehandle((SIGBLK *)fp, signame, signame, arg2))
+	while (vp) {
+		if (framehandle((SIGBLK *)vp, signame, signame, arg2))
 			return;
-		else if (framehandle((SIGBLK *)fp, "any_other", signame, arg2))
+		else if (framehandle((SIGBLK *)vp, "any_other", signame, arg2))
 			return;
-		fp = (struct frame *)((SIGBLK *)fp)->sb_savfp;
+#ifdef	HAVE_SCANSTACK
+		vp = (struct frame *)((SIGBLK *)vp)->sb_savfp;
+#endif
+		next_frame(vp);
 	}
 	/*
 	 * No matching handler that signals success found.
@@ -112,14 +137,16 @@ void raisecond(signame, arg2)
  *	otherwise the first handler with matching name is called.
  *	The return value in the latter case depends on the called function.
  */
-LOCAL BOOL framehandle(sp, handlename, signame, arg2)
+LOCAL BOOL
+framehandle(sp, handlename, signame, arg2)
 	register SIGBLK *sp;
 	const char	*handlename;
 	const char	*signame;
 	long		arg2;
 {
-	for(; sp; sp = sp->sb_signext) {
-		if (streql(sp->sb_signame, handlename)) {
+	for (; sp; sp = sp->sb_signext) {
+		if (sp->sb_signame != NULL &&
+		    streql(sp->sb_signame, handlename)) {
 			if (sp->sb_sigfun == NULL) {	/* deactivated */
 				return (FALSE);
 			} else {
@@ -131,28 +158,11 @@ LOCAL BOOL framehandle(sp, handlename, signame, arg2)
 	return (FALSE);
 }
 
-#else	/* HAVE_SCANSTACK */
-
-void raisecond(signame, arg2)
-	const char	*signame;
-	long		arg2;
-{
-	/*
-	 * Print error message and abort.
-	 */
-	raiseabort(signame);
-	/* NOTREACHED */
-}
-
-#endif	/* HAVE_SCANSTACK */
-
-LOCAL void raiseabort(signame)
+LOCAL void
+raiseabort(signame)
 	const	char	*signame;
 {
 	eprints("Condition not caught: "); eprintl(signame); eprints(".\n");
-#ifndef	HAVE_SCANSTACK
-	eprints("Raisecond: not implemented.\n");
-#endif
 	abort();
 	/* NOTREACHED */
 }

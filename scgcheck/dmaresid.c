@@ -1,7 +1,7 @@
-/* @(#)dmaresid.c	1.3 01/12/11 Copyright 1998,2001 J. Schilling */
+/* @(#)dmaresid.c	1.6 04/09/08 Copyright 1998,2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)dmaresid.c	1.3 01/12/11 Copyright 1998,2001 J. Schilling";
+	"@(#)dmaresid.c	1.6 04/09/08 Copyright 1998,2001 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998,2001 J. Schilling
@@ -17,9 +17,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -56,7 +56,7 @@ dmaresid(scgp)
 	SCSI	*scgp;
 {
 	char	abuf[2];
-	int	cnt = sizeof(struct scsi_inquiry);
+	int	cnt = sizeof (struct scsi_inquiry);
 	int	dmacnt;
 	int	ret;
 	BOOL	passed;
@@ -64,7 +64,7 @@ dmaresid(scgp)
 	printf("Ready to start test for working DMA residual count? Enter <CR> to continue: ");
 	fprintf(logfile, "**********> Testing for working DMA residual count.\n");
 	flushit();
-	(void)getline(abuf, sizeof(abuf));
+	(void) getline(abuf, sizeof (abuf));
 
 	printf("**********> Testing for working DMA residual count == 0.\n");
 	fprintf(logfile, "**********> Testing for working DMA residual count == 0.\n");
@@ -72,12 +72,12 @@ dmaresid(scgp)
 	dmacnt = cnt;
 	ret = xtinquiry(scgp, cnt, dmacnt);
 	if (ret == dmacnt) {
-		printf("---------->	Wanted %d bytes got it.\n", dmacnt);
-		fprintf(logfile, "---------->	Wanted %d sensebytes got it.\n", dmacnt);
+		printf("---------->	Wanted %d bytes, got it.\n", dmacnt);
+		fprintf(logfile, "---------->	Wanted %d bytes, got it.\n", dmacnt);
 	}
 	if (ret != dmacnt) {
-		printf("---------->	Wanted %d bytes got (%d)\n", dmacnt, ret);
-		fprintf(logfile, "---------->	Wanted %d bytes got (%d)\n", dmacnt, ret);
+		printf("---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
+		fprintf(logfile, "---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
 	}
 	if (ret != scg_getdmacnt(scgp)) {
 		passed = FALSE;
@@ -95,17 +95,17 @@ dmaresid(scgp)
 	printf("Ready to start test for working DMA residual count == DMA count? Enter <CR> to continue: ");
 	fprintf(logfile, "**********> Testing for working DMA residual count == DMA count.\n");
 	flushit();
-	(void)getline(abuf, sizeof(abuf));
+	(void) getline(abuf, sizeof (abuf));
 	passed = TRUE;
 	dmacnt = cnt;
 	ret = xtinquiry(scgp, 0, dmacnt);
 	if (ret == 0) {
-		printf("---------->	Wanted 0 bytes got it.\n");
-		fprintf(logfile, "---------->	Wanted 0 bytes got it.\n");
+		printf("---------->	Wanted 0 bytes, got it.\n");
+		fprintf(logfile, "---------->	Wanted 0 bytes, got it.\n");
 	}
 	if (ret != 0) {
-		printf("---------->	Wanted %d bytes got (%d)\n", 0, ret);
-		fprintf(logfile, "---------->	Wanted %d bytes got (%d)\n", 0, ret);
+		printf("---------->	Wanted %d bytes, got (%d)\n", 0, ret);
+		fprintf(logfile, "---------->	Wanted %d bytes, got (%d)\n", 0, ret);
 	}
 	if (ret != scg_getdmacnt(scgp)) {
 		passed = FALSE;
@@ -116,24 +116,31 @@ dmaresid(scgp)
 		printf("----------> SCSI DMA residual count == DMA count test PASSED\n");
 		fprintf(logfile, "----------> SCSI DMA residual count == DMA count test PASSED\n");
 	} else {
+		passed = FALSE;
 		printf("----------> SCSI DMA residual count == DMA count test FAILED\n");
 		fprintf(logfile, "----------> SCSI DMA residual count == DMA count test FAILED\n");
+	}
+
+	if (!passed) {
+		printf("----------> SCSI DMA residual count not working - no further tests\n");
+		fprintf(logfile, "----------> SCSI DMA residual count not working - no further tests\n");
+		return;
 	}
 
 	printf("Ready to start test for working DMA residual count == 1? Enter <CR> to continue: ");
 	fprintf(logfile, "**********> Testing for working DMA residual count == 1.\n");
 	flushit();
-	(void)getline(abuf, sizeof(abuf));
+	(void) getline(abuf, sizeof (abuf));
 	passed = TRUE;
 	dmacnt = cnt+1;
 	ret = xtinquiry(scgp, cnt, dmacnt);
 	if (ret == cnt) {
-		printf("---------->	Wanted %d bytes got it.\n", cnt);
-		fprintf(logfile, "---------->	Wanted %d sensebytes got it.\n", cnt);
+		printf("---------->	Wanted %d bytes, got it.\n", cnt);
+		fprintf(logfile, "---------->	Wanted %d bytes, got it.\n", cnt);
 	}
 	if (ret != cnt) {
-		printf("---------->	Wanted %d bytes got (%d)\n", cnt, ret);
-		fprintf(logfile, "---------->	Wanted %d bytes got (%d)\n", cnt, ret);
+		printf("---------->	Wanted %d bytes, got (%d)\n", cnt, ret);
+		fprintf(logfile, "---------->	Wanted %d bytes, got (%d)\n", cnt, ret);
 	}
 	if (ret != scg_getdmacnt(scgp)) {
 		passed = FALSE;
@@ -144,6 +151,7 @@ dmaresid(scgp)
 		printf("----------> SCSI DMA residual count == 1 test PASSED\n");
 		fprintf(logfile, "----------> SCSI DMA residual count == 1 test PASSED\n");
 	} else {
+		passed = FALSE;
 		printf("----------> SCSI DMA residual count == 1 test FAILED\n");
 		fprintf(logfile, "----------> SCSI DMA residual count == 1 test FAILED\n");
 	}
@@ -155,12 +163,12 @@ dmaresid(scgp)
 	ret = xtinquiry(scgp, cnt, dmacnt);
 	if (ret == cnt) {
 		passed = FALSE;
-		printf("---------->	Wanted %d bytes got it - DMA overrun not blocked.\n", cnt);
-		fprintf(logfile, "---------->	Wanted %d sensebytes got it - DMA overrun not blocked.\n", cnt);
+		printf("---------->	Wanted %d bytes, got it - DMA overrun not blocked.\n", cnt);
+		fprintf(logfile, "---------->	Wanted %d bytes, got it - DMA overrun not blocked.\n", cnt);
 	}
 	if (ret != dmacnt) {
-		printf("---------->	Wanted %d bytes got (%d)\n", dmacnt, ret);
-		fprintf(logfile, "---------->	Wanted %d bytes got (%d)\n", dmacnt, ret);
+		printf("---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
+		fprintf(logfile, "---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
 	}
 	if (ret != scg_getdmacnt(scgp)) {
 		passed = FALSE;
@@ -190,9 +198,9 @@ xtinquiry(scgp, cnt, dmacnt)
 
 	ip = (struct scsi_inquiry *)ibuf;
 
-	fillbytes(ibuf, sizeof(ibuf), '\0');
+	fillbytes(ibuf, sizeof (ibuf), '\0');
 	tinquiry(scgp, (caddr_t)ibuf, cnt, dmacnt);
-	for (i=sizeof(ibuf)-1; i >= 0; i--) {
+	for (i = sizeof (ibuf)-1; i >= 0; i--) {
 		if (ibuf[i] != '\0') {
 			break;
 		}
@@ -203,9 +211,9 @@ xtinquiry(scgp, cnt, dmacnt)
 	printf("CDB cnt: %d DMA cnt: %d got really: %d (System says: RDMA cnt: %d resid %d)\n",
 				cnt, dmacnt, i, rescnt, scg_getresid(scgp));
 
-	fillbytes(ibuf, sizeof(ibuf), 0xFF);
+	fillbytes(ibuf, sizeof (ibuf), 0xFF);
 	tinquiry(scgp, (caddr_t)ibuf, cnt, dmacnt);
-	for (i=sizeof(ibuf)-1; i >= 0; i--) {
+	for (i = sizeof (ibuf)-1; i >= 0; i--) {
 		if (ibuf[i] != 0xFF) {
 			break;
 		}
@@ -230,7 +238,7 @@ tinquiry(scgp, bp, cnt, dmacnt)
 	register struct	scg_cmd	*scmd = scgp->scmd;
 
 /*	fillbytes(bp, cnt, '\0');*/
-	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
 	scmd->addr = bp;
 	scmd->size = dmacnt;
 	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
@@ -239,7 +247,7 @@ tinquiry(scgp, bp, cnt, dmacnt)
 	scmd->cdb.g0_cdb.cmd = SC_INQUIRY;
 	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
 	scmd->cdb.g0_cdb.count = cnt;
-	
+
 	scgp->cmdname = "inquiry";
 
 	if (scg_cmd(scgp) < 0)

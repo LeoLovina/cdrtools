@@ -1,8 +1,8 @@
-/* @(#)xconfig.h.in	1.67 03/03/08 Copyright 1998 J. Schilling */
+/* @(#)xconfig.h.in	1.76 04/07/26 Copyright 1998-2003 J. Schilling */
 /*
  *	Dynamic autoconf C-include code.
  *
- *	Copyright (c) 1998 J. Schilling
+ *	Copyright (c) 1998-2003 J. Schilling
  */
 
 /*
@@ -101,6 +101,8 @@
 #undef HAVE_BSD_DEV_SCSIREG_H	/* if we have a NeXT Step compatible sg driver */
 #undef HAVE_SYS_BSDTTY_H	/* if we have sys/bsdtty.h on HP-UX for TIOCGPGRP */
 #undef HAVE_OS_H		/* if we have the BeOS kernel definitions in OS.h */
+#undef HAVE_ATTR_XATTR_H	/* if we have the Linux Extended File Attr definitions in attr/xattr.h */
+#undef HAVE_FNMATCH_H		/* if we may include fnmatch.h */
 
 /*
  * Convert to SCHILY name
@@ -126,6 +128,10 @@
 /*
  * Library Functions
  */
+#undef HAVE_ACCESS		/* access() is present in libc */
+#undef HAVE_EACCESS		/* eaccess() is present in libc */
+#undef HAVE_EUIDACCESS		/* euidaccess() is present in libc */
+#undef HAVE_ACCESS_E_OK		/* access() implements E_OK (010) for effective UIDs */
 #undef HAVE_CRYPT		/* crypt() is present in libc or libcrypt */
 #undef HAVE_STRERROR		/* strerror() is present in libc */
 #undef HAVE_MEMMOVE		/* memmove() is present in libc */
@@ -197,6 +203,8 @@
 #undef HAVE_READLINK		/* readlink() is present in libc */
 #undef HAVE_SYMLINK		/* symlink() is present in libc */
 #undef HAVE_LINK		/* link() is present in libc */
+#undef HAVE_HARD_SYMLINKS	/* link() allows hard links on symlinks */
+#undef HAVE_LINK_NOFOLLOW	/* link() does not follow symlinks when hard linking symlinks */
 #undef HAVE_RENAME		/* rename() is present in libc */
 #undef HAVE_MKFIFO		/* mkfifo() is present in libc */
 #undef HAVE_MKNOD		/* mknod() is present in libc */
@@ -250,6 +258,15 @@
 #undef HAVE_FCHFLAGS		/* fchflags() is present in libc */
 #undef HAVE_FFLAGSTOSTR		/* fflagstostr() is present in libc */
 #undef HAVE_STRTOFFLAGS		/* strtofflags() is present in libc */
+
+#undef HAVE_FNMATCH		/* fnmatch() is present in libc */
+
+/*
+ * Linux Extended File Attributes
+ */
+#undef HAVE_GETXATTR		/* getxattr()				*/
+#undef HAVE_SETXATTR		/* setxattr()				*/
+#undef HAVE_LISTXATTR		/* listxattr()				*/
 
 /*
  * Important:	This must be a result from a check _before_ the Large File test
@@ -327,6 +344,7 @@
 #undef HAVE_ST_ATIMESPEC	/* if struct stat contains st_atimespec.tv_nsec (nanosecs) */
 #undef HAVE_ST_BLKSIZE		/* if struct stat contains st_blksize */
 #undef HAVE_ST_BLOCKS		/* if struct stat contains st_blocks */
+#undef HAVE_ST_FSTYPE		/* if struct stat contains st_fstype */
 #undef HAVE_ST_RDEV		/* if struct stat contains st_rdev */
 #undef HAVE_ST_FLAGS		/* if struct stat contains st_flags */
 #undef STAT_MACROS_BROKEN	/* if the macros S_ISDIR, S_ISREG .. don't work */
@@ -378,6 +396,8 @@
 #undef dev_t			/* To be used if dev_t is not present */
 #undef ino_t			/* To be used if ino_t is not present */
 #undef nlink_t			/* To be used if nlink_t is not present */
+#undef blksize_t		/* To be used if blksize_t is not present */
+#undef blkcnt_t			/* To be used if blkcnt_t is not present */
 /*
  * Important:	Next Step needs time.h for clock_t (because of a bug)
  */

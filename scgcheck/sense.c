@@ -1,7 +1,7 @@
-/* @(#)sense.c	1.3 02/09/26 Copyright 2001 J. Schilling */
+/* @(#)sense.c	1.4 03/03/27 Copyright 2001 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)sense.c	1.3 02/09/26 Copyright 2001 J. Schilling";
+	"@(#)sense.c	1.4 03/03/27 Copyright 2001 J. Schilling";
 #endif
 /*
  *	Copyright (c) 2001 J. Schilling
@@ -17,9 +17,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -85,11 +85,11 @@ sensetest(scgp)
 		(void)getline(abuf, sizeof(abuf));
 		ret = test_unit_ready(scgp);
 		if (ret >= 0 || !scg_cmd_err(scgp)) {
-			scsi_unload(scgp, (cdr_t *)0);
 			printf("Test Unit Ready did not fail.\n");
 			printf("Ready to eject tray? Enter <CR> to continue: ");
 			flushit();
 			(void)getline(abuf, sizeof(abuf));
+			scsi_unload(scgp, (cdr_t *)0);
 			ret = test_unit_ready(scgp);
 		}
 	}
@@ -134,14 +134,14 @@ sensetest(scgp)
 	if (ret > sense_count)
 		sense_count = ret;
 	if (ret == CCS_SENSE_LEN) {
-		printf("---------->	Wanted %d sense bytes got it.\n", CCS_SENSE_LEN);
-		fprintf(logfile, "---------->	Wanted %d sense bytes got it.\n", CCS_SENSE_LEN);
+		printf("---------->	Wanted %d sense bytes, got it.\n", CCS_SENSE_LEN);
+		fprintf(logfile, "---------->	Wanted %d sense bytes, got it.\n", CCS_SENSE_LEN);
 	}
 	if (ret != CCS_SENSE_LEN) {
 		printf("---------->	Minimum standard (CCS) sense length failed\n");
-		printf("---------->	Wanted %d sense bytes got (%d)\n", CCS_SENSE_LEN, ret);
+		printf("---------->	Wanted %d sense bytes, got (%d)\n", CCS_SENSE_LEN, ret);
 		fprintf(logfile, "---------->	Minimum standard (CCS) sense length failed\n");
-		fprintf(logfile, "---------->	Wanted %d sense bytes got (%d)\n", CCS_SENSE_LEN, ret);
+		fprintf(logfile, "---------->	Wanted %d sense bytes, got (%d)\n", CCS_SENSE_LEN, ret);
 	}
 	if (ret != scgp->scmd->sense_count) {
 		passed = FALSE;
@@ -154,12 +154,12 @@ sensetest(scgp)
 	if (ret > sense_count)
 		sense_count = ret;
 	if (ret == SCG_MAX_SENSE) {
-		printf("---------->	Wanted %d sense bytes got it.\n", SCG_MAX_SENSE);
-		fprintf(logfile, "---------->	Wanted %d sense bytes got it.\n", SCG_MAX_SENSE);
+		printf("---------->	Wanted %d sense bytes, got it.\n", SCG_MAX_SENSE);
+		fprintf(logfile, "---------->	Wanted %d sense bytes, got it.\n", SCG_MAX_SENSE);
 	}
 	if (ret != SCG_MAX_SENSE) {
-		printf("---------->	Wanted %d sense bytes got (%d)\n", SCG_MAX_SENSE, ret);
-		fprintf(logfile, "---------->	Wanted %d sense bytes got (%d)\n", SCG_MAX_SENSE, ret);
+		printf("---------->	Wanted %d sense bytes, got (%d)\n", SCG_MAX_SENSE, ret);
+		fprintf(logfile, "---------->	Wanted %d sense bytes, got (%d)\n", SCG_MAX_SENSE, ret);
 	}
 	if (ret != scgp->scmd->sense_count) {
 		passed = FALSE;
@@ -199,7 +199,7 @@ sensecount(scgp, sensecnt)
 		bad_unit_ready(scgp, sensecnt);
 	else
 		badinquiry(scgp, buf, sizeof(struct scsi_inquiry), sensecnt);
-	scg_prbytes("Sense Data:", (Uchar *)scgp->scmd->u_sense.cmd_sense, sensecnt);
+	scg_fprbytes(stdout,  "Sense Data:", (Uchar *)scgp->scmd->u_sense.cmd_sense, sensecnt);
 	scg_fprbytes(logfile, "Sense Data:", (Uchar *)scgp->scmd->u_sense.cmd_sense, sensecnt);
 	p = (Uchar *)scgp->scmd->u_sense.cmd_sense;
 	for (i=sensecnt-1; i >= 0; i--) {
@@ -209,7 +209,7 @@ sensecount(scgp, sensecnt)
 	}
 	i++;
 	maxcnt = i;
-printf("%d %d %d\n", sensecnt, scgp->scmd->sense_count, maxcnt);
+printf("---------->     Method 0x00: expected: %d reported: %d max found: %d\n", sensecnt, scgp->scmd->sense_count, maxcnt);
 
 	fillbytes(buf, sizeof(struct scsi_inquiry), '\0');
 	fillbytes((caddr_t)scgp->scmd, sizeof(*scgp->scmd), '\0');
@@ -218,7 +218,7 @@ printf("%d %d %d\n", sensecnt, scgp->scmd->sense_count, maxcnt);
 		bad_unit_ready(scgp, sensecnt);
 	else
 		badinquiry(scgp, buf, sizeof(struct scsi_inquiry), sensecnt);
-	scg_prbytes("Sense Data:", (Uchar *)scgp->scmd->u_sense.cmd_sense, sensecnt);
+	scg_fprbytes(stdout,  "Sense Data:", (Uchar *)scgp->scmd->u_sense.cmd_sense, sensecnt);
 	scg_fprbytes(logfile, "Sense Data:", (Uchar *)scgp->scmd->u_sense.cmd_sense, sensecnt);
 	p = (Uchar *)scgp->scmd->u_sense.cmd_sense;
 	for (i=sensecnt-1; i >= 0; i--) {
@@ -229,14 +229,14 @@ printf("%d %d %d\n", sensecnt, scgp->scmd->sense_count, maxcnt);
 	i++;
 	if (i > maxcnt)
 		maxcnt = i;
-printf("%d %d %d\n", sensecnt, scgp->scmd->sense_count, maxcnt);
+printf("---------->     Method 0xFF: expected: %d reported: %d max found: %d\n", sensecnt, scgp->scmd->sense_count, i);
 
 /*	scgp->verbose--;*/
 	scgp->silent--;
 /*	scg_vsetup(scgp);*/
 /*	scg_errfflush(scgp, logfile);*/
 
-	return (i);
+	return (maxcnt);
 }
 
 LOCAL int
