@@ -1,0 +1,91 @@
+Cdrecord has not been tested on OpenBSD jet. 
+It should run anyhow because the differences between the *BSD 
+systems should not be that big.
+
+As *BSD does not have the standard UNIX functions ecvt() fvct() and gcvt()
+printing of ploating point numbers has been disabled. However
+the floatingpoint arguments are skiped so the programs will not dump core.
+This problem currently only applies to the verbose output of mkisofs.
+
+The current *BSD port will not yet be able to access
+the CD-Recorder as it is on other architectures.
+
+User level SCSI seems not be be well tested on *BSD
+
+It would be nice if the kernel hackers of all *BSD flavors could aggree in
+adding decent and useful SCSU user land transport support.
+This would cause the following canges:
+
+	-	Add a driver that is present by default and offeres an
+		easy to address interface to the /dev/ namespace.
+	-	Create device file entries for this driver by default.
+	-	allow to send all commands on this driver even if the main
+		driver entry is in use, At least allow:
+			INQUIRY
+			TEST_UNIT_READY
+			REQUEST_SENSE
+		to be able to scan the SCSI bus for drives.
+
+Workaround:
+
+If /dev/su0-0-0 ... does not exist on your systen, you may try
+to create the devices with the MAKEDEV.su script below.
+You may try to symlink /dev/scgx to the real driver entry for your device.
+If e.g. the CD-Recorder is on /dev/cd0a, you can do:
+
+cd /dev
+ln -s cd0a scgx
+
+or
+
+cd /dev
+ln -s cd0c scgx
+
+or
+
+cd /dev
+ln -s cd0.ctl scgx
+
+You then will be able to access the CD-Recorder as on other
+systems. If your CD-Recorder is on SCSI Bus 0, Target 2, lun 0
+type:
+
+cdrecord dev=0,2,0 .....
+
+I hope to get cdrecord work better with your help soon.
+
+Jörg
+
+------------------------- MAKEDEV.su------------------
+#!/bin/sh
+
+#
+# You must check which minor base is really needed for your system
+# The su driver seems not to be well tested on *BSD
+#
+# If nothing else helps, create a link /dev/scgx to the right
+# /dev/ entry (an entry that repsponds right with /sbin/scsi)
+# for your neded device.
+#
+minorbase="536870912 + 2"
+#minorbase="0"
+#minorbase="0 + 2"
+#minorbase="0 + 3"
+
+mknod /dev/su0-0-0 c 18 `expr $minorbase + 0 '*' 8`
+mknod /dev/su0-1-0 c 18 `expr $minorbase + 1 '*' 8`
+mknod /dev/su0-2-0 c 18 `expr $minorbase + 2 '*' 8`
+mknod /dev/su0-3-0 c 18 `expr $minorbase + 3 '*' 8`
+mknod /dev/su0-4-0 c 18 `expr $minorbase + 4 '*' 8`
+mknod /dev/su0-5-0 c 18 `expr $minorbase + 5 '*' 8`
+mknod /dev/su0-6-0 c 18 `expr $minorbase + 6 '*' 8`
+mknod /dev/su0-7-0 c 18 `expr $minorbase + 7 '*' 8`
+
+mknod /dev/su1-0-0 c 18 `expr $minorbase + 1 '*' 64 + 0 '*' 8`
+mknod /dev/su1-1-0 c 18 `expr $minorbase + 1 '*' 64 + 1 '*' 8`
+mknod /dev/su1-2-0 c 18 `expr $minorbase + 1 '*' 64 + 2 '*' 8`
+mknod /dev/su1-3-0 c 18 `expr $minorbase + 1 '*' 64 + 3 '*' 8`
+mknod /dev/su1-4-0 c 18 `expr $minorbase + 1 '*' 64 + 4 '*' 8`
+mknod /dev/su1-5-0 c 18 `expr $minorbase + 1 '*' 64 + 5 '*' 8`
+mknod /dev/su1-6-0 c 18 `expr $minorbase + 1 '*' 64 + 6 '*' 8`
+mknod /dev/su1-7-0 c 18 `expr $minorbase + 1 '*' 64 + 7 '*' 8`

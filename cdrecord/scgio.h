@@ -1,4 +1,4 @@
-/* @(#)scgio.h	2.7 97/04/06 Copyright 1986 J. Schilling */
+/* @(#)scgio.h	2.9 97/08/25 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI general driver 'scg'
  *
@@ -336,10 +336,8 @@ struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
 	u_char	lun	  : 3;	/* logical unit number */
 	u_char	addr[4];	/* logical block address */
-	u_char	res6;		/* reserved byte 6 */
-	u_char	res7;		/* reserved byte 7 */
-	u_char	res8;		/* reserved byte 8 */
-	u_char	count[2];	/* transfer length */
+	u_char	count[4];	/* transfer length */
+	u_char	res10;		/* reserved byte 10 */
 	u_char	link	  : 1;	/* link (another command follows) */
 	u_char	fr	  : 1;	/* flag request (interrupt at completion) */
 	u_char	rsvd	  : 4;	/* reserved */
@@ -355,10 +353,8 @@ struct	scsi_g5cdb {		/* scsi group 5 command description block */
 	u_char	res	  : 4;	/* reserved bits 1-4 of byte 1 */
 	u_char	reladr	  : 1;	/* address is relative */
 	u_char	addr[4];	/* logical block address */
-	u_char	res6;		/* reserved byte 6 */
-	u_char	res7;		/* reserved byte 7 */
-	u_char	res8;		/* reserved byte 8 */
-	u_char	count[2];	/* transfer length */
+	u_char	count[4];	/* transfer length */
+	u_char	res10;		/* reserved byte 10 */
 	u_char	vu_B7	  : 1;	/* vendor unique (byte B bit 7) */
 	u_char	vu_B6	  : 1;	/* vendor unique (byte B bit 6) */
 	u_char	rsvd	  : 4;	/* reserved */
@@ -392,7 +388,7 @@ struct	scg_cmd {
 	int	kdebug;			/* driver kernel debug level */
 	int	resid;			/* Bytes not transfered */
 	int	error;			/* Error code from scgintr() */
-	int	errno;			/* UNIX error code */
+	int	ux_errno;		/* UNIX error code */
 #ifdef	comment
 XXX	struct	scsi_status scb; ???	/* Status returnd by command */
 #endif

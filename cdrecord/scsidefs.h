@@ -1,4 +1,4 @@
-/* @(#)scsidefs.h	1.13 97/04/06 Copyright 1988 J. Schilling */
+/* @(#)scsidefs.h	1.14 97/08/24 Copyright 1988 J. Schilling */
 /*
  *	Definitions for SCSI devices i.e. for error strings in scsierrs.c
  *
@@ -62,9 +62,14 @@
  * CD-ROM
  */
 #define	DEV_CDROM		500
+#define	DEV_MMC_CDROM		501
+#define	DEV_MMC_CDR		502
+#define	DEV_MMC_CDRW		503
 
 #define	DEV_CDD_521		510
 #define	DEV_CDD_522		511
+#define	DEV_CDD_2000		512
+#define	DEV_CDD_2600		513
 #define	DEV_YAMAHA_CDR_100	520
 #define	DEV_YAMAHA_CDR_400	521
 #define	DEV_PLASMON_RF_4100	530

@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.14 97/04/23 Copyright 1988,1995 J. Schilling */
+/* @(#)scsitransp.c	1.15 97/08/25 Copyright 1988,1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.14 97/04/23 Copyright 1988,1995 J. Schilling";
+	"@(#)scsitransp.c	1.15 97/08/25 Copyright 1988,1995 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -335,7 +335,7 @@ BOOL scsierr()
 	register struct scg_cmd *cp = &scmd;
 
 	if(cp->error != SCG_NO_ERROR ||
-				cp->errno != 0 || *(u_char *)&cp->scb != 0)
+				cp->ux_errno != 0 || *(u_char *)&cp->scb != 0)
 		return (TRUE);
 	return (FALSE);
 }
@@ -384,7 +384,7 @@ void scsiprinterr(cmd)
 				err = errbuf;
 	}
 
-	errmsgno(cp->errno, "%s: scsi sendcmd: %s\n", cmd, err);
+	errmsgno(cp->ux_errno, "%s: scsi sendcmd: %s\n", cmd, err);
 	if (cp->error <= SCG_RETRYABLE)
 		scsiprintstatus();
 

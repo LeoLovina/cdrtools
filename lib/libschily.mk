@@ -47,7 +47,15 @@ avoffset:	avoffset.o getfp.o
 avoffset.h:	avoffset
 		$(ARCHDIR)/avoffset > $(ARCHDIR)/avoffset.h
 
-$(ARCHDIRX)align_test$(DEP_SUFFIX):	$(ARCHDIRX)
+###########################################################################
+# The next line is needed for old buggy gmake releases before release 3.74.
+# Sources before gmake 3.75 now are no longer available on ftp servers,
+# the GNU people seem to know why ;-)
+# Only one line is needed to have a rule for creating the OBJ dir.
+# Do not insert more then one line with $(ARCHDIR) on the right side
+# gmake would go into infinite loops otherwise.
+###########################################################################
+$(ARCHDIRX)align_test$(DEP_SUFFIX):	$(ARCHDIR)
 
 include		$(ARCHDIRX)avoffset$(DEP_SUFFIX)
 include		$(ARCHDIRX)align_test$(DEP_SUFFIX)

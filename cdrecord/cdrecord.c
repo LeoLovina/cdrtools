@@ -1,7 +1,7 @@
-/* @(#)cdrecord.c	1.8 97/05/19 Copyright 1995 J. Schilling */
+/* @(#)cdrecord.c	1.17 97/09/10 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdrecord.c	1.8 97/05/19 Copyright 1995 J. Schilling";
+	"@(#)cdrecord.c	1.17 97/09/10 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Record data on a CD-Recorder
@@ -41,16 +41,9 @@ static	char sccsid[] =
 #include "scsireg.h"		/* XXX wegen SC_NOT_READY */
 #include "cdrecord.h"
 #include "scsitransp.h"
+#include "scsi_scan.h"
 
-/*
- * Defines for option flags
- */
-#define	F_DUMMY		0x01	/* Do dummy writes */
-#define	F_MSINFO	0x02	/* Get multi-session info */
-#define	F_TOC		0x04	/* Get TOC */
-#define	F_EJECT		0x08	/* Eject disk after doing the work */
-#define	F_MULTI		0x10	/* Create linkable TOC (multi-session)*/
-#define	F_FIX		0x20	/* Fixate disk only */
+char	cdr_version[] = "1.5";
 
 /*
  * Map toc/track types into names.
@@ -134,7 +127,7 @@ extern	int	silent;
 EXPORT	int 	main		__PR((int ac, char **av));
 LOCAL	void	usage		__PR((int));
 LOCAL	int	read_buf	__PR((int f, char *bp, int size));
-LOCAL	int	write_track_data __PR((cdr_t *, int , track_t *));
+LOCAL	int	write_track_data __PR((cdr_t *, int , track_t *, long));
 LOCAL	void	printdata	__PR((int, track_t *));
 LOCAL	void	printaudio	__PR((int, track_t *));
 LOCAL	void	checkfile	__PR((int, track_t *));
@@ -142,14 +135,15 @@ LOCAL	int	checkfiles	__PR((int, track_t *));
 LOCAL	long	checktsize	__PR((int, track_t *));
 LOCAL	void	checksize	__PR((track_t *));
 LOCAL	void	raise_fdlim	__PR((void));
-LOCAL	void	gargs		__PR((int , char **, int *, track_t *, char **,
-					int *, int *, int *));
-LOCAL	void	set_trsizes	__PR((int, track_t *));
-LOCAL	void	unload_media	__PR((cdr_t *, int));
+LOCAL	void	gargs		__PR((int, char **, int *, track_t *, char **,
+					cdr_t **, int *, int *, int *));
+LOCAL	void	set_trsizes	__PR((cdr_t *, int, track_t *));
+EXPORT	void	load_media	__PR((cdr_t *));
+EXPORT	void	unload_media	__PR((cdr_t *, int));
 LOCAL	void	check_recovery	__PR((cdr_t *));
 	void	audioread	__PR((cdr_t *, int));
 LOCAL	void	print_msinfo	__PR((cdr_t *));
-LOCAL	void	print_toc	__PR((void));
+LOCAL	void	print_toc	__PR((cdr_t *));
 LOCAL	void	print_track	__PR((int, long, struct msf *, int, int, int));
 LOCAL	void	prtimediff	__PR((const char *fmt,
 					struct timeval *start,
@@ -167,25 +161,32 @@ main(ac, av)
 	int	toctype = -1;
 	int	i;
 	int	tracks = 0;
+	int	trackno;
 	long	tsize;
 	track_t	track[MAX_TRACK+1];
-	cdr_t	*dp;
+	cdr_t	*dp = (cdr_t *)0;
+	dstat_t	ds;
+	long	startsec = 0L;
+	int	errs = 0;
 
 	save_args(ac, av);
 
 	raise_fdlim();
-	gargs(ac, av, &tracks, track, &dev, &speed, &flags, &toctype);
+	gargs(ac, av, &tracks, track, &dev, &dp, &speed, &flags, &toctype);
 	if (toctype < 0)
 		comerrno(EX_BAD, "Internal error: Bad TOC type.\n");
+	if ((flags & F_MSINFO) == 0 || lverbose || flags & F_VERSION)
+		printf("Cdrecord release %s Copyright (C) 1995-1997 Jörg Schilling\n",
+								cdr_version);
+	if (flags & F_VERSION)
+		exit(0);
+
 	if (debug || lverbose) {
 		printf("TOC Type: %d = %s\n",
 			toctype, toctname[toctype & TOC_MASK]);
 	}
 
-	checkfiles(tracks, track);
-	tsize = checktsize(tracks, track);
-
-	if ((flags & (F_MSINFO|F_TOC)) == 0) {
+	if ((flags & (F_MSINFO|F_TOC|F_FIX|F_VERSION|F_CHECKDRIVE|F_INQUIRY|F_SCANBUS)) == 0) {
 		/*
 		 * Try to lock us im memory (will only work for root)
 		 * but you need access to root anyway to use /dev/scg?
@@ -204,8 +205,10 @@ main(ac, av)
 	if ((buf = scsi_getbuf(bufsize)) == NULL)
 		comerr("Cannot get SCSI I/O buffer.\n");
 
-	set_trsizes(tracks, track);
-
+	if ((flags & F_SCANBUS) != 0) {
+		select_target();
+		exit(0);
+	}
 	/*
 	 * First try to check which type of SCSI device we
 	 * have.
@@ -213,24 +216,46 @@ main(ac, av)
 	silent++;
 	test_unit_ready();	/* eat up unit attention */
 	silent--;
-	if (!do_inquiry((flags & F_MSINFO) == 0 || lverbose))
-		comerrno(EX_BAD, "Cannot do inquiry for CD-Recorder.\n");
-	dp = get_cdrcmds();
-
-	if (dp == (cdr_t *)0)
-		comerrno(EX_BAD, "Sorry, unsupported CD-Recorder found on this target.\n");
-	if (!is_cdrecorder()) {
-		if (flags & (F_MSINFO|F_TOC)) {
-			if (!is_cddrive())
-				comerrno(EX_BAD,
-			"Sorry, no CD-Drive found on this target.\n");
-		} else {
-			comerrno(EX_BAD,
-			"Sorry, no CD-Recorder found on this target.\n");
-		}
+	if (!do_inquiry((flags & F_MSINFO) == 0 || lverbose)) {
+		errmsgno(EX_BAD, "Cannot do inquiry for CD-Recorder.\n");
+		if (unit_ready())
+			errmsgno(EX_BAD, "The unit seems to be hung and needs power cycling.\n");
+		exit(EX_BAD);
 	}
+
+	if ((flags & F_INQUIRY) != 0)
+		exit(0);
+
+	if (dp == (cdr_t *)NULL) {	/* No driver= option specified */
+		dp = get_cdrcmds();
+	} else if (!is_unknown_dev() && dp != get_cdrcmds()) {
+		errmsgno(EX_BAD, "WARNING: Trying to use other driver on known device.\n");
+	}
+
+	if (!is_cddrive())
+		comerrno(EX_BAD, "Sorry, no CD-Drive found on this target.\n");
+	if (dp == (cdr_t *)0)
+		comerrno(EX_BAD, "Sorry, no supported CD-Recorder found on this target.\n");
+
+	if ((flags & (F_MSINFO|F_TOC)) == 0 &&
+					(dp->cdr_flags & CDR_ISREADER) != 0) {
+		comerrno(EX_BAD,
+		"Sorry, no CD-Recorder found on this target.\n");
+	}
+
 	if ((*dp->cdr_attach)() != 0)
 		comerrno(EX_BAD, "Cannot attach driver for CD-Recorder.\n");
+
+	if ((flags & F_MSINFO) == 0 || lverbose) {
+		printf("Using %s (%s).\n", dp->cdr_drtext, dp->cdr_drname);
+		printf("Driver flags   : ");
+		if ((dp->cdr_flags & CDR_SWABAUDIO) != 0)
+			printf("SWABAUDIO");
+		printf("\n");
+	}
+
+	if ((flags & F_CHECKDRIVE) != 0)
+		exit(0);
 
 	if (tracks == 0 && flags == F_EJECT) {
 		if (!unit_ready())
@@ -240,40 +265,25 @@ main(ac, av)
 		exit(0);
 	}
 
+	flush();
+	if (tracks > 1)
+		sleep(2);	/* Let the user watch the inquiry messages */
+
+	set_trsizes(dp, tracks, track);
+	checkfiles(tracks, track);
+	tsize = checktsize(tracks, track);
+
 	/*
 	 * Is this the right place to do this ?
 	 */
 	check_recovery(dp);
-	/*
-	 * Do some preparation before...
-	 */
-	silent++;			/* Be quiet if this fails	*/
-	(*dp->cdr_load)();		/* First try to load media and	*/
-	scsi_start_stop_unit(1, 0);	/* start unit in silent mode	*/
-	silent--;
-	silent++;
-	test_unit_ready();
-	if (scsi_sense_key() == SC_NOT_READY && scsi_sense_code() == 0x3a)
-		comerrno(EX_BAD, "No disk!\n");
-	for (i=0; i < 60 && test_unit_ready() < 0; i++)
-		sleep(1);
-	silent--;
-	if (test_unit_ready() < 0)
-		comerrno(EX_BAD, "CD-Recorder not ready.\n");
 
-	scsi_prevent_removal(1);
-	scsi_start_stop_unit(1, 0);
-	silent++;
-	while (test_unit_ready() < 0)
-		sleep(1);
-	silent--;
-	rezero_unit();
-	test_unit_ready();
-	scsi_start_stop_unit(1, 0);
+	load_media(dp);
+
 /*audioread(dp, flags);*/
 /*unload_media(dp, flags);*/
 /*return 0;*/
-	if ((*dp->cdr_getdisktype)() < 0)
+	if ((*dp->cdr_getdisktype)(dp, &ds) < 0)
 		comerrno(EX_BAD, "Cannot get disk type.\n");
 	/*
 	 * The next actions should depend on the disk type.
@@ -285,22 +295,38 @@ main(ac, av)
 		exit(0);
 	}
 	if (flags & F_TOC) {
-		print_toc();
+		print_toc(dp);
 		scsi_prevent_removal(0);
 		exit(0);
 	}
 
-	if ((*dp->cdr_set_speed_dummy)(speed, flags & F_DUMMY) < 0) {
-		errmsgno(EX_BAD, "Cannot set speed/dummy.\n");
-		unload_media(dp, flags);
-		exit(EX_BAD);
-	}
 #ifdef	XXX
 	if ((*dp->cdr_check_session)() < 0) {
 		unload_media(dp, flags);
 		exit(EX_BAD);
 	}
 #endif
+	if (tsize == 0) {
+		errmsgno(EX_BAD,
+			"WARNING: Track size unknown. Data may not fit on disk.\n");
+	} else {
+		silent++;
+		(*dp->cdr_next_wr_address)(/*i*/ 0, &startsec);
+		silent--;
+
+		if (startsec + tsize > 378000) {
+			comerrno(EX_BAD,
+				"Data will not fit on any disk.\n");
+		} else if (startsec + tsize > 333000) {
+			errmsgno(EX_BAD,
+				"WARNING: Data may not fit on standard 74min disk.\n");
+		}
+	}
+	if ((*dp->cdr_set_speed_dummy)(speed, flags & F_DUMMY) < 0) {
+		errmsgno(EX_BAD, "Cannot set speed/dummy.\n");
+		unload_media(dp, flags);
+		exit(EX_BAD);
+	}
 	/*
 	 * Last chance to quit!
 	 */
@@ -319,26 +345,68 @@ main(ac, av)
 	printf("\n");
 	if (gettimeofday(&starttime, (struct timezone *)0) < 0)
 		errmsg("Cannot get start time\n");
-	if (flags & F_FIX)
-		goto fix_it;
 
 	/*
 	 * Now we actually start writing to the CD.
 	 * XXX Check total size of the tracks and remaining size of disk.
 	 */
-	(*dp->cdr_open_session)(toctype);
+	if ((*dp->cdr_open_session)(toctype, flags & F_MULTI) < 0) {
+		errmsgno(EX_BAD, "Cannot open new session.\n");
+		unload_media(dp, flags);
+		exit(EX_BAD);
+	}
 
-	for (i = 1; i <= tracks; i++) {
-		if ((*dp->cdr_open_track)(0, track[i].secsize, track[i].sectype, track[i].tracktype) < 0)
+	/*
+	 * As long as open_session() will do nothing but
+	 * set up parameters, we may leave fix_it here.
+	 * I case we have to add an open_session() for a drive
+	 * that wants to do something that modifies the disk
+	 * We have to think about a new solution.
+	 */
+	if (flags & F_FIX)
+		goto fix_it;
+
+	/*
+	 * Need to set trackno to the real value from
+	 * the current disk status.
+	 */
+	for (i = 1, trackno = 1; i <= tracks; i++, trackno++) {
+		startsec = 0L;
+
+		/*
+		 * If the first parameter of the next two funtions is used,
+		 * it must be the "real" track number which may be different
+		 * from "i".
+		 */
+		if ((*dp->cdr_open_track)(/*i*/ 0, &track[i]) < 0) {
+			errs++;
 			break;
+		}
 
-		if (write_track_data(dp, i, &track[i]) < 0 ) {
+		if ((*dp->cdr_next_wr_address)(/*i*/ 0, &startsec) < 0) {
+			errs++;
+			break;
+		}
+		if (debug || lverbose)
+			printf("Starting new track at sector: %ld\n", startsec);
+
+		if (write_track_data(dp, i, &track[i], startsec) < 0) {
+			errs++;
 			sleep(5);
 			request_sense();
 			(*dp->cdr_close_track)(0);
 			break;
 		}
-		(*dp->cdr_close_track)(0);
+		if ((*dp->cdr_close_track)(0) < 0) {
+			/*
+			 * Check for "Dummy blocks added" message first.
+			 */
+			if (scsi_sense_key() != SC_ILLEGAL_REQUEST ||
+					scsi_sense_code() != 0xB5) {
+				errs++;
+				break;
+			}
+		}
 	}
 fix_it:
 	if (gettimeofday(&stoptime, (struct timezone *)0) < 0)
@@ -346,17 +414,22 @@ fix_it:
 	if (lverbose)
 		prtimediff("Writing  time: ", &starttime, &stoptime);
 
-	if (lverbose)
-		printf("Fixating...\n");
-	(*dp->cdr_fixate)(flags & F_MULTI, flags & F_DUMMY, toctype);
+	if ((flags & F_NOFIX) == 0) {
+		if (lverbose)
+			printf("Fixating...\n");
+		if ((*dp->cdr_fixate)(flags & F_MULTI, flags & F_DUMMY, toctype) < 0)
+			errs++;
 
-	if (gettimeofday(&fixtime, (struct timezone *)0) < 0)
-		errmsg("Cannot get fix time\n");
-	if (lverbose)
-		prtimediff("Fixating time: ", &stoptime, &fixtime);
+		if (gettimeofday(&fixtime, (struct timezone *)0) < 0)
+			errmsg("Cannot get fix time\n");
+		if (lverbose)
+			prtimediff("Fixating time: ", &stoptime, &fixtime);
+	}
 
 	unload_media(dp, flags);
-	return 0;
+
+	exit(errs?-2:0);
+	return (0);
 }
 
 LOCAL void 
@@ -367,18 +440,24 @@ usage(excode)
 		get_progname());
 
 	error("Options:\n");
+	error("\t-version	print version information and exit\n");
 	error("\t-v		be verbose\n");
 	error("\t-V		be verbose for SCSI command transport\n");
 	error("\t-debug		print additional debug messages\n");
 	error("\tdev=target	SCSI target to use as CD-Recorder\n");
+	error("\tdriver=name	user supplied driver name, use with extreme care\n");
+	error("\t-checkdrive	check if a driver for the drive is present\n");
+	error("\t-inq		do an inquiry for the drive end exit\n");
+	error("\t-scanbus	scan the SCSI bus end exit\n");
 	error("\tspeed=#		set speed of drive\n");
 	error("\t-eject		eject the disk after doing the work\n");
 	error("\t-dummy		do everything with laser turned off\n");
-	error("\t-msinfo		retrieve multi-session info for mkisofs-1.06b\n");
+	error("\t-msinfo		retrieve multi-session info for mkisofs >= 1.10\n");
 	error("\t-toc		retrieve and print TOC/PMA data\n");
 	error("\t-multi		generate a TOC that allows multi session\n");
 	error("\t		In this case default track type is CD-ROM XA2\n");
-	error("\t-fix		fixate a corrupt disk (generate a TOC)\n");
+	error("\t-fix		fixate a corrupt or unfixated disk (generate a TOC)\n");
+	error("\t-nofix		do not fixate disk after writing tracks\n");
 	error("\tbytes=#		Length of valid track data in bytes\n");
 	error("\t-audio		Subsequent tracks are CD-DA audio tracks\n");
 	error("\t-data		Subsequent tracks are CD-ROM data mode 1 tracks (default)\n");
@@ -422,10 +501,11 @@ read_buf(f, bp, size)
 }
 
 LOCAL int
-write_track_data(dp, track, trackp)
+write_track_data(dp, track, trackp, startsec)
 	cdr_t	*dp;
 	int	track;
 	track_t	*trackp;
+	long	startsec;
 {
 	int             f ;
 	int             isaudio;
@@ -496,17 +576,18 @@ write_track_data(dp, track, trackp)
 			secspt = count / secsize;
 		}
 
-		amount = (*dp->cdr_write_trackdata)(buf, 0L, bytespt, secspt);
+		amount = (*dp->cdr_write_trackdata)(buf, startsec, bytespt, secspt);
 		if (amount < 0) {
 			printf("%swrite track data: error after %d bytes\n",
 							neednl?"\n":"", bytes);
 			return (-1);
 		}
 		bytes += amount;
+		startsec += amount / secsize;
 
-		if (lverbose && (bytes > (savbytes + 0x100000))) {
+		if (lverbose && (bytes >= (savbytes + 0x100000))) {
 			printf("Track %02d: %3d\r", track, bytes >> 20);
-			savbytes = bytes;
+			savbytes = (bytes >> 20) << 20;
 			fflush(stdout);
 			neednl = TRUE;
 		}
@@ -518,13 +599,14 @@ write_track_data(dp, track, trackp)
 
 		secspt = bytespt / secsize;
 
-		amount = (*dp->cdr_write_trackdata)(buf, 0L, bytespt, secspt);
+		amount = (*dp->cdr_write_trackdata)(buf, startsec, bytespt, secspt);
 		if (amount < 0) {
 			printf("%swrite track data: error after %d bytes\n",
 							neednl?"\n":"", bytes);
 			return (-1);
 		}
 		bytes += amount;
+		startsec += amount / secsize;
 	}
 	printf("%sTrack %02d: Total bytes read/written: %d/%d (%d sectors).\n",
 	       neednl?"\n":"", track, bytes_read, bytes, bytes/secsize);
@@ -537,15 +619,13 @@ printdata(track, trackp)
 	track_t	*trackp;
 {
 	if (trackp->tracksize >= 0) {
-		printf("Track %02d: data  %3d Mb         %s %s\n",
+		printf("Track %02d: data  %3d Mb        %s\n",
 					track, trackp->tracksize >> 20,
-					is_pad(trackp) ? "pad" : "",
-					is_swab(trackp) ? "swab" : "");
+					is_pad(trackp) ? " pad" : "");
 	} else {
-		printf("Track %02d: data  unknown length %s %s\n",
+		printf("Track %02d: data  unknown length%s\n",
 					track,
-					is_pad(trackp) ? "pad" : "",
-					is_swab(trackp) ? "swab" : "");
+					is_pad(trackp) ? " pad" : "");
 	}
 }
 
@@ -689,14 +769,15 @@ raise_fdlim()
 }
 
 char	*opts =
-"help,dev*,bytes#,speed#,eject,dummy,msinfo,toc,multi,fix,debug,v,V,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab";
+"help,version,checkdrive,inq,scanbus,dev*,driver*,bytes#,speed#,eject,dummy,msinfo,toc,multi,fix,nofix,debug,v,V,audio,data,mode2,xa1,xa2,cdi,isosize,nopreemp,preemp,nopad,pad,swab";
 
 LOCAL void
-gargs(ac, av, tracksp, trackp, devp, speedp, flagsp, toctypep)
+gargs(ac, av, tracksp, trackp, devp, dpp, speedp, flagsp, toctypep)
 	int	ac;
 	char	**av;
 	int	*tracksp;
 	track_t	*trackp;
+	cdr_t	**dpp;
 	char	**devp;
 	int	*speedp;
 	int	*flagsp;
@@ -704,15 +785,21 @@ gargs(ac, av, tracksp, trackp, devp, speedp, flagsp, toctypep)
 {
 	int	cac;
 	char	* const*cav;
+	char	*driver = NULL;
 	int	tracksize;
 	int	speed = -1;
 	int	help = 0;
+	int	version = 0;
+	int	checkdrive = 0;
+	int	inq = 0;
+	int	scanbus = 0;
 	int	eject = 0;
 	int	dummy = 0;
 	int	msinfo = 0;
 	int	toc = 0;
 	int	multi = 0;
 	int	fix = 0;
+	int	nofix = 0;
 	int	audio;
 	int	data;
 	int	mode2;
@@ -740,11 +827,12 @@ gargs(ac, av, tracksp, trackp, devp, speedp, flagsp, toctypep)
 		nopreemp = 0;
 		nopad = 0;
 		if (getargs(&cac, &cav, opts,
-				&help,
-				devp,
+				&help, &version, &checkdrive,
+				&inq, &scanbus,
+				devp, &driver,
 				&tracksize, &speed,
 				&eject, &dummy, &msinfo, &toc,
-				&multi, &fix,
+				&multi, &fix, &nofix,
 				&debug, &lverbose, &verbose,
 				&audio, &data, &mode2,
 				&xa1, &xa2, &cdi,
@@ -757,6 +845,16 @@ gargs(ac, av, tracksp, trackp, devp, speedp, flagsp, toctypep)
 		if (help)
 			usage(0);
 		if (tracks == 0) {
+			if (driver)
+				set_cdrcmds(driver, dpp);
+			if (version)
+				*flagsp |= F_VERSION;
+			if (checkdrive)
+				*flagsp |= F_CHECKDRIVE;
+			if (inq)
+				*flagsp |= F_INQUIRY;
+			if (scanbus)
+				*flagsp |= F_SCANBUS;
 			if (eject)
 				*flagsp |= F_EJECT;
 			if (dummy)
@@ -769,12 +867,17 @@ gargs(ac, av, tracksp, trackp, devp, speedp, flagsp, toctypep)
 				*flagsp |= F_MULTI;
 				tracktype = TOC_XA2;
 				sectype = ST_ROM_MODE2;
+				dbtype = DB_XA_MODE2;
 			}
 			if (fix)
 				*flagsp |= F_FIX;
+			if (nofix)
+				*flagsp |= F_NOFIX;
 
-			eject = dummy = msinfo = toc = multi = fix = 0;
-		} else if ((eject + dummy + msinfo + toc + multi + fix) > 0)
+			version = checkdrive = inq = scanbus =
+			eject = dummy = msinfo = toc = multi = fix = nofix = 0;
+		} else if ((version + checkdrive + inq + scanbus +
+			    eject + dummy + msinfo + toc + multi + fix + nofix) > 0)
 			comerrno(EX_BAD, "Badly placed option. Global options must be before any track.\n");
 
 		if (nopreemp)
@@ -883,11 +986,11 @@ gargs(ac, av, tracksp, trackp, devp, speedp, flagsp, toctypep)
 		*speedp = speed;
 	if (!*devp)
 		*devp = getenv("CDR_DEVICE");
-	if (!*devp) {
+	if (!*devp && (*flagsp & (F_VERSION|F_SCANBUS)) == 0) {
 		errmsgno(EX_BAD, "No CD-Recorder device specified.\n");
 		usage(EX_BAD);
 	}
-	if (*flagsp & (F_MSINFO|F_TOC|F_FIX)) {
+	if (*flagsp & (F_MSINFO|F_TOC|F_FIX|F_VERSION|F_CHECKDRIVE|F_INQUIRY|F_SCANBUS)) {
 		if (tracks != 0) {
 			errmsgno(EX_BAD, "No tracks allowed with this option\n");
 			usage(EX_BAD);
@@ -902,7 +1005,8 @@ gargs(ac, av, tracksp, trackp, devp, speedp, flagsp, toctypep)
 }
 
 LOCAL void
-set_trsizes(tracks, trackp)
+set_trsizes(dp, tracks, trackp)
+	cdr_t	*dp;
 	int	tracks;
 	track_t	*trackp;
 {
@@ -922,10 +1026,48 @@ set_trsizes(tracks, trackp)
 			is_audio(&trackp[i]) ?
 				audio_secs_per_tr :
 				data_secs_per_tr;
+		if ((dp->cdr_flags & CDR_SWABAUDIO) != 0 &&
+					is_audio(&trackp[i])) {
+			trackp[i].flags ^= TI_SWAB;
+		}
 	}
 }
 
-LOCAL void
+EXPORT void
+load_media(dp)
+	cdr_t	*dp;
+{
+	register int	i;
+
+	/*
+	 * Do some preparation before...
+	 */
+	silent++;			/* Be quiet if this fails	*/
+	(*dp->cdr_load)();		/* First try to load media and	*/
+	scsi_start_stop_unit(1, 0);	/* start unit in silent mode	*/
+	silent--;
+	silent++;
+	test_unit_ready();
+	if (scsi_sense_key() == SC_NOT_READY && scsi_sense_code() == 0x3a)
+		comerrno(EX_BAD, "No disk!\n");
+	for (i=0; i < 60 && test_unit_ready() < 0; i++)
+		sleep(1);
+	silent--;
+	if (test_unit_ready() < 0)
+		comerrno(EX_BAD, "CD-Recorder not ready.\n");
+
+	scsi_prevent_removal(1);
+	scsi_start_stop_unit(1, 0);
+	silent++;
+	while (test_unit_ready() < 0)
+		sleep(1);
+	silent--;
+	rezero_unit();
+	test_unit_ready();
+	scsi_start_stop_unit(1, 0);
+}
+
+EXPORT void
 unload_media(dp, flags)
 	cdr_t	*dp;
 	int	flags;
@@ -974,18 +1116,19 @@ print_msinfo(dp)
 	long	off;
 	long	fa;
 
-	if ((off = read_session_offset()) < 0)
+	if ((*dp->cdr_session_offset)(&off) < 0)
 		comerrno(EX_BAD, "Cannot read session offset\n");
 	if (lverbose)
 		printf("session offset: %ld\n", off);
 
-	if ((fa = dp->cdr_next_wr_address(0)) < 0)
+	if (dp->cdr_next_wr_address(0, &fa) < 0)
 		comerrno(EX_BAD, "Cannot read first writable address\n");
 	printf("%ld,%ld\n", off, fa);
 }
 
 LOCAL void
-print_toc()
+print_toc(dp)
+	cdr_t	*dp;
 {
 	int	first;
 	int	last;
@@ -995,16 +1138,25 @@ print_toc()
 	int	control;
 	int	mode;
 	int	i;
+extern	struct scsi_capacity	cap;
 
-	if (read_tochdr(&first, &last) < 0)
+	silent++;
+	if (read_capacity() < 0)
+		comerrno(EX_BAD, "Cannot read capacity\n");
+	silent--;
+	if (read_tochdr(dp, &first, &last) < 0)
 		comerrno(EX_BAD, "Cannot read TOC/PMA\n");
 	printf("first: %d last %d\n", first, last);
 	for (i = first; i <= last; i++) {
 		read_trackinfo(i, &lba, &msf, &adr, &control, &mode);
+		if (cap.c_bsize == 512)
+			lba /= 4;
 		print_track(i, lba, &msf, adr, control, mode);
 	}
 	i = 0xAA;
 	read_trackinfo(i, &lba, &msf, &adr, &control, &mode);
+	if (cap.c_bsize == 512)
+		lba /= 4;
 	print_track(i, lba, &msf, adr, control, mode);
 }
 
@@ -1017,8 +1169,15 @@ print_track(track, lba, msp, adr, control, mode)
 	int	control;
 	int	mode;
 {
-	printf("track: %3d lba: %9ld (%9ld) %02d:%02d:%02d adr: %X control: %X mode: %d\n",
-			track, lba, lba/4,
+	long	lba_512 = lba*4;
+
+	if (track == 0xAA)
+		printf("track:lout ");
+	else
+		printf("track: %3d ", track);
+
+	printf("lba: %9ld (%9ld) %02d:%02d:%02d adr: %X control: %X mode: %d\n",
+			lba, lba_512,
 			msp->msf_min,
 			msp->msf_sec,
 			msp->msf_frame,

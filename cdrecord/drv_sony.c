@@ -1,7 +1,7 @@
-/* @(#)drv_sony.c	1.1 97/05/20 Copyright 1997 J. Schilling */
+/* @(#)drv_sony.c	1.8 97/09/10 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_sony.c	1.1 97/05/20 Copyright 1997 J. Schilling";
+	"@(#)drv_sony.c	1.8 97/09/10 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -150,14 +150,14 @@ LOCAL	int	write_track_sony	__PR((long track, int sectype));
 LOCAL	int	close_track_sony	__PR((int track));
 LOCAL	int	finalize_sony		__PR((int onp, int dummy, int type));
 LOCAL	int	recover_sony		__PR((int track));
-LOCAL	long	next_wr_addr_sony	__PR((int track));
+LOCAL	int	next_wr_addr_sony	__PR((int track, long *ap));
 LOCAL	int	reserve_track_sony	__PR((unsigned long len));
 LOCAL	int	reserve_track_sony	__PR((unsigned long len));
 LOCAL	int	speed_select_sony	__PR((int speed, int dummy));
-LOCAL	long	next_writable_address_sony __PR((int track, int sectype, int tracktype));
+LOCAL	int	next_writable_address_sony __PR((long *ap, int track, int sectype, int tracktype));
 LOCAL	int	new_track_sony		__PR((int track, int sectype, int tracktype));
-LOCAL	int	open_track_sony		__PR((int track, int secsize, int sectype, int tracktype));
-LOCAL	int	open_session_sony	__PR((int toctype));
+LOCAL	int	open_track_sony		__PR((int track, track_t *track_info));
+LOCAL	int	open_session_sony	__PR((int toctype, int multi));
 LOCAL	int	sony_attach		__PR((void));
 #ifdef	SONY_DEBUG
 LOCAL	void	print_sony_mp22		__PR((struct sony_924_mode_page_22 *xp, int len));
@@ -165,7 +165,10 @@ LOCAL	void	print_sony_mp23		__PR((struct sony_924_mode_page_23 *xp, int len));
 #endif
 
 cdr_t	cdr_sony_cdu924 = {
-	0, 0,
+	0,
+	CDR_TAO|CDR_DAO|CDR_CADDYLOAD|CDR_SWABAUDIO,
+	"sony_cdu924",
+	"driver for Sony CDU-924",
 	drive_identify,
 	sony_attach,
 	drive_getdisktype,
@@ -182,6 +185,7 @@ cdr_t	cdr_sony_cdu924 = {
 	close_track_sony,
 	open_session_sony,
 	cmd_dummy,
+	read_session_offset_philips,
 	finalize_sony,
 };
 
@@ -301,11 +305,14 @@ recover_sony(track)
 	return (0);
 }
 
-LOCAL long
-next_wr_addr_sony(track)
+LOCAL int
+next_wr_addr_sony(track, ap)
 	int	track;
+	long	*ap;
 {
-	return (next_writable_address_sony(0, 0, 0));
+	if (next_writable_address_sony(ap, 0, 0, 0) < 0)
+		return (-1);
+	return (0);
 }
 
 LOCAL int
@@ -371,8 +378,9 @@ speed_select_sony(speed, dummy)
 	return (mode_select((u_char *)&md, count, 0, 1));
 }
 
-LOCAL long
-next_writable_address_sony(track, sectype, tracktype)
+LOCAL int
+next_writable_address_sony(ap, track, sectype, tracktype)
+	long	*ap;
 	int	track;
 	int	sectype;
 	int	tracktype;
@@ -383,13 +391,13 @@ next_writable_address_sony(track, sectype, tracktype)
 	int			page = 0x23;
 	struct sony_924_mode_page_23	*xp;
 
-	fillbytes((caddr_t)&mode, sizeof(mode), '\0');
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	(void)test_unit_ready();
 	verbose++;
 	if (mode_sense((u_char *)mode, len, page, 0) < 0) {	/* Page n current */
 		verbose--;
-		return (FALSE);
+		return (-1);
 	} else {
 		len = ((struct scsi_mode_header *)mode)->sense_data_len + 1;
 	}
@@ -404,7 +412,9 @@ next_writable_address_sony(track, sectype, tracktype)
 #ifdef	SONY_DEBUG
 	print_sony_mp23(xp, len);
 #endif
-	return (a_to_u_long(xp->next_recordable_addr));
+	if (ap)
+		*ap = a_to_u_long(xp->next_recordable_addr);
+	return (0);
 }
 
 
@@ -421,13 +431,13 @@ new_track_sony(track, sectype, tracktype)
 	struct sony_924_mode_page_23	*xp;
 	int	i;
 
-	fillbytes((caddr_t)&mode, sizeof(mode), '\0');
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	(void)test_unit_ready();
 	verbose++;
 	if (mode_sense((u_char *)mode, len, page, 0) < 0) {	/* Page n current */
 		verbose--;
-		return (FALSE);
+		return (-1);
 	} else {
 		len = ((struct scsi_mode_header *)mode)->sense_data_len + 1;
 	}
@@ -469,7 +479,7 @@ new_track_sony(track, sectype, tracktype)
 								0);
 	}
 
-	if (mode_select((u_char *)mode, len, 0, inq.ansi_version >= 2) < 0) {
+	if (mode_select((u_char *)mode, len, 0, inq.data_format >= 2) < 0) {
 		return (-1);
 	}
 
@@ -477,19 +487,17 @@ new_track_sony(track, sectype, tracktype)
 }
 
 LOCAL int
-open_track_sony(track, secsize, sectype, tracktype)
+open_track_sony(track, track_info)
 	int	track;
-	int	secsize;
-	int	sectype;
-	int	tracktype;
+	track_t *track_info;
 {
-	if (select_secsize(secsize) < 0)
+	if (select_secsize(track_info->secsize) < 0)
 		return (-1);
 
-	if (new_track_sony(track, sectype, tracktype) < 0)
+	if (new_track_sony(track, track_info->sectype, track_info->tracktype) < 0)
 		return (-1);
 
-	if (write_track_sony(0L, sectype) < 0)
+	if (write_track_sony(0L, track_info->sectype) < 0)
 		return (-1);
 
 	return (0);
@@ -504,8 +512,9 @@ LOCAL int	sony_toc2disk[] = {
 };
 
 LOCAL int
-open_session_sony(toctype)
+open_session_sony(toctype, multi)
 	int	toctype;
+	int	multi;
 {
 	struct	scsi_mode_page_header *mp;
 	char			mode[256];
@@ -514,13 +523,13 @@ open_session_sony(toctype)
 	int	page = 0x22;
 	struct sony_924_mode_page_22	*xp;
 
-	fillbytes((caddr_t)&mode, sizeof(mode), '\0');
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	(void)test_unit_ready();
 	verbose++;
 	if (mode_sense((u_char *)mode, len, page, 0) < 0) {	/* Page n current */
 		verbose--;
-		return (FALSE);
+		return (-1);
 	} else {
 		len = ((struct scsi_mode_header *)mode)->sense_data_len + 1;
 	}
@@ -547,7 +556,7 @@ open_session_sony(toctype)
 								0);
 	}
 
-	if (mode_select((u_char *)mode, len, 0, inq.ansi_version >= 2) < 0) {
+	if (mode_select((u_char *)mode, len, 0, inq.data_format >= 2) < 0) {
 		return (-1);
 	}
 	return (0);

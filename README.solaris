@@ -23,3 +23,9 @@ The reason:
 	point numbers correctly if e.g. in "de" locale (Germany)
 	1.3 will be interpreted as 1.0!!!!
 	*** patch available ***
+
+If you want to do compilations on Solaris, it is best not have /usr/ucb
+in your PATH. If you want to have /usr/ucb in the PATH it must be the last
+entry.
+
+For CD-Recording please read the README.volmgt too.

@@ -1,3 +1,33 @@
+Short overview for those who don't read manuals:
+
+	You **need** either my "smake" program, the SunPRO make 
+	from /usr/bin/make (SunOS 4.x) or /usr/ccs/bin/make (SunOS 5.x)
+	or GNU make to compile this program.
+
+	All other make programs are either not smart enough or have bugs.
+
+	My "smake" is (in binary form) in the makefiles distribution 
+
+	on: ftp://ftp.fokus.gmd.de/pub/unix/makefiles
+
+	If you have the choice between all three make programs, the
+	preference would be 
+
+		1)	smake		(preferred)
+		2)	SunPRO make
+		3)	GNU make	(this is the last resort)
+
+	Important notice: "smake" that comes with SGI/IRIX will not work!!!
+
+	Please read the README's for your operating system too.
+
+			WARNING
+	Do not use 'mc' to extract the tar file!
+	All mc versions before 4.0.14 cannot extract symbolic links correctly.
+
+
+Here comes the long form:
+
 This program uses a new makefile system. The makefile system is optimized 
 for a program called 'smake' Copyright 1985 by Jörg Schilling,
 but SunPro make (the make program that comes with SunOS >= 4.0 and Solaris)

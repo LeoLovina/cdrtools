@@ -1,0 +1,17 @@
+***************
+*** 21,27 ****
+     along with this program; if not, write to the Free Software
+     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+  
+! static char rcsid[] ="$Id: name.c,v 1.5 1997/05/17 15:45:07 eric Exp $";
+  
+  #include "mkisofs.h"
+  
+--- 21,27 ----
+     along with this program; if not, write to the Free Software
+     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+  
+! static char rcsid[] ="$Id: name.c,v 1.6 1997/06/27 11:07:04 eric Exp $";
+  
+  #include "mkisofs.h"
+  

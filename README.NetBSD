@@ -1,0 +1,19 @@
+NOTE: you should also read README.xxxBSD
+
+The sparc hostadapter driver software in NetBSD has a bug:
+
+An internal copy of the SCSI status byte will never be updated.
+However, this internal copy is always returned so the 
+SCSI library always belives that an error occured.
+
+As this implementation bug makes it impossible to sense
+other error/excption contditions the driver needs to be fixed.
+
+As a workaround you can activate a hack in the file scsi-bsd.c
+by using
+
+./Gmake COPTX=-DBSD_SCSI_SENSE_BUG
+
+to compile cdrecord
+
+Jörg

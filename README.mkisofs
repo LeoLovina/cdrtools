@@ -7,8 +7,15 @@ I changed the make system to use my make file system.
 Read the file README.multi to learn how to create multi-session
 CD-R's with this release of cdrecord and mkisofs.
 
-You definitely need this patched release of mkisofs-1.11 to 
-create multi-session CD-R's on SunOS.
+Read the file README.cdplus to learn how to create CD-plus/CD-extra
+CD-R's with this release of cdrecord and mkisofs.
 
+You definitely need this patched release of mkisofs-1.11 to 
+create multi-session CD-R's on SunOS/Solaris/SGI-IRIX.
+
+The current version includes a patch from me that corrects the 
+Volume descriptor time bug.
+It also includes a patch from the author to correct a bug in
+creating iso9660 conformant file names.
 
 Joerg Schiling

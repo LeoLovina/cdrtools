@@ -1,4 +1,4 @@
-/* @(#)format.c	1.23 97/04/27 Copyright 1985 J. Schilling */
+/* @(#)format.c	1.25 97/09/04 Copyright 1985 J. Schilling */
 /*
  *	format
  *	common code for printf fprintf & sprintf
@@ -18,7 +18,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -336,6 +336,14 @@ EXPORT int format(fun, farg, fmt, args)
 			gcvt(dval, fa.signific, buf);
 			count += prbuf(buf, &fa);
 			continue;
+#else
+#	ifdef	USE_FLOATINGARGS
+		case 'e':
+		case 'f':
+		case 'g':
+			dval = va_arg(args, double);
+			continue;
+#	endif
 #endif
 
 		case 'r':			/* recursive printf */
@@ -418,6 +426,9 @@ EXPORT int format(fun, farg, fmt, args)
 			/*
 			 * Printing '0' with fieldwidth 0 results in no chars.
 			 */
+			fa.lzero = -1;
+			if (fa.signific >= 0)
+				fa.fillc = ' ';
 			count += prstring("0", &fa);
 			continue;
 		} else switch(mode) {
@@ -647,6 +658,7 @@ LOCAL int prstring(s, fa)
 	f_args *fa;
 {
 	register char	*bp;
+	register int	signific;
 
 	if (s == NULL)
 		return (prbuf("(NULL POINTER)", fa));
@@ -655,8 +667,9 @@ LOCAL int prstring(s, fa)
 		return (prbuf(s, fa));
 
 	bp = fa->buf;
+	signific = fa->signific;
 
-	while (--fa->signific >= 0 && *s != '\0')
+	while (--signific >= 0 && *s != '\0')
 		*bp++ = *s++;
 	*bp = '\0';
 

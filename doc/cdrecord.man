@@ -18,24 +18,32 @@ DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
      Orange Book CD-Recorder.
 
      The _d_e_v_i_c_e refers to _s_c_s_i_b_u_s/_t_a_r_g_e_t/_l_u_n of the  CD-Recorder.
-     Communication is done with the SCSI general driver ssssccccgggg.... Pos-
-     sible syntax is:  _s_c_s_i_b_u_s,_t_a_r_g_e_t,_l_u_n or _t_a_r_g_e_t,_l_u_n.  In  the
-     latter  case,  the  CD-Recorder  has  to be connected to the
-     default SCSI bus of the machine.
+     Communication  on _S_u_n_O_S is done with the SCSI general driver
+     ssssccccgggg.... Other operating systems are using a library  simulation
+     of    this    driver.     Possible    syntax    is:     ddddeeeevvvv====
+     _s_c_s_i_b_u_s,_t_a_r_g_e_t,_l_u_n or ddddeeeevvvv==== _t_a_r_g_e_t,_l_u_n.  In the latter  case,
+     the  CD-Recorder has to be connected to the default SCSI bus
+     of the machine.
 
-     _S_c_s_i_b_u_s , _t_a_r_g_e_t and _l_u_n are integer numbers. _S_c_s_i_b_u_s  0  is
-     the default SCSI bus on the machine. Watch the boot messages
-     for more information or look into ////vvvvaaaarrrr////aaaaddddmmmm////mmmmeeeessssssssaaaaggggeeeessss for more
-     information about the SCSI configuration of your machine.
+     _S_c_s_i_b_u_s,  _t_a_r_g_e_t  and  _l_u_n  are  integer  numbers.  To  make
+     ccccddddrrrreeeeccccoooorrrrdddd  portable to all UNIX platforms, there is no way to
+     specify a real device file name.  _S_c_s_i_b_u_s 0 is  the  default
+     SCSI  bus  on  the machine. Watch the boot messages for more
+     information or look into ////vvvvaaaarrrr////aaaaddddmmmm////mmmmeeeessssssssaaaaggggeeeessss for more informa-
+     tion about the SCSI configuration of your machine.
 
      Each _t_r_a_c_k corresponds to a single file  that  contains  the
      prepared data for that track.  If the argument is `----', stan-
-     dard input is used for that track.
+     dard input is used for that track. There  may  only  be  one
+     track that is taken from _s_t_d_i_n.
 
 
 GGGGEEEENNNNEEEERRRRAAAALLLL OOOOPPPPTTTTIIIIOOOONNNNSSSS
      General options must be before any track file name or  track
      option.
+
+     ----vvvveeeerrrrssssiiiioooonnnn
+          Print version information and exit.
 
      ----vvvv    Be verbose during work, display the  progress  of  the
           writing process.
@@ -49,18 +57,10 @@ GGGGEEEENNNNEEEERRRRAAAALLLL OOOOPPPPTTTTIIIIO
 
      ----ddddeeeebbbbuuuugggg
           Print additional debug messages. This may help to  find
-          out problems with sector sizes and sector types.  Using
-          ----ddddeeeebbbbuuuugggg slows down the process and may be the reason for
-          a buffer underrun.
-
-     ----dddduuuummmmmmmmyyyy
-          The CD-Recorder  will  go  through  all  steps  of  the
-          recording  process,  but the laser is turned off during
-          this procedure.  It is recommended to run several tests
 
 
 
-Joerg Schilling     Last change: Version 1.4                    1
+Joerg Schilling     Last change: Version 1.5                    1
 
 
 
@@ -71,6 +71,14 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
 
+          out problems with sector sizes and sector types.  Using
+          ----ddddeeeebbbbuuuugggg slows down the process and may be the reason for
+          a buffer underrun.
+
+     ----dddduuuummmmmmmmyyyy
+          The CD-Recorder  will  go  through  all  steps  of  the
+          recording  process,  but the laser is turned off during
+          this procedure.  It is recommended to run several tests
           before  actually writing to a Compact Disk, if the tim-
           ing and load response of the system is not known.
 
@@ -101,6 +109,13 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           Reader  will be written). This may be used, if for some
           reason the disk has been written but not fixated.
 
+     ----nnnnooooffffiiiixxxx
+          Do not fixate the disk after writing the  tracks.  This
+          may be used to create an audio disk in steps. An unfix-
+          ated disk can usually not be used on  a  non  CD-writer
+          type  drive but there are audio CD players that will be
+          able to play such a disk.
+
      ----eeeejjjjeeeecccctttt
           Eject disk after doing the work.   Some  Devices  (e.g.
           Philips) need to eject the medium before creating a new
@@ -108,25 +123,10 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           real disk would not work on these devices.
 
      ssssppppeeeeeeeedddd====####
-          Set the speed factor of the writing process to #.  # is
-          an integer, representing a multiple of the audio speed.
-          This is about 151 KB/s for CD-ROM and  about  175  KB/s
-          for  CD-Audio.  If no _s_p_e_e_d option is present, ccccddddrrrreeeeccccoooorrrrdddd
-          will try to get the  speed  value  from  the  CCCCDDDDRRRR____SSSSPPPPEEEEEEEEDDDD
-          environment.  If you drive has problems with _s_p_e_e_d=_2 or
-          _s_p_e_e_d=_4, you should try _s_p_e_e_d=_0.
-
-     ddddeeeevvvv====_t_a_r_g_e_t
-          Sets the SCSI target for  the  CD-Recorder,  see  notes
-          above.   If no _d_e_v option is present, ccccddddrrrreeeeccccoooorrrrdddd will try
-          to get the device from the CCCCDDDDRRRR____DDDDEEEEVVVVIIIICCCCEEEE environment.
 
 
 
-
-
-
-Joerg Schilling     Last change: Version 1.4                    2
+Joerg Schilling     Last change: Version 1.5                    2
 
 
 
@@ -135,6 +135,45 @@ Joerg Schilling     Last change: Version 1.4                    2
 
 CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
+
+
+          Set the speed factor of the writing process to #.  # is
+          an integer, representing a multiple of the audio speed.
+          This is about 150 KB/s for CD-ROM and  about  172  KB/s
+          for  CD-Audio.  If no _s_p_e_e_d option is present, ccccddddrrrreeeeccccoooorrrrdddd
+          will try to get the  speed  value  from  the  CCCCDDDDRRRR____SSSSPPPPEEEEEEEEDDDD
+          environment.   If  your drive has problems with _s_p_e_e_d=_2
+          or _s_p_e_e_d=_4, you should try _s_p_e_e_d=_0.
+
+     ddddeeeevvvv====_t_a_r_g_e_t
+          Sets the SCSI target for  the  CD-Recorder,  see  notes
+          above.   If no _d_e_v option is present, ccccddddrrrreeeeccccoooorrrrdddd will try
+          to get the device from the CCCCDDDDRRRR____DDDDEEEEVVVVIIIICCCCEEEE environment.
+
+     ddddrrrriiiivvvveeeerrrr====_n_a_m_e
+          Allows to use a user supplied driver name for the  dev-
+          ice.    To   get   a   list  of  possible  drivers  use
+          ddddrrrriiiivvvveeeerrrr====hhhheeeellllpppp.  The reason  for  the  existence  of  this
+          option  is  to  allow users to use ccccddddrrrreeeeccccoooorrrrdddd with drives
+          that are similar to  supported  drives  but  not  known
+          directly  by  ccccddddrrrreeeeccccoooorrrrdddd.   Use  this option with extreme
+          care. If a wrong driver is used for a device, the  pos-
+          sibility  of  creating  corrupted  disks  is high.  The
+          minimum problem related to a wrong driver is that the ----
+          ssssppppeeeeeeeedddd or ----dddduuuummmmmmmmyyyy will not work.
+
+     ----cccchhhheeeecccckkkkddddrrrriiiivvvveeee
+          Checks if a driver for the current drive is present and
+          exit.   If  the  drive  is a known drive, ccccddddrrrreeeeccccoooorrrrdddd uses
+          exit code 0.
+
+     ----iiiinnnnqqqq  Do an inquiry for the drive, print  the  inquiry  info
+          and exit.
+
+     ----ssssccccaaaannnnbbbbuuuussss
+          Scan all SCSI devices on all SCSI busses and print  the
+          inquiry  strings.  This option may be used to find SCSI
+          address of the CD-Recorder on a system.
 
 
 TTTTRRRRAAAACCCCKKKK OOOOPPPPTTTTIIIIOOOONNNNSSSS
@@ -150,16 +189,41 @@ TTTTRRRRAAAACCCCKKKK OOOOPPPPTTTTIIIIOOOONNNNS
           should be a multiple of 2352 bytes. It is not  possible
           to put the master image of an audio track on a raw disk
           because data will be read in  multiple  of  2352  bytes
-          during the recording process.
+
+
+
+Joerg Schilling     Last change: Version 1.5                    3
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
+
+          during  the  recording  process.  The audio data stream
+          must not have any headers.  Using  audio  data  formats
+          with  headers as input to ccccddddrrrreeeeccccoooorrrrdddd will usually work if
+          the structure of the data is  the  structure  described
+          above  but  you  will  hear  a  click at the start of a
+          track.
 
      ----sssswwwwaaaabbbb
-          If this flag is present, audio data is  swapped  before
-          writing  to  CD.   This  is needed on some types of CD-
-          Writers e.g. Yamaha and Sony because they are using the
-          wrong  byte order for audio data (they are ignoring the
-          fact that the SCSI-protocol  otherwise  correctly  uses
-          network  byte  order). In a future release ccccddddrrrrwwwwiiiitttteeee will
-          know itself which CD-Recorder needs byte swapping.
+          If this flag is present, swapped audio data may be used
+          for  writing  to  CD.   Some  types  of CD-Writers e.g.
+          Yamaha, Sony and the new SCSI-3/mmc  drives  are  using
+          the  wrong byte order for audio data, ignoring the fact
+          that the SCSI-protocol otherwise correctly uses network
+          (big  endian)  byte  order.  CCCCddddrrrreeeeccccoooorrrrdddd  knows  if  a CD-
+          Recorder needs byte  swapping  and  corrects  the  byte
+          order  of  the  data stream to the byte order described
+          with the -_a_u_d_i_o flag.  You only need the -_s_w_a_b flag  if
+          your  data stream is in Intel byte order. Note that the
+          verbose output of ccccddddrrrreeeeccccoooorrrrdddd instead will not show you if
+          the -_s_w_a_b flag was present for a track.  CCCCddddrrrreeeeccccoooorrrrdddd shows
+          you if it really needs to swab that track.
 
      ----ddddaaaattttaaaa
           If this flag is  present,  all  subsequent  tracks  are
@@ -190,9 +254,11 @@ TTTTRRRRAAAACCCCKKKK OOOOPPPPTTTTIIIIOOOONNNNS
           written  in  CCCCDDDDIIII format. The data is a multiple of 2048
           bytes.
 
+     ----iiiissssoooossssiiiizzzzeeee
 
 
-Joerg Schilling     Last change: Version 1.4                    3
+
+Joerg Schilling     Last change: Version 1.5                    4
 
 
 
@@ -203,20 +269,31 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
 
-     ----iiiissssoooossssiiiizzzzeeee
           Use the IIIISSSSOOOO----9999666666660000 file system size as the  size  of  the
-          next track.  This currently cannot be used to determine
-          the size of a file system if the multi  session  option
-          is present.
+          next  track.  This option is needed if you want to read
+          the image of a track from a raw disk partition or on  a
+          master  CD.  In  the  first case the option ----iiiissssoooossssiiiizzzzeeee is
+          needed to limit the size of the CD to the size  of  the
+          iso filesystem.  In the second case the option ----iiiissssoooossssiiiizzzzeeee
+          is needed to prevent ccccddddrrrreeeeccccoooorrrrdddd from reading the two  run
+          out  blocks  that  are  appended by each CD-recorder in
+          track at once mode. These two run out blocks cannot  be
+          read and would cause a buffer underrun that would cause
+          e defective copy.  Do not use this option  if  ccccddddrrrreeeeccccoooorrrrdddd
+          reads the track data from _s_t_d_i_n.  This option currently
+          cannot be used to determine the size of a  file  system
+          if the multi session option is present.
 
      ----ppppaaaadddd  If the track is a data track,  15  sectors  of  zeroed
           data  will  be added to the end of this and each subse-
-          quent data track.  Use this if  your  CD-drive  is  not
-          able  to read the last sectors of a track. If the track
-          is an audio track, ccccddddrrrreeeeccccoooorrrrdddd will pad the audio data  to
-          be  a multiple of 2352 bytes. The audio data padding is
-          done with binary zeroes  which  is  equal  to  absolute
-          silence.
+          quent data track.  Use this option if your CD-drive  is
+          not  able to read the last sectors of a track or if you
+          want to read to be able to read the CD on a LLLLiiiinnnnuuuuxxxx  sys-
+          tem with the iso9660 filesystem read ahead bug.  If the
+          -_p_a_d option refers to an audio track, ccccddddrrrreeeeccccoooorrrrdddd will pad
+          the  audio  data  to  be  a multiple of 2352 bytes. The
+          audio data padding is done with binary zeroes which  is
+          equal to absolute silence.
 
      ----nnnnooooppppaaaadddd
           Do not pad the following tracks - the default.
@@ -239,9 +316,23 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
           amount of data on this disk. If the image of  the  next
           track  is  stored  in  a regular file, the size of that
           file is taken to determine the length  of  this  track.
-          The  iiiissssoooossssiiiizzzzeeee  program,  usually included in the mmmmkkkkiiiissssooooffffssss
-          distribution, can be used to determine the length of an
-          ISO 9660 filesystem image.
+          If  the track contains an ISO 9660 filesystem image use
+          the -_i_s_o_s_i_z_e option to determine  the  length  of  that
+          filesystem image.
+
+
+
+
+
+Joerg Schilling     Last change: Version 1.5                    5
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
 
 
 EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
@@ -253,21 +344,6 @@ EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
      file _c_d_i_m_a_g_e._r_a_w:
 
          cdrecord -v speed=2 dev=2,0 cdimage.raw
-
-
-
-
-
-Joerg Schilling     Last change: Version 1.4                    4
-
-
-
-
-
-
-CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
-
-
 
      To create an image for a ISO 9660 filesystem with Rock Ridge
      extensions:
@@ -311,20 +387,10 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      mkisofs  at  no  more than priority 58. On SunOS, you should
      run mkisofs at no less than nice -18.
 
-     Creating a CD-ROM without file system image on disk has been
-     tested  on  a  Sparcstation-2  with a Yamaha CDR-100. It did
-     work up to double speed.  A faster machine may  be  able  to
-     handle quad speed also.
-
-     To record a pure CD-DA (audio) at single  speed,  with  each
-     track   contained   in   a   file   named   _t_r_a_c_k_0_1._c_d_a_u_d_i_o,
-     _t_r_a_c_k_0_2._c_d_a_u_d_i_o, etc:
 
 
 
-
-
-Joerg Schilling     Last change: Version 1.4                    5
+Joerg Schilling     Last change: Version 1.5                    6
 
 
 
@@ -334,6 +400,15 @@ Joerg Schilling     Last change: Version 1.4                    5
 CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
+
+     Creating a CD-ROM without file system image on disk has been
+     tested  on  a  Sparcstation-2  with a Yamaha CDR-100. It did
+     work up to double speed.  A faster machine may  be  able  to
+     handle quad speed also.
+
+     To record a pure CD-DA (audio) at single  speed,  with  each
+     track   contained   in   a   file   named   _t_r_a_c_k_0_1._c_d_a_u_d_i_o,
+     _t_r_a_c_k_0_2._c_d_a_u_d_i_o, etc:
 
          cdrecord -v speed=1 dev=2,0 -audio track*.cdaudio
 
@@ -356,20 +431,13 @@ SSSSEEEEEEEE AAAALLLLSSSSOOOO
 
 NNNNOOOOTTTTEEEESSSS
      The current version of ccccddddrrrreeeeccccoooorrrrdddd will only  record  ttttrrrraaaacccckkkk  aaaatttt
-     oooonnnncccceeee  Yellow  Book  Compatible  Discs.  If the so made disks
-     contain more than one  track,  they  are  not  suitable  for
-     direct  mass  production by CD manufacturers.  You will need
-     the ddddiiiisssskkkk aaaatttt oooonnnncccceeee option to record such disks.   Nevertheless
-     the disks made with ccccddddrrrreeeeccccoooorrrrdddd will normally be read in all CD
-     players. Some old players however may produce a  two  second
-     click between two audio tracks.
-
-     You should not use the ----mmmmuuuullllttttiiii flag, unless you know that you
-     really  want  to  create  a  multi  session CD.  As ccccddddrrrreeeeccccoooorrrrdddd
-     currently has no support  to  retrieve  the  first  writable
-     address  for  the  next  session,  multi  session  CD's  are
-     currently not possible. We will need a modified  mmmmkkkkiiiissssooooffffssss  to
-     do this according the Kodak Photo-CD spec.
+     oooonnnncccceeee  Discs.   If  the  so  made disks contain more than one
+     track, they are not suitable for direct mass  production  by
+     CD  manufacturers.  You will need the ddddiiiisssskkkk aaaatttt oooonnnncccceeee option to
+     record  such  disks.   Nevertheless  the  disks  made   with
+     ccccddddrrrreeeeccccoooorrrrdddd  will  normally be read in all CD players. Some old
+     audio CD players however may  produce  a  two  second  click
+     between two audio tracks.
 
      The minimal size of a track is 4 seconds or 300 sectors.  If
      you  write  smaller  tracks,  the CD-Recorder will add dummy
@@ -385,12 +453,10 @@ NNNNOOOOTTTTEEEESSSS
      521 that has not been upgraded  will  not  work.   The  Sony
      CDU-924  has  been  tested, but does not support XA-mode2 in
      hardware.  The sony therefore cannot create conforming multi
-     session  disks.   The  Ricoh RO-1420C works, but some people
-     seem to have problems to use them with speed=2, try  speed=0
 
 
 
-Joerg Schilling     Last change: Version 1.4                    6
+Joerg Schilling     Last change: Version 1.5                    7
 
 
 
@@ -401,19 +467,27 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
 
+     session  disks.   The  Ricoh RO-1420C works, but some people
+     seem to have problems to use them with speed=2, try  speed=0
      in this case.
 
-     You should run several tests in single and double speed with
-     the  ----dddduuuummmmmmmmyyyy option turned on if you are using ccccddddrrrreeeeccccoooorrrrdddd on an
-     unknown system. Writing a CD is a realtime process. You  can
-     currently not use cdimages that are located on NNNNFFFFSSSS file sys-
-     tems.  NNNNffffssss will  not  deliver  constantly  the  needed  data
-     rates.   I used ccccddddrrrreeeeccccoooorrrrdddd with with medium load on a SS20/502
-     and even at quad speed on a Sparcstation-2 which was heavily
-     loaded, but it is recommended to leave the system as lightly
-     loaded as possible while writing a CD.   CCCCddddrrrreeeeccccoooorrrrdddd  needs  to
-     run  as root to get access to the ////ddddeeeevvvv////ssssccccgggg???? device nodes and
-     to be able to lock itself into memory.
+     The Yamaha CDR-400 and all new SCSI-3/mmc conforming  drives
+     are  supported  in  single  and multi-session.  CD-RW drives
+     like the Ricoh  MP-6200  are  currently  supported  as  CD-R
+     drives  only.  Erasing the disk or parts of the disk will be
+     added in a later version of cdrecord.
+
+     You should run several tests in all supported speeds of your
+     drive  with  the   ---- dddduuuummmmmmmmyyyy option turned on if you are using
+     ccccddddrrrreeeeccccoooorrrrdddd on an unknown system. Writing a CD  is  a  realtime
+     process. You can currently not use cdimages that are located
+     on NNNNFFFFSSSS file systems.  NNNNFFFFSSSS will not  deliver  constantly  the
+     needed data rates.  I used ccccddddrrrreeeeccccoooorrrrdddd with with medium load on
+     a SS20/502 and even at quad speed on a Sparcstation-2  which
+     was  heavily loaded, but it is recommended to leave the sys-
+     tem as lightly  loaded  as  possible  while  writing  a  CD.
+     CCCCddddrrrreeeeccccoooorrrrdddd needs to run as root to get access to the ////ddddeeeevvvv////ssssccccgggg????
+     device nodes and to be able to lock itself into memory.
 
      If you don't want to allow users to become root on your sys-
      tem, ccccddddrrrreeeeccccoooorrrrdddd may safely be installed suid root. This allows
@@ -443,20 +517,12 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      A Compact Disc can have no more than 99 tracks.
 
      When creating a disc with both audio and  data  tracks,  the
-     data should be on track 1. CDplus has not yet been tested.
-
-     Many systems are not able to read more than  a  single  data
-     track, or need special software to do so.
-
-     More information on the SCSI command set of a HP CD-Recorder
-     can be found at:
-
-          http://www.hp.com:80/isgsupport/cdr/index.html
+     data  should  be  on  track  1 otherwise wou should create a
+     CDplus disk which is a multi session  disk  with  the  first
 
 
 
-
-Joerg Schilling     Last change: Version 1.4                    7
+Joerg Schilling     Last change: Version 1.5                    8
 
 
 
@@ -466,6 +532,17 @@ Joerg Schilling     Last change: Version 1.4                    7
 CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
+
+     session  containing  the audio tracks and the following ses-
+     sion containing the data track.
+
+     Many operating systems are not able to read more than a sin-
+     gle data track, or need special software to do so.
+
+     More information on the SCSI command set of a HP CD-Recorder
+     can be found at:
+
+          http://www.hp.com/isgsupport/cdr/index.html
 
      If you have more information or  SCSI  command  manuals  for
      other CD-Recorders than Philips CDD 522 or the HP drive men-
@@ -508,21 +585,10 @@ DDDDIIIIAAAAGGGGNNNNOOOOSSSSTTTTIIIICCCCSSSS
      A typical error message for a SCSI command looks like:
 
           cdrecord: I/O error. test unit ready: scsi sendcmd: no error
-          status: 0x2 (CHECK CONDITION)
-          Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00
-          Sense Key: 0x5 Illegal Request, Code 0x25 (invalid lun) blk 0
-
-     The first line gives information about the transport of  the
-     command.   The  text  after  the first colon gives the error
-     text for the system call from the view  of  the  kernel.  It
-     usually  is:   IIII////OOOO  eeeerrrrrrrroooorrrr  unless other problems happen. The
-     next words contain a short description for the SCSI  command
-     that  fails. The rest of the line tell you if there were any
-     problems for the transport of the command over the SCSI bus.
 
 
 
-Joerg Schilling     Last change: Version 1.4                    8
+Joerg Schilling     Last change: Version 1.5                    9
 
 
 
@@ -533,6 +599,19 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
 
 
 
+          status: 0x2 (CHECK CONDITION)
+          Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00
+          Sense Key: 0x5 Illegal Request, Segment 0
+          Sense Code: 0x25 Qual 0x00 (logical unit not supported) Fru 0x0
+          Sense flags: Blk 0 (not valid)
+
+     The first line gives information about the transport of  the
+     command.   The  text  after  the first colon gives the error
+     text for the system call from the view  of  the  kernel.  It
+     usually  is:   IIII////OOOO  eeeerrrrrrrroooorrrr  unless other problems happen. The
+     next words contain a short description for the SCSI  command
+     that fails. The rest of the line tells you if there were any
+     problems for the transport of the command over the SCSI bus.
      ffffaaaattttaaaallll  eeeerrrrrrrroooorrrr means that it was not possible to transport the
      command (i.e.  no  device  present  at  the  requested  SCSI
      address).
@@ -544,19 +623,47 @@ CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
      The third line is a hex  dump  of  the  auto  request  sense
      information for the command.
 
-     The fourth line is the error text for  the  sense  bytes  if
-     available.   If  the  type of the device is known, the sense
-     data is decoded from tables in _s_c_s_i_e_r_r_s._c .
+     The fourth line is the error  text  for  the  sense  key  if
+     available, followed by the segment number that is only valid
+     if the command was a _c_o_p_y command. If the error  message  is
+     not  directly  related  to  the  current  command,  the text
+     _d_e_f_e_r_r_e_d _e_r_r_o_r is appended.
+
+     The fifth line is the error text for the sense code and  the
+     sense  qualifier if available.  If the type of the device is
+     known, the sense data is decoded from tables in _s_c_s_i_e_r_r_s._c .
+     The text is followed by the error value for a field replace-
+     able unit.
+
+     The sixth line prints the block number that  is  related  to
+     the  failed  command  and  text for several error flags. The
+     block number may not be valid.
 
      The following message is not an error:
           Track 01: Total bytes read/written: 2048/2048 (1 sectors).
           cdrecord: I/O error. flush cache: scsi sendcmd: no error
           status: 0x2 (CHECK CONDITION)
           Sense Bytes: F0 00 05 80 00 00 27 0A 00 00 00 00 B5 00 00 00 00 00
-          Sense Key: 0x5 Illegal Request, Code 0xB5 (dummy data blocks added) blk -2147483609 valid
+          Sense Key: 0x5 Illegal Request, Segment 0
+          Sense Code: 0xB5 Qual 0x00 (dummy data blocks added) Fru 0x0
+          Sense flags: Blk -2147483609 (valid)
 
      It simply notifies, that a track that is  smaller  than  the
      minimum size has been expanded to 300 sectors.
+
+
+
+
+Joerg Schilling     Last change: Version 1.5                   10
+
+
+
+
+
+
+CDRECORD(1)          Schily's USER COMMANDS           CDRECORD(1)
+
+
 
 BBBBUUUUGGGGSSSS
      CCCCddddrrrreeeeccccoooorrrrdddd should verify that the input data will fit  on  the
@@ -588,7 +695,32 @@ AAAAUUUUTTTTHHHHOOOORRRR
 
 
 
-Joerg Schilling     Last change: Version 1.4                    9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Joerg Schilling     Last change: Version 1.5                   11
 
 
 

@@ -1,0 +1,13 @@
+A first release of cdrecord has been released for SGI.
+
+SGI has a userland SCSI ioctl(2) that is very similar to my /dev/scg* design
+that I made in 1986 for SunOS/Solaris. I am using my SCSI library, you don't 
+need to link the program with -lds
+
+This cdrecord distribution contains a hacked mkisofs-1.11 that runs on SGI
+ans allows you th read a filesystem from a CD-R device with 2048 bytes 
+sector size. This is done with the SCSI user level library.
+
+I would be happy to get test reports ...
+
+Jörg

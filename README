@@ -1,6 +1,6 @@
- # @(#)README	1.8 97/05/23 Copyright 1996 J. Schilling
+ # @(#)README	1.9 97/09/15 Copyright 1996 J. Schilling
 
-This is Version 1.4 of cdrecord for Solaris/Linux
+This is Version 1.5 of cdrecord
 
 Cdrecord allows you to create CD's on a CD-Recorder.
 Cdrecord runs on:
@@ -8,17 +8,21 @@ Cdrecord runs on:
 SunOS 4.1.3 or later:	sparc.
 Solaris 2.3 or later:	sparc and x86.
 Linux:			x86 sparc and alpha.
+NetBSD/FreeBSD/OpenBSD:	x86 sparc
+SGI IRIX:		mips
+HP-UX:			hppa
 
 For multi session please read README.multi
 
 Cdrecord runs without problems on a loded Solaris system.
-On SunOS and Linux you have to test.
+On SunOS, Linux and other systems without realtime scheduler you have to test.
 
 Cdrecord has been designed with a similar user interface as cdwrite
 written by
 	Adam J. Richter <adam@yggdrasil.com>
 now maintained by
 	H. Peter Anvin <hpa@transmeta.com>
+but the dev= option is slightly different for portability.
 
 The cdrecord distribution contains a SCSI user level transport library.
 The SCSI library is suitable to talk to any SCSI device without having
@@ -28,9 +32,16 @@ SCSI device driver similar to the scg driver.
 
 On Linux cdrecord currently uses the /dev/sg? driver 
 	- you need no additional driver
+On *BSD, SGI IRIX and HP-UX the internal user level SCSI driver is used
+but you will not need an OS specific SCSU user library.
 
 On SunOS/Solaris:
 You *need* the SCSI general driver 'scg' in order to run cdrecord.
+
+SunOS 4.1.3 only:
+The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
+it is supplied binary in a loadable format.
+There is no future support, there is no non loadable support.
 
 Solaris only:
 The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
@@ -50,26 +61,53 @@ gert@fwi.uva.nl (Gert Poletiek) who did the tests.
 The bitorder problems have been eliminated.
 
 Cdrecord-1.3 or later adopts the right BUF_SIZE for each architecture.
-
-cdrecord should compile on SunOS, but you will need the scg driver for
-SunOS in this case.
-
+This is to reduce some performance problems on Solaris x86.
+It may be that the reason for this performance problems is that
+the PC-architecture has no IO-MMU and therefore is not able to do DVMA.
+If this points out to be the reason, I have to
+change the scg driver & cdrecord, but this would 
+be needed on Linux anyway.
 
 Cdrecord has been implemented with a Philips CDD 521.
 Cdrecord now is maintained with a Philips CDD-2000
 It should run also on:
 
+	DynaTec CDM-240J (see Pinnacle RCD-4x4)
+	Grundig CDR-100  (not tested)
+	Hewlett Packard 4020i
+	Hewlett Packard 6020i
+	HP C4324/C4325 (HP SureStore 4020i/6020i)
+	Hi-Val CD-R (see Pinnacle RCD-4x4)
+	JVC XR-W2010 (uses TEAC pre-alpha code - see below)
+	Kodak PCD-200 or Kodak PCD-200 Plus
+	Kodak PCD-225
+	Kodak PCD-600
+	MitsumiCR-2401-TS (not tested)
+	Olympus CDS615E
+	Philips CDD 521 (CDD521/02  Revision: 2.06 has bad firmware - seems not to work)
+	Philips CDD 521 (upgraded units only: ID: CDD521/10  Revision: 2.07)
 	Philips CDD 522
 	Philips CDD 2000
 	Philips CDD 2600
-	HP C4324/C4325	 (HP SureStore 4020i/6020i)
-	Plasmon	RF-41000
+	Pinnacle Micro RCD-5020 (see TEAC/JVC)
+	Pinnacle Micro RCD-5040 (see TEAC/JVC)
+	Pinnacle Micro RCD-4x4 (see TEAC/JVC but no auto device detect: use driver=teac_cdr50 please report inquiry)
 	Plasmon CDR 4220 (not tested)
-	Grundig CDR-100  (not tested)
-	Mitsumi	CR-2401-TS (not tested)
-	Yamaha	CDR-100
-	Yamaha	CDR-102
-	Sony	CDU-924
+	Plasmon RF-4100
+	Ricoh RO-1420C
+	Ricoh MP-6200
+	Smart & Friendly CD-R2004
+	Sony CDU920S
+	Sony CDU924S
+	Sony CDU926S
+	Sony CDU940S
+	TEAC CD-R50S (Pre-alpha support: one data track only,  use at your own risk)
+			please run each session in "script" and report errors
+	Taiyo Yuden CD-WO EW-50(please test: has been reported to be a Philips CDD-522)
+	Yamaha CDR-100
+	Yamaha CDR-102
+	Yamaha CDR-200
+	Yamaha CDR-400(Firmware revision 1.0d and up otherwise upgrade)
 
 Multi-session has not been tested with the Plasmon RF-4100
 
@@ -84,11 +122,16 @@ Solaris only:
 	SCHILYscg.i386.tar.Z	The scg driver in pkgadd format (x86).
 	SCHILYfbk.i386.tar.Z	The fbk driver in pkgadd format (x86).
 
-All Systems:
-	cdrecord-1.4.tar.gz	The cdrecord for source distribution.
+Note that the fbk driver packet is for Solaris 2.4 and not system independant.
 
-NOTE:	These tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
+All Systems:
+	cdrecord-1.5.tar.gz	The cdrecord for source distribution.
+
+NOTE:	All these tar archives are 100% ansi compatible. Solaris 2.x tar and GNU
 	tar may get some minor trouble.
+
+WARNING: Do not use 'mc' to extract the tar file!
+	All mc versions before 4.0.14 cannot extract symbolic links correctly.
 
 The files are located on:
 
@@ -100,7 +143,7 @@ If you need mkisofs, it is located on:
 
 ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/mkisofs-1.11.tar.gz
 
-but it is also contained in cdrecord-1.4
+but it is also contained in cdrecord-1.5
 
 
 
@@ -123,7 +166,7 @@ Solaris only:
 		
 
 NOTE:
-	Be very carefull. pkgadd does not check for the right target 
+	Be very careful. pkgadd does not check for the right target 
 	architecture. Do not indstall drivers for intel on sparc
 	and vice versa. You will get a corrupt system.
 
@@ -136,13 +179,14 @@ The SCSI transport library has been taken from the sformat program.
 Sformat is the first SCSI disk formatting/analyzing/repairing that runs on
 SunOS/Solaris. The first release of sformat has been made for SunOS 3.0
 (two years before Sun introduced their format utility). Sformat source
-including 10 years of competence in SCSI disk handling will be 
-available within the next few months.
+including 10 years of competence in SCSI disk handling is available
+on:
+	ftp://ftp.fokus.gmd.de/pub/unix/sformat
 
 I am interested to hear if someone is interested in a kernel based
 filesystem for Solaris that uses packet writing on the CD-Recorder.
 The filesystem will create a single session CD that may be finally converted
-to a hybride filesystem that alllows to be read as 
+to a hybrid filesystem that allows to be read as 
 ISO-9660 with Rock Ridge extensions too.
 Please mail suggestions to: wofs@schily.isdn.cs.tu-berlin.de
 

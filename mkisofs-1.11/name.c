@@ -261,7 +261,7 @@ int FDECL3(iso9660_file_length,
 	  else 
 	    {
 	      if(    (seen_dot && (chars_after_dot < 3) && ++chars_after_dot)
-		  || ((chars_before_dot < 8) && ++chars_before_dot) ) 
+		     || (!seen_dot && (chars_before_dot < 8) && ++chars_before_dot) )
 		{
 		  if(result) 
 		    {

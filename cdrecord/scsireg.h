@@ -1,4 +1,4 @@
-/* @(#)scsireg.h	1.13 97/04/13 Copyright 1987 J. Schilling */
+/* @(#)scsireg.h	1.14 97/08/24 Copyright 1987 J. Schilling */
 /*
  *	usefull definitions for dealing with CCS SCSI - devices
  *
@@ -779,6 +779,184 @@ struct ccs_mode_page_38 {		/* CCS Caching Parameters */
 	u_char	res3[8];		/* Byte 9 */
 };
 #endif
+
+#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct cd_mode_page_05 {		/* write parameters */
+	u_char	MP_P_CODE;		/* parsave & pagecode */
+	u_char	p_len;			/* 0x32 = 50 Bytes */
+	u_char	write_type	:4;	/* Session write type (PACKET/TAO...)*/
+	u_char	test_write	:1;	/* Do not actually write data	     */
+	u_char	res_2		:3;
+	u_char	track_mode	:4;	/* Track mode (Q-sub control nibble) */
+	u_char	copy		:1;	/* 1st higher gen of copy prot track ~*/
+	u_char	fp		:1;	/* Fixed packed (if in packet mode)  */
+	u_char	multi_session	:2;	/* Multi session write type	     */
+	u_char	dbtype		:4;	/* Data block type		     */
+	u_char	res_4		:4;	/* Reserved			     */
+	u_char	res_56[2];		/* Reserved			     */
+	u_char	host_appl_code	:6;	/* Host application code of disk     */
+	u_char	res_7		:2;	/* Reserved			     */
+	u_char	session_format;		/* Session format (DA/CDI/XA)	     */
+	u_char	res_9;			/* Reserved			     */
+	u_char	packet_size[4];		/* # of user datablocks/fixed packet */
+	u_char	audio_pause_len[2];	/* # of blocks where index is zero   */
+	u_char	media_cat_number[16];	/* Media catalog Number (MCN)	     */
+	u_char	ISRC[14];		/* ISRC for this track		     */
+	u_char	sub_header[4];
+	u_char	vendor_uniq[4];
+};
+
+#else				/* Motorola byteorder */
+
+struct cd_mode_page_05 {		/* write parameters */
+	u_char	MP_P_CODE;		/* parsave & pagecode */
+	u_char	p_len;			/* 0x32 = 50 Bytes */
+	u_char	res_2		:3;
+	u_char	test_write	:1;	/* Do not actually write data	     */
+	u_char	write_type	:4;	/* Session write type (PACKET/TAO...)*/
+	u_char	multi_session	:2;	/* Multi session write type	     */
+	u_char	fp		:1;	/* Fixed packed (if in packet mode)  */
+	u_char	copy		:1;	/* 1st higher gen of copy prot track */
+	u_char	track_mode	:4;	/* Track mode (Q-sub control nibble) */
+	u_char	res_4		:4;	/* Reserved			     */
+	u_char	dbtype		:4;	/* Data block type		     */
+	u_char	res_56[2];		/* Reserved			     */
+	u_char	res_7		:2;	/* Reserved			     */
+	u_char	host_appl_code	:6;	/* Host application code of disk     */
+	u_char	session_format;		/* Session format (DA/CDI/XA)	     */
+	u_char	res_9;			/* Reserved			     */
+	u_char	packet_size[4];		/* # of user datablocks/fixed packet */
+	u_char	audio_pause_len[2];	/* # of blocks where index is zero   */
+	u_char	media_cat_number[16];	/* Media catalog Number (MCN)	     */
+	u_char	ISRC[14];		/* ISRC for this track		     */
+	u_char	sub_header[4];
+	u_char	vendor_uniq[4];
+};
+
+#endif
+
+#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
+
+struct cd_mode_page_2A {		/* CD Cap / mech status */
+	u_char	MP_P_CODE;		/* parsave & pagecode */
+	u_char	p_len;			/* 0x14 = 20 Bytes */
+	u_char	cd_r_read	:1;	/* Reads CD-R  media		     */
+	u_char	cd_rw_read	:1;	/* Reads CD-RW media		     */
+	u_char	method2		:1;	/* Reads fixed packet method2 media  */
+	u_char	res_2		:5;
+	u_char	cd_r_write	:1;	/* Supports writing CD-R  media	     */
+	u_char	cd_rw_write	:1;	/* Supports writing CD-RW media	     */
+	u_char	test_write	:1;	/* Supports emulation write	     */
+	u_char	res_3		:5;	/* Reseved			     */
+	u_char	audio_play	:1;	/* Supports Audio play operation     */
+	u_char	composite	:1;	/* Deliveres composite A/V stream    */
+	u_char	digital_port_2	:1;	/* Supports digital output on port 2 */
+	u_char	digital_port_1	:1;	/* Supports digital output on port 1 */
+	u_char	mode_2_form_1	:1;	/* Reads Mode-2 form 1 media (XA)    */
+	u_char	mode_2_form_2	:1;	/* Reads Mode-2 form 2 media	     */
+	u_char	multi_session	:1;	/* Reads multi-session media	     */
+	u_char	res_4		:1;	/* Reserved			     */
+	u_char	cd_da_supported	:1;	/* Reads audio data with READ CD cmd */
+	u_char	cd_da_accurate	:1;	/* READ CD data stream is accurate   */
+	u_char	rw_supported	:1;	/* Reads R-W sub channel information */
+	u_char	rw_deint_corr	:1;	/* Reads de-interleved R-W sub chan  */
+	u_char	c2_pointers	:1;	/* Supports C2 error pointers	     */
+	u_char	ISRC		:1;	/* Reads ISRC information	     */
+	u_char	UPC		:1;	/* Reads media catalog number (UPC)  */
+	u_char	read_bar_code	:1;	/* Supports reading bar codes	     */
+	u_char	lock		:1;	/* PREVENT/ALLOW may lock media	     */
+	u_char	lock_state	:1;	/* Lock state 0=unlocked 1=locked    */
+	u_char	prevent_jumper	:1;	/* State of prev/allow jumper 0=pres */
+	u_char	eject		:1;	/* Ejects disc/cartr with STOP LoEj  */
+	u_char	res_6_4		:1;	/* Reserved			     */
+	u_char	loading_type	:3;	/* Loading mechanism type	     */
+	u_char	sep_chan_vol	:1;	/* Vol controls each channel separat */
+	u_char	sep_chan_mute	:1;	/* Mute controls each channel separat*/
+	u_char	disk_present_rep:1;	/* Changer supports disk present rep */
+	u_char	sw_slot_sel	:1;	/* Load empty slot in changer	     */
+	u_char	res_7		:4;	/* Reserved			     */
+	u_char	max_read_speed[2];	/* Max. read speed in KB/s	     */
+	u_char	num_vol_levels[2];	/* # of supported volume levels	     */
+	u_char	buffer_size[2];		/* Buffer size for the data in KB    */
+	u_char	cur_read_speed[2];	/* Current read speed in KB/s	     */
+	u_char	res_16;			/* Reserved			     */
+	u_char	res_17_0	:1;	/* Reserved			     */
+	u_char	BCK		:1;	/* Data valid on falling edge of BCK */
+	u_char	RCK		:1;	/* Set: HIGH high LRCK=left channel  */
+	u_char	LSBF		:1;	/* Set: LSB first Clear: MSB first   */
+	u_char	length		:2;	/* 0=32BCKs 1=16BCKs 2=24BCKs 3=24I2c*/
+	u_char	res_17		:2;	/* Reserved			     */
+	u_char	max_write_speed[2];	/* Max. write speed supported in KB/s*/
+	u_char	cur_write_speed[2];	/* Current write speed in KB/s	     */
+};
+
+#else				/* Motorola byteorder */
+
+struct cd_mode_page_2A {		/* CD Cap / mech status */
+	u_char	MP_P_CODE;		/* parsave & pagecode */
+	u_char	p_len;			/* 0x14 = 20 Bytes */
+	u_char	res_2		:5;
+	u_char	method2		:1;	/* Reads fixed packet method2 media  */
+	u_char	cd_rw_read	:1;	/* Reads CD-RW media		     */
+	u_char	cd_r_read	:1;	/* Reads CD-R  media		     */
+	u_char	res_3		:5;	/* Reseved			     */
+	u_char	test_write	:1;	/* Supports emulation write	     */
+	u_char	cd_rw_write	:1;	/* Supports writing CD-RW media	     */
+	u_char	cd_r_write	:1;	/* Supports writing CD-R  media	     */
+	u_char	res_4		:1;	/* Reserved			     */
+	u_char	multi_session	:1;	/* Reads multi-session media	     */
+	u_char	mode_2_form_2	:1;	/* Reads Mode-2 form 2 media	     */
+	u_char	mode_2_form_1	:1;	/* Reads Mode-2 form 1 media (XA)    */
+	u_char	digital_port_1	:1;	/* Supports digital output on port 1 */
+	u_char	digital_port_2	:1;	/* Supports digital output on port 2 */
+	u_char	composite	:1;	/* Deliveres composite A/V stream    */
+	u_char	audio_play	:1;	/* Supports Audio play operation     */
+	u_char	read_bar_code	:1;	/* Supports reading bar codes	     */
+	u_char	UPC		:1;	/* Reads media catalog number (UPC)  */
+	u_char	ISRC		:1;	/* Reads ISRC information	     */
+	u_char	c2_pointers	:1;	/* Supports C2 error pointers	     */
+	u_char	rw_deint_corr	:1;	/* Reads de-interleved R-W sub chan  */
+	u_char	rw_supported	:1;	/* Reads R-W sub channel information */
+	u_char	cd_da_accurate	:1;	/* READ CD data stream is accurate   */
+	u_char	cd_da_supported	:1;	/* Reads audio data with READ CD cmd */
+	u_char	loading_type	:3;	/* Loading mechanism type	     */
+	u_char	res_6_4		:1;	/* Reserved			     */
+	u_char	eject		:1;	/* Ejects disc/cartr with STOP LoEj  */
+	u_char	prevent_jumper	:1;	/* State of prev/allow jumper 0=pres */
+	u_char	lock_state	:1;	/* Lock state 0=unlocked 1=locked    */
+	u_char	lock		:1;	/* PREVENT/ALLOW may lock media	     */
+	u_char	res_7		:4;	/* Reserved			     */
+	u_char	sw_slot_sel	:1;	/* Load empty slot in changer	     */
+	u_char	disk_present_rep:1;	/* Changer supports disk present rep */
+	u_char	sep_chan_mute	:1;	/* Mute controls each channel separat*/
+	u_char	sep_chan_vol	:1;	/* Vol controls each channel separat */
+	u_char	max_read_speed[2];	/* Max. read speed in KB/s	     */
+	u_char	num_vol_levels[2];	/* # of supported volume levels	     */
+	u_char	buffer_size[2];		/* Buffer size for the data in KB    */
+	u_char	cur_read_speed[2];	/* Current read speed in KB/s	     */
+	u_char	res_16;			/* Reserved			     */
+	u_char	res_17		:2;	/* Reserved			     */
+	u_char	length		:2;	/* 0=32BCKs 1=16BCKs 2=24BCKs 3=24I2c*/
+	u_char	LSBF		:1;	/* Set: LSB first Clear: MSB first   */
+	u_char	RCK		:1;	/* Set: HIGH high LRCK=left channel  */
+	u_char	BCK		:1;	/* Data valid on falling edge of BCK */
+	u_char	res_17_0	:1;	/* Reserved			     */
+	u_char	max_write_speed[2];	/* Max. write speed supported in KB/s*/
+	u_char	cur_write_speed[2];	/* Current write speed in KB/s	     */
+};
+
+#endif
+
+#define	LT_CADDY	0
+#define	LT_TRAY		1
+#define	LT_POP_UP	2
+#define	LT_RES3		3
+#define	LT_CHANGER_IND	4
+#define	LT_CHANGER_CART	5
+#define	LT_RES6		6
+#define	LT_RES7		7
+
 
 struct scsi_mode_data {
 	struct scsi_mode_header		header;

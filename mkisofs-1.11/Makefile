@@ -15,9 +15,9 @@ CFILES=		mkisofs.c tree.c write.c hash.c rock.c exclude.c multi.c \
 		files.c match.c name.c fnmatch.c eltorito.c \
 		scsi.c \
 		scsi_cdr.c scsitransp.c scsierrs.c \
-		port.c
+		modes.c port.c
 LIBS=		-lschily
-#XMAKEFILE=	Makefile.man
+XMK_FILE=	Makefile.man
 
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.cmd

@@ -25,6 +25,7 @@ static char rcsid[] ="$Id: multi.c,v 1.4 1997/03/08 17:08:53 eric Rel $";
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include "config.h"

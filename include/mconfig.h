@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.13 97/05/21 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.17 97/07/17 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -91,10 +91,18 @@ extern "C" {
  *			and open(), creat(), fcntl() prototypes
  *			use sys/file.h otherwise for above constants
  *
+ * define HAVE_DIRENT_H	to use dirent.h instead of the old BSD sys/dir.h
+ * define HAVE_SYS_DIR_H to use the old BSD sys/dir.h, otherwise no readdir()
+ * define HAVE_NDIR_H	to use ndir.h
+ * define HAVE_SYS_NDIR_H to use sys/ndir.h
+ *
  * define HAVE_TERMIOS_H to use posix terminal and session control (termios.h)
  * define HAVE_TERMIO_H	to use SV terminal control (termio.h) *- no setpgrp -*
  *			Else use BSD style sgttyb and setpgrp (ioctl.h)
  *			XXX session control should be another define XXX
+ * 
+ * define HAVE_SYS_TIME_H may include sys/time.h for struct timeval
+ *			used internally in timedefs.h
  *
  * define HAVE_UTIMES	to use BSD utimes() and sys/time.h
  * define HAVE_UTIME_H	to use utime.h for the utimbuf structure declaration
@@ -268,8 +276,11 @@ extern "C" {
 #	define	HAVE_STRING_H
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
+#	define	HAVE_SYS_DIR_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_SYS_WAIT_H
@@ -318,8 +329,10 @@ extern "C" {
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_SYS_WAIT_H
@@ -360,6 +373,7 @@ extern "C" {
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
 #	define	HAVE_SYS_TIME_H
@@ -409,6 +423,7 @@ extern "C" {
 #	define	HAVE_STDARG_H
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_UTIME_H
 #	define	HAVE_MSEM
@@ -461,6 +476,7 @@ extern "C" {
 #	endif
 #	define	HAVE_STDLIB_H
 #	define	HAVE_UNISTD_H
+#	define	HAVE_SYS_DIR_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_UTIME_H
 #	define	HAVE_USGSHM
@@ -481,8 +497,10 @@ extern "C" {
 #	define	HAVE_STDARG_H
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIME_H
 #	define	HAVE_SYS_WAIT_H
 #	define	HAVE_SYS_UTSNAME_H
@@ -520,6 +538,7 @@ extern "C" {
 #	define	HAVE_ELF
 #	define	HAVE_STDARG_H
 #	define	HAVE_UNISTD_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIMES
@@ -616,8 +635,10 @@ extern "C" {
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 /*#	define	HAVE_WAIT_H*/
@@ -664,7 +685,9 @@ extern "C" {
 #	define	HAVE_STDARG_H
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_MSEM
@@ -681,10 +704,11 @@ extern "C" {
 #endif
 
 /*
- * Prototype for FreeBSD
+ * Prototype for FreeBSD / NetBSD / OpenBSD
  */
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #	define	NO_FLOATINGPOINT/* No support for nonstd floatingpoint */
+#	define	USE_FLOATINGARGS/* Use up args from floatingpoint format */
 #	define	PROTOTYPES
 #	define	HAVE_AOUT
 #	define	HAVE_STDARG_H
@@ -695,7 +719,9 @@ extern "C" {
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_SYS_WAIT_H
@@ -756,8 +782,10 @@ extern "C" {
 #	endif
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIME_H
 #	define	HAVE_WAIT_H
 #	define	HAVE_SYS_WAIT_H
@@ -824,8 +852,13 @@ extern "C" {
 #	define	HAVE_LONGLONG
 #	define	HAVE_UNISTD_H
 #	define	HAVE_FCNTL_H
+#	define	HAVE_DIRENT_H
+#	define	HAVE_SYS_DIR_H
+#	define	HAVE_NDIR_H
+#	define	HAVE_SYS_NDIR_H
 #	define	HAVE_TERMIOS_H
 #	define	HAVE_TERMIO_H
+#	define	HAVE_SYS_TIME_H
 #	define	HAVE_UTIMES
 #	define	HAVE_UTIME_H
 #	define	HAVE_WAIT_H

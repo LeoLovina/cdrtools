@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.5 97/04/06 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.12 97/09/04 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.5 97/04/06 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.12 97/09/04 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -58,18 +58,16 @@ static	char __sccsid[] =
 
 #include "scsi/sg.h"
 
-LOCAL	int	pack_id = 5;
+#ifndef	SCSI_IOCTL_GET_BUS_NUMBER
+#define SCSI_IOCTL_GET_BUS_NUMBER 0x5386
+#endif
 
-struct sg_rq {
-	struct sg_header	hd;
-	unsigned char		buf[SG_BIG_BUFF];
-} sg_rq;
+#define	MAX_SCG		4	/* Max # of SCSI controllers */
+#define	MAX_TGT		8
+#define	MAX_LUN		8
 
-char	*SCSIbuf;
-
-#define	MAX_SCG		1	/* Max # of SCSI controllers */
-
-LOCAL	int	scgfiles[8][8];
+LOCAL	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
+LOCAL	short	buscookies[MAX_SCG];
 
 #ifdef	SG_BIG_BUFF
 #define	MAX_DMA_LINUX	SG_BIG_BUFF
@@ -77,9 +75,12 @@ LOCAL	int	scgfiles[8][8];
 #define	MAX_DMA_LINUX	(32*1024)
 #endif
 
+LOCAL	int	pack_id = 5;
+LOCAL	char	*SCSIbuf;
 
 LOCAL	int	scsi_send	__PR((int f, struct scg_cmd *sp));
-LOCAL	void	scsi_setup	__PR((int f));
+LOCAL	BOOL	scsi_setup	__PR((int f, int busno, int tgt, int tlun));
+LOCAL	int	scsi_mapbus	__PR((int ino));
 LOCAL	void	scsi_settimeout	__PR((int f, int timeout));
 
 EXPORT
@@ -87,15 +88,25 @@ int scsi_open()
 {
 	register int	f;
 	register int	i;
+	register int	b;
+	register int	t;
+	register int	l;
 	register int	nopen = 0;
-	char		devname[32];
+	char		devname[64];
 
-	for (i=0; i < 8; i++) {
-		for (f=0; f < 8 ; f++)
-			scgfiles[i][f] = -1;
-
+	for (b=0; b < MAX_SCG; b++) {
+		buscookies[b] = (short)-1;
+		for (t=0; t < MAX_TGT; t++) {
+			for (l=0; l < MAX_LUN ; l++)
+				scgfiles[b][t][l] = (short)-1;
+		}
 	}
-	for (i=0; i < 8; i++) {
+	if (scsibus >= 0 && target >= 0 && lun >= 0) {
+		if (scsibus >= MAX_SCG || target >= MAX_TGT || lun >= MAX_LUN)
+			return (-1);
+	}
+
+	for (i=0; i < 25; i++) {
 		sprintf(devname, "/dev/sg%c", i+'a');
 		f = open(devname, 2);
 		if (f < 0) {
@@ -103,15 +114,31 @@ int scsi_open()
 				comerr("Cannot open '%s'.\n", devname);
 		} else {
 			nopen++;
-			scsi_setup(f);
+			if (scsi_setup(f, scsibus, target, lun))
+				break;
+		}
+	}
+	if (nopen == 0) for (i=0; i < 32; i++) {
+		sprintf(devname, "/dev/sg%d", i);
+		f = open(devname, 2);
+		if (f < 0) {
+			if (errno != ENOENT && errno != ENXIO && errno != ENODEV)
+				comerr("Cannot open '%s'.\n", devname);
+		} else {
+			nopen++;
+			if (scsi_setup(f, scsibus, target, lun))
+				break;
 		}
 	}
 	return (nopen);
 }
 
-LOCAL void
-scsi_setup(f)
+LOCAL BOOL
+scsi_setup(f, busno, tgt, tlun)
 	int	f;
+	int	busno;
+	int	tgt;
+	int	tlun;
 {
 	struct sg_rep {
 		struct sg_header	hd;
@@ -122,9 +149,16 @@ scsi_setup(f)
 		long	l2; /* Unique id */
 	} sg_id;
 	int	n;
+	int	Chan;
+	int	Ino;
+	int	Bus;
 	int	Target;
 	int	Lun;
+	BOOL	onetarget = FALSE;
 
+
+	if (scsibus >= 0 && target >= 0 && lun >= 0)
+		onetarget = TRUE;
 
 	/* Eat any unwanted garbage from prior use of this device */
 
@@ -144,11 +178,57 @@ scsi_setup(f)
 	ioctl(f, SCSI_IOCTL_GET_IDLUN, &sg_id);
 	if (debug)
 		printf("l1: 0x%lX l2: 0x%lX\n", sg_id.l1, sg_id.l2);
+	if (ioctl(f, SCSI_IOCTL_GET_BUS_NUMBER, &Bus) < 0) {
+		Bus = -1;
+	} else if (debug)
+		printf("SCSI Bus: %d\n", Bus);
 
 	Target	= sg_id.l1 & 0xFF;
 	Lun	= (sg_id.l1 >> 8) & 0xFF;
+	Chan	= (sg_id.l1 >> 16) & 0xFF;
+	Ino	= (sg_id.l1 >> 24) & 0xFF;
 
-	scgfiles[Target][Lun] = f;
+	/*
+	 * For old kernels try to make the best guess.
+	 */
+	Ino |= Chan << 8;
+	n = scsi_mapbus(Ino);
+	if (Bus == -1) {
+		Bus = n;
+		if (debug)
+			printf("SCSI Bus: %d (mapped from %d)\n", Bus, Ino);
+	}
+
+	if (scgfiles[Bus][Target][Lun] == (short)-1)
+		scgfiles[Bus][Target][Lun] = (short)f;
+
+	if (onetarget) {
+		if (Bus == busno && Target == tgt && Lun == tlun) {
+			return (TRUE);
+		} else {
+			scgfiles[Bus][Target][Lun] = (short)-1;
+			close(f);
+		}
+	}
+	return (FALSE);
+}
+
+LOCAL int
+scsi_mapbus(ino)
+	int	ino;
+{
+	register int	i;
+
+	for (i=0; i < MAX_SCG; i++) {
+		if (buscookies[i] == (short)-1) {
+			buscookies[i] = ino;
+			return (i);
+		}
+
+		if (buscookies[i] == ino)
+			return (i);
+	}
+	return (0);
 }
 
 LOCAL long
@@ -175,7 +255,7 @@ scsi_getbuf(amt)
 	/*
 	 * For performance reason, we allocate pagesize()
 	 * bytes before the SCSI buffer to avoid
-	 * copying the whole buffer contents when 
+	 * copying the whole buffer contents when
 	 * setting up the /dev/sg data structures.
 	 */
 	ret = valloc((size_t)(amt+getpagesize()));
@@ -188,7 +268,18 @@ EXPORT
 BOOL scsi_havebus(busno)
 	int	busno;
 {
-	return (busno < 0 || busno >= MAX_SCG) ? FALSE : TRUE;
+	register int	t;
+	register int	l;
+
+	if (busno < 0 || busno >= MAX_SCG)
+		return (FALSE);
+
+	for (t=0; t < MAX_TGT; t++) {
+		for (l=0; l < MAX_LUN ; l++)
+			if (scgfiles[busno][t][l] >= 0)
+				return (TRUE);
+	}
+	return (FALSE);
 }
 
 EXPORT
@@ -197,7 +288,12 @@ int scsi_fileno(busno, tgt, tlun)
 	int	tgt;
 	int	tlun;
 {
-	return (busno < 0 || busno >= MAX_SCG) ? -1 : scgfiles[tgt][tlun];
+	if (busno < 0 || busno >= MAX_SCG ||
+	    tgt < 0 || tgt >= MAX_TGT ||
+	    tlun < 0 || tlun >= MAX_LUN)
+		return (-1);
+
+	return ((int)scgfiles[busno][tgt][tlun]);
 }
 
 EXPORT
@@ -215,6 +311,8 @@ scsi_settimeout(f, tmo)
 	int	tmo;
 {
 	tmo *= 100;
+	if (tmo)
+		tmo += 50;
 
 	if (ioctl(f, SG_SET_TIMEOUT, &tmo) < 0)
 		comerr("Cannot set SG_SET_TIMEOUT.\n");
@@ -227,13 +325,18 @@ scsi_send(int f, struct scg_cmd *sp)
 	struct sg_rq	*sgp2;
 	int	i;
 	int	amt = sp->cdb_len;
+	struct sg_rq {
+		struct sg_header	hd;
+		unsigned char		buf[MAX_DMA_LINUX+SCG_MAX_CMD];
+	} sg_rq;
 
 	if (f < 0) {
 		sp->error = SCG_FATAL;
 		return (0);
 	}
-	if (sp->timeout != deftimeout);
+	if (sp->timeout != deftimeout)
 		scsi_settimeout(f, sp->timeout);
+
 
 	sgp2 = sgp = &sg_rq;
 	if (sp->addr == SCSIbuf) {
@@ -241,6 +344,15 @@ scsi_send(int f, struct scg_cmd *sp)
 			(SCSIbuf - (sizeof(struct sg_header) + amt));
 		sgp2 = (struct sg_rq *)
 			(SCSIbuf - (sizeof(struct sg_header)));
+	} else {
+		if (debug) {
+			printf("DMA addr: 0x%8.8lX size: %d - using copy buffer\n",
+				(long)sp->addr, sp->size);
+		}
+		if (sp->size > (sizeof(sg_rq.buf) - SCG_MAX_CMD)) {
+			errno = ENOMEM;
+			return (-1);
+		}
 	}
 
 	fillbytes((caddr_t)sgp, sizeof(struct sg_header), '\0');
@@ -249,6 +361,9 @@ scsi_send(int f, struct scg_cmd *sp)
 	sgp->hd.reply_len = sizeof(struct sg_header) + sp->size;
 	sgp->hd.pack_id = pack_id++;
 	sgp->hd.result = 0;
+	if (amt == 12)
+		sgp->hd.twelve_byte = 1;
+
 
 	for (i = 0; i < amt; i++ ) {
 		sgp->buf[i] = sp->cdb.cmd_cdb[i];;
@@ -278,22 +393,43 @@ scsi_send(int f, struct scg_cmd *sp)
 	if (sp->flags & SCG_RECV_DATA && ((void *)sgp->buf != (void *)sp->addr)) {
 		movebytes(sgp->buf, sp->addr, sp->size);
 	}
-	sp->errno = sgp->hd.result;
+	sp->ux_errno = sgp->hd.result;
+	if (sgp->hd.result == EBUSY) {
+		struct timeval to;
 
-	if (debug) {
-		printf("pack_len: %d, reply_len: %d pack_id: %d result: %d\n",
+		to.tv_sec = sp->timeout;
+		to.tv_usec = 500000;
+		scsitimes();
+
+		if (cmdstop.tv_sec < to.tv_sec ||
+		    (cmdstop.tv_sec == to.tv_sec &&
+			cmdstop.tv_usec < to.tv_usec)) {
+
+			sp->ux_errno = 0;
+			sp->error = SCG_TIMEOUT;
+		} else {
+			sp->error = SCG_RETRYABLE;
+		}
+	}
+
+	if (verbose > 0 && debug) {
+		printf("pack_len: %d, reply_len: %d pack_id: %d result: %d sense[0]: %02X\n",
 				sgp->hd.pack_len,
 				sgp->hd.reply_len,
 				sgp->hd.pack_id,
-				sgp->hd.result);
+				sgp->hd.result,
+				sgp->hd.sense_buffer[0]);
+#ifdef	DEBUG
 		printf("sense: ");
 		for (i=0; i< 16; i++)
 			printf("%02X ", sgp->hd.sense_buffer[i]);
 		printf("\n");
+#endif
 	}
 
 	sp->resid = sp->size +sizeof(struct sg_header) - amt;
 	if (sgp->hd.sense_buffer[0] != 0) {
+		sp->error = SCG_RETRYABLE;
 		sp->scb.chk = 1;
 		sp->sense_count = 16;
 		movebytes(sgp->hd.sense_buffer, sp->u_sense.cmd_sense, sp->sense_count);

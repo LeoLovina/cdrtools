@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.2 97/04/06 Copyright 1997 J. Schilling */
+/* @(#)scsihack.c	1.5 97/08/31 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.2 97/04/06 Copyright 1997 J. Schilling";
+	"@(#)scsihack.c	1.5 97/08/31 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -39,6 +39,27 @@ static	char _sccsid[] =
 #include "scsi-linux-sg.c"
 
 #endif	/* linux */
+
+#if	defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#define	SCSI_IMPL		/* We have a SCSI implementation for *BSD */
+
+#include "scsi-bsd.c"
+
+#endif	/* *BSD */
+
+#ifdef	__sgi
+#define	SCSI_IMPL		/* We have a SCSI implementation for SGI */
+
+#include "scsi-sgi.c"
+
+#endif	/* SGI */
+
+#ifdef	__hpux
+#define	SCSI_IMPL		/* We have a SCSI implementation for HP-UX */
+
+#include "scsi-hpux.c"
+
+#endif	/* HP-UX */
 
 #ifdef	__NEW_ARCHITECTURE
 #define	SCSI_IMPL		/* We have a SCSI implementation for XXX */

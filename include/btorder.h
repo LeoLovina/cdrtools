@@ -1,4 +1,4 @@
-/* @(#)btorder.h	1.2 97/04/27 Copyright 1996 J. Schilling */
+/* @(#)btorder.h	1.3 97/08/25 Copyright 1996 J. Schilling */
 /*
  *	Definitions for Bitordering
  *
@@ -14,7 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -32,6 +32,10 @@
 #	if defined(sun3) || defined(mc68000) || \
 	   defined(sun4) || defined(__sparc) || defined(sparc) || \
 	   defined(__hppa)
+#		define _BIT_FIELDS_HTOL
+#	endif
+
+#	if defined(__sgi) && defined(__mips)
 #		define _BIT_FIELDS_HTOL
 #	endif
 

@@ -1,7 +1,7 @@
-/* @(#)drv_philips.c	1.1 97/05/20 Copyright 1997 J. Schilling */
+/* @(#)drv_philips.c	1.6 97/09/10 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_philips.c	1.1 97/05/20 Copyright 1997 J. Schilling";
+	"@(#)drv_philips.c	1.6 97/09/10 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -33,22 +33,28 @@ static	char sccsid[] =
 
 #include "cdrecord.h"
 
+extern	int	silent;
+
 LOCAL	int	philips_load	__PR((void));
 LOCAL	int	philips_unload	__PR((void));
-LOCAL	long	next_wr_addr_philips __PR((int track));
-LOCAL	int	open_track_philips __PR((int track, int secsize, int sectype, int tracktype));
-LOCAL	int	open_track_yamaha __PR((int track, int secsize, int sectype, int tracktype));
+LOCAL	int	philips_getdisktype __PR((cdr_t *dp, dstat_t *dsp));
+LOCAL	int	next_wr_addr_philips __PR((int track, long *ap));
+LOCAL	int	open_track_philips __PR((int track, track_t *track_info));
+LOCAL	int	open_track_yamaha __PR((int track, track_t *track_info));
 
 LOCAL	int	philips_attach	__PR((void));
 LOCAL	int	plasmon_attach	__PR((void));
 LOCAL	int	ricoh_attach	__PR((void));
 
+
 cdr_t	cdr_philips_cdd521 = {
 	0,
-	CDR_TAO,
+	CDR_TAO|CDR_TRAYLOAD,
+	"philips_cdd521",
+	"driver for Philips CDD-521",
 	drive_identify,
 	philips_attach,
-	drive_getdisktype,
+	philips_getdisktype,
 	philips_load,
 	philips_unload,
 	recovery_needed,
@@ -60,17 +66,20 @@ cdr_t	cdr_philips_cdd521 = {
 	scsi_cdr_write,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int)))cmd_dummy,
+	(int(*)__PR((int, int)))cmd_dummy,
 	cmd_dummy,
+	read_session_offset_philips,
 	fixation,
 };
 
 cdr_t	cdr_philips_cdd522 = {
 	0,
-	CDR_TAO|CDR_DAO,
+	CDR_TAO|CDR_DAO|CDR_TRAYLOAD,
+	"philips_cdd522",
+	"driver for Philips CDD-522",
 	drive_identify,
 	philips_attach,
-	drive_getdisktype,
+	philips_getdisktype,
 	philips_load,
 	philips_unload,
 	recovery_needed,
@@ -82,17 +91,20 @@ cdr_t	cdr_philips_cdd522 = {
 	scsi_cdr_write,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int)))cmd_dummy,
+	(int(*)__PR((int, int)))cmd_dummy,
 	cmd_dummy,
+	read_session_offset_philips,
 	fixation,
 };
 
 cdr_t	cdr_plasmon_rf4100 = {
 	0,
-	CDR_TAO,
+	CDR_TAO|CDR_TRAYLOAD,
+	"plasmon_rf4100",
+	"driver for Plasmon RF 4100",
 	drive_identify,
 	plasmon_attach,
-	drive_getdisktype,
+	philips_getdisktype,
 	philips_load,
 	philips_unload,
 	recovery_needed,
@@ -104,13 +116,17 @@ cdr_t	cdr_plasmon_rf4100 = {
 	scsi_cdr_write,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int)))cmd_dummy,
+	(int(*)__PR((int, int)))cmd_dummy,
 	cmd_dummy,
+	read_session_offset_philips,
 	fixation,
 };
 
 cdr_t	cdr_yamaha_cdr100 = {
-	0, 0,
+	0,
+	CDR_TAO|CDR_DAO|CDR_CADDYLOAD|CDR_SWABAUDIO,
+	"yamaha_cdr100",
+	"driver for Yamaha CDR-100 / CDR-102",
 	drive_identify,
 	philips_attach,
 	drive_getdisktype,
@@ -125,16 +141,20 @@ cdr_t	cdr_yamaha_cdr100 = {
 	scsi_cdr_write,
 	open_track_yamaha,
 	close_track_philips,
-	(int(*)__PR((int)))cmd_dummy,
+	(int(*)__PR((int, int)))cmd_dummy,
 	cmd_dummy,
+	read_session_offset_philips,
 	fixation,
 };
 
 cdr_t	cdr_ricoh_ro1420 = {
-	0, 0,
+	0,
+	CDR_TAO|CDR_DAO|CDR_CADDYLOAD,
+	"ricoh_ro1420c",
+	"driver for Ricoh RO-1420C",
 	drive_identify,
 	ricoh_attach,
-	drive_getdisktype,
+	philips_getdisktype,
 	scsi_load,
 	scsi_unload,
 	recovery_needed,
@@ -146,8 +166,9 @@ cdr_t	cdr_ricoh_ro1420 = {
 	scsi_cdr_write,
 	open_track_philips,
 	close_track_philips,
-	(int(*)__PR((int)))cmd_dummy,
+	(int(*)__PR((int, int)))cmd_dummy,
 	cmd_dummy,
+	read_session_offset_philips,
 	fixation,
 };
 
@@ -163,47 +184,70 @@ philips_unload()
 	return (load_unload_philips(0));
 }
 
-LOCAL long
-next_wr_addr_philips(track)
-	int	track;
+LOCAL int
+philips_getdisktype(dp, dsp)
+	cdr_t	*dp;
+	dstat_t	*dsp;
 {
-	long	fa;
+	long	dummy;
 
-/*	fa = first_writable_addr(0, 0, 0, 1);*/
-	fa = first_writable_addr(0, 0, 0, 0);
-	return (fa);
+	silent++;
+	dummy = (*dp->cdr_next_wr_address)(0, &dummy);
+	silent--;
+
+	/*
+	 * Check for "Command sequence error" first.
+	 */
+	if (dummy < 0 &&
+	    (scsi_sense_key() != SC_ILLEGAL_REQUEST ||
+						scsi_sense_code() != 0x2C)) {
+
+		errmsgno(EX_BAD, "Drive needs to reload the media to return to proper status.\n");
+
+		unload_media(dp, F_EJECT);
+		load_media(dp);
+	}
+	return (drive_getdisktype(dp, dsp));
 }
 
 LOCAL int
-open_track_philips(track, secsize, sectype, tracktype)
+next_wr_addr_philips(track, ap)
 	int	track;
-	int	secsize;
-	int	sectype;
-	int	tracktype;
+	long	*ap;
 {
-	if (select_secsize(secsize) < 0)
+
+/*	if (first_writable_addr(ap, 0, 0, 0, 1) < 0)*/
+	if (first_writable_addr(ap, 0, 0, 0, 0) < 0)
+		return (-1);
+	return (0);
+}
+
+LOCAL int
+open_track_philips(track, track_info)
+	int	track;
+	track_t *track_info;
+{
+	if (select_secsize(track_info->secsize) < 0)
 		return (-1);
 
-	if (write_track_info(sectype) < 0)
+	if (write_track_info(track_info->sectype) < 0)
 		return (-1);
 
-	if (write_track(0, sectype) < 0)
+	if (write_track(0, track_info->sectype) < 0)
 		return (-1);
 
 	return (0);
 }
 
 LOCAL int
-open_track_yamaha(track, secsize, sectype, tracktype)
+open_track_yamaha(track, track_info)
 	int	track;
-	int	secsize;
-	int	sectype;
-	int	tracktype;
+	track_t	*track_info;
 {
-	if (select_secsize(secsize) < 0)
+	if (select_secsize(track_info->secsize) < 0)
 		return (-1);
 
-	if (write_track(0, sectype) < 0)
+	if (write_track(0, track_info->sectype) < 0)
 		return (-1);
 
 	return (0);

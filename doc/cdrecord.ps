@@ -1,13 +1,13 @@
 %!PS-Adobe-3.0
 %%Creator: groff version 1.09
-%%CreationDate: Wed May 21 19:26:02 1997
+%%CreationDate: Wed Sep 10 17:21:14 1997
 %%DocumentNeededResources: font Symbol
 %%+ font Times-Roman
 %%+ font Times-Bold
 %%+ font Times-Italic
 %%DocumentSuppliedResources: procset grops 1.09 0
 %%+ font Symbol-Slanted
-%%Pages: 6
+%%Pages: 7
 %%PageOrder: Ascend
 %%Orientation: Portrait
 %%EndComments
@@ -248,493 +248,598 @@ E F3(tr)2.5 E(ac)-.15 E 2.5(ko)-.2 G(ptions)-2.5 E F0(])2.5 E F3(tr)2.5
 E(ac)-.15 E(k1)-.2 E F0 1.666(...)C F3(tr)-1.536 E(ac)-.15 E(kn)-.2 E F1
 (DESCRIPTION)72 153.6 Q F2(Cdr)108 165.6 Q(ecord)-.18 E F0(is used to r\
 ecord data or audio Compact Discs on an Orange Book CD-Recorder)2.5 E(.)
--.55 E(The)108 182.4 Q F3(de)2.959 E(vice)-.15 E F0 .459(refers to)2.959
-F F3(scsib)2.959 E(us)-.2 E F0(/).27 E F3(tar).13 E -.1(ge)-.37 G(t).1 E
-F0(/).68 E F3(lun).09 E F0 .459(of the CD-Recorder)2.959 F 2.959(.C)-.55
-G .458(ommunication is done with the SCSI general)-2.959 F(dri)108 194.4
-Q -.15(ve)-.25 G(r).15 E F2(scg)3.288 E(.)-.15 E F0 .788
-(Possible syntax is:)5.788 F F3(scsib)3.288 E(us)-.2 E F0(,).27 E F3
-(tar).13 E -.1(ge)-.37 G(t).1 E F0(,).68 E F3(lun).09 E F0(or)3.289 E F3
-(tar)3.289 E -.1(ge)-.37 G(t).1 E F0(,).68 E F3(lun).09 E F0 5.789(.I)
-.24 G 3.289(nt)-5.789 G .789(he latter case, the CD-Recorder has to)
--3.289 F(be connected to the def)108 206.4 Q(ault SCSI b)-.1 E
-(us of the machine.)-.2 E F3(Scsib)108 223.2 Q(us)-.2 E F0(,)3.027 E F3
-(tar)3.027 E -.1(ge)-.37 G(t).1 E F0(and)3.027 E F3(lun)3.027 E F0 .527
-(are inte)3.027 F .526(ger numbers.)-.15 F F3(Scsib)5.526 E(us)-.2 E F0
-3.026(0i)3.026 G 3.026(st)-3.026 G .526(he def)-3.026 F .526
-(ault SCSI b)-.1 F .526(us on the machine. W)-.2 F .526(atch the)-.8 F
-.35(boot messages for more information or look into)108 235.2 R F2(/v)
-2.851 E(ar/adm/messages)-.1 E F0 .351
-(for more information about the SCSI)2.851 F
-(con\214guration of your machine.)108 247.2 Q(Each)108 264 Q F3(tr)2.777
-E(ac)-.15 E(k)-.2 E F0 .277(corresponds to a single \214le that contain\
-s the prepared data for that track.)2.777 F .277(If the ar)5.277 F .276
-(gument is `)-.18 F F2<ad>A F0(',)A
-(standard input is used for that track.)108 276 Q F1(GENERAL OPTIONS)72
-304.8 Q F0(General options must be before an)108 316.8 Q 2.5(yt)-.15 G
-(rack \214le name or track option.)-2.5 E F2<ad76>108 333.6 Q F0(Be v)
-25.3 E(erbose during w)-.15 E
+-.55 E(The)108 182.4 Q F3(de)3.911 E(vice)-.15 E F0 1.411(refers to)
+3.911 F F3(scsib)3.911 E(us)-.2 E F0(/).27 E F3(tar).13 E -.1(ge)-.37 G
+(t).1 E F0(/).68 E F3(lun).09 E F0 1.411(of the CD-Recorder)3.911 F
+3.911(.C)-.55 G 1.411(ommunication on)-3.911 F F3(SunOS)3.911 E F0 1.41
+(is done with the)3.91 F 1.254(SCSI general dri)108 194.4 R -.15(ve)-.25
+G(r).15 E F2(scg)3.754 E(.)-.15 E F0 1.255
+(Other operating systems are using a library simulation of this dri)
+6.254 F -.15(ve)-.25 G 4.855 -.55(r. P).15 H(ossible).55 E 1.002
+(syntax is:)108 206.4 R F2(de)3.502 E(v=)-.15 E F3(scsib)3.502 E(us)-.2
+E F0(,).27 E F3(tar).13 E -.1(ge)-.37 G(t).1 E F0(,).68 E F3(lun).09 E
+F0(or)3.502 E F2(de)3.501 E(v=)-.15 E F3(tar)3.501 E -.1(ge)-.37 G(t).1
+E F0(,).68 E F3(lun).09 E F0 6.001(.I).24 G 3.501(nt)-6.001 G 1.001
+(he latter case, the CD-Recorder has to be con-)-3.501 F
+(nected to the def)108 218.4 Q(ault SCSI b)-.1 E(us of the machine.)-.2
+E F3(Scsib)108 235.2 Q(us)-.2 E F0(,).27 E F3(tar)3.028 E -.1(ge)-.37 G
+(t).1 E F0(and)3.028 E F3(lun)3.028 E F0 .528(are inte)3.028 F .528
+(ger numbers.)-.15 F 2.128 -.8(To m)5.528 H(ak).8 E(e)-.1 E F2(cdr)3.028
+E(ecord)-.18 E F0 .528(portable to all)3.028 F/F4 8/Times-Roman@0 SF
+(UNIX)3.028 E F0 .529(platforms, there is no)3.028 F -.1(wa)108 247.2 S
+3.2(yt).1 G 3.2(os)-3.2 G .7(pecify a real de)-3.2 F .7
+(vice \214le name.)-.25 F F3(Scsib)5.7 E(us)-.2 E F0 3.2(0i)3.2 G 3.199
+(st)-3.2 G .699(he def)-3.199 F .699(ault SCSI b)-.1 F .699
+(us on the machine. W)-.2 F .699(atch the boot)-.8 F .351
+(messages for more information or look into)108 259.2 R F2(/v)2.851 E
+(ar/adm/messages)-.1 E F0 .352(for more information about the SCSI con-)
+2.851 F(\214guration of your machine.)108 271.2 Q(Each)108 288 Q F3(tr)
+2.777 E(ac)-.15 E(k)-.2 E F0 .277(corresponds to a single \214le that c\
+ontains the prepared data for that track.)2.777 F .277(If the ar)5.277 F
+.276(gument is `)-.18 F F2<ad>A F0(',)A
+(standard input is used for that track.)108 300 Q
+(There may only be one track that is tak)5 E(en from)-.1 E F3(stdin)2.5
+E F0(.).24 E F1(GENERAL OPTIONS)72 328.8 Q F0
+(General options must be before an)108 340.8 Q 2.5(yt)-.15 G
+(rack \214le name or track option.)-2.5 E F2<ad76>108 357.6 Q(ersion)-.1
+E F0(Print v)144 369.6 Q(ersion information and e)-.15 E(xit.)-.15 E F2
+<ad76>108 386.4 Q F0(Be v)25.3 E(erbose during w)-.15 E
 (ork, display the progress of the writing process.)-.1 E F2<ad56>108
-350.4 Q F0 .5(Be v)23.08 F .5
+403.2 Q F0 .5(Be v)23.08 F .5
 (erbose in respect of SCSI command transport. This helps to deb)-.15 F
 .5(ug problems during the writ-)-.2 F 1.963
-(ing process, that occur in the CD-Recorder)144 362.4 R 6.963(.I)-.55 G
+(ing process, that occur in the CD-Recorder)144 415.2 R 6.963(.I)-.55 G
 4.463(fy)-6.963 G 1.963(ou get incomprehensible error messages you)
 -4.463 F .107(should use this \215ag to get more detailed output.)144
-374.4 R(Using)5.108 E F2<ad56>2.608 E F0(slo)2.608 E .108(ws do)-.25 F
-.108(wn the process and may be the)-.25 F(reason for a b)144 386.4 Q(uf)
--.2 E(fer underrun.)-.25 E F2(\255deb)108 403.2 Q(ug)-.2 E F0 .638
-(Print additional deb)144 415.2 R .637(ug messages. This may help to \
-\214nd out problems with sector sizes and sector)-.2 F 2.5(types. Using)
-144 427.2 R F2(\255deb)2.5 E(ug)-.2 E F0(slo)2.5 E(ws do)-.25 E
+427.2 R(Using)5.108 E F2<ad56>2.608 E F0(slo)2.608 E .108(ws do)-.25 F
+.108(wn the process and may be the)-.25 F(reason for a b)144 439.2 Q(uf)
+-.2 E(fer underrun.)-.25 E F2(\255deb)108 456 Q(ug)-.2 E F0 .638
+(Print additional deb)144 468 R .637(ug messages. This may help to \214\
+nd out problems with sector sizes and sector)-.2 F 2.5(types. Using)144
+480 R F2(\255deb)2.5 E(ug)-.2 E F0(slo)2.5 E(ws do)-.25 E
 (wn the process and may be the reason for a b)-.25 E(uf)-.2 E
-(fer underrun.)-.25 E F2(\255dummy)108 444 Q F0 .134
+(fer underrun.)-.25 E F2(\255dummy)108 496.8 Q F0 .134
 (The CD-Recorder will go through all steps of the recording process, b)
-144 456 R .134(ut the laser is turned of)-.2 F 2.635(fd)-.25 G(ur)-2.635
-E(-)-.2 E 1.042(ing this procedure.)144 468 R 1.042
+144 508.8 R .134(ut the laser is turned of)-.2 F 2.635(fd)-.25 G(ur)
+-2.635 E(-)-.2 E 1.042(ing this procedure.)144 520.8 R 1.042
 (It is recommended to run se)6.042 F -.15(ve)-.25 G 1.042
 (ral tests before actually writing to a Compact).15 F
-(Disk, if the timing and load response of the system is not kno)144 480
-Q(wn.)-.25 E F2(\255multi)108 496.8 Q F0(Allo)7.52 E 2.917(wm)-.25 G
-.417(ulti session CD')-2.917 F 2.917(st)-.55 G 2.917(ob)-2.917 G 2.917
+(Disk, if the timing and load response of the system is not kno)144
+532.8 Q(wn.)-.25 E F2(\255multi)108 549.6 Q F0(Allo)7.52 E 2.917(wm)-.25
+G .417(ulti session CD')-2.917 F 2.917(st)-.55 G 2.917(ob)-2.917 G 2.917
 (em)-2.917 G .418
 (ade. This \215ag needs to be present on all sessions of a multi ses-)
--2.917 F .361(sion disk, e)144 508.8 R .361(xcept you w)-.15 F .36
+-2.917 F .361(sion disk, e)144 561.6 R .361(xcept you w)-.15 F .36
 (ant to create a session that will be the last session on the media.)-.1
-F .36(The \214xa-)5.36 F .244(tion will be done in a w)144 520.8 R .245
+F .36(The \214xa-)5.36 F .244(tion will be done in a w)144 573.6 R .245
 (ay that allo)-.1 F .245
 (ws the CD-Recorder to append additional sessions later)-.25 F 2.745(.T)
--.55 G .245(his is)-2.745 F 1.112(done by generation a T)144 532.8 R
+-.55 G .245(his is)-2.745 F 1.112(done by generation a T)144 585.6 R
 1.112(OC with a link to the ne)-.18 F 1.111
 (xt program area. The so generated media is not)-.15 F 4.267
-(100% compatible)144 544.8 R 1.768(to manuf)4.267 F 1.768(actured CD')
+(100% compatible)144 597.6 R 1.768(to manuf)4.267 F 1.768(actured CD')
 -.1 F 4.268(s. Use)-.55 F 1.768(only for recording a multi session CD.)
-4.268 F 1.768(If this)6.768 F .458(option is present, the def)144 556.8
+4.268 F 1.768(If this)6.768 F .458(option is present, the def)144 609.6
 R .458(ault track type is)-.1 F F2(CD-R)2.958 E .458(OM XA mode 2)-.3 F
 F0 5.457(.T)C(he)-5.457 E F3(Sony)2.957 E F0(dri)2.957 E -.15(ve)-.25 G
 2.957(sh).15 G -2.25 -.2(av e)-2.957 H .457(no hard-)3.157 F -.1(wa)144
-568.8 S .507(re support for).1 F F2(CD-R)3.007 E .507(OM XA mode 2)-.3 F
+621.6 S .507(re support for).1 F F2(CD-R)3.007 E .507(OM XA mode 2)-.3 F
 F0 5.507(.Y)C .507(ou ha)-6.607 F .807 -.15(ve t)-.2 H 3.007(ps).15 G
 .507(pecify the)-3.007 F F2(\255data)3.007 E F0 .507
 (option in order to create)3.007 F(multi session disks on these dri)144
-580.8 Q -.15(ve)-.25 G(s.).15 E F2(\255msinf)108 597.6 Q(o)-.25 E F0
-(Retrie)144 609.6 Q .3 -.15(ve m)-.25 H
+633.6 Q -.15(ve)-.25 G(s.).15 E F2(\255msinf)108 650.4 Q(o)-.25 E F0
+(Retrie)144 662.4 Q .3 -.15(ve m)-.25 H
 (ulti session info in a form suitable for).15 E F2(mkisofs-1.10)2.5 E F0
-(or later)2.5 E(.)-.55 E F2(\255toc)108 626.4 Q F0(Retrie)17.53 E .526
+(or later)2.5 E(.)-.55 E F2(\255toc)108 679.2 Q F0(Retrie)17.53 E .526
 -.15(ve a)-.25 H .226(nd print out the table of content or PMA of a CD.)
 .15 F -.4(Wi)5.225 G .225(th this option,).4 F F2(cdr)2.725 E(ecord)-.18
-E F0 .225(will w)2.725 F(ork)-.1 E(also with a CD-Rom dri)144 638.4 Q
--.15(ve)-.25 G(.).15 E F2<ad8c78>108 655.2 Q F0 .62
+E F0 .225(will w)2.725 F(ork)-.1 E(also with a CD-Rom dri)144 691.2 Q
+-.15(ve)-.25 G(.).15 E F2<ad8c78>108 708 Q F0 .62
 (The disk will only be \214xated \(i.e. a T)19.74 F .621
 (OC for a CD-Reader will be written\).)-.18 F .621(This may be used, if)
-5.621 F(for some reason the disk has been written b)144 667.2 Q
-(ut not \214xated.)-.2 E F2(\255eject)108 684 Q F0 .298
-(Eject disk after doing the w)10.32 F 2.798(ork. Some)-.1 F(De)2.798 E
-.297(vices \(e.g. Philips\) need to eject the medium before cre-)-.25 F
-.768(ating a ne)144 696 R 3.268(wd)-.25 G .769
-(isk. Doing a \255dummy test and immediately creating a real disk w)
--3.268 F .769(ould not w)-.1 F .769(ork on)-.1 F(these de)144 708 Q
-(vices.)-.25 E(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G
-153.065(chilling V)-2.5 F(ersion 1.4)-1.11 E(1)206.225 E EP
+5.621 F(for some reason the disk has been written b)144 720 Q
+(ut not \214xated.)-.2 E(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)
+-.18 G 153.065(chilling V)-2.5 F(ersion 1.5)-1.11 E(1)206.225 E EP
 %%Page: 2 2
 %%BeginPageSetup
 BP
 %%EndPageSetup
 /F0 10/Times-Roman@0 SF 104.275(CDRECORD\(1\) Schily\264s)72 48 R
 (USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E/F1 10/Times-Bold@0 SF
-(speed=#)108 84 Q F0 1.345(Set the speed f)144 96 R 1.345
-(actor of the writing process to #.)-.1 F 3.845(#i)6.345 G 3.845(sa)
--3.845 G 3.845(ni)-3.845 G(nte)-3.845 E(ger)-.15 E 3.845(,r)-.4 G 1.345
-(epresenting a multiple of the)-3.845 F 1.547(audio speed.)144 108 R
-1.547(This is about 151 KB/s for CD-R)6.547 F 1.548
-(OM and about 175 KB/s for CD-Audio.)-.4 F 1.548(If no)6.548 F/F2 10
-/Times-Italic@0 SF(speed)144 120 Q F0 .459(option is present,)2.959 F F1
-(cdr)2.959 E(ecord)-.18 E F0 .459(will try to get the speed v)2.959 F
+<ad6e6f8c78>108 84 Q F0 .713(Do not \214xate the disk after writing the\
+ tracks. This may be used to create an audio disk in steps.)9.18 F .709
+(An un\214xated disk can usually not be used on a non CD-writer type dr\
+i)144 96 R 1.01 -.15(ve b)-.25 H .71(ut there are audio CD)-.05 F
+(players that will be able to play such a disk.)144 108 Q F1(\255eject)
+108 124.8 Q F0 .298(Eject disk after doing the w)10.32 F 2.798
+(ork. Some)-.1 F(De)2.798 E .297
+(vices \(e.g. Philips\) need to eject the medium before cre-)-.25 F .768
+(ating a ne)144 136.8 R 3.268(wd)-.25 G .769
+(isk. Doing a \255dummy test and immediately creating a real disk w)
+-3.268 F .769(ould not w)-.1 F .769(ork on)-.1 F(these de)144 148.8 Q
+(vices.)-.25 E F1(speed=#)108 165.6 Q F0 1.345(Set the speed f)144 177.6
+R 1.345(actor of the writing process to #.)-.1 F 3.845(#i)6.345 G 3.845
+(sa)-3.845 G 3.845(ni)-3.845 G(nte)-3.845 E(ger)-.15 E 3.845(,r)-.4 G
+1.345(epresenting a multiple of the)-3.845 F 1.547(audio speed.)144
+189.6 R 1.547(This is about 150 KB/s for CD-R)6.547 F 1.548
+(OM and about 172 KB/s for CD-Audio.)-.4 F 1.548(If no)6.548 F/F2 10
+/Times-Italic@0 SF(speed)144 201.6 Q F0 .459(option is present,)2.959 F
+F1(cdr)2.959 E(ecord)-.18 E F0 .459(will try to get the speed v)2.959 F
 .458(alue from the)-.25 F F1(CDR_SPEED)2.958 E F0(en)2.958 E(viron-)-.4
-E 2.5(ment. If)144 132 R(you dri)2.5 E .3 -.15(ve h)-.25 H
+E 2.5(ment. If)144 213.6 R(your dri)2.5 E .3 -.15(ve h)-.25 H
 (as problems with).15 E F2(speed=2)2.5 E F0(or)2.5 E F2(speed=4)2.5 E F0
 2.5(,y).29 G(ou should try)-2.5 E F2(speed=0)2.5 E F0(.).47 E F1(de)108
-148.8 Q(v=)-.15 E F2(tar).13 E -.1(ge)-.37 G(t).1 E F0 .559
-(Sets the SCSI tar)144 160.8 R .559(get for the CD-Recorder)-.18 F 3.059
+230.4 Q(v=)-.15 E F2(tar).13 E -.1(ge)-.37 G(t).1 E F0 .559
+(Sets the SCSI tar)144 242.4 R .559(get for the CD-Recorder)-.18 F 3.059
 (,s)-.4 G .559(ee notes abo)-3.059 F -.15(ve)-.15 G 5.559(.I).15 G 3.06
 (fn)-5.559 G(o)-3.06 E F2(de)3.06 E(v)-.15 E F0 .56(option is present,)
-3.06 F F1(cdr)3.06 E(ecord)-.18 E F0(will try to get the de)144 172.8 Q
+3.06 F F1(cdr)3.06 E(ecord)-.18 E F0(will try to get the de)144 254.4 Q
 (vice from the)-.25 E F1(CDR_DEVICE)2.5 E F0(en)2.5 E(vironment.)-.4 E
-/F3 9/Times-Bold@0 SF(TRA)72 201.6 Q(CK OPTIONS)-.495 E F0 -.35(Tr)108
-213.6 S(ack options may be mix).35 E(ed with track \214le names.)-.15 E
-F1(\255audio)108 230.4 Q F0 .226
+F1(dri)108 271.2 Q -.1(ve)-.1 G(r=).1 E F2(name).36 E F0(Allo)144 283.2
+Q 1.41(ws to use a user supplied dri)-.25 F -.15(ve)-.25 G 3.91(rn).15 G
+1.41(ame for the de)-3.91 F 3.91(vice. T)-.25 F 3.91(og)-.8 G 1.41
+(et a list of possible dri)-3.91 F -.15(ve)-.25 G 1.41(rs use).15 F F1
+(dri)144 295.2 Q -.1(ve)-.1 G(r=help).1 E F0 5.973(.T)C .973
+(he reason for the e)-5.973 F .973(xistence of this option is to allo)
+-.15 F 3.473(wu)-.25 G .973(sers to use)-3.473 F F1(cdr)3.474 E(ecord)
+-.18 E F0(with)3.474 E(dri)144 307.2 Q -.15(ve)-.25 G 3.609(st).15 G
+1.109(hat are similar to supported dri)-3.609 F -.15(ve)-.25 G 3.609(sb)
+.15 G 1.109(ut not kno)-3.809 F 1.109(wn directly by)-.25 F F1(cdr)3.608
+E(ecord)-.18 E F0 6.108(.U)C 1.108(se this option)-6.108 F .094(with e)
+144 319.2 R .094(xtreme care. If a wrong dri)-.15 F -.15(ve)-.25 G 2.595
+(ri).15 G 2.595(su)-2.595 G .095(sed for a de)-2.595 F .095
+(vice, the possibility of creating corrupted disks)-.25 F .54(is high.)
+144 331.2 R .54(The minimum problem related to a wrong dri)5.54 F -.15
+(ve)-.25 G 3.04(ri).15 G 3.04(st)-3.04 G .54(hat the)-3.04 F F1
+(\255speed)3.04 E F0(or)3.04 E F1(\255dummy)3.04 E F0 .54(will not)3.04
+F -.1(wo)144 343.2 S(rk.).1 E F1(\255checkdri)108 360 Q -.1(ve)-.1 G F0
+.26(Checks if a dri)144 372 R -.15(ve)-.25 G 2.76(rf).15 G .26
+(or the current dri)-2.76 F .56 -.15(ve i)-.25 H 2.76(sp).15 G .26
+(resent and e)-2.76 F 2.76(xit. If)-.15 F .26(the dri)2.76 F .56 -.15
+(ve i)-.25 H 2.76(sak).15 G(no)-2.76 E .26(wn dri)-.25 F -.15(ve)-.25 G
+(,).15 E F1(cdr)2.76 E(ecord)-.18 E F0(uses e)144 384 Q(xit code 0.)-.15
+E F1(\255inq)108 400.8 Q F0(Do an inquiry for the dri)16.4 E -.15(ve)
+-.25 G 2.5(,p).15 G(rint the inquiry info and e)-2.5 E(xit.)-.15 E F1
+(\255scanb)108 417.6 Q(us)-.2 E F0 .22(Scan all SCSI de)144 429.6 R .22
+(vices on all SCSI b)-.25 F .219
+(usses and print the inquiry strings. This option may be used to)-.2 F
+(\214nd SCSI address of the CD-Recorder on a system.)144 441.6 Q/F3 9
+/Times-Bold@0 SF(TRA)72 470.4 Q(CK OPTIONS)-.495 E F0 -.35(Tr)108 482.4
+S(ack options may be mix).35 E(ed with track \214le names.)-.15 E F1
+(\255audio)108 499.2 Q F0 .225
 (If this \215ag is present, all subsequent tracks are written in)6.4 F
-F1(CD-D)2.725 E(A)-.35 E F0 .225(\(similar to Red Book\) audio for)2.725
-F(-)-.2 E 2.928(mat. The)144 242.4 R .429(\214le with data for this tra\
-cks should contain stereo, 16-bit digital audio with 44100 sam-)2.928 F
-3.133(ples/s. The)144 254.4 R .633(byte order should be the follo)3.133
-F .632(wing: MSB left, LSB left, MSB right, LSB right, MSB)-.25 F .884(\
+F1(CD-D)2.725 E(A)-.35 E F0 .226(\(similar to Red Book\) audio for)2.725
+F(-)-.2 E 2.929(mat. The)144 511.2 R .429(\214le with data for this tra\
+cks should contain stereo, 16-bit digital audio with 44100 sam-)2.929 F
+3.132(ples/s. The)144 523.2 R .632(byte order should be the follo)3.132
+F .633(wing: MSB left, LSB left, MSB right, LSB right, MSB)-.25 F .885(\
 left and so on. The track should be a multiple of 2352 bytes. It is not\
- possible to put the master)144 266.4 R .576
-(image of an audio track on a ra)144 278.4 R 3.076(wd)-.15 G .576
+ possible to put the master)144 535.2 R .575
+(image of an audio track on a ra)144 547.2 R 3.076(wd)-.15 G .576
 (isk because data will be read in multiple of 2352 bytes during)-3.076 F
-(the recording process.)144 290.4 Q F1(\255swab)108 307.2 Q F0 .572
-(If this \215ag is present, audio data is sw)8.63 F .573
-(apped before writing to CD.)-.1 F .573(This is needed on some types)
-5.573 F .602(of CD-Writers e.g. Y)144 319.2 R .602(amaha and Son)-1 F
-3.101(yb)-.15 G .601(ecause the)-3.101 F 3.101(ya)-.15 G .601
-(re using the wrong byte order for audio data)-3.101 F(\(the)144 331.2 Q
-2.9(ya)-.15 G .4(re ignoring the f)-2.9 F .4
-(act that the SCSI-protocol otherwise correctly uses netw)-.1 F .4
-(ork byte order\). In)-.1 F 2.5(af)144 343.2 S(uture release)-2.5 E F1
-(cdrwite)2.5 E F0(will kno)2.5 E 2.5(wi)-.25 G
-(tself which CD-Recorder needs byte sw)-2.5 E(apping.)-.1 E F1(\255data)
-108 360 Q F0 .853
+.032(the recording process.)144 559.2 R .031
+(The audio data stream must not ha)5.032 F .331 -.15(ve a)-.2 H .331
+-.15(ny h).15 H .031(eaders. Using audio data formats).15 F 1.238
+(with headers as input to)144 571.2 R F1(cdr)3.739 E(ecord)-.18 E F0
+1.239(will usually w)3.739 F 1.239
+(ork if the structure of the data is the structure)-.1 F(described abo)
+144 583.2 Q .3 -.15(ve b)-.15 H
+(ut you will hear a click at the start of a track.)-.05 E F1(\255swab)
+108 600 Q F0 1.19(If this \215ag is present, sw)8.63 F 1.19
+(apped audio data may be used for writing to CD.)-.1 F 1.19
+(Some types of CD-)6.19 F 1.191(Writers e.g. Y)144 612 R 1.191
+(amaha, Son)-1 F 3.691(ya)-.15 G 1.191(nd the ne)-3.691 F 3.691(wS)-.25
+G 1.191(CSI-3/mmc dri)-3.691 F -.15(ve)-.25 G 3.691(sa).15 G 1.192
+(re using the wrong byte order for)-3.691 F .44
+(audio data, ignoring the f)144 624 R .439
+(act that the SCSI-protocol otherwise correctly uses netw)-.1 F .439
+(ork \(big endian\))-.1 F .09(byte order)144 636 R(.)-.55 E F1(Cdr)5.09
+E(ecord)-.18 E F0(kno)2.59 E .09(ws if a CD-Recorder needs byte sw)-.25
+F .09(apping and corrects the byte order of)-.1 F .326
+(the data stream to the byte order described with the)144 648 R F2
+(\255audio)2.826 E F0 2.826(\215ag. Y)2.826 F .326(ou only need the)-1.1
+F F2(\255swab)2.826 E F0 .326(\215ag if)2.826 F .734
+(your data stream is in Intel byte order)144 660 R 3.235(.N)-.55 G .735
+(ote that the v)-3.235 F .735(erbose output of)-.15 F F1(cdr)3.235 E
+(ecord)-.18 E F0 .735(instead will not)3.235 F(sho)144 672 Q 2.525(wy)
+-.25 G .025(ou if the)-2.525 F F2(\255swab)2.525 E F0 .025(\215ag w)
+2.525 F .025(as present for a track.)-.1 F F1(Cdr)5.025 E(ecord)-.18 E
+F0(sho)2.525 E .024(ws you if it really needs to sw)-.25 F(ab)-.1 E
+(that track.)144 684 Q F1(\255data)108 700.8 Q F0 .853
 (If this \215ag is present, all subsequent tracks are written in)11.41 F
-F1(CD-R)3.353 E .853(OM mode 1)-.3 F F0(\(Y)3.353 E(ello)-1 E 3.353(wB)
--.25 G .853(ook\) for)-3.353 F(-)-.2 E .289
-(mat. The data is a multiple of 2048 bytes.)144 372 R .289
-(The \214le with track data should contain an)5.289 F F1(ISO-9660)2.789
-E F0(or)2.789 E F1 .361(Rock Ridge)144 384 R F0 .361
-(\214lesystem image \(see)2.861 F F1(mkisofs)2.861 E F0 .361
-(for more details\). If the track data is an)2.861 F F1(ufs)2.86 E F0
-(\214lesystem)2.86 E .126
-(image, fragment size should be set to 2 KB or more to allo)144 396 R
-2.626(wC)-.25 G(R-dri)-2.626 E -.15(ve)-.25 G 2.626(sw).15 G .126
-(ith 2 KB sector size to to)-2.626 F(be used for reading.)144 408 Q
-(\255data is the def)144 424.8 Q(ault, if no other \215ag is present.)
--.1 E F1(\255mode2)108 441.6 Q F0 .416
-(If this \215ag is present, all subsequent tracks are written in)144
-453.6 R F1(CD-R)2.915 E .415(OM mode 2)-.3 F F0 .415
-(format. The data is a)2.915 F(multiple of 2048 bytes.)144 465.6 Q F1
-(\255xa1)108 482.4 Q F0 .391
-(If this \215ag is present, all subsequent tracks are written in)15.3 F
-F1(CD-R)2.891 E .391(OM XA mode 1)-.3 F F0 .392(format. The data)2.892 F
-(is a multiple of 2048 bytes.)144 494.4 Q F1(\255xa2)108 511.2 Q F0 .391
-(If this \215ag is present, all subsequent tracks are written in)15.3 F
-F1(CD-R)2.891 E .391(OM XA mode 2)-.3 F F0 .391(format. The data)2.891 F
-(is a multiple of 2048 bytes.)144 523.2 Q F1(\255cdi)108 540 Q F0 .984
-(If this \215ag is present, all subsequent tracks are written in)17.52 F
-F1(CDI)3.485 E F0 .985(format. The data is a multiple of)3.485 F
-(2048 bytes.)144 552 Q F1(\255isosize)108 568.8 Q F0 .654(Use the)144
-580.8 R F1(ISO-9660)3.154 E F0 .653
-(\214le system size as the size of the ne)3.154 F .653(xt track.)-.15 F
-.653(This currently cannot be used to)5.653 F(determine the size of a \
-\214le system if the multi session option is present.)144 592.8 Q F1
-(\255pad)108 609.6 Q F0 .29(If the track is a data track, 15 sectors of\
- zeroed data will be added to the end of this and each sub-)14.18 F .644
-(sequent data track.)144 621.6 R .644(Use this if your CD-dri)5.644 F
-.944 -.15(ve i)-.25 H 3.144(sn).15 G .643
-(ot able to read the last sectors of a track. If the)-3.144 F .065
-(track is an audio track,)144 633.6 R F1(cdr)2.565 E(ecord)-.18 E F0
-.065(will pad the audio data to be a multiple of 2352 bytes.)2.565 F
-.066(The audio)5.066 F(data padding is done with binary zeroes which is\
- equal to absolute silence.)144 645.6 Q F1(\255nopad)108 662.4 Q F0
-(Do not pad the follo)144 674.4 Q(wing tracks \255 the def)-.25 E(ault.)
--.1 E F1(\255pr)108 691.2 Q(eemp)-.18 E F0 .432
-(If this \215ag is present, all T)144 703.2 R .432(OC entries for subse\
-quent audio tracks will indicate that the audio data)-.18 F .068
-(has been sampled with 50/15)144 715.2 R/F4 10/Symbol-Slanted SF(m)2.568
-E F0 .068(sec preemphasis.)B .068(The data, ho)5.068 F(we)-.25 E -.15
-(ve)-.25 G 2.568(ri).15 G 2.568(sn)-2.568 G .068
-(ot modi\214ed during the pro-)-2.568 F
-(cess of transferring from \214le to disk.)144 727.2 Q
-(This option has no ef)5 E(fect on data tracks.)-.25 E(J)72 768 Q -.25
-(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G 153.065(chilling V)-2.5 F
-(ersion 1.4)-1.11 E(2)206.225 E EP
+F1(CD-R)3.353 E .853(OM mode 1)-.3 F F0(\(Y)3.353 E(ello)-1 E 3.354(wB)
+-.25 G .854(ook\) for)-3.354 F(-)-.2 E .289
+(mat. The data is a multiple of 2048 bytes.)144 712.8 R .289
+(The \214le with track data should contain an)5.289 F F1(ISO-9660)2.788
+E F0(or)2.788 E F1 .36(Rock Ridge)144 724.8 R F0 .36
+(\214lesystem image \(see)2.86 F F1(mkisofs)2.86 E F0 .361
+(for more details\). If the track data is an)2.86 F F1(ufs)2.861 E F0
+(\214lesystem)2.861 E(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)
+-.18 G 153.065(chilling V)-2.5 F(ersion 1.5)-1.11 E(2)206.225 E EP
 %%Page: 3 3
 %%BeginPageSetup
 BP
 %%EndPageSetup
 /F0 10/Times-Roman@0 SF 104.275(CDRECORD\(1\) Schily\264s)72 48 R
-(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E/F1 10/Times-Bold@0 SF
-(\255nopr)108 84 Q(eemp)-.18 E F0 .432(If this \215ag is present, all T)
-144 96 R .432(OC entries for subsequent audio tracks will indicate that\
- the audio data)-.18 F
-(has been mastered with linear data \255 this is the def)144 108 Q
-(ault.)-.1 E F1(bytes=#)108 124.8 Q F0 .388
-(If the master image for the ne)144 136.8 R .388
+(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E .126
+(image, fragment size should be set to 2 KB or more to allo)144 84 R
+2.626(wC)-.25 G(R-dri)-2.626 E -.15(ve)-.25 G 2.626(sw).15 G .126
+(ith 2 KB sector size to to)-2.626 F(be used for reading.)144 96 Q
+(\255data is the def)144 112.8 Q(ault, if no other \215ag is present.)
+-.1 E/F1 10/Times-Bold@0 SF(\255mode2)108 129.6 Q F0 .415
+(If this \215ag is present, all subsequent tracks are written in)144
+141.6 R F1(CD-R)2.916 E .416(OM mode 2)-.3 F F0 .416
+(format. The data is a)2.916 F(multiple of 2048 bytes.)144 153.6 Q F1
+(\255xa1)108 170.4 Q F0 .391
+(If this \215ag is present, all subsequent tracks are written in)15.3 F
+F1(CD-R)2.891 E .391(OM XA mode 1)-.3 F F0 .391(format. The data)2.891 F
+(is a multiple of 2048 bytes.)144 182.4 Q F1(\255xa2)108 199.2 Q F0 .391
+(If this \215ag is present, all subsequent tracks are written in)15.3 F
+F1(CD-R)2.891 E .391(OM XA mode 2)-.3 F F0 .392(format. The data)2.892 F
+(is a multiple of 2048 bytes.)144 211.2 Q F1(\255cdi)108 228 Q F0 .985
+(If this \215ag is present, all subsequent tracks are written in)17.52 F
+F1(CDI)3.484 E F0 .984(format. The data is a multiple of)3.484 F
+(2048 bytes.)144 240 Q F1(\255isosize)108 256.8 Q F0 .345(Use the)144
+268.8 R F1(ISO-9660)2.845 E F0 .346
+(\214le system size as the size of the ne)2.845 F .346(xt track.)-.15 F
+.346(This option is needed if you w)5.346 F(ant)-.1 E .018
+(to read the image of a track from a ra)144 280.8 R 2.518(wd)-.15 G .018
+(isk partition or on a master CD. In the \214rst case the option)-2.518
+F F1(\255isosize)144 292.8 Q F0 .517(is needed to limit the size of the\
+ CD to the size of the iso \214lesystem.)3.017 F .517
+(In the second case)5.517 F 1.177(the option)144 304.8 R F1(\255isosize)
+3.677 E F0 1.176(is needed to pre)3.677 F -.15(ve)-.25 G(nt).15 E F1
+(cdr)3.676 E(ecord)-.18 E F0 1.176(from reading the tw)3.676 F 3.676(or)
+-.1 G 1.176(un out blocks that are)-3.676 F .995
+(appended by each CD-recorder in track at once mode. These tw)144 316.8
+R 3.496(or)-.1 G .996(un out blocks cannot be read)-3.496 F .97(and w)
+144 328.8 R .97(ould cause a b)-.1 F(uf)-.2 E .97(fer underrun that w)
+-.25 F .97(ould cause e defecti)-.1 F 1.27 -.15(ve c)-.25 H(op).15 E
+4.77 -.65(y. D)-.1 H 3.47(on).65 G .97(ot use this option if)-3.47 F F1
+(cdr)144 340.8 Q(ecord)-.18 E F0 .826(reads the track data from)3.326 F
+/F2 10/Times-Italic@0 SF(stdin)3.327 E F0 5.827(.T).24 G .827
+(his option currently cannot be used to determine the)-5.827 F
+(size of a \214le system if the multi session option is present.)144
+352.8 Q F1(\255pad)108 369.6 Q F0 .29(If the track is a data track, 15 \
+sectors of zeroed data will be added to the end of this and each sub-)
+14.18 F .018(sequent data track.)144 381.6 R .018
+(Use this option if your CD-dri)5.018 F .318 -.15(ve i)-.25 H 2.518(sn)
+.15 G .018(ot able to read the last sectors of a track or)-2.518 F .418
+(if you w)144 393.6 R .418(ant to read to be able to read the CD on a)
+-.1 F F1(Linux)2.917 E F0 .417
+(system with the iso9660 \214lesystem read)2.917 F .715(ahead b)144
+405.6 R 3.215(ug. If)-.2 F(the)3.215 E F2(\255pad)3.215 E F0 .716
+(option refers to an audio track,)3.216 F F1(cdr)3.216 E(ecord)-.18 E F0
+.716(will pad the audio data to be a)3.216 F .111
+(multiple of 2352 bytes.)144 417.6 R .11(The audio data padding is done\
+ with binary zeroes which is equal to abso-)5.111 F(lute silence.)144
+429.6 Q F1(\255nopad)108 446.4 Q F0(Do not pad the follo)144 458.4 Q
+(wing tracks \255 the def)-.25 E(ault.)-.1 E F1(\255pr)108 475.2 Q(eemp)
+-.18 E F0 .431(If this \215ag is present, all T)144 487.2 R .432(OC ent\
+ries for subsequent audio tracks will indicate that the audio data)-.18
+F .068(has been sampled with 50/15)144 499.2 R/F3 10/Symbol-Slanted SF
+(m)2.568 E F0 .068(sec preemphasis.)B .068(The data, ho)5.068 F(we)-.25
+E -.15(ve)-.25 G 2.568(ri).15 G 2.568(sn)-2.568 G .068
+(ot modi\214ed during the pro-)-2.568 F
+(cess of transferring from \214le to disk.)144 511.2 Q
+(This option has no ef)5 E(fect on data tracks.)-.25 E F1(\255nopr)108
+528 Q(eemp)-.18 E F0 .431(If this \215ag is present, all T)144 540 R
+.432(OC entries for subsequent audio tracks will indicate that the audi\
+o data)-.18 F(has been mastered with linear data \255 this is the def)
+144 552 Q(ault.)-.1 E F1(bytes=#)108 568.8 Q F0 .388
+(If the master image for the ne)144 580.8 R .388
 (xt track has been stored on a ra)-.15 F 2.888(wd)-.15 G .388
-(isk, use this option to specify the)-2.888 F -.25(va)144 148.8 S .46
+(isk, use this option to specify the)-2.888 F -.25(va)144 592.8 S .46
 (lid amount of data on this disk. If the image of the ne).25 F .46
 (xt track is stored in a re)-.15 F .46(gular \214le, the size)-.15 F
-.361(of that \214le is tak)144 160.8 R .361
-(en to determine the length of this track.)-.1 F(The)5.361 E F1(isosize)
-2.861 E F0 .362(program, usually included in)2.861 F(the)144 172.8 Q F1
-(mkisofs)2.5 E F0(distrib)2.5 E(ution, can be used to determine the len\
-gth of an ISO 9660 \214lesystem image.)-.2 E/F2 9/Times-Bold@0 SF
-(EXAMPLES)72 201.6 Q F0 -.15(Fo)108 213.6 S 3.139(ra).15 G .639(ll e)
--3.139 F .639(xamples belo)-.15 F 1.939 -.65(w, i)-.25 H 3.139(tw).65 G
-.639
+.251(of that \214le is tak)144 604.8 R .251
+(en to determine the length of this track.)-.1 F .25
+(If the track contains an ISO 9660 \214lesys-)5.25 F(tem image use the)
+144 616.8 Q F2(\255isosize)2.5 E F0
+(option to determine the length of that \214lesystem image.)2.5 E/F4 9
+/Times-Bold@0 SF(EXAMPLES)72 645.6 Q F0 -.15(Fo)108 657.6 S 3.138(ra).15
+G .638(ll e)-3.138 F .639(xamples belo)-.15 F 1.939 -.65(w, i)-.25 H
+3.139(tw).65 G .639
 (ill be assumed that the CD-Recorder is connected to the primary SCSI b)
--3.139 F .638(us of)-.2 F(the machine. The SCSI tar)108 225.6 Q
-(get id is set to 2.)-.18 E 1.6 -.8(To r)108 242.4 T(ecord a pure CD-R)
-.8 E(OM at double speed, using data from the \214le)-.4 E/F3 10
-/Times-Italic@0 SF(cdima)2.5 E -.1(ge)-.1 G(.r)-.05 E(aw)-.15 E F0(:).31
-E(cdrecord \255v speed=2 de)118 259.2 Q(v=2,0 cdimage.ra)-.25 E(w)-.15 E
-1.6 -.8(To c)108 276 T
+-3.139 F .639(us of)-.2 F(the machine. The SCSI tar)108 669.6 Q
+(get id is set to 2.)-.18 E 1.6 -.8(To r)108 686.4 T(ecord a pure CD-R)
+.8 E(OM at double speed, using data from the \214le)-.4 E F2(cdima)2.5 E
+-.1(ge)-.1 G(.r)-.05 E(aw)-.15 E F0(:).31 E(cdrecord \255v speed=2 de)
+118 703.2 Q(v=2,0 cdimage.ra)-.25 E(w)-.15 E 1.6 -.8(To c)108 720 T
 (reate an image for a ISO 9660 \214lesystem with Rock Ridge e).8 E
-(xtensions:)-.15 E(mkisofs \255R \255o cdimage.ra)118 292.8 Q 2.5(w/)
--.15 G(home/joer)-2.5 E(g/master/tree)-.18 E 1.6 -.8(To c)108 309.6 T
-(heck the resulting \214le before writing to CD on Solaris:).8 E
-(mount \255r \255F fbk \255o type=hsfs /de)118 326.4 Q
-(v/fbk0:cdimage.ra)-.25 E 2.5(w/)-.15 G(mnt)-2.5 E(On Linux:)108 343.2 Q
-(mount cdimage.ra)118 360 Q 2.5<77ad>-.15 G 2.5<72ad>-2.5 G 2.5(ti)-2.5
-G(so9660 \255o loop /mnt)-2.5 E(Go on with:)108 376.8 Q(ls \255lR /mnt)
-118 388.8 Q(umount /mnt)118 400.8 Q 1.896(If the o)108 417.6 R -.15(ve)
--.15 G 1.896(rall speed of the system is suf).15 F 1.896
-(\214cient and the structure of the \214lesystem is not too comple)-.25
-F(x,)-.15 E(cdrecord will run without creating an image of the ISO 9660\
- \214lesystem. Simply run the pipeline:)108 429.6 Q
-(mkisofs \255R /master/tree | cdrecord \255v speed=2 de)118 446.4 Q
-(v=2,0 -)-.25 E .211(If your system is loaded, you should run mkisofs i\
-n the real time class too.)108 463.2 R 1.811 -.8(To r)5.211 H .211
-(aise the priority of).8 F F1(mkisofs)2.711 E F0(replace the command)108
-475.2 Q(mkisofs \255R /master/tree)118 492 Q(by)108 504 Q
-(priocntl \255e \255c R)118 516 Q 2.5<54ad>-.6 G 2.5(p5)-2.5 G 2.5(9m)
--2.5 G(kisofs \255R /master/tree)-2.5 E(on Solaris and by)108 540 Q
-(nice -18 mkisofs \255R /master/tree)118 564 Q(on SunOS.)108 588 Q .018
-(Cdrecord runs at priority 59 on Solaris, you should run mkisofs at no \
-more than priority 58. On SunOS, you)108 604.8 R
-(should run mkisofs at no less than nice -18.)108 616.8 Q .383
-(Creating a CD-R)108 633.6 R .382(OM without \214le system image on dis\
-k has been tested on a Sparcstation-2 with a Y)-.4 F(amaha)-1 E
-(CDR-100. It did w)108 645.6 Q(ork up to double speed.)-.1 E 2.5(Af)5 G
-(aster machine may be able to handle quad speed also.)-2.6 E 1.64 -.8
-(To r)108 662.4 T .04(ecord a pure CD-D).8 F 2.54(A\()-.4 G .041
-(audio\) at single speed, with each track contained in a \214le named)
--2.54 F F3(tr)2.541 E(ac)-.15 E(k01.cdaudio)-.2 E F0(,).18 E F3(tr)108
-674.4 Q(ac)-.15 E(k02.cdaudio)-.2 E F0 2.5(,e).18 G(tc:)-2.5 E
-(cdrecord \255v speed=1 de)118 691.2 Q(v=2,0 -audio track*.cdaudio)-.25
-E 1.6 -.8(To c)108 708 T
-(heck if it will be ok to use double speed for the e).8 E(xample abo)
--.15 E -.15(ve)-.15 G 5(.U).15 G(se the dummy write option:)-5 E
-(cdrecord \255v \255dummy speed=2 de)118 724.8 Q
-(v=2,0 \255audio track*.cdaudio)-.25 E(J)72 768 Q -.25(..)-5.5 K(or)-4.5
-5.5 M 2.5(gS)-.18 G 153.065(chilling V)-2.5 F(ersion 1.4)-1.11 E(3)
-206.225 E EP
+(xtensions:)-.15 E(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G
+153.065(chilling V)-2.5 F(ersion 1.5)-1.11 E(3)206.225 E EP
 %%Page: 4 4
 %%BeginPageSetup
 BP
 %%EndPageSetup
 /F0 10/Times-Roman@0 SF 104.275(CDRECORD\(1\) Schily\264s)72 48 R
-(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E 2.607 -.8(To r)108 84 T
-1.007(ecord a mix).8 F 1.007
-(ed-mode CD with an ISO 9660 \214lesystem from)-.15 F/F1 10
-/Times-Italic@0 SF(cdima)3.506 E -.1(ge)-.1 G(.r)-.05 E(aw)-.15 E F0
-1.006(on the \214rst track, the other)3.506 F
-(tracks being audio tracks from the \214les)108 96 Q F1(tr)2.5 E(ac)-.15
-E(k01.cdaudio)-.2 E F0(,).18 E F1(tr)2.5 E(ac)-.15 E(k02.cdaudio)-.2 E
-F0 2.5(,e).18 G(tc:)-2.5 E(cdrecord \255v \255dummy de)118 112.8 Q
-(v=2,0 cdimage.ra)-.25 E 2.5<77ad>-.15 G(audio track*.cdaudio)-2.5 E/F2
-9/Times-Bold@0 SF(SEE ALSO)72 141.6 Q/F3 10/Times-Bold@0 SF(mkisofs)108
-153.6 Q F0(\(1\),)A F3(scg)2.5 E F0(\(7\),)A F3(fbk)2.5 E F0(\(7\).)A F2
-(NO)72 182.4 Q(TES)-.36 E F0 .525(The current v)108 194.4 R .525
-(ersion of)-.15 F F3(cdr)3.025 E(ecord)-.18 E F0 .525(will only record)
-3.025 F F3 .525(track at once)3.025 F F0 -1(Ye)3.025 G(llo)1 E 3.025(wB)
--.25 G .526(ook Compatible Discs.)-3.025 F .526(If the so)5.526 F .627
-(made disks contain more than one track, the)108 206.4 R 3.127(ya)-.15 G
-.627(re not suitable for direct mass production by CD manuf)-3.127 F
-(ac-)-.1 E 4.097(turers. Y)108 218.4 R 1.597(ou will need the)-1.1 F F3
-1.597(disk at once)4.097 F F0 1.597(option to record such disks.)4.097 F
-(Ne)6.597 E -.15(ve)-.25 G 1.597(rtheless the disks made with).15 F F3
-(cdr)108 230.4 Q(ecord)-.18 E F0 .896
-(will normally be read in all CD players. Some old players ho)3.396 F
-(we)-.25 E -.15(ve)-.25 G 3.396(rm).15 G .896(ay produce a tw)-3.396 F
-3.395(os)-.1 G(econd)-3.395 E(click between tw)108 242.4 Q 2.5(oa)-.1 G
-(udio tracks.)-2.5 E -1.1(Yo)108 259.2 S 2.736(us)1.1 G .236
-(hould not use the)-2.736 F F3(\255multi)2.736 E F0 .236
-(\215ag, unless you kno)2.736 F 2.736(wt)-.25 G .236(hat you really w)
--2.736 F .236(ant to create a multi session CD.)-.1 F(As)5.236 E F3(cdr)
-108 271.2 Q(ecord)-.18 E F0 .852(currently has no support to retrie)
-3.352 F 1.151 -.15(ve t)-.25 H .851
-(he \214rst writable address for the ne).15 F .851
-(xt session, multi session)-.15 F(CD')108 283.2 Q 2.589(sa)-.55 G .089
-(re currently not possible. W)-2.589 F 2.589(ew)-.8 G .089
-(ill need a modi\214ed)-2.589 F F3(mkisofs)2.589 E F0 .09
-(to do this according the K)2.59 F .09(odak Photo-CD)-.35 F(spec.)108
-295.2 Q .563(The minimal size of a track is 4 seconds or 300 sectors. I\
-f you write smaller tracks, the CD-Recorder will)108 312 R
-(add dummy blocks. This is not an error)108 324 Q 2.5(,e)-.4 G -.15(ve)
+(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E
+(mkisofs \255R \255o cdimage.ra)118 84 Q 2.5(w/)-.15 G(home/joer)-2.5 E
+(g/master/tree)-.18 E 1.6 -.8(To c)108 100.8 T
+(heck the resulting \214le before writing to CD on Solaris:).8 E
+(mount \255r \255F fbk \255o type=hsfs /de)118 117.6 Q
+(v/fbk0:cdimage.ra)-.25 E 2.5(w/)-.15 G(mnt)-2.5 E(On Linux:)108 134.4 Q
+(mount cdimage.ra)118 151.2 Q 2.5<77ad>-.15 G 2.5<72ad>-2.5 G 2.5(ti)
+-2.5 G(so9660 \255o loop /mnt)-2.5 E(Go on with:)108 168 Q
+(ls \255lR /mnt)118 180 Q(umount /mnt)118 192 Q 1.897(If the o)108 208.8
+R -.15(ve)-.15 G 1.896(rall speed of the system is suf).15 F 1.896
+(\214cient and the structure of the \214lesystem is not too comple)-.25
+F(x,)-.15 E(cdrecord will run without creating an image of the ISO 9660\
+ \214lesystem. Simply run the pipeline:)108 220.8 Q
+(mkisofs \255R /master/tree | cdrecord \255v speed=2 de)118 237.6 Q
+(v=2,0 -)-.25 E .211(If your system is loaded, you should run mkisofs i\
+n the real time class too.)108 254.4 R 1.811 -.8(To r)5.211 H .211
+(aise the priority of).8 F/F1 10/Times-Bold@0 SF(mkisofs)2.711 E F0
+(replace the command)108 266.4 Q(mkisofs \255R /master/tree)118 283.2 Q
+(by)108 295.2 Q(priocntl \255e \255c R)118 307.2 Q 2.5<54ad>-.6 G 2.5
+(p5)-2.5 G 2.5(9m)-2.5 G(kisofs \255R /master/tree)-2.5 E
+(on Solaris and by)108 331.2 Q(nice -18 mkisofs \255R /master/tree)118
+355.2 Q(on SunOS.)108 379.2 Q .018(Cdrecord runs at priority 59 on Sola\
+ris, you should run mkisofs at no more than priority 58. On SunOS, you)
+108 396 R(should run mkisofs at no less than nice -18.)108 408 Q .382
+(Creating a CD-R)108 424.8 R .382(OM without \214le system image on dis\
+k has been tested on a Sparcstation-2 with a Y)-.4 F(amaha)-1 E
+(CDR-100. It did w)108 436.8 Q(ork up to double speed.)-.1 E 2.5(Af)5 G
+(aster machine may be able to handle quad speed also.)-2.6 E 1.641 -.8
+(To r)108 453.6 T .041(ecord a pure CD-D).8 F 2.541(A\()-.4 G .04
+(audio\) at single speed, with each track contained in a \214le named)
+-2.541 F/F2 10/Times-Italic@0 SF(tr)2.54 E(ac)-.15 E(k01.cdaudio)-.2 E
+F0(,).18 E F2(tr)108 465.6 Q(ac)-.15 E(k02.cdaudio)-.2 E F0 2.5(,e).18 G
+(tc:)-2.5 E(cdrecord \255v speed=1 de)118 482.4 Q
+(v=2,0 -audio track*.cdaudio)-.25 E 1.6 -.8(To c)108 499.2 T
+(heck if it will be ok to use double speed for the e).8 E(xample abo)
+-.15 E -.15(ve)-.15 G 5(.U).15 G(se the dummy write option:)-5 E
+(cdrecord \255v \255dummy speed=2 de)118 516 Q
+(v=2,0 \255audio track*.cdaudio)-.25 E 2.606 -.8(To r)108 532.8 T 1.006
+(ecord a mix).8 F 1.006(ed-mode CD with an ISO 9660 \214lesystem from)
+-.15 F F2(cdima)3.507 E -.1(ge)-.1 G(.r)-.05 E(aw)-.15 E F0 1.007
+(on the \214rst track, the other)3.507 F
+(tracks being audio tracks from the \214les)108 544.8 Q F2(tr)2.5 E(ac)
+-.15 E(k01.cdaudio)-.2 E F0(,).18 E F2(tr)2.5 E(ac)-.15 E(k02.cdaudio)
+-.2 E F0 2.5(,e).18 G(tc:)-2.5 E(cdrecord \255v \255dummy de)118 561.6 Q
+(v=2,0 cdimage.ra)-.25 E 2.5<77ad>-.15 G(audio track*.cdaudio)-2.5 E/F3
+9/Times-Bold@0 SF(SEE ALSO)72 590.4 Q F1(mkisofs)108 602.4 Q F0(\(1\),)A
+F1(scg)2.5 E F0(\(7\),)A F1(fbk)2.5 E F0(\(7\).)A F3(NO)72 631.2 Q(TES)
+-.36 E F0 .598(The current v)108 643.2 R .598(ersion of)-.15 F F1(cdr)
+3.098 E(ecord)-.18 E F0 .597(will only record)3.097 F F1 .597
+(track at once)3.097 F F0 3.097(Discs. If)3.097 F .597
+(the so made disks contain more)3.097 F .92(than one track, the)108
+655.2 R 3.42(ya)-.15 G .921
+(re not suitable for direct mass production by CD manuf)-3.42 F 3.421
+(acturers. Y)-.1 F .921(ou will need the)-1.1 F F1 .073(disk at once)108
+667.2 R F0 .073(option to record such disks.)2.573 F(Ne)5.073 E -.15(ve)
+-.25 G .073(rtheless the disks made with).15 F F1(cdr)2.573 E(ecord)-.18
+E F0 .073(will normally be read)2.573 F .178
+(in all CD players. Some old audio CD players ho)108 679.2 R(we)-.25 E
+-.15(ve)-.25 G 2.678(rm).15 G .178(ay produce a tw)-2.678 F 2.678(os)-.1
+G .178(econd click between tw)-2.678 F 2.678(oa)-.1 G(udio)-2.678 E
+(tracks.)108 691.2 Q .563(The minimal size of a track is 4 seconds or 3\
+00 sectors. If you write smaller tracks, the CD-Recorder will)108 708 R
+(add dummy blocks. This is not an error)108 720 Q 2.5(,e)-.4 G -.15(ve)
 -2.75 G 2.5(nt).15 G(hough the SCSI-error message looks this w)-2.5 E
-(ay)-.1 E(.)-.65 E F3(Cdr)108 340.8 Q(ecord)-.18 E F0 1.773(has been te\
-sted on an upgraded Philips CDD-521 recorder at single and double speed\
- on a)4.273 F 4.317(SparcStation 20/502 with no problems, slo)108 352.8
-R 4.317(wer computer systems should w)-.25 F 4.316(ork also.)-.1 F 4.316
-(The ne)9.316 F(wer)-.25 E 1.149(Philips/HP/Plasmon/Grundig dri)108
-364.8 R -.15(ve)-.25 G 3.649(sa).15 G 3.649(sw)-3.649 G 1.149(ell as Y)
--3.649 F 1.149(amaha CDR-100 and CDR-102 w)-1 F 1.15
-(ork also. The Plasmon)-.1 F .205(RF-4100 w)108 376.8 R .205(ork, b)-.1
-F .205(ut has not tested in multi session.)-.2 F 2.705(AP)5.205 G .205
-(hilips CDD-521 that has not been upgraded will not)-2.705 F -.1(wo)108
-388.8 S 2.933(rk. The).1 F(Son)2.933 E 2.933(yC)-.15 G .434
-(DU-924 has been tested, b)-2.933 F .434
-(ut does not support XA-mode2 in hardw)-.2 F 2.934(are. The)-.1 F(son)
-2.934 E 2.934(yt)-.15 G(here-)-2.934 E .48
-(fore cannot create conforming multi session disks.)108 400.8 R .479
-(The Ricoh R)5.479 F .479(O-1420C w)-.4 F .479(orks, b)-.1 F .479
-(ut some people seem to)-.2 F(ha)108 412.8 Q .3 -.15(ve p)-.2 H
-(roblems to use them with speed=2, try speed=0 in this case.).15 E -1.1
-(Yo)108 429.6 S 2.605(us)1.1 G .105(hould run se)-2.605 F -.15(ve)-.25 G
-.105(ral tests in single and double speed with the).15 F F3(\255dummy)
-2.605 E F0 .106(option turned on if you are using)2.605 F F3(cdr)108
-441.6 Q(ecord)-.18 E F0 .376(on an unkno)2.876 F .375
-(wn system. Writing a CD is a realtime process.)-.25 F -1.1(Yo)5.375 G
-2.875(uc)1.1 G .375(an currently not use cdimages)-2.875 F .023
-(that are located on)108 453.6 R F3(NFS)2.524 E F0 .024(\214le systems.)
-2.524 F F3(Nfs)5.024 E F0 .024(will not deli)2.524 F -.15(ve)-.25 G
-2.524(rc).15 G .024(onstantly the needed data rates.)-2.524 F 2.524(Iu)
-5.024 G(sed)-2.524 E F3(cdr)2.524 E(ecord)-.18 E F0 1.583
-(with with medium load on a SS20/502 and e)108 465.6 R -.15(ve)-.25 G
-4.083(na).15 G 4.083(tq)-4.083 G 1.583
-(uad speed on a Sparcstation-2 which w)-4.083 F 1.582(as hea)-.1 F(vily)
--.2 E 2.128(loaded, b)108 477.6 R 2.129(ut it is recommended to lea)-.2
-F 2.429 -.15(ve t)-.2 H 2.129
-(he system as lightly loaded as possible while writing a CD.).15 F F3
-(Cdr)108 489.6 Q(ecord)-.18 E F0 .258
-(needs to run as root to get access to the)2.759 F F3(/de)2.758 E
-(v/scg?)-.15 E F0(de)5.258 E .258
-(vice nodes and to be able to lock itself into)-.25 F(memory)108 501.6 Q
-(.)-.65 E .043(If you don')108 518.4 R 2.543(tw)-.18 G .043(ant to allo)
--2.643 F 2.543(wu)-.25 G .043(sers to become root on your system,)-2.543
-F F3(cdr)2.543 E(ecord)-.18 E F0 .044
-(may safely be installed suid root.)2.543 F .937(This allo)108 530.4 R
-.936(ws all users or a group of users with no root pri)-.25 F(vile)-.25
-E .936(ges to use)-.15 F F3(cdr)3.436 E 3.436(ecord. Cdr)-.18 F(ecord)
--.18 E F0 .936(in this case)3.436 F 1.423(checks, if the real user w)108
-542.4 R 1.423(ould ha)-.1 F 1.723 -.15(ve b)-.2 H 1.423
-(een able to read the speci\214ed \214les.).15 F 3.024 -.8(To g)6.424 H
--2.15 -.25(iv e).8 H 1.424(all user access to use)4.174 F F3(cdr)108
-554.4 Q(ecord,)-.18 E F0(enter:)2.5 E
-(chmod 4711 /usr/local/bin/cdrecord)144 571.2 Q 1.6 -.8(To g)108 588 T
--2.15 -.25(iv e).8 H 2.5(ar)2.75 G
-(estricted group of users access to cdrecord enter:)-2.5 E
-(chmod 4710 /usr/local/bin/cdrecord)144 604.8 Q(chgrp cdb)144 616.8 Q
-(urners /usr/local/bin/cdrecord)-.2 E(and add a group)108 633.6 Q F1
-(cdb)2.5 E(urner)-.2 E(s)-.1 E F0(on your system.)2.5 E(Ne)108 650.4 Q
--.15(ve)-.25 G 3.03(rg).15 G -2.15 -.25(iv e)-3.03 H .53
-(write permissions for non root users to the)3.28 F F1(/de)3.03 E
-(v/scg?)-.15 E F0(de)5.53 E .53(vices unless you w)-.25 F .53(ould allo)
--.1 F 3.03(wa)-.25 G -.15(ny)-3.03 G(body).15 E
-(to read/write/format all your disks.)108 662.4 Q -1.1(Yo)108 679.2 S
-3.356(us)1.1 G .856(hould not connect old dri)-3.356 F -.15(ve)-.25 G
-3.356(st).15 G .857
-(hat do not support disconnect/reconnect to either the SCSI b)-3.356 F
-.857(us that is)-.2 F(connected to the CD-Recorder or the source disk.)
-108 691.2 Q 2.5(AC)108 708 S(ompact Disc can ha)-2.5 E .3 -.15(ve n)-.2
-H 2.5(om).15 G(ore than 99 tracks.)-2.5 E .937(When creating a disc wit\
-h both audio and data tracks, the data should be on track 1. CDplus has\
- not yet)108 724.8 R(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18
-G 153.065(chilling V)-2.5 F(ersion 1.4)-1.11 E(4)206.225 E EP
+(ay)-.1 E(.)-.65 E(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G
+153.065(chilling V)-2.5 F(ersion 1.5)-1.11 E(4)206.225 E EP
 %%Page: 5 5
 %%BeginPageSetup
 BP
 %%EndPageSetup
 /F0 10/Times-Roman@0 SF 104.275(CDRECORD\(1\) Schily\264s)72 48 R
-(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E(been tested.)108 84 Q(Man)
-108 100.8 Q 2.5(ys)-.15 G(ystems are not able to read more than a singl\
-e data track, or need special softw)-2.5 E(are to do so.)-.1 E(More inf\
-ormation on the SCSI command set of a HP CD-Recorder can be found at:)
-108 117.6 Q(http://www)144 134.4 Q(.hp.com:80/isgsupport/cdr/inde)-.65 E
-(x.html)-.15 E .15(If you ha)108 151.2 R .45 -.15(ve m)-.2 H .15(ore in\
-formation or SCSI command manuals for other CD-Recorders than Philips C\
-DD 522 or).15 F(the HP dri)108 163.2 Q .3 -.15(ve m)-.25 H(entioned abo)
-.15 E .3 -.15(ve p)-.15 H(lease contact the author).15 E(.)-.55 E 1.333
-(The Philips CDD 521 CD-Recorder \(e)108 180 R -.15(ve)-.25 G 3.833(ni)
-.15 G 3.833(nt)-3.833 G 1.333(he upgraded v)-3.833 F 1.333
+(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E/F1 10/Times-Bold@0 SF(Cdr)
+108 84 Q(ecord)-.18 E F0 1.773(has been tested on an upgraded Philips C\
+DD-521 recorder at single and double speed on a)4.273 F 4.317
+(SparcStation 20/502 with no problems, slo)108 96 R 4.317
+(wer computer systems should w)-.25 F 4.316(ork also.)-.1 F 4.316
+(The ne)9.316 F(wer)-.25 E 1.149(Philips/HP/Plasmon/Grundig dri)108 108
+R -.15(ve)-.25 G 3.649(sa).15 G 3.649(sw)-3.649 G 1.149(ell as Y)-3.649
+F 1.149(amaha CDR-100 and CDR-102 w)-1 F 1.15(ork also. The Plasmon)-.1
+F .205(RF-4100 w)108 120 R .205(ork, b)-.1 F .205
+(ut has not tested in multi session.)-.2 F 2.705(AP)5.205 G .205
+(hilips CDD-521 that has not been upgraded will not)-2.705 F -.1(wo)108
+132 S 2.933(rk. The).1 F(Son)2.933 E 2.933(yC)-.15 G .434
+(DU-924 has been tested, b)-2.933 F .434
+(ut does not support XA-mode2 in hardw)-.2 F 2.934(are. The)-.1 F(son)
+2.934 E 2.934(yt)-.15 G(here-)-2.934 E .48
+(fore cannot create conforming multi session disks.)108 144 R .479
+(The Ricoh R)5.479 F .479(O-1420C w)-.4 F .479(orks, b)-.1 F .479
+(ut some people seem to)-.2 F(ha)108 156 Q .3 -.15(ve p)-.2 H
+(roblems to use them with speed=2, try speed=0 in this case.).15 E 1.732
+(The Y)108 172.8 R 1.732(amaha CDR-400 and all ne)-1 F 4.232(wS)-.25 G
+1.732(CSI-3/mmc conforming dri)-4.232 F -.15(ve)-.25 G 4.232(sa).15 G
+1.732(re supported in single and multi-)-4.232 F 2.906(session. CD-R)108
+184.8 R 2.906(Wd)-.55 G(ri)-2.906 E -.15(ve)-.25 G 2.906(sl).15 G(ik)
+-2.906 E 2.906(et)-.1 G .406
+(he Ricoh MP-6200 are currently supported as CD-R dri)-2.906 F -.15(ve)
+-.25 G 2.906(so).15 G(nly)-2.906 E 5.406(.E)-.65 G .406(rasing the)
+-5.406 F(disk or parts of the disk will be added in a later v)108 196.8
+Q(ersion of cdrecord.)-.15 E -1.1(Yo)108 213.6 S 2.567(us)1.1 G .067
+(hould run se)-2.567 F -.15(ve)-.25 G .068
+(ral tests in all supported speeds of your dri).15 F .368 -.15(ve w)-.25
+H .068(ith the).15 F F1(\255dummy)2.568 E F0 .068
+(option turned on if you)2.568 F .432(are using)108 225.6 R F1(cdr)2.932
+E(ecord)-.18 E F0 .432(on an unkno)2.932 F .432
+(wn system. Writing a CD is a realtime process.)-.25 F -1.1(Yo)5.431 G
+2.931(uc)1.1 G .431(an currently not use)-2.931 F 1.01
+(cdimages that are located on)108 237.6 R F1(NFS)3.51 E F0 1.01
+(\214le systems.)3.51 F F1(NFS)6.011 E F0 1.011(will not deli)3.511 F
+-.15(ve)-.25 G 3.511(rc).15 G 1.011(onstantly the needed data rates.)
+-3.511 F(I)6.011 E(used)108 249.6 Q F1(cdr)3.39 E(ecord)-.18 E F0 .89
+(with with medium load on a SS20/502 and e)3.39 F -.15(ve)-.25 G 3.39
+(na).15 G 3.39(tq)-3.39 G .89(uad speed on a Sparcstation-2 which)-3.39
+F -.1(wa)108 261.6 S 2.799(sh).1 G(ea)-2.799 E .299(vily loaded, b)-.2 F
+.299(ut it is recommended to lea)-.2 F .599 -.15(ve t)-.2 H .3
+(he system as lightly loaded as possible while writing a).15 F(CD.)108
+273.6 Q F1(Cdr)5.1 E(ecord)-.18 E F0 .1
+(needs to run as root to get access to the)2.6 F F1(/de)2.599 E(v/scg?)
+-.15 E F0(de)5.099 E .099(vice nodes and to be able to lock itself)-.25
+F(into memory)108 285.6 Q(.)-.65 E .043(If you don')108 302.4 R 2.543
+(tw)-.18 G .043(ant to allo)-2.643 F 2.543(wu)-.25 G .043
+(sers to become root on your system,)-2.543 F F1(cdr)2.543 E(ecord)-.18
+E F0 .044(may safely be installed suid root.)2.543 F .937(This allo)108
+314.4 R .936(ws all users or a group of users with no root pri)-.25 F
+(vile)-.25 E .936(ges to use)-.15 F F1(cdr)3.436 E 3.436(ecord. Cdr)-.18
+F(ecord)-.18 E F0 .936(in this case)3.436 F 1.423
+(checks, if the real user w)108 326.4 R 1.423(ould ha)-.1 F 1.723 -.15
+(ve b)-.2 H 1.423(een able to read the speci\214ed \214les.).15 F 3.024
+-.8(To g)6.424 H -2.15 -.25(iv e).8 H 1.424(all user access to use)4.174
+F F1(cdr)108 338.4 Q(ecord,)-.18 E F0(enter:)2.5 E
+(chmod 4711 /usr/local/bin/cdrecord)144 355.2 Q 1.6 -.8(To g)108 372 T
+-2.15 -.25(iv e).8 H 2.5(ar)2.75 G
+(estricted group of users access to cdrecord enter:)-2.5 E
+(chmod 4710 /usr/local/bin/cdrecord)144 388.8 Q(chgrp cdb)144 400.8 Q
+(urners /usr/local/bin/cdrecord)-.2 E(and add a group)108 417.6 Q/F2 10
+/Times-Italic@0 SF(cdb)2.5 E(urner)-.2 E(s)-.1 E F0(on your system.)2.5
+E(Ne)108 434.4 Q -.15(ve)-.25 G 3.03(rg).15 G -2.15 -.25(iv e)-3.03 H
+.53(write permissions for non root users to the)3.28 F F2(/de)3.03 E
+(v/scg?)-.15 E F0(de)5.53 E .53(vices unless you w)-.25 F .53(ould allo)
+-.1 F 3.03(wa)-.25 G -.15(ny)-3.03 G(body).15 E
+(to read/write/format all your disks.)108 446.4 Q -1.1(Yo)108 463.2 S
+3.356(us)1.1 G .856(hould not connect old dri)-3.356 F -.15(ve)-.25 G
+3.356(st).15 G .857
+(hat do not support disconnect/reconnect to either the SCSI b)-3.356 F
+.857(us that is)-.2 F(connected to the CD-Recorder or the source disk.)
+108 475.2 Q 2.5(AC)108 492 S(ompact Disc can ha)-2.5 E .3 -.15(ve n)-.2
+H 2.5(om).15 G(ore than 99 tracks.)-2.5 E .524(When creating a disc wit\
+h both audio and data tracks, the data should be on track 1 otherwise w)
+108 508.8 R .523(ou should)-.1 F .267(create a CDplus disk which is a m\
+ulti session disk with the \214rst session containing the audio tracks \
+and the)108 520.8 R(follo)108 532.8 Q
+(wing session containing the data track.)-.25 E(Man)108 549.6 Q 3.179
+(yo)-.15 G .679(perating systems are not able to read more than a singl\
+e data track, or need special softw)-3.179 F .679(are to do)-.1 F(so.)
+108 561.6 Q(More information on the SCSI command set of a HP CD-Recorde\
+r can be found at:)108 578.4 Q(http://www)144 595.2 Q
+(.hp.com/isgsupport/cdr/inde)-.65 E(x.html)-.15 E .15(If you ha)108 612
+R .45 -.15(ve m)-.2 H .15(ore information or SCSI command manuals for o\
+ther CD-Recorders than Philips CDD 522 or).15 F(the HP dri)108 624 Q .3
+-.15(ve m)-.25 H(entioned abo).15 E .3 -.15(ve p)-.15 H
+(lease contact the author).15 E(.)-.55 E 1.333
+(The Philips CDD 521 CD-Recorder \(e)108 640.8 R -.15(ve)-.25 G 3.833
+(ni).15 G 3.833(nt)-3.833 G 1.333(he upgraded v)-3.833 F 1.333
 (ersion\) has se)-.15 F -.15(ve)-.25 G 1.332(ral \214rmw).15 F 1.332
-(are b)-.1 F 1.332(ugs. Some of)-.2 F(them will force you to po)108 192
-Q(wer c)-.25 E(ycle the de)-.15 E(vice or to reboot the machine.)-.25 E
-.404(When using)108 208.8 R/F1 10/Times-Bold@0 SF(cdr)2.904 E(ecord)-.18
-E F0 .404(with the brok)2.904 F(en)-.1 E F1 .404(Linux SCSI generic dri)
-2.904 F -.1(ve)-.1 G -1(r.).1 G F0 -1.1(Yo)6.404 G 2.905(us)1.1 G .405
+(are b)-.1 F 1.332(ugs. Some of)-.2 F(them will force you to po)108
+652.8 Q(wer c)-.25 E(ycle the de)-.15 E(vice or to reboot the machine.)
+-.25 E .404(When using)108 669.6 R F1(cdr)2.904 E(ecord)-.18 E F0 .404
+(with the brok)2.904 F(en)-.1 E F1 .404(Linux SCSI generic dri)2.904 F
+-.1(ve)-.1 G -1(r.).1 G F0 -1.1(Yo)6.404 G 2.905(us)1.1 G .405
 (hould note that)-2.905 F F1(cdr)2.905 E(ecord)-.18 E F0 .405(uses a)
 2.905 F .054
-(hack, that tries to emulate the functionality of the scg dri)108 220.8
+(hack, that tries to emulate the functionality of the scg dri)108 681.6
 R -.15(ve)-.25 G 3.654 -.55(r. U).15 H(nfortunately).55 E 2.554(,t)-.65
 G .054(he sg dri)-2.554 F -.15(ve)-.25 G 2.554(ro).15 G(n)-2.554 E F1
-(Linux)2.554 E F0 .053(has se)2.553 F(v-)-.25 E(eral se)108 232.8 Q -.15
-(ve)-.25 G(re b).15 E(ugs:)-.2 E 32.5<8349>108 249.6 S 2.5(tc)-32.5 G
-(annot see if SCSI command could not be sent at all.)-2.5 E 32.5<8349>
-108 266.4 S 2.532(tc)-32.5 G .032(annot get the SCSI status byte.)-2.532
-F F1(Cdr)5.033 E(ecord)-.18 E F0 .033(for that reason cannot report f)
-2.533 F .033(ailing SCSI commands)-.1 F(in some situations.)144 278.4 Q
-32.5<8349>108 295.2 S 3.93(tc)-32.5 G 1.43
-(annot get real dma count of transfer)-3.93 F(.)-.55 E F1(Cdr)6.43 E
-(ecord)-.18 E F0 1.43(cannot tell you if there is an dma residual)3.93 F
-(count.)144 307.2 Q 32.5<8349>108 324 S 3.109(tc)-32.5 G .609
-(annot get number of bytes v)-3.109 F .609(alid in auto sense data.)-.25
-F F1(Cdr)5.61 E(ecord)-.18 E F0 .61(cannot tell you if de)3.11 F .61
-(vice trans-)-.25 F(fers no sense data at all.)144 336 Q 32.5<8349>108
-352.8 S 2.5(tf)-32.5 G(etches to fe)-2.5 E 2.5(wd)-.25 G
-(ata in auto request sense \(CCS/SCSI-2/SCSI-3 needs >= 18\).)-2.5 E/F2
-9/Times-Bold@0 SF(DIA)72 381.6 Q(GNOSTICS)-.495 E F0 -1.1(Yo)108 393.6 S
-2.5(uh)1.1 G -2.25 -.2(av e)-2.5 H 2.5(9s)2.7 G
-(econds to type ^C to abort)-2.5 E F1(cdr)2.5 E(ecord)-.18 E F0
-(after you see the message:)2.5 E
-(Starting to write CD at speed %d in %s mode for %s session.)108 410.4 Q
-2.5(At)108 427.2 S(ypical error message for a SCSI command looks lik)
--2.5 E(e:)-.1 E(cdrecord: I/O error)144 451.2 Q 2.5(.t)-.55 G
-(est unit ready: scsi sendcmd: no error)-2.5 E
-(status: 0x2 \(CHECK CONDITION\))144 463.2 Q
-(Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00)144
-475.2 Q(Sense K)144 487.2 Q -.15(ey)-.25 G 2.5(:0).15 G(x5 Ille)-2.5 E
--.05(ga)-.15 G 2.5(lR).05 G(equest, Code 0x25 \(in)-2.5 E -.25(va)-.4 G
-(lid lun\) blk 0).25 E .352(The \214rst line gi)108 511.2 R -.15(ve)-.25
-G 2.852(si).15 G .352(nformation about the transport of the command.)
--2.852 F .352(The te)5.352 F .351(xt after the \214rst colon gi)-.15 F
--.15(ve)-.25 G 2.851(st).15 G(he)-2.851 E .04(error te)108 523.2 R .04
-(xt for the system call from the vie)-.15 F 2.54(wo)-.25 G 2.54(ft)-2.54
-G .041(he k)-2.54 F .041(ernel. It usually is:)-.1 F F1 .041(I/O err)
-2.541 F(or)-.18 E F0 .041(unless other problems hap-)2.541 F .785
-(pen. The ne)108 535.2 R .785(xt w)-.15 F .784
-(ords contain a short description for the SCSI command that f)-.1 F .784
-(ails. The rest of the line tell)-.1 F .051(you if there were an)108
-547.2 R 2.551(yp)-.15 G .051(roblems for the transport of the command o)
--2.551 F -.15(ve)-.15 G 2.551(rt).15 G .051(he SCSI b)-2.551 F(us.)-.2 E
-F1 .051(fatal err)5.051 F(or)-.18 E F0 .052(means that)2.551 F(it w)108
-559.2 Q(as not possible to transport the command \(i.e. no de)-.1 E
-(vice present at the requested SCSI address\).)-.25 E .214
-(The second line gi)108 576 R -.15(ve)-.25 G 2.714(si).15 G .213(nforma\
-tion on the SCSI status code returned by the command, if the transport \
-of the)-2.714 F(command succeeds.)108 588 Q
-(This is error information from the SCSI de)5 E(vice.)-.25 E
-(The third line is a he)108 604.8 Q 2.5(xd)-.15 G
-(ump of the auto request sense information for the command.)-2.5 E .132
-(The fourth line is the error te)108 621.6 R .132
-(xt for the sense bytes if a)-.15 F -.25(va)-.2 G 2.632(ilable. If).25 F
-.132(the type of the de)2.632 F .133(vice is kno)-.25 F .133
-(wn, the sense)-.25 F(data is decoded from tables in)108 633.6 Q/F3 10
-/Times-Italic@0 SF(scsierr)2.5 E(s.c)-.1 E F0(.)2.81 E(The follo)108
-650.4 Q(wing message is not an error:)-.25 E -.35(Tr)144 662.4 S
-(ack 01: T).35 E(otal bytes read/written: 2048/2048 \(1 sectors\).)-.8 E
-(cdrecord: I/O error)144 674.4 Q 2.5<2e8d>-.55 G
-(ush cache: scsi sendcmd: no error)-2.5 E
-(status: 0x2 \(CHECK CONDITION\))144 686.4 Q
-(Sense Bytes: F0 00 05 80 00 00 27 0A 00 00 00 00 B5 00 00 00 00 00)144
-698.4 Q(Sense K)144 710.4 Q -.15(ey)-.25 G 2.5(:0).15 G(x5 Ille)-2.5 E
--.05(ga)-.15 G 2.5(lR).05 G
-(equest, Code 0xB5 \(dummy data blocks added\) blk -2147483609 v)-2.5 E
-(alid)-.25 E(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G
-153.065(chilling V)-2.5 F(ersion 1.4)-1.11 E(5)206.225 E EP
+(Linux)2.554 E F0 .053(has se)2.553 F(v-)-.25 E(eral se)108 693.6 Q -.15
+(ve)-.25 G(re b).15 E(ugs:)-.2 E 32.5<8349>108 710.4 S 2.5(tc)-32.5 G
+(annot see if SCSI command could not be sent at all.)-2.5 E(J)72 768 Q
+-.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G 153.065(chilling V)-2.5 F
+(ersion 1.5)-1.11 E(5)206.225 E EP
 %%Page: 6 6
 %%BeginPageSetup
 BP
 %%EndPageSetup
 /F0 10/Times-Roman@0 SF 104.275(CDRECORD\(1\) Schily\264s)72 48 R
-(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E(It simply noti\214es, that\
- a track that is smaller than the minimum size has been e)108 84 Q
-(xpanded to 300 sectors.)-.15 E/F1 9/Times-Bold@0 SF -.09(BU)72 100.8 S
-(GS).09 E/F2 10/Times-Bold@0 SF(Cdr)108 112.8 Q(ecord)-.18 E F0 .401
-(should v)2.901 F .401(erify that the input data will \214t on the medi\
-a. Currently you get unpredictable results in)-.15 F(this case.)108
-124.8 Q(There should be an option to write inde)108 141.6 Q 2.5(xn)-.15
-G(umbers for audio tracks.)-2.5 E(There should be a reco)108 158.4 Q
--.15(ve)-.15 G 2.5(ro).15 G(ption to mak)-2.5 E 2.5(ed)-.1 G
+(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E 32.5<8349>108 84 S 2.532
+(tc)-32.5 G .032(annot get the SCSI status byte.)-2.532 F/F1 10
+/Times-Bold@0 SF(Cdr)5.033 E(ecord)-.18 E F0 .033
+(for that reason cannot report f)2.533 F .033(ailing SCSI commands)-.1 F
+(in some situations.)144 96 Q 32.5<8349>108 112.8 S 3.93(tc)-32.5 G 1.43
+(annot get real dma count of transfer)-3.93 F(.)-.55 E F1(Cdr)6.43 E
+(ecord)-.18 E F0 1.43(cannot tell you if there is an dma residual)3.93 F
+(count.)144 124.8 Q 32.5<8349>108 141.6 S 3.109(tc)-32.5 G .609
+(annot get number of bytes v)-3.109 F .609(alid in auto sense data.)-.25
+F F1(Cdr)5.61 E(ecord)-.18 E F0 .61(cannot tell you if de)3.11 F .61
+(vice trans-)-.25 F(fers no sense data at all.)144 153.6 Q 32.5<8349>108
+170.4 S 2.5(tf)-32.5 G(etches to fe)-2.5 E 2.5(wd)-.25 G
+(ata in auto request sense \(CCS/SCSI-2/SCSI-3 needs >= 18\).)-2.5 E/F2
+9/Times-Bold@0 SF(DIA)72 199.2 Q(GNOSTICS)-.495 E F0 -1.1(Yo)108 211.2 S
+2.5(uh)1.1 G -2.25 -.2(av e)-2.5 H 2.5(9s)2.7 G
+(econds to type ^C to abort)-2.5 E F1(cdr)2.5 E(ecord)-.18 E F0
+(after you see the message:)2.5 E
+(Starting to write CD at speed %d in %s mode for %s session.)108 228 Q
+2.5(At)108 244.8 S(ypical error message for a SCSI command looks lik)
+-2.5 E(e:)-.1 E(cdrecord: I/O error)144 268.8 Q 2.5(.t)-.55 G
+(est unit ready: scsi sendcmd: no error)-2.5 E
+(status: 0x2 \(CHECK CONDITION\))144 280.8 Q
+(Sense Bytes: 70 00 05 00 00 00 00 0A 00 00 00 00 25 00 00 00 00 00)144
+292.8 Q(Sense K)144 304.8 Q -.15(ey)-.25 G 2.5(:0).15 G(x5 Ille)-2.5 E
+-.05(ga)-.15 G 2.5(lR).05 G(equest, Se)-2.5 E(gment 0)-.15 E
+(Sense Code: 0x25 Qual 0x00 \(logical unit not supported\) Fru 0x0)144
+316.8 Q(Sense \215ags: Blk 0 \(not v)144 328.8 Q(alid\))-.25 E .352
+(The \214rst line gi)108 352.8 R -.15(ve)-.25 G 2.852(si).15 G .352
+(nformation about the transport of the command.)-2.852 F .352(The te)
+5.352 F .351(xt after the \214rst colon gi)-.15 F -.15(ve)-.25 G 2.851
+(st).15 G(he)-2.851 E .04(error te)108 364.8 R .04
+(xt for the system call from the vie)-.15 F 2.54(wo)-.25 G 2.54(ft)-2.54
+G .041(he k)-2.54 F .041(ernel. It usually is:)-.1 F F1 .041(I/O err)
+2.541 F(or)-.18 E F0 .041(unless other problems hap-)2.541 F .58
+(pen. The ne)108 376.8 R .58(xt w)-.15 F .58
+(ords contain a short description for the SCSI command that f)-.1 F .579
+(ails. The rest of the line tells)-.1 F .051(you if there were an)108
+388.8 R 2.551(yp)-.15 G .051(roblems for the transport of the command o)
+-2.551 F -.15(ve)-.15 G 2.551(rt).15 G .051(he SCSI b)-2.551 F(us.)-.2 E
+F1 .051(fatal err)5.051 F(or)-.18 E F0 .052(means that)2.551 F(it w)108
+400.8 Q(as not possible to transport the command \(i.e. no de)-.1 E
+(vice present at the requested SCSI address\).)-.25 E .214
+(The second line gi)108 417.6 R -.15(ve)-.25 G 2.714(si).15 G .213(nfor\
+mation on the SCSI status code returned by the command, if the transpor\
+t of the)-2.714 F(command succeeds.)108 429.6 Q
+(This is error information from the SCSI de)5 E(vice.)-.25 E
+(The third line is a he)108 446.4 Q 2.5(xd)-.15 G
+(ump of the auto request sense information for the command.)-2.5 E .457
+(The fourth line is the error te)108 463.2 R .457(xt for the sense k)
+-.15 F .758 -.15(ey i)-.1 H 2.958(fa).15 G -.25(va)-3.158 G .458
+(ilable, follo).25 F .458(wed by the se)-.25 F .458
+(gment number that is only)-.15 F -.25(va)108 475.2 S .421
+(lid if the command w).25 F .421(as a)-.1 F/F3 10/Times-Italic@0 SF
+(copy)2.921 E F0 .421(command. If the error message is not directly rel\
+ated to the current com-)2.921 F(mand, the te)108 487.2 Q(xt)-.15 E F3
+(deferr)2.5 E(ed err)-.37 E(or)-.45 E F0(is appended.)2.5 E .058
+(The \214fth line is the error te)108 504 R .058
+(xt for the sense code and the sense quali\214er if a)-.15 F -.25(va)-.2
+G 2.558(ilable. If).25 F .059(the type of the de)2.558 F(vice)-.25 E
+.357(is kno)108 516 R .357(wn, the sense data is decoded from tables in)
+-.25 F F3(scsierr)2.857 E(s.c)-.1 E F0 5.357(.T)3.167 G .357(he te)
+-5.357 F .357(xt is follo)-.15 F .356(wed by the error v)-.25 F .356
+(alue for a)-.25 F(\214eld replaceable unit.)108 528 Q .318
+(The sixth line prints the block number that is related to the f)108
+544.8 R .319(ailed command and te)-.1 F .319(xt for se)-.15 F -.15(ve)
+-.25 G .319(ral error \215ags.).15 F(The block number may not be v)108
+556.8 Q(alid.)-.25 E(The follo)108 573.6 Q
+(wing message is not an error:)-.25 E -.35(Tr)144 585.6 S(ack 01: T).35
+E(otal bytes read/written: 2048/2048 \(1 sectors\).)-.8 E
+(cdrecord: I/O error)144 597.6 Q 2.5<2e8d>-.55 G
+(ush cache: scsi sendcmd: no error)-2.5 E
+(status: 0x2 \(CHECK CONDITION\))144 609.6 Q
+(Sense Bytes: F0 00 05 80 00 00 27 0A 00 00 00 00 B5 00 00 00 00 00)144
+621.6 Q(Sense K)144 633.6 Q -.15(ey)-.25 G 2.5(:0).15 G(x5 Ille)-2.5 E
+-.05(ga)-.15 G 2.5(lR).05 G(equest, Se)-2.5 E(gment 0)-.15 E
+(Sense Code: 0xB5 Qual 0x00 \(dummy data blocks added\) Fru 0x0)144
+645.6 Q(Sense \215ags: Blk -2147483609 \(v)144 657.6 Q(alid\))-.25 E(It\
+ simply noti\214es, that a track that is smaller than the minimum size \
+has been e)108 681.6 Q(xpanded to 300 sectors.)-.15 E F2 -.09(BU)72
+698.4 S(GS).09 E F1(Cdr)108 710.4 Q(ecord)-.18 E F0 .401(should v)2.901
+F .401(erify that the input data will \214t on the media. Currently you\
+ get unpredictable results in)-.15 F(this case.)108 722.4 Q(J)72 768 Q
+-.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G 153.065(chilling V)-2.5 F
+(ersion 1.5)-1.11 E(6)206.225 E EP
+%%Page: 7 7
+%%BeginPageSetup
+BP
+%%EndPageSetup
+/F0 10/Times-Roman@0 SF 104.275(CDRECORD\(1\) Schily\264s)72 48 R
+(USER COMMANDS)2.5 E(CDRECORD\(1\))106.775 E
+(There should be an option to write inde)108 84 Q 2.5(xn)-.15 G
+(umbers for audio tracks.)-2.5 E(There should be a reco)108 100.8 Q -.15
+(ve)-.15 G 2.5(ro).15 G(ption to mak)-2.5 E 2.5(ed)-.1 G
 (isks usable, that ha)-2.5 E .3 -.15(ve b)-.2 H(een written during a po)
-.15 E(wer f)-.25 E(ailure.)-.1 E F1 -.45(AU)72 187.2 S(THOR).45 E F0(J)
-108 199.2 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G(chilling)-2.5 E
-(Seestr)108 211.2 Q 2.5(.1)-.55 G(10)-2.5 E(D-13353 Berlin)108 223.2 Q
-(German)108 235.2 Q(y)-.15 E(Mail b)108 252 Q(ugs and suggestions to:)
--.2 E F2(joer)108 268.8 Q(g@schily)-.1 E(.isdn.cs.tu-berlin.de)-.7 E F0
-(or)2.5 E F2(js@cs.tu-berlin.de)2.5 E F0(or)2.5 E F2(jes@f)2.5 E
-(okus.gmd.de)-.25 E F0(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)
--.18 G 153.065(chilling V)-2.5 F(ersion 1.4)-1.11 E(6)206.225 E EP
+.15 E(wer f)-.25 E(ailure.)-.1 E/F1 9/Times-Bold@0 SF -.45(AU)72 129.6 S
+(THOR).45 E F0(J)108 141.6 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G
+(chilling)-2.5 E(Seestr)108 153.6 Q 2.5(.1)-.55 G(10)-2.5 E
+(D-13353 Berlin)108 165.6 Q(German)108 177.6 Q(y)-.15 E(Mail b)108 194.4
+Q(ugs and suggestions to:)-.2 E/F2 10/Times-Bold@0 SF(joer)108 211.2 Q
+(g@schily)-.1 E(.isdn.cs.tu-berlin.de)-.7 E F0(or)2.5 E F2
+(js@cs.tu-berlin.de)2.5 E F0(or)2.5 E F2(jes@f)2.5 E(okus.gmd.de)-.25 E
+F0(J)72 768 Q -.25(..)-5.5 K(or)-4.5 5.5 M 2.5(gS)-.18 G 153.065
+(chilling V)-2.5 F(ersion 1.5)-1.11 E(7)206.225 E EP
 %%Trailer
 end
 %%EOF

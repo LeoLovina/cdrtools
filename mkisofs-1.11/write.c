@@ -57,7 +57,8 @@ static struct directory ** pathlist;
 static next_path_index = 1;
 
 /* Used to fill in some  of the information in the volume descriptor. */
-static struct tm *local;
+static struct tm local;
+static struct tm gmt;
 
 /* Routines to actually write the disc.  We write sequentially so that
    we could write a tape, or write the disc directly */
@@ -389,7 +390,8 @@ void generate_root_record()
      time_t ctime;
      
      time (&ctime);
-     local = localtime(&ctime);
+     local = *localtime(&ctime);
+     gmt = *gmtime(&ctime);
      
      root_record.length[0] = 1 + sizeof(struct iso_directory_record)
 	  - sizeof(root_record.name);
@@ -946,9 +948,14 @@ int FDECL1(iso_write, FILE *, outfile)
    * This will break  in the year  2000, I supose, but there is no good way
    * to get the top two digits of the year. 
    */
-  sprintf(iso_time, "%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d00", 1900 + local->tm_year,
-	  local->tm_mon+1, local->tm_mday,
-	  local->tm_hour, local->tm_min, local->tm_sec);
+  sprintf(iso_time, "%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d00", 1900 + local.tm_year,
+	  local.tm_mon+1, local.tm_mday,
+	  local.tm_hour, local.tm_min, local.tm_sec);
+
+  local.tm_min -= gmt.tm_min;
+  local.tm_hour -= gmt.tm_hour;
+  local.tm_yday -= gmt.tm_yday;
+  iso_time[16] = (local.tm_min + 60*(local.tm_hour + 24*local.tm_yday)) / 15;
 
   /*
    * First, we output 16 sectors of all zero 
