@@ -1,7 +1,7 @@
-/* @(#)scsiopen.c	1.93 02/11/19 Copyright 1995,2000 J. Schilling */
+/* @(#)scsiopen.c	1.94 03/05/08 Copyright 1995,2000 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsiopen.c	1.93 02/11/19 Copyright 1995,2000 J. Schilling";
+	"@(#)scsiopen.c	1.94 03/05/08 Copyright 1995,2000 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -19,9 +19,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 /*
@@ -270,7 +270,7 @@ nulldevice:
 	}
 	if (scg__open(scgp, devname) <= 0) {
 		if (errs && scgp->errstr)
-			js_snprintf(errs, slen, scgp->errstr);
+			js_snprintf(errs, slen, "%s", scgp->errstr);
 		scg_sfree(scgp);
 		return ((SCSI *)0);
 	}

@@ -62,7 +62,7 @@ long	bufsize;		/* The size of the transfer buffer */
 
 FILE	*logfile;
 char	unavail[] = "<data unavaiable>";
-char	scgc_version[] = "2.0";
+char	scgc_version[] = "2.00.3";
 
 #define	BUF_SIZE	(126*1024)
 #define	MAX_BUF_SIZE	(16*1024*1024)

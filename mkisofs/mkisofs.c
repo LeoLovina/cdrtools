@@ -57,7 +57,7 @@ static	char sccsid[] =
 struct directory *root = NULL;
 int		path_ind;
 
-char	version_string[] = "mkisofs 2.0";
+char	version_string[] = "mkisofs 2.0.3";
 
 char		*outfile;
 FILE		*discimage;

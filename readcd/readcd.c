@@ -45,7 +45,7 @@ static	char sccsid[] =
 #undef	qpto96
 #include "movesect.h"
 
-char	cdr_version[] = "2.0";
+char	cdr_version[] = "2.00.3";
 
 #if     defined(PROTOTYPES)
 #define UINT_C(a)	(a##u)

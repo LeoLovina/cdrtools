@@ -1,4 +1,4 @@
-/* @(#)libport.h	1.6 02/05/27 Copyright 1995 J. Schilling */
+/* @(#)libport.h	1.8 03/03/01 Copyright 1995 J. Schilling */
 /*
  *	Copyright (c) 1995 J. Schilling
  */
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 
@@ -30,6 +30,38 @@
 #endif
 #ifndef _STANDARD_H
 #include <standard.h>
+#endif
+
+/*
+ * Try to get HOST_NAME_MAX for gethostname()
+ */
+#ifndef _UNIXSTD_H
+#include <unixstd.h>
+#endif
+
+#ifndef HOST_NAME_MAX
+#if	defined(HAVE_NETDB_H) && !defined(HOST_NOT_FOUND) && \
+				!defined(_INCL_NETDB_H)
+#include <netdb.h>
+#define	_INCL_NETDB_H
+#endif
+#ifdef	MAXHOSTNAMELEN
+#define	HOST_NAME_MAX	MAXHOSTNAMELEN
+#endif
+#endif
+
+#ifndef HOST_NAME_MAX
+#ifdef	HAVE_SYS_PARAM_H
+#include <sys/param.h>	/* Include various defs needed with some OS */
+			/* Linux MAXHOSTNAMELEN */
+#endif
+#ifdef	MAXHOSTNAMELEN
+#define	HOST_NAME_MAX	MAXHOSTNAMELEN
+#endif
+#endif
+
+#ifndef HOST_NAME_MAX
+#define	HOST_NAME_MAX	255
 #endif
 
 #ifdef	__cplusplus
@@ -62,6 +94,14 @@ EXPORT	int		getpagesize	__PR((void));
 #endif
 #ifndef	HAVE_USLEEP
 extern	int		usleep		__PR((int usec));
+#endif
+
+#if	!defined(HAVE_STRDUP) || defined(__SVR4)
+extern	char		*strdup		__PR((const char *s));
+#endif
+
+#ifndef	HAVE_RENAME
+extern	int		rename		__PR((const char *old, const char *new));
 #endif
 
 #ifdef	__cplusplus

@@ -1,7 +1,7 @@
-/* @(#)usleep.c	1.15 01/01/07 Copyright 1995 J. Schilling */
+/* @(#)usleep.c	1.16 03/03/08 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)usleep.c	1.15 01/01/07 Copyright 1995 J. Schilling";
+	"@(#)usleep.c	1.16 03/03/08 Copyright 1995 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1995 J. Schilling
@@ -17,12 +17,13 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
+#define	usleep	__nothing_    /* prototype in unistd.h may be different */
 #include <standard.h>
 #include <stdxlib.h>
 #include <timedefs.h>
@@ -37,11 +38,8 @@ static	char sccsid[] =
 #include <sys/systeminfo.h>
 #endif
 #include <libport.h>
+#undef	usleep
 
-/*
- * SCO has a usleep() prototype in unistd.h
- * So we put this prototype before the #undef HAVE_USLEEP
- */
 #ifndef	HAVE_USLEEP
 EXPORT	int	usleep		__PR((int usec));
 #endif
@@ -50,6 +48,8 @@ EXPORT	int	usleep		__PR((int usec));
 /*
  * Don't use the usleep() from libc on SCO's OPENSERVER.
  * It will kill our processes with SIGALRM.
+ * SCO has a usleep() prototype in unistd.h, for this reason we
+ * #define usleep to __nothing__ before including unistd.h
  */
 #undef	HAVE_USLEEP
 #endif

@@ -1,4 +1,4 @@
-/* @(#)io.h	2.17 01/12/09 Copyright 1986, 1995 J. Schilling */
+/* @(#)io.h	2.18 03/03/09 Copyright 1986, 1995 J. Schilling */
 /*
  *	Copyright (c) 1986, 1995 J. Schilling
  */
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_STDIO_IO_H
@@ -86,10 +86,10 @@
 #define	FI_READ		0x0001	/* open for reading */
 #define	FI_WRITE	0x0002	/* open for writing */
 #define	FI_BINARY	0x0004	/* open in binary mode */
+#define	FI_APPEND	0x0008	/* append on each write */
 
 #define	FI_CREATE	0x0010	/* create if nessecary */
 #define	FI_TRUNC	0x0020	/* truncate file on open */
-#define	FI_APPEND	0x0040	/* append on each write */
 #define	FI_UNBUF	0x0080	/* dont't buffer io */
 #define	FI_CLOSE	0x1000	/* close file on error */
 

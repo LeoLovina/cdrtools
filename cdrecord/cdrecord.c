@@ -56,7 +56,7 @@ static	char sccsid[] =
 #include "movesect.h"
 
 
-char	cdr_version[] = "2.0";
+char	cdr_version[] = "2.00.3";
 
 /*
  * Map toc/track types into names.

@@ -1,4 +1,4 @@
-/* @(#)strdefs.h	1.7 02/08/26 Copyright 1996 J. Schilling */
+/* @(#)strdefs.h	1.8 03/03/09 Copyright 1996 J. Schilling */
 /*
  *	Definitions for strings
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _STRDEFS_H
@@ -30,16 +30,15 @@
 #include <prototyp.h>
 #endif
 
-#ifdef	__never_def
 /*
- * It seems that IBM's AIX sometimes has problems when doing
+ * It may be that IBM's AIX has problems when doing
  * #include <string.h>
  * #include <strings.h>
  * So I moved the #include <strings.h> to the top. As the file strings.h
- * only defines extern int bcmp(); extern void bcopy(); extern void bzero();
- * extern char *index(); extern char *rindex(); and these functions should
- * not be used in portable programs, I disabled the strings.h #include for now.
+ * defines strcasecmp() we may need it...
  *
+ * Note that the only real problem appears if we use rubbish FSF based code that
+ * #defines _NO_PROTO
  */
 #ifdef	HAVE_STRINGS_H
 #ifndef	_INCL_STRINGS_H
@@ -47,8 +46,6 @@
 #define	_INCL_STRINGS_H
 #endif
 #endif	/* HAVE_STRINGS_H */
-
-#endif	/*  __never_def */
 
 
 #ifdef	HAVE_STRING_H

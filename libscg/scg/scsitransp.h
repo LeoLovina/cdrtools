@@ -1,4 +1,4 @@
-/* @(#)scsitransp.h	1.53 02/10/19 Copyright 1995 J. Schilling */
+/* @(#)scsitransp.h	1.54 03/05/03 Copyright 1995 J. Schilling */
 /*
  *	Definitions for commands that use functions from scsitransp.c
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_SCG_SCSITRANSP_H
@@ -177,9 +177,12 @@ extern	void	scg_printstatus		__PR((SCSI *scgp));
 extern	int	scg_sprintstatus 	__PR((SCSI *scgp, char *buf, int maxcnt));
 #ifdef	EOF	/* stdio.h has been included */
 extern	void	scg_fprbytes		__PR((FILE *, char *, unsigned char *, int));
+extern	void	scg_fprascii		__PR((FILE *, char *, unsigned char *, int));
 #endif
 extern	void	scg_prbytes		__PR((char *, unsigned char *, int));
+extern	void	scg_prascii		__PR((char *, unsigned char *, int));
 extern	int	scg_sprbytes		__PR((char *buf, int maxcnt, char *, unsigned char *, int));
+extern	int	scg_sprascii		__PR((char *buf, int maxcnt, char *, unsigned char *, int));
 #ifdef	EOF	/* stdio.h has been included */
 extern	void	scg_fprsense		__PR((FILE *f, unsigned char *, int));
 #endif

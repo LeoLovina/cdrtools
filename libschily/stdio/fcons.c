@@ -1,4 +1,4 @@
-/* @(#)fcons.c	2.13 01/12/09 Copyright 1986, 1995 J. Schilling */
+/* @(#)fcons.c	2.14 03/03/09 Copyright 1986, 1995 J. Schilling */
 /*
  *	Copyright (c) 1986, 1995  J. Schilling
  */
@@ -13,9 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include "io.h"
@@ -34,6 +34,15 @@ LOCAL	char	*fmtab[] = {
 			"rb",	/* 5	FI_READ  | FI_BINARY		*/
 			"wb",	/* 6	FI_WRITE | FI_BINARY	**1)	*/
 			"r+b",	/* 7	FI_READ  | FI_WRITE | FI_BINARY	*/
+
+/* + FI_APPEND	*/	"",	/* 0	FI_NONE				*/
+/* ...		*/	"r",	/* 1	FI_READ				*/
+			"a",	/* 2	FI_WRITE		**1)	*/
+			"a+",	/* 3	FI_READ  | FI_WRITE		*/
+			"b",	/* 4	FI_NONE  | FI_BINARY		*/
+			"rb",	/* 5	FI_READ  | FI_BINARY		*/
+			"ab",	/* 6	FI_WRITE | FI_BINARY	**1)	*/
+			"a+b",	/* 7	FI_READ  | FI_WRITE | FI_BINARY	*/
 		};
 /*
  * NOTES:
@@ -53,7 +62,7 @@ _fcons(fd, f, flag)
 	int	my_gflag = _io_glflag;
 
 	if (fd == (FILE *)NULL)
-		fd = fdopen(f, fmtab[flag&(FI_READ|FI_WRITE|FI_BINARY)]);
+		fd = fdopen(f, fmtab[flag&(FI_READ|FI_WRITE|FI_BINARY | FI_APPEND)]);
 
 	if (fd != (FILE *)NULL) {
 		if (flag & FI_APPEND) {

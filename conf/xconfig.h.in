@@ -1,4 +1,4 @@
-/* @(#)xconfig.h.in	1.58 02/11/22 Copyright 1998 J. Schilling */
+/* @(#)xconfig.h.in	1.67 03/03/08 Copyright 1998 J. Schilling */
 /*
  *	Dynamic autoconf C-include code.
  *
@@ -126,6 +126,7 @@
 /*
  * Library Functions
  */
+#undef HAVE_CRYPT		/* crypt() is present in libc or libcrypt */
 #undef HAVE_STRERROR		/* strerror() is present in libc */
 #undef HAVE_MEMMOVE		/* memmove() is present in libc */
 #undef HAVE_MADVISE		/* madvise() is present in libc */
@@ -158,6 +159,8 @@
 #undef HAVE_GETSPWNAM		/* getspwnam() in libsec.a (HP-UX) */
 #undef HAVE_SYNC		/* sync() is present in libc */
 #undef HAVE_FSYNC		/* fsync() is present in libc */
+#undef HAVE_TCGETATTR		/* tcgetattr() is present in libc */
+#undef HAVE_TCSETATTR		/* tcsetattr() is present in libc */
 #undef HAVE_WAIT3		/* working wait3() is present in libc */
 #undef HAVE_WAIT4		/* wait4() is present in libc */
 #undef HAVE_WAITID		/* waitid() is present in libc */
@@ -264,6 +267,7 @@
 #undef HAVE_RCMD		/* rcmd() is present in libc/libsocket */
 #undef HAVE_SOCKET		/* socket() is present in libc/libsocket */
 #undef HAVE_SOCKETPAIR		/* socketpair() is present in libc/libsocket */
+#undef HAVE_GETSERVBYNAME	/* getservbyname() is present in libc/libsocket */
 #undef HAVE_INET_NTOA		/* inet_ntoa() is present in libc/libsocket */
 #undef HAVE_GETADDRINFO		/* getaddrinfo() is present in libc/libsocket */
 #undef HAVE_GETNAMEINFO		/* getnameinfo() is present in libc/libsocket */
@@ -307,10 +311,20 @@
 #undef HAVE_MTGET_FLAGS		/* if struct mtget contains mt_flags (flags) */
 #undef HAVE_MTGET_BF		/* if struct mtget contains mt_bf (optimum blocking factor) */
 #undef HAVE_STRUCT_RUSAGE	/* have struct rusage in sys/resource.h */
+#undef HAVE_SI_UTIME		/* if struct siginfo contains si_utime */
 #undef HAVE_UNION_SEMUN		/* have an illegal definition for union semun in sys/sem.h */
 #undef HAVE_UNION_WAIT		/* have union wait in wait.h */
+/*
+ * SCO UnixWare has st_atim.st__tim.tv_nsec but the st_atim.tv_nsec tests also
+ * succeeds. If you use st_atim.tv_nsec on UnixWare, you get a warning about
+ * illegal structure usage. For this reason, your code needs to have
+ * #ifdef HAVE_ST__TIM before #ifdef HAVE_ST_NSEC.
+ */
 #undef HAVE_ST_SPARE1		/* if struct stat contains st_spare1 (usecs) */
-#undef HAVE_ST_NSEC		/* if struct stat contains st_atim.st_nsec (nanosecs */
+#undef HAVE_ST_ATIMENSEC	/* if struct stat contains st_atimensec (nanosecs) */
+#undef HAVE_ST_NSEC		/* if struct stat contains st_atim.tv_nsec (nanosecs) */
+#undef HAVE_ST__TIM		/* if struct stat contains st_atim.st__tim.tv_nsec (nanosecs) */
+#undef HAVE_ST_ATIMESPEC	/* if struct stat contains st_atimespec.tv_nsec (nanosecs) */
 #undef HAVE_ST_BLKSIZE		/* if struct stat contains st_blksize */
 #undef HAVE_ST_BLOCKS		/* if struct stat contains st_blocks */
 #undef HAVE_ST_RDEV		/* if struct stat contains st_rdev */
@@ -319,6 +333,8 @@
 
 #undef DEV_MINOR_BITS		/* # if bits needed to hold minor device number */
 #undef DEV_MINOR_NONCONTIG	/* if bits in minor device number are noncontiguous */
+
+#undef HAVE_SOCKADDR_STORAGE	/* if socket.h defines struct sockaddr_storage */
 
 
 /*
@@ -362,6 +378,9 @@
 #undef dev_t			/* To be used if dev_t is not present */
 #undef ino_t			/* To be used if ino_t is not present */
 #undef nlink_t			/* To be used if nlink_t is not present */
+/*
+ * Important:	Next Step needs time.h for clock_t (because of a bug)
+ */
 #undef clock_t			/* To be used if clock_t is not present */
 #undef socklen_t		/* To be used if socklen_t is not present */
 

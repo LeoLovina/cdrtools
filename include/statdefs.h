@@ -1,4 +1,4 @@
-/* @(#)statdefs.h	1.7 02/05/12 Copyright 1998 J. Schilling */
+/* @(#)statdefs.h	1.8 03/03/08 Copyright 1998 J. Schilling */
 /*
  *	Definitions for stat() file mode
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef	_STATDEFS_H
@@ -276,6 +276,64 @@
 #endif
 #ifndef	S_IRWXO			/* Read, write, execute/search by others */
 #define	S_IRWXO (S_IROTH|S_IWOTH|S_IXOTH)
+#endif
+
+/*
+ * SCO UnixWare has st_atim.st__tim.tv_nsec but the st_atim.tv_nsec tests also
+ * succeeds. If we use st_atim.tv_nsec on UnixWare, we get a warning about
+ * illegal structure usage. For this reason, our code needs to have
+ * #ifdef HAVE_ST__TIM before #ifdef HAVE_ST_NSEC.
+ */
+#if	defined(HAVE_ST_ATIMENSEC)
+
+#define	stat_ansecs(s)		((s)->st_atimensec)
+#define	stat_mnsecs(s)		((s)->st_mtimensec)
+#define	stat_cnsecs(s)		((s)->st_ctimensec)
+
+#define	_FOUND_STAT_NSECS_
+#endif
+
+#if	defined(HAVE_ST_SPARE1) && !defined(_FOUND_STAT_NSECS_)
+
+#define	stat_ansecs(s)		((s)->st_spare1 * 1000)
+#define	stat_mnsecs(s)		((s)->st_spare2 * 1000)
+#define	stat_cnsecs(s)		((s)->st_spare3 * 1000)
+
+#define	_FOUND_STAT_USECS_
+#define	_FOUND_STAT_NSECS_
+#endif
+
+#if	defined(HAVE_ST__TIM) && !defined(_FOUND_STAT_NSECS_)
+
+#define	stat_ansecs(s)		((s)->st_atim.st__tim.tv_nsec)
+#define	stat_mnsecs(s)		((s)->st_mtim.st__tim.tv_nsec)
+#define	stat_cnsecs(s)		((s)->st_ctim.st__tim.tv_nsec)
+
+#define	_FOUND_STAT_NSECS_
+#endif
+
+#if	defined(HAVE_ST_NSEC) && !defined(_FOUND_STAT_NSECS_)
+
+#define	stat_ansecs(s)		((s)->st_atim.tv_nsec)
+#define	stat_mnsecs(s)		((s)->st_mtim.tv_nsec)
+#define	stat_cnsecs(s)		((s)->st_ctim.tv_nsec)
+
+#define	_FOUND_STAT_NSECS_
+#endif
+
+#if	defined(HAVE_ST_ATIMESPEC) && !defined(_FOUND_STAT_NSECS_)
+
+#define	stat_ansecs(s)		((s)->st_atimespec.tv_nsec)
+#define	stat_mnsecs(s)		((s)->st_mtimespec.tv_nsec)
+#define	stat_cnsecs(s)		((s)->st_ctimespec.tv_nsec)
+
+#define	_FOUND_STAT_NSECS_
+#endif
+
+#if	!defined(_FOUND_STAT_NSECS_)
+#define	stat_ansecs(s)		(0)
+#define	stat_mnsecs(s)		(0)
+#define	stat_cnsecs(s)		(0)
 #endif
 
 #endif	/* _STATDEFS_H */

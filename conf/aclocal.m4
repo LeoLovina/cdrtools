@@ -1,4 +1,4 @@
-dnl @(#)aclocal.m4	1.30 02/10/11 Copyright 1998 J. Schilling
+dnl @(#)aclocal.m4	1.34 03/03/08 Copyright 1998 J. Schilling
 
 dnl Set VARIABLE to VALUE in C-string form, verbatim, or 1.
 dnl AC_DEFINE_STRING(VARIABLE [, VALUE])
@@ -28,6 +28,19 @@ if test $ac_cv_struct_st_spare1 = yes; then
   AC_DEFINE(HAVE_ST_SPARE1)
 fi])
 
+dnl Checks if structure 'stat' have field 'st_atimensec'.
+dnl Defines HAVE_ST_ATIMENSEC on success.
+AC_DEFUN([AC_STRUCT_ST_ATIMENSEC],
+[AC_CACHE_CHECK([if struct stat contains st_atimensec], ac_cv_struct_st_atimensec,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/stat.h>],
+                                [struct  stat s; s.st_atimensec = 0;],
+                                [ac_cv_struct_st_atimensec=yes],
+                                [ac_cv_struct_st_atimensec=no])])
+if test $ac_cv_struct_st_atimensec = yes; then
+  AC_DEFINE(HAVE_ST_ATIMENSEC)
+fi])
+
 dnl Checks if structure 'stat' have field 'st_atim.tv_nsec'.
 dnl Defines HAVE_ST_NSEC on success.
 AC_DEFUN([AC_STRUCT_ST_NSEC],
@@ -39,6 +52,32 @@ AC_DEFUN([AC_STRUCT_ST_NSEC],
                                 [ac_cv_struct_st_nsec=no])])
 if test $ac_cv_struct_st_nsec = yes; then
   AC_DEFINE(HAVE_ST_NSEC)
+fi])
+
+dnl Checks if structure 'stat' have field 'st_atim.st__tim.tv_nsec'.
+dnl Defines HAVE_ST__TIM on success.
+AC_DEFUN([AC_STRUCT_ST__TIM],
+[AC_CACHE_CHECK([if struct stat contains st_atim.st__tim.tv_nsec], ac_cv_struct_st__tim,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/stat.h>],
+                                [struct  stat s; s.st_atim.st__tim.tv_nsec = 0;],
+                                [ac_cv_struct_st__tim=yes],
+                                [ac_cv_struct_st__tim=no])])
+if test $ac_cv_struct_st__tim = yes; then
+  AC_DEFINE(HAVE_ST__TIM)
+fi])
+
+dnl Checks if structure 'stat' have field 'st_atimspec.tv_nsec'.
+dnl Defines HAVE_ST_ATIMESPEC on success.
+AC_DEFUN([AC_STRUCT_ST_ATIMESPEC],
+[AC_CACHE_CHECK([if struct stat contains st_atimespec.tv_nsec], ac_cv_struct_st_atimespec,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/stat.h>],
+                                [struct  stat s; s.st_atimespec.tv_nsec = 0;],
+                                [ac_cv_struct_st_atimespec=yes],
+                                [ac_cv_struct_st_atimespec=no])])
+if test $ac_cv_struct_st_atimespec = yes; then
+  AC_DEFINE(HAVE_ST_ATIMESPEC)
 fi])
 
 dnl Checks if structure 'stat' have field 'st_flags'.
@@ -252,6 +291,20 @@ if test $ac_cv_struct_rusage = yes; then
   AC_DEFINE(HAVE_STRUCT_RUSAGE)
 fi])
 
+dnl Checks if structure 'siginfo' have field 'si_utime'.
+dnl Defines HAVE_SI_UTIME on success.
+AC_DEFUN([AC_STRUCT_SI_UTIME],
+[AC_CACHE_CHECK([if struct siginfo contains si_utime], ac_cv_struct_si_utime,
+                [AC_TRY_COMPILE([#include <sys/types.h>
+#include <sys/siginfo.h>],
+                                [struct  siginfo si; si.si_utime = 0;],
+                                [ac_cv_struct_si_utime=yes],
+                                [ac_cv_struct_si_utime=no])])
+if test $ac_cv_struct_si_utime = yes; then
+  AC_DEFINE(HAVE_SI_UTIME)
+fi])
+
+
 dnl Checks wether major(), minor() and makedev() are defined in
 dnl 'sys/mkdev.h' or in 'sys/sysmacros.h. Defines MAJOR_IN_MKDEV or
 dnl MAJOR_IN_SYSMACROS or nothing.
@@ -417,6 +470,32 @@ AC_DEFUN([AC_TYPE_CLOCK_T],
 AC_CACHE_CHECK([for clock_t], ac_cv_type_clock_t,
                 [AC_TRY_COMPILE([
 #include <sys/types.h>
+/*
+ * time.h is needed because of a bug in Next Step.
+ * Next Step needs time.h for clock_t
+ */
+#ifdef	TIME_WITH_SYS_TIME
+#	ifndef	_INCL_SYS_TIME_H
+#	include <sys/time.h>
+#	define	_INCL_SYS_TIME_H
+#	endif
+#	ifndef	_INCL_TIME_H
+#	include <time.h>
+#	define	_INCL_TIME_H
+#	endif
+#else
+#ifdef	HAVE_SYS_TIME_H
+#	ifndef	_INCL_SYS_TIME_H
+#	include <sys/time.h>
+#	define	_INCL_SYS_TIME_H
+#	endif
+#else
+#	ifndef	_INCL_TIME_H
+#	include <time.h>
+#	define	_INCL_TIME_H
+#	endif
+#endif
+#endif
 #include <sys/times.h>], [clock_t t;],
                 [ac_cv_type_clock_t=yes],
                 [ac_cv_type_clock_t=no])])
@@ -442,6 +521,18 @@ changequote([,]), [#include <sys/types.h>
 AC_MSG_RESULT($ac_cv_type_socklen_t)
 if test $ac_cv_type_socklen_t = no; then
   AC_DEFINE(socklen_t, int)
+fi])
+
+dnl Checks for type struct sockaddr_storage
+dnl Defines HAVE_SOCKADDR_STORAGE on success.
+AC_DEFUN([AC_STRUCT_SOCKADDR_STORAGE],
+[AC_CACHE_CHECK([if struct sockaddr_storage is declared in socket.h], ac_cv_struct_sockaddr_storage,
+                [AC_TRY_COMPILE([#include <sys/socket.h>],
+                                [struct  sockaddr_storage ss; ss.ss_family = 0;],
+                                [ac_cv_struct_sockaddr_storage=yes],
+                                [ac_cv_struct_sockaddr_storage=no])])
+if test $ac_cv_struct_sockaddr_storage = yes; then
+  AC_DEFINE(HAVE_SOCKADDR_STORAGE)
 fi])
 
 dnl Checks for type long long

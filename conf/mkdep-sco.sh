@@ -1,5 +1,5 @@
 #!/bin/sh
-#ident "@(#)mkdep-sco.sh	1.3 02/10/11 "
+#ident "@(#)mkdep-sco.sh	1.5 03/03/05 "
 ###########################################################################
 # Copyright 1999 by J. Schilling
 ###########################################################################
@@ -22,9 +22,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; see the file COPYING.  If not, write to
-# the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+# You should have received a copy of the GNU General Public License along with
+# this program; see the file COPYING.  If not, write to the Free Software
+# Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ###########################################################################
 FILES=
 
@@ -37,11 +37,13 @@ for i in "$@"; do
 	*.c)	if [ ! -z "$FILES" ]; then
 			FILES="$FILES "
 		fi
-		FILES="$FILES$i"
+		# base name from $i
+		base=`echo $i | sed -e 's;[^/]*/;;'`
+		FILES="$FILES$base"
 		;;
 	esac
 done
 
 OFILES=`echo "$FILES" | sed -e 's;\([^.]*\)\.c;\1.o;g'`
 
-cc -H -E 2>&1 > /dev/null "$@" | grep -hv '^"' | grep -hv '^UX:' | sed -e 's;^;$OFILES: ;'
+cc -H -E 2>&1 > /dev/null "$@" | grep -hv '^"' | grep -hv '^UX:' | sed -e "s;^;$OFILES: ;"

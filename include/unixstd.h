@@ -1,4 +1,4 @@
-/* @(#)unixstd.h	1.8 01/10/27 Copyright 1996 J. Schilling */
+/* @(#)unixstd.h	1.10 03/03/06 Copyright 1996 J. Schilling */
 /*
  *	Definitions for unix system interface
  *
@@ -15,9 +15,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef _UNIXSTD_H
@@ -85,6 +85,22 @@
 #endif
 #ifndef	SEEK_END
 #define	SEEK_END	2	/* Set file pointer to EOF plus "offset" */
+#endif
+
+#if	!defined(HAVE_UNISTD_H) || !defined(_POSIX_VERSION)
+/*
+ * Maybe we need a lot more definitions here...
+ * It is not clear whether we should have prototyped definitions.
+ */
+extern	int	access	__PR((const char *, int));
+extern	int	close	__PR((int));
+extern	int	dup	__PR((int));
+extern	int	dup2	__PR((int, int));
+extern	void	_exit	__PR((int));
+extern	int	link	__PR((const char *, const char *));
+extern	int	read	__PR((int, void *, size_t));
+extern	int	unlink	__PR((const char *));
+extern	int	write	__PR((int, void *, size_t));
 #endif
 
 #endif	/* _UNIXSTD_H */

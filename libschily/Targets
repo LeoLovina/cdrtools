@@ -25,10 +25,10 @@ CFILES_REST=	astoi.c astoll.c breakline.c \
 		jsprintf.c jssnprintf.c jssprintf.c \
 		match.c matchl.c movebytes.c \
 		printf.c \
-		raisecond.c \
+		raisecond.c rename.c \
 		saveargs.c serrmsg.c seterrno.c setfp.c \
 		snprintf.c spawn.c \
-		sprintf.c strcatl.c streql.c \
+		sprintf.c strcatl.c strdup.c streql.c \
 		swabbytes.c \
 		usleep.c
 

@@ -1,8 +1,8 @@
 #define	USE_REMOTE
-/* @(#)scsi-remote.c	1.11 02/11/22 Copyright 1990,2000-2001 J. Schilling */
+/* @(#)scsi-remote.c	1.13 03/05/16 Copyright 1990,2000-2003 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-remote.c	1.11 02/11/22 Copyright 1990,2000-2001 J. Schilling";
+	"@(#)scsi-remote.c	1.13 03/05/16 Copyright 1990,2000-2003 J. Schilling";
 #endif
 /*
  *	Remote SCSI user level command transport routines
@@ -13,7 +13,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1990,2000-2001 J. Schilling
+ *	Copyright (c) 1990,2000-2003 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -26,29 +26,42 @@ static	char __sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
 
-#if !defined(HAVE_NETDB_H) || !defined(HAVE_RCMD)
-#undef	USE_REMOTE				/* There is no rcmd() */
-#endif
-#if !defined(HAVE_SOCKETPAIR) || !defined(HAVE_DUP2)
+#if !defined(HAVE_FORK) || !defined(HAVE_SOCKETPAIR) || !defined(HAVE_DUP2)
 #undef	USE_RCMD_RSH
+#endif
+/*
+ * We may work without getservbyname() if we restructure the code not to
+ * use the port number if we only use _rcmdrsh().
+ */
+#if !defined(HAVE_GETSERVBYNAME)
+#undef	USE_REMOTE				/* Cannot get rcmd() port # */
+#endif
+#if (!defined(HAVE_NETDB_H) || !defined(HAVE_RCMD)) && !defined(USE_RCMD_RSH)
+#undef	USE_REMOTE				/* There is no rcmd() */
 #endif
 
 #ifdef	USE_REMOTE
 #include <stdio.h>
 #include <sys/types.h>
 #include <fctldefs.h>
+#ifdef	HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
 #include <errno.h>
 #include <signal.h>
+#ifdef	HAVE_NETDB_H
 #include <netdb.h>
+#endif
+#ifdef	HAVE_PWD_H
 #include <pwd.h>
+#endif
 #include <standard.h>
 #include <stdxlib.h>
 #include <unixstd.h>
@@ -81,7 +94,7 @@ static	char __sccsid[] =
 /*extern	BOOL	debug;*/
 LOCAL	BOOL	debug = 1;
 
-LOCAL	char	_scg_trans_version[] = "remote-1.11";	/* The version for remote SCSI	*/
+LOCAL	char	_scg_trans_version[] = "remote-1.13";	/* The version for remote SCSI	*/
 LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 LOCAL	int	scgo_rsend		__PR((SCSI *scgp));
@@ -292,7 +305,7 @@ scgo_ropen(scgp, device)
 	/*
 	 * Save non user@host:device
 	 */
-	js_snprintf(devname, sizeof(devname), device);
+	js_snprintf(devname, sizeof(devname), "%s", device);
 
 	if ((p = strchr(devname, ':')) != NULL)
 		*p++ = '\0';
@@ -502,9 +515,7 @@ rscsigetconn(scgp, host)
 		char		*name = "root";
 		char		*p;
 		char		*rscsi;
-#ifdef	USE_RCMD_RSH
 		char		*rsh;
-#endif
 		int		rscsisock;
 		char		*rscsipeer;
 		char		rscsiuser[128];
@@ -541,17 +552,21 @@ rscsigetconn(scgp, host)
 
 	if ((rscsi = getenv("RSCSI")) == NULL)
 		rscsi = "/opt/schily/sbin/rscsi";
-
-#ifdef	USE_RCMD_RSH
 	rsh = getenv("RSH");
 
+#ifdef	USE_RCMD_RSH
 	if (!privport_ok() || rsh != NULL)
 		rscsisock = _rcmdrsh(&rscsipeer, (unsigned short)sp->s_port,
 					pw->pw_name, name, rscsi, rsh);
 	else
 #endif
+#ifdef	HAVE_RCMD
 		rscsisock = rcmd(&rscsipeer, (unsigned short)sp->s_port,
 					pw->pw_name, name, rscsi, 0);
+#else
+		rscsisock = _rcmdrsh(&rscsipeer, (unsigned short)sp->s_port,
+					pw->pw_name, name, rscsi, rsh);
+#endif
 
 	return (rscsisock);
 }
@@ -985,7 +1000,6 @@ rscsiaborted(scgp, fd)
 		errno = EIO;
 	return (-1);
 }
-#endif	/* USE_REMOTE */
 
 /*--------------------------------------------------------------------------*/
 #ifdef	USE_RCMD_RSH
@@ -1050,6 +1064,7 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 
 			errmsg("dup2 failed.\n");
 			_exit(EX_BAD);
+			/* NOTREACHED */
 		}
 		(void)close(pp[1]);		/* We don't need this anymore*/
 
@@ -1061,6 +1076,7 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 			errmsg("setuid(%lld) failed.\n",
 							(Llong)pw->pw_uid);
 			_exit(EX_BAD);
+			/* NOTREACHED */
 		}
 
 		/*
@@ -1068,11 +1084,14 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 		 * and avoid the need to wait(2).
 		 */
 		if ((xpid = fork()) == -1) {
-			perror("rcmdsh: fork to lose parent failed");
+			errmsg("rcmdsh: fork to lose parent failed.\n");
 			_exit(EX_BAD);
+			/* NOTREACHED */
 		}
-		if (xpid > 0)
+		if (xpid > 0) {
 			_exit(0);
+			/* NOTREACHED */
+		}
 
 		/*
 		 * Always use remote shell programm (even for localhost).
@@ -1114,6 +1133,7 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 
 		errmsg("execlp '%s' failed.\n", rsh);
 		_exit(EX_BAD);
+		/* NOTREACHED */
 	} else {
 		(void)close(pp[1]);
 		/*
@@ -1123,5 +1143,8 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 		wait(0);
 		return (pp[0]);
 	}
+	return (-1);	/* keep gcc happy */
 }
 #endif	/* USE_RCMD_RSH */
+
+#endif	/* USE_REMOTE */

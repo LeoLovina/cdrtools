@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.85 02/10/19 Copyright 1988,1995,2000 J. Schilling */
+/* @(#)scsitransp.c	1.86 03/05/03 Copyright 1988,1995,2000 J. Schilling */
 /*#ifndef lint*/
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.85 02/10/19 Copyright 1988,1995,2000 J. Schilling";
+	"@(#)scsitransp.c	1.86 03/05/03 Copyright 1988,1995,2000 J. Schilling";
 /*#endif*/
 /*
  *	SCSI user level command transport routines (generic part).
@@ -25,9 +25,9 @@ static	char sccsid[] =
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <mconfig.h>
@@ -96,8 +96,11 @@ EXPORT	int	scg_sprintresult __PR((SCSI *scgp, char *buf, int maxcnt));
 EXPORT	void	scg_printstatus	__PR((SCSI *scgp));
 EXPORT	int	scg_sprintstatus __PR((SCSI *scgp, char *buf, int maxcnt));
 EXPORT	void	scg_fprbytes	__PR((FILE *, char *, unsigned char *, int));
+EXPORT	void	scg_fprascii	__PR((FILE *, char *, unsigned char *, int));
 EXPORT	void	scg_prbytes	__PR((char *, unsigned char *, int));
+EXPORT	void	scg_prascii	__PR((char *, unsigned char *, int));
 EXPORT	int	scg_sprbytes	__PR((char *buf, int maxcnt, char *, unsigned char *, int));
+EXPORT	int	scg_sprascii	__PR((char *buf, int maxcnt, char *, unsigned char *, int));
 EXPORT	void	scg_fprsense	__PR((FILE *f, unsigned char *, int));
 EXPORT	int	scg_sprsense	__PR((char *buf, int maxcnt, unsigned char *, int));
 EXPORT	void	scg_prsense	__PR((unsigned char *, int));
@@ -1019,9 +1022,32 @@ scg_fprbytes(f, s, cp, n)
 	register Uchar	*cp;
 	register int	n;
 {
-	js_fprintf(f, s);
+	js_fprintf(f, "%s", s);
 	while (--n >= 0)
 		js_fprintf(f, " %02X", *cp++);
+	js_fprintf(f, "\n");
+}
+
+/*
+ * print some bytes in ascii to a file.
+ */
+EXPORT void
+scg_fprascii(f, s, cp, n)
+		FILE	*f;
+		char	*s;
+	register Uchar	*cp;
+	register int	n;
+{
+	register int	c;
+
+	js_fprintf(f, "%s", s);
+	while (--n >= 0) {
+		c = *cp++;
+		if (c >= ' ' && c < 0177)
+			js_fprintf(f, "%c", c);
+		else
+			js_fprintf(f, ".");
+	}
 	js_fprintf(f, "\n");
 }
 
@@ -1040,6 +1066,20 @@ scg_prbytes(s, cp, n)
 }
 
 /*
+ * XXX We need to check if we should write to stderr or better to scg->errfile
+ *
+ * print some bytes in ascii to stderr.
+ */
+EXPORT void
+scg_prascii(s, cp, n)
+		char	*s;
+	register Uchar	*cp;
+	register int	n;
+{
+	scg_fprascii(stderr, s, cp, n);
+}
+
+/*
  * print some bytes in hex into a buffer.
  */
 EXPORT int
@@ -1053,7 +1093,7 @@ scg_sprbytes(buf, maxcnt, s, cp, n)
 	register char	*p = buf;
 	register int	amt;
 
-	amt = js_snprintf(p, maxcnt, s);
+	amt = js_snprintf(p, maxcnt, "%s", s);
 	if (amt < 0)
 		return (amt);
 	p += amt;
@@ -1061,6 +1101,45 @@ scg_sprbytes(buf, maxcnt, s, cp, n)
 
 	while (--n >= 0) {
 		amt = js_snprintf(p, maxcnt, " %02X", *cp++);
+		if (amt < 0)
+			return (amt);
+		p += amt;
+		maxcnt -= amt;
+	}
+	amt = js_snprintf(p, maxcnt, "\n");
+	if (amt < 0)
+		return (amt);
+	p += amt;
+	return (p - buf);
+}
+
+/*
+ * print some bytes in ascii into a buffer.
+ */
+EXPORT int
+scg_sprascii(buf, maxcnt, s, cp, n)
+		char	*buf;
+		int	maxcnt;
+		char	*s;
+	register Uchar	*cp;
+	register int	n;
+{
+	register char	*p = buf;
+	register int	amt;
+	register int	c;
+
+	amt = js_snprintf(p, maxcnt, "%s", s);
+	if (amt < 0)
+		return (amt);
+	p += amt;
+	maxcnt -= amt;
+
+	while (--n >= 0) {
+		c = *cp++;
+		if (c >= ' ' && c < 0177)
+			amt = js_snprintf(p, maxcnt, "%c", c);
+		else
+			amt = js_snprintf(p, maxcnt, ".");
 		if (amt < 0)
 			return (amt);
 		p += amt;
