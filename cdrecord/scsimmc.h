@@ -1,4 +1,4 @@
-/* @(#)scsimmc.h	1.3 98/05/25 Copyright 1997 J. Schilling */
+/* @(#)scsimmc.h	1.4 99/03/28 Copyright 1997 J. Schilling */
 /*
  *	Definitions for SCSI/mmc compliant drives
  *
@@ -445,6 +445,17 @@ struct dvd_structure_0F_w {
 	Uchar	hour[2];		/* Hour (ascii)			*/
 	Uchar	minute[2];		/* Minute (ascii)		*/
 	Uchar	second[2];		/* Second (ascii)		*/	
+};
+
+struct mmc_cue {
+	Uchar	cs_ctladr;		/* CTL/ADR for this track	*/
+	Uchar	cs_tno;			/* This track number		*/
+	Uchar	cs_index;		/* Index within this track	*/
+	Uchar	cs_dataform;		/* Data form 			*/
+	Uchar	cs_scms;		/* Serial copy management	*/
+	Uchar	cs_min;			/* Absolute time minutes	*/
+	Uchar	cs_sec;			/* Absolute time seconds	*/
+	Uchar	cs_frame;		/* Absolute time frames		*/
 };
 
 #endif	/* _SCSIMMC_H */

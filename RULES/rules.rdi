@@ -1,4 +1,4 @@
-#ident @(#)rules.rdi	1.6 98/09/27 
+#ident @(#)rules.rdi	1.7 99/12/20 
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -22,18 +22,7 @@
 # the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 ###########################################################################
 
-$(ALLTARGETS):
-	@ for DIR in $(DIRS) ;							\
-	do									\
-		(								\
-		echo "	==> MAKING \"$@\" ON SUBDIRECTORY \"$(CURDIR)/$$DIR\"";\
-		if [ -d ./$$DIR -a -r ./$$DIR/Makefile ] ; then			\
-			cd ./$$DIR;$(MAKE) $(MAKEMACS) XARCH=$(XARCH) DIRNAME=$(CURDIR)/$$DIR $@;		\
-		else								\
-			echo "NOTICE: Partial source ($(CURDIR)/$$DIR) missing";\
-		fi								\
-		);								\
-	done
+include		$(SRCROOT)/$(RULESDIR)/rules1.dir
 
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.hlp

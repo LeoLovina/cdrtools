@@ -1,4 +1,4 @@
-/* @(#)mconfig.h	1.21 98/10/09 Copyright 1995 J. Schilling */
+/* @(#)mconfig.h	1.30 00/01/28 Copyright 1995 J. Schilling */
 /*
  *	definitions for machine configuration
  *
@@ -28,15 +28,38 @@
 #ifndef _MCONFIG_H
 #define _MCONFIG_H
 
-#include <xconfig.h>	/* This is the current dynamic autoconf stuff */
+/*
+ * This hack that is needed as long as VMS has no POSIX shell.
+ */
+#ifdef	VMS
+#	define	USE_STATIC_CONF
+#endif
+
+#ifdef	USE_STATIC_CONF
 #include <xmconfig.h>	/* This is the current static autoconf stuff */
+#else
+#include <xconfig.h>	/* This is the current dynamic autoconf stuff */
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if defined(unix) || defined(__unix) || defined(__unix__)
-#	define	IS_UNIX
+/*
+ * The NetBSD people want to bother us.
+ * They removed the definition for 'unix' and are bleating for every test
+ * for #if defined(unix). So we need to check for NetBSD early.
+ */
+#ifndef	IS_UNIX
+#	if defined(__NetBSD__)
+#		define	IS_UNIX
+#	endif
+#endif
+
+#ifndef	IS_UNIX
+#	if defined(unix) || defined(__unix) || defined(__unix__)
+#		define	IS_UNIX
+#	endif
 #endif
 
 #ifdef	__MSDOS__
@@ -105,7 +128,18 @@ extern "C" {
  * AIX
  */
 #if	defined(_IBMR2) || defined(_AIX)
+#	ifndef	IS_UNIX
 #	define	IS_UNIX		/* ??? really ??? */
+#	endif
+#endif
+
+/*
+ * QNX
+ */
+#if defined(__QNX__)
+#	ifndef	IS_UNIX
+#	define	IS_UNIX
+#	endif
 #endif
 
 /*
@@ -152,17 +186,25 @@ extern "C" {
  */
 #if defined(__NeXT__) && !defined(HAVE_OSDEF)
 #define	NO_PRINT_OVR
+#undef	HAVE_USG_STDIO		/*
+				 *  NeXT Step 3.x uses __flsbuf(unsigned char , FILE *)
+				 * instead of __flsbuf(int, FILE *)
+				 */
 #endif
 
 /*
  * NextStep 3.x has a broken linker that does not allow us to override
  * these functions.
  */
+#ifndef	__OPRINTF__
+
 #ifdef	NO_PRINT_OVR
 #	define	printf	Xprintf
 #	define	fprintf	Xfprintf
 #	define	sprintf	Xsprintf
 #endif
+
+#endif	/* __OPRINTF__ */
 
 /*--------------------------------------------------------------------------*/
 /*
@@ -189,6 +231,12 @@ extern "C" {
 #	endif
 #endif
 
+#ifdef	__CHAR_UNSIGNED__	/* GNU GCC define     (dynamic)	*/
+#ifndef CHAR_IS_UNSIGNED
+#define	CHAR_IS_UNSIGNED	/* Sing Schily define (static)	*/
+#endif
+#endif
+
 /*
  * Convert to GNU name
  */
@@ -207,6 +255,20 @@ extern "C" {
 #endif
 
 #ifdef	IS_UNIX
+#	define	PATH_DELIM	'/'
+#	define	PATH_DELIM_STR	"/"
+#	define	far
+#	define	near
+#endif
+
+#ifdef	IS_GCC_WIN32
+#	define	PATH_DELIM	'/'
+#	define	PATH_DELIM_STR	"/"
+#	define	far
+#	define	near
+#endif
+
+#ifdef	__EMX__				/* We don't want to call it UNIX */
 #	define	PATH_DELIM	'/'
 #	define	PATH_DELIM_STR	"/"
 #	define	far

@@ -1,7 +1,7 @@
-/* @(#)drv_simul.c	1.4 98/09/05 Copyright 1998 J. Schilling */
+/* @(#)drv_simul.c	1.12 99/08/30 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_simul.c	1.4 98/09/05 Copyright 1998 J. Schilling";
+	"@(#)drv_simul.c	1.12 99/08/30 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Simulation device driver
@@ -38,10 +38,12 @@ static	char sccsid[] =
 #include <sys/time.h>
 #include <utypes.h>
 #include <btorder.h>
-#include <scgio.h>
-#include <scsidefs.h>
-#include <scsireg.h>
+/*#include <scgio.h>*/
+#include <scg/scsidefs.h>
+#include <scg/scsireg.h>
+#include <scg/scsitransp.h>
 
+#include <libport.h>
 
 #include "cdrecord.h"
 
@@ -49,27 +51,29 @@ extern	int	silent;
 extern	int	verbose;
 extern	int	lverbose;
 
-LOCAL	int	simul_load		__PR((void));
-LOCAL	int	simul_unload		__PR((void));
-LOCAL	cdr_t	*identify_simul		__PR((cdr_t *, struct scsi_inquiry *));
-LOCAL	int	getdisktype_simul	__PR((cdr_t *dp, dstat_t *dsp));
-LOCAL	int	speed_select_simul	__PR((int speed, int dummy));
-LOCAL	int	next_wr_addr_simul	__PR((int track, track_t *trackp, long *ap));
-LOCAL	int	cdr_write_simul		__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
-LOCAL	int	open_track_simul	__PR((cdr_t *dp, int track, track_t *trackp));
-LOCAL	int	close_track_simul	__PR((int track, track_t *trackp));
-LOCAL	int	open_session_simul	__PR((int tracks, track_t *trackp, int toctype, int multi));
-LOCAL	int	fixate_simul		__PR((int onp, int dummy, int toctype, int tracks, track_t *trackp));
+LOCAL	int	simul_load		__PR((SCSI *scgp));
+LOCAL	int	simul_unload		__PR((SCSI *scgp));
+LOCAL	cdr_t	*identify_simul		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *));
+LOCAL	int	getdisktype_simul	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
+LOCAL	int	speed_select_simul	__PR((SCSI *scgp, int *speedp, int dummy));
+LOCAL	int	next_wr_addr_simul	__PR((SCSI *scgp, int track, track_t *trackp, long *ap));
+LOCAL	int	cdr_write_simul		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+LOCAL	int	open_track_simul	__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
+LOCAL	int	close_track_simul	__PR((SCSI *scgp, int track, track_t *trackp));
+LOCAL	int	open_session_simul	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	fixate_simul		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
 LOCAL	void	tv_sub			__PR((struct timeval *tvp1, struct timeval *tvp2));
 
 LOCAL int
-simul_load()
+simul_load(scgp)
+	SCSI	*scgp;
 {
 	return (0);
 }
 
 LOCAL int
-simul_unload()
+simul_unload(scgp)
+	SCSI	*scgp;
 {
 	return (0);
 }
@@ -85,13 +89,15 @@ cdr_t	cdr_cdr_simul = {
 	getdisktype_simul,
 	simul_load,
 	simul_unload,
-	recovery_needed,
-	recover,
+	buf_dummy,
+	(int(*)__PR((SCSI *)))cmd_dummy,	/* recovery_needed	*/
+	(int(*)__PR((SCSI *, int)))cmd_dummy,	/* recover		*/
 	speed_select_simul,
 	select_secsize,
 	next_wr_addr_simul,
-	reserve_track,
+	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	cdr_write_simul,
+	(int(*)__PR((SCSI *scgp, int, track_t *)))cmd_dummy,	/* send_cue */
 	open_track_simul,
 	close_track_simul,
 	open_session_simul,
@@ -112,13 +118,15 @@ cdr_t	cdr_dvd_simul = {
 	getdisktype_simul,
 	simul_load,
 	simul_unload,
-	recovery_needed,
-	recover,
+	buf_dummy,
+	(int(*)__PR((SCSI *)))cmd_dummy,	/* recovery_needed	*/
+	(int(*)__PR((SCSI *, int)))cmd_dummy,	/* recover		*/
 	speed_select_simul,
 	select_secsize,
 	next_wr_addr_simul,
-	reserve_track,
+	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	cdr_write_simul,
+	(int(*)__PR((SCSI *scgp, int, track_t *)))cmd_dummy,	/* send_cue */
 	open_track_simul,
 	close_track_simul,
 	open_session_simul,
@@ -129,14 +137,15 @@ cdr_t	cdr_dvd_simul = {
 };
 
 LOCAL cdr_t *
-identify_simul(dp, ip)
+identify_simul(scgp, dp, ip)
+	SCSI			*scgp;
 	cdr_t			*dp;
 	struct scsi_inquiry	*ip;
 {
 	return (dp);
 }
 
-LOCAL	int	simul_speed;
+LOCAL	int	simul_speed = 1;
 LOCAL	int	simul_dummy;
 LOCAL	int	simul_isdvd;
 LOCAL	int	simul_bufsize = 1024;
@@ -145,7 +154,8 @@ LOCAL	Uint	sleep_max;
 LOCAL	Uint	sleep_min;
 
 LOCAL int
-getdisktype_simul(dp, dsp)
+getdisktype_simul(scgp, dp, dsp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	dstat_t	*dsp;
 {
@@ -157,19 +167,21 @@ getdisktype_simul(dp, dsp)
 /*		dsp->ds_maxblocks = 1927896;*/	/* 3.95 GB */
 		simul_isdvd = TRUE;
 	}
-	return (drive_getdisktype(dp, dsp));
+	return (drive_getdisktype(scgp, dp, dsp));
 }
 
 
 LOCAL int
-speed_select_simul(speed, dummy)
-	int	speed;
+speed_select_simul(scgp, speedp, dummy)
+	SCSI	*scgp;
+	int	*speedp;
 	int	dummy;
 {
 	long	val;
 	char	*p;
 
-	simul_speed = speed;
+	if (speedp)
+		simul_speed = *speedp;
 	simul_dummy = dummy;
 
 	if ((p = getenv("CDR_SIMUL_BUFSIZE")) != NULL) {
@@ -196,7 +208,8 @@ speed_select_simul(speed, dummy)
 }
 
 LOCAL int
-next_wr_addr_simul(track, trackp, ap)
+next_wr_addr_simul(scgp, track, trackp, ap)
+	SCSI	*scgp;
 	int	track;
 	track_t	*trackp;
 	long	*ap;
@@ -207,7 +220,8 @@ next_wr_addr_simul(track, trackp, ap)
 }
 
 LOCAL int
-cdr_write_simul(bp, sectaddr, size, blocks, islast)
+cdr_write_simul(scgp, bp, sectaddr, size, blocks, islast)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	sectaddr;	/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
@@ -276,7 +290,8 @@ static	struct timeval	tv2;
 }
 
 LOCAL int
-open_track_simul(dp, track, trackp)
+open_track_simul(scgp, dp, track, trackp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	int	track;
 	track_t *trackp;
@@ -286,7 +301,8 @@ open_track_simul(dp, track, trackp)
 }
 
 LOCAL int
-close_track_simul(track, trackp)
+close_track_simul(scgp, track, trackp)
+	SCSI	*scgp;
 	int	track;
 	track_t	*trackp;
 {
@@ -304,7 +320,8 @@ close_track_simul(track, trackp)
 }
 
 LOCAL int
-open_session_simul(tracks, trackp, toctype, multi)
+open_session_simul(scgp, tracks, trackp, toctype, multi)
+	SCSI	*scgp;
 	int	tracks;
 	track_t	*trackp;
 	int	toctype;
@@ -314,7 +331,8 @@ open_session_simul(tracks, trackp, toctype, multi)
 }
 
 LOCAL int
-fixate_simul(onp, dummy, toctype, tracks, trackp)
+fixate_simul(scgp, onp, dummy, toctype, tracks, trackp)
+	SCSI	*scgp;
 	int	onp;
 	int	dummy;
 	int	toctype;

@@ -1,4 +1,4 @@
-#ident "@(#)rs6000-aix-gcc.rul	1.1 97/11/29 "
+#ident "@(#)rs6000-aix-gcc.rul	1.2 99/08/29 "
 ###########################################################################
 # Written 1997 by J. Schilling
 ###########################################################################
@@ -62,5 +62,5 @@ RANLIB=		@echo "	==> RANDOMIZING ARCHIVE \"$@\""; ranlib
 ARFLAGS=	cr
 
 RMDEP=		:
-MKDEP=		@echo "	==> MAKE DEPENDENCIES \"$@\""; $(RMDEP); gcc -M
+MKDEP=		@echo "	==> MAKING DEPENDENCIES \"$@\""; $(RMDEP); gcc -M
 MKDEP_OUT=

@@ -21,7 +21,7 @@ DEFCCOM=	gcc
 DEFINCDIRS=	$(SRCROOT)/include
 #LDPATH=		-L/opt/schily/lib
 LDPATH=
-#RUNPATH=	-R /opt/schily/lib -R $(OLIBSDIR)
+#RUNPATH=	-R $(INS_BASE)/lib -R /opt/schily/lib -R $(OLIBSDIR)
 RUNPATH=
 
 ###########################################################################

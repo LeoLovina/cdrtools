@@ -1,7 +1,7 @@
-/* @(#)drv_sony.c	1.20 98/09/15 Copyright 1997 J. Schilling */
+/* @(#)drv_sony.c	1.37 99/10/17 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_sony.c	1.20 98/09/15 Copyright 1997 J. Schilling";
+	"@(#)drv_sony.c	1.37 99/10/17 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -37,30 +37,23 @@ static	char sccsid[] =
 
 #include <utypes.h>
 #include <btorder.h>
-#include <scgio.h>
-#include <scsidefs.h>
-#include <scsireg.h>
+#include <intcvt.h>
+#include <scg/scgcmd.h>
+#include <scg/scsidefs.h>
+#include <scg/scsireg.h>
+#include <scg/scsitransp.h>
 
 #include "cdrecord.h"
-#include "scsitransp.h"
 
 #ifdef	SONY_DEBUG
-#	define		inc_verbose()	verbose++
-#	define		dec_verbose()	verbose--
+#	define		inc_verbose()	scgp->verbose++
+#	define		dec_verbose()	scgp->verbose--
 #else
 #	define		inc_verbose()
 #	define		dec_verbose()
 #endif
 
-struct	scg_cmd		scmd;
-struct	scsi_inquiry	inq;
-
-extern	int	scsibus;
-extern	int	target;
-extern	int	lun;
-
-extern	int	silent;
-extern	int	verbose;
+extern	int	lverbose;
 
 #if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 
@@ -155,24 +148,27 @@ struct cdd_52x_mode_data {
 	} pagex;
 };
 
-LOCAL	int	write_continue_sony	__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
-LOCAL	int	write_track_sony	__PR((long track, int sectype));
-LOCAL	int	close_track_sony	__PR((int track, track_t *trackp));
-LOCAL	int	finalize_sony		__PR((int onp, int dummy, int type, int tracks, track_t *trackp));
-LOCAL	int	recover_sony		__PR((int track));
-LOCAL	int	next_wr_addr_sony	__PR((int track, track_t *trackp, long *ap));
-LOCAL	int	reserve_track_sony	__PR((unsigned long len));
-LOCAL	int	reserve_track_sony	__PR((unsigned long len));
-LOCAL	int	speed_select_sony	__PR((int speed, int dummy));
-LOCAL	int	next_writable_address_sony __PR((long *ap, int track, int sectype, int tracktype));
-LOCAL	int	new_track_sony		__PR((int track, int sectype, int tracktype));
-LOCAL	int	open_track_sony		__PR((cdr_t *dp, int track, track_t *track_info));
-LOCAL	int	open_session_sony	__PR((int tracks, track_t *trackp, int toctype, int multi));
-LOCAL	int	sony_attach		__PR((cdr_t *dp));
+LOCAL	int	write_continue_sony	__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+LOCAL	int	write_track_sony	__PR((SCSI *scgp, long track, int sectype));
+LOCAL	int	close_track_sony	__PR((SCSI *scgp, int track, track_t *trackp));
+LOCAL	int	finalize_sony		__PR((SCSI *scgp, int onp, int dummy, int type, int tracks, track_t *trackp));
+LOCAL	int	recover_sony		__PR((SCSI *scgp, int track));
+LOCAL	int	next_wr_addr_sony	__PR((SCSI *scgp, int track, track_t *trackp, long *ap));
+LOCAL	int	reserve_track_sony	__PR((SCSI *scgp, unsigned long len));
+LOCAL	int	getdisktype_sony	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
+LOCAL	void	di_to_dstat_sony	__PR((struct sony_924_mode_page_22 *dip, dstat_t *dsp));
+LOCAL	int	speed_select_sony	__PR((SCSI *scgp, int *speedp, int dummy));
+LOCAL	int	next_writable_address_sony __PR((SCSI *scgp, long *ap, int track, int sectype, int tracktype));
+LOCAL	int	new_track_sony		__PR((SCSI *scgp, int track, int sectype, int tracktype));
+LOCAL	int	open_track_sony		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *track_info));
+LOCAL	int	open_session_sony	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	get_page22_sony		__PR((SCSI *scgp, char *mode));
+LOCAL	int	sony_attach		__PR((SCSI *scgp, cdr_t *dp));
 #ifdef	SONY_DEBUG
 LOCAL	void	print_sony_mp22		__PR((struct sony_924_mode_page_22 *xp, int len));
 LOCAL	void	print_sony_mp23		__PR((struct sony_924_mode_page_23 *xp, int len));
 #endif
+LOCAL	int	buf_cap_sony		__PR((SCSI *scgp, long *, long *));
 
 cdr_t	cdr_sony_cdu924 = {
 	0,
@@ -182,16 +178,18 @@ cdr_t	cdr_sony_cdu924 = {
 	0,
 	drive_identify,
 	sony_attach,
-	drive_getdisktype,
+	getdisktype_sony,
 	scsi_load,
 	scsi_unload,
-	recovery_needed,
-	recover,
+	buf_cap_sony,
+	(int(*)__PR((SCSI *)))cmd_dummy,	/* recovery_needed	*/
+	recover_sony,
 	speed_select_sony,
 	select_secsize,
 	next_wr_addr_sony,
 	reserve_track_sony,
 	write_continue_sony,
+	no_sendcue,
 	open_track_sony,
 	close_track_sony,
 	open_session_sony,
@@ -202,155 +200,313 @@ cdr_t	cdr_sony_cdu924 = {
 };
 
 LOCAL int
-write_continue_sony(bp, sectaddr, size, blocks, islast)
+write_continue_sony(scgp, bp, sectaddr, size, blocks, islast)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	sectaddr;	/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
 	int	blocks;		/* sector count */
 	BOOL	islast;		/* last write for track */
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = size;
-	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xE1;
-	scmd.cdb.g1_cdb.lun = lun;
-	g0_cdbaddr(&scmd.cdb.g0_cdb, size); /* Hack, but Sony is silly */
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = size;
+	scmd->flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0xE1;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g0_cdbaddr(&scmd->cdb.g0_cdb, size); /* Hack, but Sony is silly */
 	
-	if (scsicmd("write_continue") < 0)
+	scgp->cmdname = "write_continue";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	return (size - scmd.resid);
+	return (size - scsigetresid(scgp));
 }
 
 LOCAL int
-write_track_sony(track, sectype)
+write_track_sony(scgp, track, sectype)
+	SCSI	*scgp;
 	long	track;		/* track number 0 == new track */
 	int	sectype;	/* no sectype for Sony write track */
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xF5;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, track);
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0xF5;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdbaddr(&scmd->cdb.g1_cdb, track);
 	
-	if (scsicmd("write_track") < 0)
+	scgp->cmdname = "write_track";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 /* XXX NOCH NICHT FERTIG */
 LOCAL int
-close_track_sony(track, trackp)
+close_track_sony(scgp, track, trackp)
+	SCSI	*scgp;
 	int	track;
 	track_t	*trackp;
 {
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
 	track = 0;
 
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xF0;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, track);
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0xF0;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdbaddr(&scmd->cdb.g1_cdb, track);
 /* XXX Padding ??? (bit 0 in addr[0]) */
 	
-	if (scsicmd("close_track") < 0)
+	scgp->cmdname = "close_track";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 
 	/*
 	 * Clear the silly "error situation" from Sony´ dummy write end
 	 * but notify if real errors occurred. 
 	 */
-	silent++;
-	if (test_unit_ready() < 0 && scsi_sense_code() != 0xD4)
-		scsiprinterr("close_track/test_unit_ready");
-	silent--;
+	scgp->silent++;
+	if (test_unit_ready(scgp) < 0 && scsi_sense_code(scgp) != 0xD4) {
+		scgp->cmdname = "close_track/test_unit_ready";
+		scsiprinterr(scgp);
+	}
+	scgp->silent--;
 
 	return (0);
 }
 
 LOCAL int
-finalize_sony(onp, dummy, type, tracks, trackp)
+finalize_sony(scgp, onp, dummy, type, tracks, trackp)
+	SCSI	*scgp;
 	int	onp;	/* open next program area */
 	int	dummy;
 	int	type;	/* TOC type 0: CD-DA, 1: CD-ROM, 2: CD-ROM/XA1, 3: CD-ROM/XA2, 4: CDI */
 	int	tracks;
 	track_t	*trackp;
 {
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
 	if (dummy) {
 		printf("Fixating is not possible in dummy write mode.\n");
 		return (0);
 	}
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 8 * 60;		/* Needs up to 4 minutes */
-	scmd.cdb.g1_cdb.cmd = 0xF1;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.count[1] = (onp ? 1 : 0);
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 8 * 60;		/* Needs up to 4 minutes */
+	scmd->cdb.g1_cdb.cmd = 0xF1;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.count[1] = (onp ? 1 : 0);
 /* XXX Padding ??? (bit 0 in addr[0]) */
 	
-	if (scsicmd("finalize") < 0)
+	scgp->cmdname = "finalize";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 LOCAL int
-recover_sony(track)
+recover_sony(scgp, track)
+	SCSI	*scgp;
 	int	track;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xF6;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.addr[3] = track;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0xF6;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.addr[3] = track;
 	
-	if (scsicmd("recover") < 0)
+	scgp->cmdname = "recover";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 LOCAL int
-next_wr_addr_sony(track, trackp, ap)
+next_wr_addr_sony(scgp, track, trackp, ap)
+	SCSI	*scgp;
 	int	track;
 	track_t	*trackp;
 	long	*ap;
 {
-	if (next_writable_address_sony(ap, 0, 0, 0) < 0)
+	if (next_writable_address_sony(scgp, ap, 0, 0, 0) < 0)
 		return (-1);
 	return (0);
 }
 
 LOCAL int
-reserve_track_sony(len)
+reserve_track_sony(scgp, len)
+	SCSI	*scgp;
 	unsigned long len;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xF3;
-	scmd.cdb.g1_cdb.lun = lun;
-	i_to_long(&scmd.cdb.g1_cdb.addr[3], len);
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0xF3;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	i_to_4_byte(&scmd->cdb.g1_cdb.addr[3], len);
 	
-	if (scsicmd("reserve_track") < 0)
+	scgp->cmdname = "reserve_track";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
+
+#define	IS(what,flag)	printf("  Is %s%s\n", flag?"":"not ",what);
+
+LOCAL int
+getdisktype_sony(scgp, dp, dsp)
+	SCSI	*scgp;
+	cdr_t	*dp;
+	dstat_t	*dsp;
+{
+	long	dummy;
+	long	lst;
+	msf_t	msf;
+
+	char			mode[256];
+	struct scsi_mode_page_header	*mp;
+	struct sony_924_mode_page_22	*xp;
+
+	dummy = get_page22_sony(scgp, mode);
+	if (dummy >= 0) {
+		mp = (struct scsi_mode_page_header *)
+			(mode + sizeof(struct scsi_mode_header) +
+			((struct scsi_mode_header *)mode)->blockdesc_len);
+
+		xp = (struct sony_924_mode_page_22 *)mp;
+
+		if (xp->disk_appl_code[0] == 0xFF)
+			dummy = -1;
+	}
+	if (dummy < 0)
+		return (drive_getdisktype(scgp, dp, dsp));
+
+	if (lverbose && dummy >= 0) {
+
+		printf("ATIP info from disk:\n");
+		printf("  Indicated writing power: %d\n",
+				(unsigned)(xp->disk_appl_code[1] & 0x70) >> 4);
+		IS("unrestricted", xp->disk_appl_code[2] & 0x40);
+		printf("  Disk application code: %d\n", xp->disk_appl_code[2] & 0x3F);
+		msf.msf_min = xp->lead_in_start[1];
+		msf.msf_sec = xp->lead_in_start[2];
+		msf.msf_frame = xp->lead_in_start[3];
+		lst = msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame);
+		if (lst  < -150) {
+			/*
+			 * The Sony CDU 920 seems to deliver 00:00/00 for
+			 * lead-in start time, dont use it.
+			 */
+			printf("  ATIP start of lead in:  %ld (%02d:%02d/%02d)\n",
+				msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame),
+				msf.msf_min, msf.msf_sec, msf.msf_frame);
+		}
+		msf.msf_min = xp->last_start_time[1];
+		msf.msf_sec = xp->last_start_time[2];
+		msf.msf_frame = xp->last_start_time[3];
+		printf("  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
+			msf_to_lba(msf.msf_min, msf.msf_sec, msf.msf_frame),
+			msf.msf_min, msf.msf_sec, msf.msf_frame);
+		if (lst  < -150) {
+			/*
+			 * The Sony CDU 920 seems to deliver 00:00/00 for
+			 * lead-in start time, dont use it.
+			 */
+			msf.msf_min = xp->lead_in_start[1];
+			msf.msf_sec = xp->lead_in_start[2];
+			msf.msf_frame = xp->lead_in_start[3];
+			pr_manufacturer(&msf,
+					FALSE,	/* Always not erasable */
+					(xp->disk_appl_code[2] & 0x40) != 0);
+		}
+	}
+	if (dummy >= 0)
+		di_to_dstat_sony(xp, dsp);
+	return (drive_getdisktype(scgp, dp, dsp));
+}
+
+LOCAL void
+di_to_dstat_sony(dip, dsp)
+	struct sony_924_mode_page_22	*dip;
+	dstat_t	*dsp;
+{
+	msf_t	msf;
+
+	dsp->ds_diskid = a_to_u_4_byte(dip->disk_id_code);
+	if (dsp->ds_diskid != -1)
+		dsp->ds_flags |= DSF_DID_V;
+	dsp->ds_diskstat = (dip->disk_status >> 6) & 0x03;
+#ifdef	XXX
+	/*
+	 * There seems to be no MMC equivalent...
+	 */
+	dsp->ds_sessstat = dip->sess_status;
+#endif
+
+	dsp->ds_maxblocks = msf_to_lba(dip->last_start_time[1],
+					dip->last_start_time[2],
+					dip->last_start_time[3]);
+	/*
+	 * Check for 0xFF:0xFF/0xFF which is an indicator for a complete disk
+	 */
+	if (dsp->ds_maxblocks == 716730)
+		dsp->ds_maxblocks = -1L;
+
+	if (dsp->ds_first_leadin == 0) {
+		dsp->ds_first_leadin = msf_to_lba(dip->lead_in_start[1],
+						dip->lead_in_start[2],
+						dip->lead_in_start[3]);
+		/*
+		 * Check for illegal values (> 0)
+		 * or for empty field (-150) with CDU-920.
+		 */
+		if (dsp->ds_first_leadin > 0 || dsp->ds_first_leadin == -150)
+			dsp->ds_first_leadin = 0;
+	}
+
+	if (dsp->ds_last_leadout == 0 && dsp->ds_maxblocks >= 0)
+		dsp->ds_last_leadout = dsp->ds_maxblocks;
+
+	msf.msf_min = dip->lead_in_start[1];
+	msf.msf_sec = dip->lead_in_start[2];
+	msf.msf_frame = dip->lead_in_start[3];
+	dsp->ds_maxrblocks = disk_rcap(&msf, dsp->ds_maxblocks,
+					FALSE,	/* Always not erasable */
+					(dip->disk_appl_code[2] & 0x40) != 0);
+}
+
 
 int	sony_speeds[] = {
 		-1,		/* Speed null is not allowed */
@@ -361,16 +517,21 @@ int	sony_speeds[] = {
 };
 
 LOCAL int
-speed_select_sony(speed, dummy)
-	int	speed;
+speed_select_sony(scgp, speedp, dummy)
+	SCSI	*scgp;
+	int	*speedp;
 	int	dummy;
 {
 	struct cdd_52x_mode_data md;
 	int	count;
 	int	err;
+	int	speed = 1;
 
-	if (speed < 1 || speed > 4 || sony_speeds[speed] < 0)
-		return (-1);
+	if (speedp) {
+		speed = *speedp;
+		if (speed < 1 || speed > 4 || sony_speeds[speed] < 0)
+			return (-1);
+	}
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
@@ -381,9 +542,12 @@ speed_select_sony(speed, dummy)
 	md.pagex.page_s20.p_len =  0x06;
 	md.pagex.page_s20.speudo = dummy?1:0;
 	
-	err = mode_select((u_char *)&md, count, 0, 1);
+	err = mode_select(scgp, (u_char *)&md, count, 0, 1);
 	if (err < 0)
 		return (err);
+
+	if (speedp == 0)
+		return (0);
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
@@ -394,11 +558,12 @@ speed_select_sony(speed, dummy)
 	md.pagex.page_s31.p_len =  0x02;
 	md.pagex.page_s31.speed = sony_speeds[speed];
 	
-	return (mode_select((u_char *)&md, count, 0, 1));
+	return (mode_select(scgp, (u_char *)&md, count, 0, 1));
 }
 
 LOCAL int
-next_writable_address_sony(ap, track, sectype, tracktype)
+next_writable_address_sony(scgp, ap, track, sectype, tracktype)
+	SCSI	*scgp;
 	long	*ap;
 	int	track;
 	int	sectype;
@@ -413,7 +578,7 @@ next_writable_address_sony(ap, track, sectype, tracktype)
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	inc_verbose();
-	if (!get_mode_params(page, "CD track information",
+	if (!get_mode_params(scgp, page, "CD track information",
 			(u_char *)mode, (u_char *)0, (u_char *)0, (u_char *)0, &len)) {
 		dec_verbose();
 		return (-1);
@@ -433,13 +598,14 @@ next_writable_address_sony(ap, track, sectype, tracktype)
 	print_sony_mp23(xp, len);
 #endif
 	if (ap)
-		*ap = a_to_u_long(xp->next_recordable_addr);
+		*ap = a_to_4_byte(xp->next_recordable_addr);
 	return (0);
 }
 
 
 LOCAL int
-new_track_sony(track, sectype, tracktype)
+new_track_sony(scgp, track, sectype, tracktype)
+	SCSI	*scgp;
 	int	track;
 	int	sectype;
 	int	tracktype;
@@ -452,9 +618,12 @@ new_track_sony(track, sectype, tracktype)
 	int	i;
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+	get_page22_sony(scgp, mode);
+
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	inc_verbose();
-	if (!get_mode_params(page, "CD track information",
+	if (!get_mode_params(scgp, page, "CD track information",
 			(u_char *)mode, (u_char *)0, (u_char *)0, (u_char *)0, &len)) {
 		dec_verbose();
 		return (-1);
@@ -500,7 +669,7 @@ new_track_sony(track, sectype, tracktype)
 								0);
 	}
 
-	if (mode_select((u_char *)mode, len, 0, inq.data_format >= 2) < 0) {
+	if (mode_select(scgp, (u_char *)mode, len, 0, scgp->inq->data_format >= 2) < 0) {
 		return (-1);
 	}
 
@@ -508,25 +677,27 @@ new_track_sony(track, sectype, tracktype)
 }
 
 LOCAL int
-open_track_sony(dp, track, track_info)
+open_track_sony(scgp, dp, track, track_info)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	int	track;
 	track_t *track_info;
 {
-	if (select_secsize(track_info->secsize) < 0)
+	if (select_secsize(scgp, track_info->secsize) < 0)
 		return (-1);
 
-	if (new_track_sony(track, track_info->sectype, track_info->tracktype) < 0)
+	if (new_track_sony(scgp, track, track_info->sectype, track_info->tracktype) < 0)
 		return (-1);
 
-	if (write_track_sony(0L, track_info->sectype) < 0)
+	if (write_track_sony(scgp, 0L, track_info->sectype) < 0)
 		return (-1);
 
 	return (0);
 }
 
 LOCAL int
-open_session_sony(tracks, trackp, toctype, multi)
+open_session_sony(scgp, tracks, trackp, toctype, multi)
+	SCSI	*scgp;
 	int	tracks;
 	track_t	*trackp;
 	int	toctype;
@@ -536,13 +707,51 @@ open_session_sony(tracks, trackp, toctype, multi)
 	char			mode[256];
 	int	i;
 	int	len = 0x30;
+	struct sony_924_mode_page_22	*xp;
+
+	fillbytes((caddr_t)mode, sizeof(mode), '\0');
+
+	if ((len = get_page22_sony(scgp, mode)) < 0)
+		return (-1);
+
+	mp = (struct scsi_mode_page_header *)
+		(mode + sizeof(struct scsi_mode_header) +
+		((struct scsi_mode_header *)mode)->blockdesc_len);
+
+	xp = (struct sony_924_mode_page_22 *)mp;
+
+	xp->disk_type = toc2sess[toctype & TOC_MASK];
+
+	((struct scsi_modesel_header *)mode)->sense_data_len	= 0;
+	((struct scsi_modesel_header *)mode)->res2		= 0;
+
+	i = ((struct scsi_mode_header *)mode)->blockdesc_len;
+	if (i > 0) {
+		i_to_3_byte(
+			((struct scsi_mode_data *)mode)->blockdesc.nlblock,
+								0);
+	}
+
+	if (mode_select(scgp, (u_char *)mode, len, 0, scgp->inq->data_format >= 2) < 0) {
+		return (-1);
+	}
+	return (0);
+}
+
+LOCAL int
+get_page22_sony(scgp, mode)
+	SCSI	*scgp;
+	char	*mode;
+{
+	struct	scsi_mode_page_header *mp;
+	int	len = 0x30;
 	int	page = 0x22;
 	struct sony_924_mode_page_22	*xp;
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
 	inc_verbose();
-	if (!get_mode_params(page, "CD disk information",
+	if (!get_mode_params(scgp, page, "CD disk information",
 			(u_char *)mode, (u_char *)0, (u_char *)0, (u_char *)0, &len)) {
 		dec_verbose();
 		return (-1);
@@ -560,23 +769,7 @@ open_session_sony(tracks, trackp, toctype, multi)
 #ifdef	SONY_DEBUG
 	print_sony_mp22(xp, len);
 #endif
-
-	xp->disk_type = toc2sess[toctype & TOC_MASK];
-
-	((struct scsi_modesel_header *)mode)->sense_data_len	= 0;
-	((struct scsi_modesel_header *)mode)->res2		= 0;
-
-	i = ((struct scsi_mode_header *)mode)->blockdesc_len;
-	if (i > 0) {
-		i_to_3_byte(
-			((struct scsi_mode_data *)mode)->blockdesc.nlblock,
-								0);
-	}
-
-	if (mode_select((u_char *)mode, len, 0, inq.data_format >= 2) < 0) {
-		return (-1);
-	}
-	return (0);
+	return (len);
 }
 
 static const char *sd_cdu_924_error_str[] = {
@@ -605,7 +798,7 @@ static const char *sd_cdu_924_error_str[] = {
 	"\311\000illegal block length for write command",	/* C9 00 */
 	"\312\000power calibration error",			/* CA 00 */
 	"\313\000write error",					/* CB 00 */
-	"\313\001write rrror track recovered",			/* CB 01 */
+	"\313\001write error track recovered",			/* CB 01 */
 	"\314\000not enough space",				/* CC 00 */
 	"\315\000no track present to finalize",			/* CD 00 */
 	"\316\000unrecoverable track descriptor encountered",	/* CE 00 */
@@ -623,10 +816,11 @@ static const char *sd_cdu_924_error_str[] = {
 };
 
 LOCAL int
-sony_attach(dp)
+sony_attach(scgp, dp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 {
-	scsi_setnonstderrs(sd_cdu_924_error_str);
+	scsi_setnonstderrs(scgp, sd_cdu_924_error_str);
 	return (0);
 }
 
@@ -641,14 +835,14 @@ print_sony_mp22(xp, len)
 	printf("first track: %X\n", xp->first_track);
 	printf("last track: %X\n", xp->last_track);
 	printf("numsess:    %X\n", xp->numsess);
-	printf("disk appl code: %X\n", a_to_u_long(xp->disk_appl_code));
-	printf("last start time: %X\n", a_to_u_long(xp->last_start_time));
+	printf("disk appl code: %lX\n", a_to_u_4_byte(xp->disk_appl_code));
+	printf("last start time: %lX\n", a_to_u_4_byte(xp->last_start_time));
 	printf("disk status: %X\n", xp->disk_status);
 	printf("num valid nra: %X\n", xp->num_valid_nra);
 	printf("track info track: %X\n", xp->track_info_track);
 	printf("post gap: %X\n", xp->post_gap);
-	printf("disk id code: %X\n", a_to_u_long(xp->disk_id_code));
-	printf("lead in start: %X\n", a_to_u_long(xp->lead_in_start));
+	printf("disk id code: %lX\n", a_to_u_4_byte(xp->disk_id_code));
+	printf("lead in start: %lX\n", a_to_u_4_byte(xp->lead_in_start));
 }
 
 LOCAL void
@@ -664,12 +858,62 @@ print_sony_mp23(xp, len)
 	printf("session: %X\n", xp->session);
 	printf("track status: %X\n", xp->track_status);
 
-	printf("start lba: %X\n", a_to_u_long(xp->start_lba));
-	printf("next recordable addr: %X\n", a_to_u_long(xp->next_recordable_addr));
-	printf("blank area cap: %X\n", a_to_u_long(xp->blank_area_cap));
-	printf("fixed packet size: %X\n", a_to_u_long(xp->fixed_packet_size));
-	printf("starting msf: %X\n", a_to_u_long(xp->starting_msf));
-	printf("ending msf: %X\n", a_to_u_long(xp->ending_msf));
-	printf("next rec time: %X\n", a_to_u_long(xp->next_rec_time));
+/*
+ * XXX Check for signed/unsigned a_to_*() conversion.
+ */
+	printf("start lba: %lX\n", a_to_4_byte(xp->start_lba));
+	printf("next recordable addr: %lX\n", a_to_4_byte(xp->next_recordable_addr));
+	printf("blank area cap: %lX\n", a_to_u_4_byte(xp->blank_area_cap));
+	printf("fixed packet size: %lX\n", a_to_u_4_byte(xp->fixed_packet_size));
+	printf("starting msf: %lX\n", a_to_u_4_byte(xp->starting_msf));
+	printf("ending msf: %lX\n", a_to_u_4_byte(xp->ending_msf));
+	printf("next rec time: %lX\n", a_to_u_4_byte(xp->next_rec_time));
 }
 #endif
+
+LOCAL int
+buf_cap_sony(scgp, sp, fp)
+	SCSI	*scgp;
+	long	*sp;	/* Size pointer */
+	long	*fp;	/* Free pointer */
+{
+	char	resp[8];
+	Ulong	freespace;
+	Ulong	bufsize;
+	int	per;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)resp;
+	scmd->size = sizeof(resp);
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0xEC;		/* Read buffer cap */
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	
+	scgp->cmdname = "read buffer cap sony";
+
+	if (scsicmd(scgp) < 0)
+		return (-1);
+
+	bufsize   = a_to_u_3_byte(&resp[1]);
+	freespace = a_to_u_3_byte(&resp[5]);
+	if (sp)
+		*sp = bufsize;
+	if (fp)
+		*fp = freespace;
+	
+	if (scgp->verbose || (sp == 0 && fp == 0))
+		printf("BFree: %ld K BSize: %ld K\n", freespace >> 10, bufsize >> 10);
+
+	if (bufsize == 0)
+		return (0);
+	per = (100 * (bufsize - freespace)) / bufsize;
+	if (per < 0)
+		return (0);
+	if (per > 100)
+		return (100);
+	return (per);
+}

@@ -1,0 +1,19 @@
+#ident %W% %E% %Q%
+###########################################################################
+# Sample makefile for installing manual pages
+###########################################################################
+SRCROOT=	..
+RULESDIR=	RULES
+include		$(SRCROOT)/$(RULESDIR)/rules.top
+###########################################################################
+
+INSMODE=	0644
+MANDIR=		man
+TARGETMAN=	mkisofs
+MANSECT=	$(MANSECT_ADMIN)
+MANSUFFIX=	$(MANSUFF_ADMIN)
+MANFILE=	mkisofs.8
+
+###########################################################################
+include		$(SRCROOT)/$(RULESDIR)/rules.man
+###########################################################################

@@ -1,4 +1,4 @@
-/* @(#)scsi_scan.h	1.1 97/08/24 Copyright 1997 J. Schilling */
+/* @(#)scsi_scan.h	1.2 98/11/02 Copyright 1997 J. Schilling */
 /*
  *	Interface to scan SCSI Bus.
  *
@@ -23,6 +23,6 @@
 #ifndef	_SCSI_SCAN_H
 #define	_SCSI_SCAN_H
 
-extern	void	select_target		__PR((void));
+extern	void	select_target		__PR((SCSI *scgp));
 
 #endif	/* _SCSI_SCAN_H */

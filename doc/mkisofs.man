@@ -1,0 +1,924 @@
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+NNNNAAAAMMMMEEEE
+     mkisofs - create a iso9660  filesystem  with  optional  Rock
+     Ridge attributes.
+
+SSSSYYYYNNNNOOOOPPPPSSSSIIIISSSS
+     mmmmkkkkiiiissssooooffffssss [ ----aaaa ] [ ----aaaabbbbssssttttrrrraaaacccctttt _F_I_L_E ] [ ----bbbbiiiibbbblllliiiioooo _F_I_L_E  ]  [   ---- bbbb
+     _e_l_t_o_r_i_t_o__b_o_o_t__i_m_a_g_e  ]  [   ---- BBBB _s_p_a_r_c__b_o_o_t__i_m_a_g_e__l_i_s_t ] [ ----GGGG
+     _g_e_n_e_r_i_c__b_o_o_t__i_m_a_g_e ] [ ----gggguuuuiiii ] [ ----CCCC #,# ] [ ----hhhhaaaarrrrdddd----ddddiiiisssskkkk----bbbbooooooootttt ]
+     [   ----nnnnoooo----eeeemmmmuuuullll----bbbbooooooootttt ] [ ----nnnnoooo----bbbbooooooootttt ] [ ----bbbbooooooootttt----llllooooaaaadddd----sssseeeegggg ] [ ----bbbbooooooootttt----
+     llllooooaaaadddd----ssssiiiizzzzeeee ] [ ----bbbbooooooootttt----iiiinnnnffffoooo----ttttaaaabbbblllleeee ] [ ----cccc _b_o_o_t__c_a_t_a_l_o_g  ]  [   ----
+     ccccooooppppyyyyrrrriiiigggghhhhtttt  _F_I_L_E ] [ ----AAAA _a_p_p_l_i_c_a_t_i_o_n__i_d ] [ ----ffff ] [ ----dddd ] [ ----DDDD ]
+     [ ----hhhhiiiiddddeeee _g_l_o_b ] [ ----hhhhiiiiddddeeee----lllliiiisssstttt _f_i_l_e ] [ ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt _g_l_o_b ] [ ----
+     hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----lllliiiisssstttt  _f_i_l_e ] [ ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----ttttrrrraaaannnnssss----ttttbbbbllll ] [ ----hhhhiiiiddddeeee----
+     rrrrrrrr----mmmmoooovvvveeeedddd ] [ ----JJJJ ] [ ----llll ] [ ----LLLL ] [ ----lllloooogggg----ffffiiiilllleeee _l_o_g__f_i_l_e ] [ ---- MMMM
+     _p_a_t_h  | _d_e_v_i_c_e ] [ ----nnnnoooobbbbaaaakkkk ] [ ----nnnnoooo----bbbbaaaakkkk ] [ ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----
+     ccccoooommmmppppoooonnnneeeennnnttttssss ] [ ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----ffffiiiieeeellllddddssss ] [ ----ppppaaaatttthhhh----lllliiiisssstttt  _f_i_l_e
+     ]  [ ----pppp _p_r_e_p_a_r_e_r ] [ ----pppprrrriiiinnnntttt----ssssiiiizzzzeeee ] [ ----PPPP _p_u_b_l_i_s_h_e_r ] [ ----qqqquuuuiiiieeeetttt
+     ] [ ----rrrr ] [ ----RRRR ] [ ----ssssyyyyssssiiiidddd _I_D ] [ ----TTTT ] [ ----UUUU ] [ ----vvvv  ]  [   ---- VVVV
+     _v_o_l_i_d  ] [ ----vvvvoooollllsssseeeetttt _I_D ] [ ----vvvvoooollllsssseeeetttt----ssssiiiizzzzeeee # ] [ ----vvvvoooollllsssseeeetttt----sssseeeeqqqqnnnnoooo #
+     ] [ ----xxxx _p_a_t_h ] [ ----eeeexxxxcccclllluuuuddddeeee----lllliiiisssstttt _f_i_l_e ] [ ----zzzz ] [ ----mmmm _g_l_o_b ]  ---- oooo
+     _f_i_l_e_n_a_m_e _p_a_t_h_s_p_e_c [_p_a_t_h_s_p_e_c]
+
+DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
+     mmmmkkkkiiiissssooooffffssss is effectively a pre-mastering program  to  generate
+     the  iso9660  filesystem  -  it  takes a snapshot of a given
+     directory tree, and generates  a  binary  image  which  will
+     correspond  to an iso9660 filesystem when written to a block
+     device.
+
+     mmmmkkkkiiiissssooooffffssss is also capable of generating the System Use Sharing
+     Protocol  records  specified  by  the Rock Ridge Interchange
+     Protocol.  This is used to further describe the files in the
+     iso9660  filesystem to a unix host, and provides information
+     such as longer filenames, uid/gid,  posix  permissions,  and
+     block and character devices.
+
+     Each file written to the  iso9660  filesystem  must  have  a
+     filename  in the 8.3 format (8 characters, period, 3 charac-
+     ters, all upper case), even if Rock Ridge is in  use.   This
+     filename is used on systems that are not able to make use of
+     the  Rock  Ridge  extensions  (such  as  MS-DOS),  and  each
+     filename  in each directory must be different from the other
+     filenames in the same directory.  mmmmkkkkiiiissssooooffffssss generally tries to
+     form  correct  names  by  forcing the unix filename to upper
+     case and truncating as required, but often times this yields
+     unsatisfactory  results when there are cases where the trun-
+     cated names are not all unique.  mmmmkkkkiiiissssooooffffssss assigns  weightings
+     to  each  filename,  and if two names that are otherwise the
+     same are found the name with the lower priority  is  renamed
+     to  have  a 3 digit number as an extension (where the number
+     is guaranteed to be unique).  An example of  this  would  be
+     the  files  foo.bar  and  foo.bar.~1~ - the file foo.bar.~1~
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    1
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     would be written as FOO.000;1 and the file foo.bar would  be
+     written as FOO.BAR;1
+
+     Note that mmmmkkkkiiiissssooooffffssss is not designed to  communicate  with  the
+     writer directly.  Most writers have proprietary command sets
+     which vary from one manufacturer to another, and you need  a
+     specialized  tool  to  actually  burn the disk.  The ccccddddwwwwrrrriiiitttteeee
+     utility is one such tool that runs under Linux and  performs
+     this task.  The latest version of ccccddddwwwwrrrriiiitttteeee is capable of com-
+     municating with the Phillips/IMS/Kodak, HP and Yamaha drives
+     that  have been manufactured before 1997.  Most writers come
+     with some version of DOS software that allows a direct image
+     copy of an iso9660 image to the writer.  The current version
+     of ccccddddwwwwrrrriiiitttteeee is available from  sunsite.unc.edu:  /utils/disk-
+     management/cdwrite-2.0.tar.gz Note that cdwrite has not been
+     actively maintained since 1995.
+
+     The ccccddddrrrreeeeccccoooorrrrdddd utility is another utility capable  of  burning
+     an actual disc.  The latest version of ccccddddrrrreeeeccccoooorrrrdddd is available
+     from  ftp://ftp.fokus.gmd.de/pub/unix/cdrecord  Cdrecord  is
+     under constant development.
+
+     Also you should know that most cd writers are very  particu-
+     lar about timing.  Once you start to burn a disc, you cannot
+     let their buffer empty before you are done, or you will  end
+     up  with  a  corrupt  disc.  Thus it is critical that you be
+     able to maintain an uninterrupted data stream to the  writer
+     for the entire time that the disc is being written.
+
+     ppppaaaatttthhhhssssppppeeeecccc is the path of the directory tree to be copied into
+     the  iso9660  filesystem.   Multiple paths can be specified,
+     and mmmmkkkkiiiissssooooffffssss will merge the files found in all of the  speci-
+     fied path components to form the cdrom image.
+
+     It is possible to graft the paths at points other  than  the
+     root  directory, and it is possible to graft files or direc-
+     tories onto the cdrom image with names different  than  what
+     they  have  in  the  source  filesystem.  This is easiest to
+     illustrate with a  couple  of  examples.    Let's  start  by
+     assuming  that  a local file ../old.lis exists, and you wish
+     to include it in the cdrom image.
+
+
+          foo/bar/=../old.lis
+
+     will  include  the  file  old.lis  in  the  cdrom  image  at
+     /foo/bar/old.lis, while
+
+          foo/bar/xxx=../old.lis
+
+     will  include  the  file  old.lis  in  the  cdrom  image  at
+     /foo/bar/xxx.   The  same  sort  of  syntax can be used with
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    2
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     directories as well.  mmmmkkkkiiiissssooooffffssss wwwwiiiillllllll  ccccrrrreeeeaaaatttteeee  aaaannnnyyyy  ddddiiiirrrreeeeccccttttoooorrrriiiieeeessss
+     rrrreeeeqqqquuuuiiiirrrreeeedddd ssssuuuucccchhhh tttthhhhaaaatttt tttthhhheeee ggggrrrraaaafffftttt points exist on the cdrom image
+     - the directories do not need to appear in one of the paths.
+     Any  directories  that are created on the fly like this will
+     have permissions 0555 and appear to be owned by  the  person
+     running mkisofs.  If you wish other permissions or owners of
+     the intermediate directories, the  easiest  solution  is  to
+     create  real  directories  in  the  path  such  that mkisofs
+     doesn't have to invent them.
+
+
+OOOOPPPPTTTTIIIIOOOONNNNSSSS
+     ----aaaa    Include all files on the iso9660 filesystem.  Normally
+          files  that  contain the characters '~' or '#' will not
+          be included (these are typically backup files for  edi-
+          tors  under  unix).  This  option  is now obsolete (see
+          -no-bak option).
+
+     ----aaaabbbbssssttttrrrraaaacccctttt _F_I_L_E
+          Specifies the abstract file name.  This  parameter  can
+          also  be set in the file ....mmmmkkkkiiiissssooooffffssssrrrrcccc with ABST=filename.
+          If specified in both places, the command  line  version
+          is used.
+
+     ----AAAA _a_p_p_l_i_c_a_t_i_o_n__i_d
+          Specifies a text string that will be written  into  the
+          volume  header.   This  should describe the application
+          that will be on the disc.  There is space on  the  disc
+          for  128 characters of information.  This parameter can
+          also be set in the file ....mmmmkkkkiiiissssooooffffssssrrrrcccc  with  APPI=id.   If
+          specified  in  both places, the command line version is
+          used.
+
+     ----bbbbiiiibbbblllliiiioooo _F_I_L_E
+          Specifies the bibliographic file name.  This  parameter
+          can   also   be   set   in  the  file  ....mmmmkkkkiiiissssooooffffssssrrrrcccc  with
+          BIBLO=filename.  If specified in both places, the  com-
+          mand line version is used.
+
+     ----bbbb _e_l_t_o_r_i_t_o__b_o_o_t__i_m_a_g_e
+          Specifies the path and filename of the boot image to be
+          used  when making an "El Torito" bootable CD. The path-
+          name must be relative to the source path  specified  to
+          mmmmkkkkiiiissssooooffffssss.... This option is required to make an "El Torito"
+          bootable CD.  The boot image must be exactly  the  size
+          of  either  a  1.2,  1.44,  or  a  2.88 meg floppy, and
+          mmmmkkkkiiiissssooooffffssss will use this size  when  creating  the  output
+          iso9660  filesystem.  It  is assumed that the first 512
+          byte sector should be read from the boot image  (it  is
+          essentially  emulating  a  normal  floppy drive).  This
+          will work, for example, if the boot  image  is  a  LILO
+          based boot floppy.
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    3
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     ----BBBB _i_m_g__s_u_n_4,_i_m_g__s_u_n_4_c,_i_m_g__s_u_n_4_m,_i_m_g__s_u_n_4_d,_i_m_g__s_u_n_4_e
+          Specifies a comma separated list of  boot  images  that
+          are  needed  to  make  a bootable CD for sparc systems.
+          There may be empty fields in the comma separated  list.
+          This  option  is required to make a bootable CD for Sun
+          sparc systems.  If the ----BBBB or  ---- ssssppppaaaarrrrcccc----bbbbooooooootttt  option  has
+          been specified, the first sector of the resulting image
+          will contain a Sun disk label. This disk  label  speci-
+          fies  slice  0  for  the  iso9660 image and slice 1 ...
+          slice 7 for the boot images that  have  been  specified
+          with  this option. Byte offset 512 ... 8191 within each
+          of the additional boot images must  contain  a  primary
+          boot that works for the appropriate sparc architecture.
+          The rest of each of the images usually contains an  ufs
+          filesystem that is used primary kernel boot stage.
+
+          The implemented boot method is the  boot  method  found
+          with  SunOS  4.x  and  SunOS 5.x.  However, it does not
+          depend on SunOS internals but only on properties of the
+          Open  Boot  prom.  For this reason, it should be usable
+          for any OS that boots off a sparc system.
+
+     ----GGGG _g_e_n_e_r_i_c__b_o_o_t__i_m_a_g_e
+          Specifies the path and filename  of  the  generic  boot
+          image  to  be  used  when making a generic bootable CD.
+          The ggggeeeennnneeeerrrriiiicccc____bbbbooooooootttt____iiiimmmmaaaaggggeeee wil be placed on  the  first  16
+          sectors of the CD. The first 16 sectors are the sectors
+          that are located  before  the  iso9660  primary  volume
+          descriptor.  If this option is used together with the ----
+          ssssppppaaaarrrrcccc----bbbbooooooootttt option, the Sun disk label will overlay  the
+          first 512 bytes of the generic boot image.
+
+     ----hhhhaaaarrrrdddd----ddddiiiisssskkkk----bbbbooooooootttt
+          Specifies that the boot image used to create  "El  Tor-
+          ito"  bootable  CDs is a hard disk image. The hard disk
+          image must begin with a master boot  record  that  con-
+          tains a single partition.
+
+     ----nnnnoooo----eeeemmmmuuuullll----bbbbooooooootttt
+          Specifies that the boot image used to create  "El  Tor-
+          ito" bootable CDs is a 'no emulation' image. The system
+          will load and execute this image without performing any
+          disk emulation.
+
+     ----nnnnoooo----bbbbooooooootttt
+          Specifies that the created "El  Torito"  CD  should  be
+          marked as not bootable. The system will provide an emu-
+          lated drive for the image, but will boot off a standard
+          boot device.
+
+     ----bbbbooooooootttt----llllooooaaaadddd----sssseeeegggg _s_e_g_m_e_n_t__a_d_d_r_e_s_s
+          Specifies the load segment address of  the  boot  image
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    4
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          for no-emulation "El Torito" CDs.
+
+     ----bbbbooooooootttt----llllooooaaaadddd----ssssiiiizzzzeeee _l_o_a_d__s_e_c_t_o_r_s
+          Specifies the number of "virtual" (512-byte) sectors to
+          load  in no-emulation mode.  The default is to load the
+          entire boot file.  Some BIOSes  may  have  problems  if
+          this is not a multiple of 4.
+
+     ----bbbbooooooootttt----iiiinnnnffffoooo----ttttaaaabbbblllleeee
+          Specifies that a 56-byte table with information of  the
+          CD-ROM  layout  will  be  patched in at offset 8 in the
+          boot file.  If this option is given, the boot  file  is
+          modified in the source filesystem, so make sure to make
+          a copy if this file cannot be easily regenerated!   See
+          the   BBBBOOOOOOOOTTTT IIIINNNNFFFFOOOO TTTTAAAABBBBLLLLEEEE section for a description of this
+          table.
+
+     ----CCCC _l_a_s_t__s_e_s_s__s_t_a_r_t,_n_e_x_t__s_e_s_s__s_t_a_r_t
+          This option is needed when mmmmkkkkiiiissssooooffffssss is  used  to  create
+          the image of a second session or a higher level session
+          for a multi session disk.  The option ----CCCC takes  a  pair
+          of  two  numbers separated by a comma. The first number
+          is the sector number of the first sector  in  the  last
+          session  of  the  disk that should be appended to.  The
+          second number is the starting sector number of the  new
+          session.  The expected pair of numbers may be retrieved
+          by calling ccccddddrrrreeeeccccoooorrrrdddd ----mmmmssssiiiinnnnffffoooo ............ the ----CCCC option may  only
+          be uses in conjunction with the ----MMMM option.
+
+     ----cccc _b_o_o_t__c_a_t_a_l_o_g
+          Specifies the path and filename of the boot catalog  to
+          be  used  when  making  an "El Torito" bootable CD. The
+          pathname must be relative to the source path  specified
+          to  mmmmkkkkiiiissssooooffffssss.... This option is required to make a bootable
+          CD.  This file will be created by mmmmkkkkiiiissssooooffffssss in the source
+          filesystem,  so be sure the specified filename does not
+          conflict with an existing file, as it will  be  quietly
+          overwritten!  Usually  a  name  like  "boot.catalog" is
+          chosen.
+
+     ----ccccooooppppyyyyrrrriiiigggghhhhtttt _F_I_L_E
+          Specifies the Copyright file name.  This parameter  can
+          also  be set in the file ....mmmmkkkkiiiissssooooffffssssrrrrcccc with COPY=filename.
+          If specified in both places, the command  line  version
+          is used.
+
+     ----dddd    Omit trailing period from files that  do  not  have  a
+          period.   This  violates  the  ISO9660 standard, but it
+          happens to work on many systems.  Use with caution.
+
+     ----DDDD    Do not use deep directory relocation, and instead just
+          pack  them  in  the way we see them.  This violates the
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    5
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          ISO9660 standard, but it works on  many  systems.   Use
+          with caution.
+
+     ----ffff    Follow symbolic links when generating the  filesystem.
+          When  this option is not in use, symbolic links will be
+          entered using Rock Ridge if enabled, otherwise the file
+          will be ignored.
+
+     ----gggguuuuiiii  Switch the behaviour for a GUI. This  currently  makes
+          the  output  more verbose but may have other effects in
+          future.
+
+     ----hhhhiiiiddddeeee _g_l_o_b
+          Hide _g_l_o_b from being seen on the ISO9660 or Rock  Ridge
+          directory.   _g_l_o_b  is  a  shell wild-card-style pattern
+          that must match any part of the filename or path.  Mul-
+          tiple  globs  may  be  hidden  (up  to  1000).  If _g_l_o_b
+          matches a directory, then the contents of  that  direc-
+          tory  will  be hidden.  All the hidden files will still
+          be written to the output CD image file.  Should be used
+          with the ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt option.
+
+     ----hhhhiiiiddddeeee----lllliiiisssstttt _f_i_l_e
+          A file containing a list  of  _g_l_o_b_s  to  be  hidden  as
+          above.
+
+     ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt _g_l_o_b
+          Hide _g_l_o_b from being  seen  on  the  Joliet  directory.
+          _g_l_o_b is a shell wild-card-style pattern that must match
+          any part of the filename or path.  Multiple  globs  may
+          be  hidden  (up to 1000).  If _g_l_o_b matches a directory,
+          then the contents of that  directory  will  be  hidden.
+          All  the hidden files will still be written to the out-
+          put CD image file.  Should be  used  with  the   ---- hhhhiiiiddddeeee
+          option.
+
+     ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----lllliiiisssstttt _f_i_l_e
+          A file containing a list  of  _g_l_o_b_s  to  be  hidden  as
+          above.
+
+     ----hhhhiiiiddddeeee----jjjjoooolllliiiieeeetttt----ttttrrrraaaannnnssss----ttttbbbbllll
+          Hide the TTTTRRRRAAAANNNNSSSS....TTTTBBBBLLLL files from the Joliet  tree.   These
+          files  usually  don't make sense in the Joliet World as
+          they list the real name and the ISO9660 name which  may
+          both be different from the Joliet name.
+
+     ----hhhhiiiiddddeeee----rrrrrrrr----mmmmoooovvvveeeedddd
+          Rename the directory RRRRRRRR____MMMMOOOOVVVVEEEEDDDD to ....rrrrrrrr____mmmmoooovvvveeeedddd in the  Rock
+          Ridge  tree.   It  seems to be impossible to completely
+          hide the RRRRRRRR____MMMMOOOOVVVVEEEEDDDD directory from the Rock  Ridge  tree.
+          This  option  only  makes  the  visible  tree better to
+          understand  for  people  who  don't  know   what   this
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    6
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          directory  is  for.   If  you  need to have no RRRRRRRR____MMMMOOOOVVVVEEEEDDDD
+          directory at all, you should use the ---- DDDD  option.  Note
+          that in case that the ----DDDD option has been specified, the
+          resulting filesystem is not ISO9660  level-1  compliant
+          and will not be readable on MS-DOS.
+
+     ----llll    Allow  full  30  character  filenames.   Normally  the
+          ISO9660 filename will be in an 8.3 format which is com-
+          patible with MS-DOS, even though the  ISO9660  standard
+          allows  filenames  of  up to 30 characters.  If you use
+          this option, the disc may be difficult to use on a  MS-
+          DOS  system, but this comes in handy on some other sys-
+          tems (such as the Amiga).  Use with caution.
+
+     ----JJJJ    Generate Joliet directory records in addition to regu-
+          lar  iso9660 file names.  This is primarily useful when
+          the discs are to be used on  Windows-NT  or  Windows-95
+          machines.    The  Joliet  filenames  are  specified  in
+          Unicode and each path component can be up to 64 Unicode
+          characters long.
+
+     ----LLLL    Allow ISO9660 filenames to begin with a period.   Usu-
+          ally,  a  leading dot is replaced with an underscore in
+          order to maintain MS-DOS compatibility.
+
+     ----lllloooogggg----ffffiiiilllleeee _l_o_g__f_i_l_e
+          Redirect all error, warning and informational  messages
+          to _l_o_g__f_i_l_e instead of the standard error.
+
+     ----mmmm _g_l_o_b
+          Exclude _g_l_o_b from being written to CDROM.   _g_l_o_b  is  a
+          shell  wild-card-style  pattern that must match part of
+          the filename (not the path as with option ----xxxx).  Techni-
+          cally _g_l_o_b is matched against the _d->_d__n_a_m_e part of the
+          directory entry.  Multiple globs may be excluded (up to
+          1000).  Example:
+
+          mkisofs -o rom -m '*.o' -m core -m foobar
+
+          would exclude all files ending in ".o",  called  "core"
+          or "foobar" to be copied to CDROM. Note that if you had
+          a directory called "foobar" it too (and of  course  all
+          its descendants) would be excluded.
+
+          NOTE: The -m and -x option description should  both  be
+          updated,  they  are wrong.  Both now work identical and
+          use filename globbing. A file is excluded if either the
+          last component matches or the whole path matches.
+
+     ----eeeexxxxcccclllluuuuddddeeee----lllliiiisssstttt _f_i_l_e
+          A file containing a list of  _g_l_o_b_s  to  be  exclude  as
+          above.
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    7
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     ----MMMM _p_a_t_h
+          or
+
+     ----MMMM _d_e_v_i_c_e
+          Specifies path to existing iso9660 image to be  merged.
+          The  alternate  form takes a SCSI device specifier that
+          uses the same syntax as the ddddeeeevvvv==== parameter of ccccddddrrrreeeeccccoooorrrrdddd....
+          The  output  of  mmmmkkkkiiiissssooooffffssss  will  be  a new session which
+          should get written to the end of the image specified in
+          -M.   Typically  this requires multi-session capability
+          for the recorder and cdrom drive that you are  attempt-
+          ing  to  write  this image to.  This option may only be
+          used in conjunction with the ----CCCC option.
+
+     ----NNNN    Omit version numbers from ISO9660  file  names.   This
+          may  violate  the  ISO9660  standard, but no one really
+          uses the version numbers anyway.  Use with caution.
+
+     ----nnnnoooobbbbaaaakkkk
+
+     ----nnnnoooo----bbbbaaaakkkk
+          Do not  include  backup  files  files  on  the  iso9660
+          filesystem.  If  the ----nnnnoooo----bbbbaaaakkkk option is specified, files
+          that contain the characters '~' or '#' or end in '.bak'
+          will  not be included (these are typically backup files
+          for editors under unix).
+
+     ----nnnnoooo----rrrrrrrr
+          Do not use the Rock Ridge attributes from previous ses-
+          sions.   This  may  help  to avoid getting into trouble
+          when mmmmkkkkiiiissssooooffffssss finds illegal Rock Ridge signatures on  an
+          old session.
+
+     ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----ccccoooommmmppppoooonnnneeeennnnttttssss
+          Don't split the SL components, but  begin  a  new  Con-
+          tinuation Area (CE) instead. This may waste some space,
+          but the SunOS 4.1.4 cdrom driver has a bug  in  reading
+          split SL components (link_size = component_size instead
+          of link_size += component_size).
+
+     ----nnnnoooo----sssspppplllliiiitttt----ssssyyyymmmmlllliiiinnnnkkkk----ffffiiiieeeellllddddssss
+          Don't split the SL fields, but begin a new Continuation
+          Area  (CE)  instead. This may waste some space, but the
+          SunOS 4.1.4 and Solaris 2.5.1 cdrom driver have  a  bug
+          in reading split SL fields (a `/' can be dropped).
+
+     ----oooo _f_i_l_e_n_a_m_e
+          is the name of the file to which the iso9660 filesystem
+          image  should  be  written.  This can be a disk file, a
+          tape drive, or it can correspond directly to the device
+          name  of  the  optical  disc writer.  If not specified,
+          stdout is used.  Note that the output  can  also  be  a
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    8
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          block special device for a regular disk drive, in which
+          case the disk partition can be mounted and examined  to
+          ensure that the premastering was done correctly.
+
+     ----ppppaaaatttthhhh----lllliiiisssstttt _f_i_l_e
+          A file containing a list of  _p_a_t_h_s_p_e_c  directories  and
+          filenames  to  be added to the ISO9660 filesystem. This
+          list of pathspecs are processed after any  that  appear
+          on  the  command  line.  If the argument is -, then the
+          list is read from the standard input. There must be  at
+          least one _p_a_t_h_s_p_e_c given on the command line as well.
+
+     ----PPPP _p_u_b_l_i_s_h_e_r__i_d
+          Specifies a text string that will be written  into  the
+          volume  header.   This should describe the publisher of
+          the CDROM, usually with a  mailing  address  and  phone
+          number.   There is space on the disc for 128 characters
+          of information.  This parameter can also be set in  the
+          file  ....mmmmkkkkiiiissssooooffffssssrrrrcccc  with  PUBL=.   If  specified  in both
+          places, the command line version is used.
+
+     ----pppp _p_r_e_p_a_r_e_r__i_d
+          Specifies a text string that will be written  into  the
+          volume  header.   This  should describe the preparer of
+          the CDROM, usually with a  mailing  address  and  phone
+          number.   There is space on the disc for 128 characters
+          of information.  This parameter can also be set in  the
+          file  ....mmmmkkkkiiiissssooooffffssssrrrrcccc  with  PREP=.   If  specified  in both
+          places, the command line version is used.
+
+     ----pppprrrriiiinnnntttt----ssssiiiizzzzeeee
+          Print estimated filesystem size and exit.  This  option
+          is  needed  for  Disk  At  Once mode and with some CD-R
+          drives when piping directly into ccccddddrrrreeeeccccoooorrrrdddd.... In this case
+          it  is needed to know the size of the filesystem before
+          the actual CD-creation is done.  The option -print-size
+          allows  to get this size from a "dry-run" before the CD
+          is actually written.
+
+     ----RRRR    Generate SUSP and RR records using the Rock Ridge pro-
+          tocol  to  further  describe  the  files on the iso9660
+          filesystem.
+
+     ----rrrr    This is like the -R option,  but  file  ownership  and
+          modes  are  set to more useful values.  The uid and gid
+          are set to zero, because they are usually  only  useful
+          on  the  author's system, and not useful to the client.
+          All the file read bits are set true, so that files  and
+          directories  are  globally  readable on the client.  If
+          any execute bit is set for a file, set all of the  exe-
+          cute  bits, so that executables are globally executable
+          on the  client.   If  any  search  bit  is  set  for  a
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                    9
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          directory,  set  all of the search bits, so that direc-
+          tories are globally  searchable  on  the  client.   All
+          write  bits  are  cleared,  because  the CD-Rom will be
+          mounted read-only in any case.  If any of  the  special
+          mode  bits  are set, clear them, because file locks are
+          not useful on a read-only file system, and set-id  bits
+          are not desirable for uid 0 or gid 0.
+
+     ----ssssyyyyssssiiiidddd _I_D
+          Specifies the system ID.  This parameter  can  also  be
+          set  in  the  file  ....mmmmkkkkiiiissssooooffffssssrrrrcccc with SYSI=system_id.  If
+          specified in both places, the command line  version  is
+          used.
+
+     ----TTTT    Generate a file TRANS.TBL in  each  directory  on  the
+          CDROM, which can be used on non-Rock Ridge capable sys-
+          tems to help establish the correct file  names.   There
+          is  also information present in the file that indicates
+          the major and minor numbers  for  block  and  character
+          devices, and each symlink has the name of the link file
+          given.
+
+     ----ttttaaaabbbblllleeee----nnnnaaaammmmeeee _T_A_B_L_E__N_A_M_E
+          Alternative translation table file  name  (see  above).
+          Implies  the   ----TTTT option.  If you are creating a multi-
+          session image you must use the same name as in the pre-
+          vious session.
+
+     ----UUUU    Allows "Untranslated" filenames, completely  violating
+          the  iso9660  standards  described above. Forces on the
+          -d, -l, -L and -N flags, and also allows more than  one
+          '.'  character  in  the filename, as well as mixed case
+          filenames.  This is useful on HP-UX system,  where  the
+          built-in  CDFS filesystem does not recognize ANY exten-
+          sions. Use with extreme caution.
+
+     ----VVVV _v_o_l_i_d
+          Specifies the volume ID to be written into  the  master
+          block.   This  parameter  can  also  be set in the file
+          ....mmmmkkkkiiiissssooooffffssssrrrrcccc with VOLI=id.  If specified in both  places,
+          the  command  line  version  is used.  Note that if you
+          assign a volume ID, this is the name that will be  used
+          as  the  mount point used by the Solaris volume manage-
+          ment system and the name that is assigned to  the  disc
+          on a Windows or Mac platform.
+
+     ----vvvvoooollllsssseeeetttt _I_D
+          Specifies the volset ID.  This parameter  can  also  be
+          set  in  the  file  ....mmmmkkkkiiiissssooooffffssssrrrrcccc with VOLS=volset_id.  If
+          specified in both places, the command line  version  is
+          used.
+
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                   10
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     ----vvvvoooollllsssseeeetttt----ssssiiiizzzzeeee #
+          Sets the volume set size to #. The volume set  size  is
+          the  number of CD's that are in a CD set.  The ----vvvvoooollllsssseeeetttt----
+          ssssiiiizzzzeeee option may be used to create CD's that are part of
+          e.g.  a Operation System installation set of CD's.  The
+          option ----vvvvoooollllsssseeeetttt----ssssiiiizzzzeeee must be specified before  ---- vvvvoooollllsssseeeetttt----
+          sssseeeeqqqqnnnnoooo on each command line.
+
+     ----vvvvoooollllsssseeeetttt----sssseeeeqqqqnnnnoooo #
+          Sets the volume set sequence number to  #.  The  volume
+          set  sequence number is the index number of the current
+          CD in a CD set.  The option ----vvvvoooollllsssseeeetttt----ssssiiiizzzzeeee must be speci-
+          fied before ----vvvvoooollllsssseeeetttt----sssseeeeqqqqnnnnoooo on each command line.
+
+     ----vvvv    Verbose execution.
+
+     ----xxxx _p_a_t_h
+          Exclude _p_a_t_h from being written to CDROM.  _p_a_t_h must be
+          the  complete  pathname that results from concatenating
+          the pathname given as command  line  argument  and  the
+          path relative to this directory.  Multiple paths may be
+          excluded (up to 1000).  Example:
+
+          mkisofs -o cd -x /local/dir1 -x /local/dir2 /local
+
+          NOTE: The -m and -x option description should  both  be
+          updated,  they  are wrong.  Both now work identical and
+          use filename globbing. A file is excluded if either the
+          last component matches or the whole path matches.
+
+      ---- zzzz    Generate  special  SUSP  records  for  transparently
+          compressed files.  This is only of use and interest for
+          hosts that support transparent decompression.  This  is
+          an experimental feature, and no hosts yet support this,
+          but there are ALPHA patches for Linux that can make use
+          of this feature.
+
+BBBBOOOOOOOOTTTT IIIINNNNFFFFOOOORRRRMMMMAAAATTTTIIIIOOOONNNN TTTTAAAABBBBLLLLEEEE
+     When the ----bbbbooooooootttt----iiiinnnnffffoooo----ttttaaaabbbblllleeee  option  is  given,  mmmmkkkkiiiissssooooffffssss  will
+     modify the boot file specified by the ----bbbb option by inserting
+     a 56-byte "boot information table" at offset 8 in the  file.
+     This  modification is done in the source filesystem, so make
+     sure you use a copy if this file is  not  easily  recreated!
+     This file contains pointers which may not be easily or reli-
+     ably obtained at boot time.
+
+     The format of this table is as follows; all integers are  in
+     section 7.3.1 ("little endian") format.
+
+       Offset    Name           Size      Meaning
+        8        bi_pvd         4 bytes   LBA of primary volume descriptor
+       12        bi_file        4 bytes   LBA of boot file
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                   11
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+       16        bi_length      4 bytes   Boot file length in bytes
+       20        bi_csum        4 bytes   32-bit checksum
+       24        bi_reserved    40 bytes  Reserved
+
+     The 32-bit checksum is the sum of all the  32-bit  words  in
+     the  boot file starting at byte offset 64.  All linear block
+     addresses (LBAs) are given  in  CD  sectors  (normally  2048
+     bytes).
+
+CCCCOOOONNNNFFFFIIIIGGGGUUUURRRRAAAATTTTIIIIOOOONNNN
+     mmmmkkkkiiiissssooooffffssss looks for the ....mmmmkkkkiiiissssooooffffssssrrrrcccc file, first in the  current
+     working  directory,  then  in the user's home directory, and
+     then in the directory in which the mmmmkkkkiiiissssooooffffssss binary is stored.
+     This  file  is  assumed  to contain a series of lines of the
+     form TTTTAAAAGGGG====_v_a_l_u_e, and in this  way  you  can  specify  certain
+     options.   The  case  of  the  tag is not significant.  Some
+     fields in the volume header are not settable on the  command
+     line,  but  can  be altered through this facility.  Comments
+     may be placed in this file, using lines which start  with  a
+     hash (#) character.
+
+     AAAAPPPPPPPPIIII The application identifier should describe the applica-
+          tion  that  will be on the disc.  There is space on the
+          disc for 128 characters of information.  May  be  over-
+          ridden using the ----AAAA command line option.
+
+     CCCCOOOOPPPPYYYY The copyright information, often the name of a file  on
+          the  disc  containing  the  copyright notice.  There is
+          space in the disc for  37  characters  of  information.
+          May  be  overridden  using  the ----ccccooooppppyyyyrrrriiiigggghhhhtttt command line
+          option.
+
+     AAAABBBBSSSSTTTT The abstract information, often the name of a  file  on
+          the disc containing an abstract.  There is space in the
+          disc for 37 characters of information.  May be overrid-
+          den using the ----aaaabbbbssssttttrrrraaaacccctttt command line option.
+
+     BBBBIIIIBBBBLLLL The bibliographic information, often the name of a file
+          on  the disc containing a bibliography.  There is space
+          in the disc for 37 characters of information.   May  be
+          overridden using the ----bbbbiiiilllliiiioooo command line option.
+
+     PPPPRRRREEEEPPPP This should describe the preparer of the CDROM, usually
+          with  a  mailing  address  and  phone number.  There is
+          space on the disc for 128  characters  of  information.
+          May be overridden using the ----pppp command line option.
+
+     PPPPUUUUBBBBLLLL This should describe the publisher of the  CDROM,  usu-
+          ally with a mailing address and phone number.  There is
+          space on the disc for 128  characters  of  information.
+          May be overridden using the ----PPPP command line option.
+
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                   12
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+     SSSSYYYYSSSSIIII The System Identifier.  There is space on the disc  for
+          32  characters of information.  May be overridden using
+          the ----ssssyyyyssssiiiidddd command line option.
+
+     VVVVOOOOLLLLIIII The Volume Identifier.  There is space on the disc  for
+          32  characters of information.  May be overridden using
+          the ----VVVV command line option.
+
+     VVVVOOOOLLLLSSSS The Volume Set Name.  There is space on  the  disc  for
+          128 characters of information.  May be overridden using
+          the ----vvvvoooollllsssseeeetttt command line option.
+
+     mmmmkkkkiiiissssooooffffssss can also be configured at compile time with defaults
+     for many of these fields.  See the file defaults.h.
+
+AAAAUUUUTTTTHHHHOOOORRRR
+     mmmmkkkkiiiissssooooffffssss is not based on the standard mk*fs tools  for  unix,
+     because  we  must  generate  a complete  copy of an existing
+     filesystem on a disk in the  iso9660 filesystem.   The  name
+     mkisofs  is  probably a bit of a misnomer, since it not only
+     creates the filesystem, but it also populates it as well.
+
+     Eric Youngdale <ericy@gnu.ai.mit.edu> or  <eric@andante.org>
+     wrote  both  the  Linux isofs9660 filesystem and the mkisofs
+     utility.  The copyright for the mkisofs utility is  held  by
+     Yggdrasil Computing, Incorporated.
+
+NNNNOOOOTTTTEEEESSSS
+     MMMMkkkkiiiissssooooffffssss may safely be  installed  suid  root.  This  may  be
+     needed  to  allow  mmmmkkkkiiiissssooooffffssss to read the previous session when
+     creating a multi session image.
+
+BBBBUUUUGGGGSSSS
+     +o     Any files that have hard links to  files  not  in  the
+          tree  being  copied to the iso9660 filesystem will have
+          an incorrect file reference count.
+
+     +o     Does not check for SUSP record(s) in "." entry of  the
+          root  directory  to  verify the existence of Rock Ridge
+          enhancements.
+
+          This problem is present when reading old sessions while
+          adding data in multi-session mode.
+
+      +o     Does  not  properly  read  relocated  directories  in
+          multi-session mode when adding data.
+
+          Any relocated deep directory is lost if the new session
+          does not include the deep directory.
+
+          Repeat by: create first  session  with  deep  directory
+          relocation  then add new session with a single dir that
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                   13
+
+
+
+
+
+
+MKISOFS(8)           Maintenance Procedures            MKISOFS(8)
+
+
+
+          differs from the old deep path.
+
+     +o     Does not re-use RR_MOVED when doing multi-session from
+          TRANS.TBL
+
+     +o     Does not  create  whole_name  entry  for  RR_MOVED  in
+          multi-session mode.
+
+     There may be some other ones.  Please, report  them  to  the
+     author.
+
+FFFFUUUUTTTTUUUURRRREEEE IIIIMMMMPPPPRRRROOOOVVVVEEEEMMMMEEEENNNNTTTTSSSS
+     Some sort of gui interface.
+
+AAAAVVVVAAAAIIIILLLLAAAABBBBIIIILLLLIIIITTTTYYYY
+     mmmmkkkkiiiissssooooffffssss is available for anonymous ftp  from  tsx-11.mit.edu
+     in /pub/linux/packages/mkisofs and many other mirror sites.
+
+
+MMMMAAAAIIIILLLLIIIINNNNGGGG LLLLIIIISSSSTTTTSSSS
+     If you want to actively take  part  on  the  development  of
+     mkisofs,  you may join the cdwriting mailing list by sending
+     mail to:
+
+               other-cdwrite-request@lists.debian.org
+
+     and include the  word  _s_u_b_s_c_r_i_b_e  in  the  body.   The  mail
+     address of the list is:
+
+               cdwrite@lists.debian.org
+
+
+MMMMAAAAIIIINNNNTTTTAAAAIIIINNNNEEEERRRR
+     Joerg Schilling
+     Seestr. 110
+     D-13353 Berlin
+     Germany
+
+     Mail bugs and suggestions to:
+
+     sssscccchhhhiiiilllllllliiiinnnngggg@@@@ffffooookkkkuuuussss....ggggmmmmdddd....ddddeeee     or     jjjjssss@@@@ccccssss....ttttuuuu----bbbbeeeerrrrlllliiiinnnn....ddddeeee      or
+     jjjjooooeeeerrrrgggg@@@@sssscccchhhhiiiillllyyyy....iiiissssddddnnnn....ccccssss....ttttuuuu----bbbbeeeerrrrlllliiiinnnn....ddddeeee
+
+
+
+
+
+
+
+
+
+
+
+
+
+Version 1.12b5      Last change: 7. Jan 2000                   14
+
+
+

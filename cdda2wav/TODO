@@ -1,0 +1,22 @@
+stabilization:
+new sound support for Windows95/98, completely broken for WinNT
+new ioctl support for Solaris, FreeBSD-3.x
+
+internal:
+get cache setting/set cache to zero/reset cache size at the end...
+maybe add something for pioneer cd drives (spin up problems)
+develop a new transport to read cdda sectors with complete subchannels
+use index0 optionally to cut off the pregap portion
+detect serial copying management system (SCMS)
+implement capability to add a global shift
+enhance drive exception methods
+enhance cd text:
+	increase buffer size
+	add tab semantics
+	support 16-bit characters
+	try fallback read text info from program area
+
+
+structural:
+rehash option system
+get rid of global scsi variables

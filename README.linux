@@ -34,6 +34,11 @@ your device, the problem is in your kernel or system installation.
 If scanning the bus finds the device, you are using the wrong device name.
 If nothing help try to call e.g. strace cdrecord 
 
+Linux ATAPI hints:
+
+Read README.ATAPI to learn how to use ATAPI drives with the SCSI transport
+library.
+
 Linux SCSI hints:
 
 If you want to use the user SCSI library on a target that is connected
@@ -55,12 +60,53 @@ adapters found in some CD-R or CD-RW drives.
 
 IMPORTANT:
 
+-	Although cdrecord supports to use dev=/dev/sgc, it is not recommended
+	and it is unsupported.
+
+	The /dev/sg* device mapping in Linux is not stable! Using dev=/dev/sgc
+	in a shell script may fail after a reboot because the device you want
+	to talk to has moved to /dev/sgd. For the proper and OS independant
+	dev=<bus>,<tgt>,<lun> syntax read the man page of cdrecord.
+
 -	In some architectures (at least on sparc / alpha / ppc) kernels prior
 	to 2.0.32 are not usable because the call to mlockall() kills cdrecord.
 
--       You may need to edit /usr/src/linux/asm*/shmparam.h to allow at least 
+-	If you get a message like:
+
+		cdrecord: Function not implemented. shmget failed
+
+	You removed SVSv IPC from your kernel. You need to enable it again.
+
+-       You may need to edit /usr/src/linux/include/asm*/shmparam.h to allow at least 
         4 MB of shared memory for your architecture by modifying SHMMAX
 	and re-compile/re-install Linux !
 	(note that Linux for Intel by default allows 16 MB) 
+
+	Do this by e.g. changing the #define for SHMMAX to:
+
+	#define SHMMAX 0x1000000                /* max shared seg size (bytes) */
+
+	This will allow 16 MB for shared memory.
+
+-	If you get the message: "Cannot allocate memory. Cannot send SCSI cmd via ioctl"
+	Your kernel/include files are inconsistent.
+
+		This seems to be the case with most actual Linux kernels!!!!!!
+
+	Make sure, that the include file /usr/src/linux/include/scsi/sg.h
+	reflects the actual kernel. Usually, the files /usr/include/scsi/sg.h
+	and /usr/src/linux/include/scsi/sg.h should be identical.
+
+	**** Never change the content of /usr/src/linux/include/scsi/sg.h without
+	properly recompiling the kernel. Cdrecord depends on the fact that
+	the value of the define SG_BIG_BUFF uses the same value as the actual
+	kernel. Use cdrecord -scanbus -debug to get the value of SG_BIG_BUFF
+	with cdrecorrd has been compiled. An output of:
+
+		scsi_getbuf: 32768 bytes
+
+	indicates that cdrecord has been compiled with 32k SG_BIG_BUF
+
+	The Linux 'sg' driver is the worst driver design, I've ever seen.
 
 Joerg

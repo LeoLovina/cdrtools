@@ -1,7 +1,7 @@
-/* @(#)fifo.c	1.12 98/10/17 Copyright 1989,1997 J. Schilling */
+/* @(#)fifo.c	1.21 99/12/29 Copyright 1989,1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)fifo.c	1.12 98/10/17 Copyright 1989,1997 J. Schilling";
+	"@(#)fifo.c	1.21 99/12/29 Copyright 1989,1997 J. Schilling";
 #endif
 /*
  *	A "fifo" that uses shared memory between two processes
@@ -29,8 +29,9 @@ static	char sccsid[] =
  */
 
 #define	DEBUG
+/*#define	XDEBUG*/
 #include <mconfig.h>
-#if	!defined(HAVE_SMMAP) && !defined(HAVE_USGSHM)
+#if	!defined(HAVE_SMMAP) && !defined(HAVE_USGSHM) && !defined(HAVE_DOSALLOCSHAREDMEM)
 #undef	FIFO			/* We cannot have a FIFO on this platform */
 #endif
 #ifdef	FIFO
@@ -39,10 +40,16 @@ static	char sccsid[] =
 #endif
 #ifndef	HAVE_SMMAP
 #	undef	USE_MMAP
-#	define	USE_USGSHM	/* SYSV shared memory is the default	*/
+#	define	USE_USGSHM	/* now SYSV shared memory is the default*/
 #endif
 #ifdef	USE_MMAP		/* Only want to have one implementation */
 #	undef	USE_USGSHM	/* mmap() is preferred			*/
+#endif
+
+#ifdef	HAVE_DOSALLOCSHAREDMEM	/* This is for OS/2 */
+#	undef	USE_MMAP
+#	undef	USE_USGSHM
+#	define	USE_OS2SHM
 #endif
 
 #include <fctldefs.h>
@@ -53,17 +60,29 @@ static	char sccsid[] =
 #include <stdio.h>
 #include <stdxlib.h>
 #include <unixstd.h>
+#include <waitdefs.h>
 #include <utypes.h>
 #include <standard.h>
 #include <errno.h>
 #include <signal.h>
+#include <libport.h>
 
 #include "cdrecord.h"
 
 #ifdef DEBUG
+#ifdef XDEBUG
+FILE	*ef;
+#define	USDEBUG1	if (debug) {if(s == owner_reader)fprintf(ef, "r");else fprintf(ef, "w");fflush(ef);}
+#define	USDEBUG2	if (debug) {if(s == owner_reader)fprintf(ef, "R");else fprintf(ef, "W");fflush(ef);}
+#else
+#define	USDEBUG1
+#define	USDEBUG2
+#endif
 #define	EDEBUG(a)	if (debug) error a
 #else
 #define	EDEBUG(a)
+#define	USDEBUG1
+#define	USDEBUG2
 #endif
 
 #define palign(x, a)	(((char *)(x)) + ((a) - 1 - (((unsigned)((x)-1))%(a))))
@@ -104,13 +123,18 @@ struct faio_stats {
 #define	MSECS	1000
 #define	SECS	(1000*MSECS)
 
+/*
+ * Note: WRITER_MAXWAIT & READER_MAXWAIT need to be greater than the SCSI
+ * timeout for commands that write to the media. This is currently 200s
+ * if we are in SAO mode.
+ */
 /* microsecond delay between each buffer-ready probe by writing process */
 #define	WRITER_DELAY	(20*MSECS)
-#define	WRITER_MAXWAIT	(120*SECS)	/* 120 seconds max wait for data */
+#define	WRITER_MAXWAIT	(240*SECS)	/* 240 seconds max wait for data */
 
 /* microsecond delay between each buffer-ready probe by reading process */
 #define	READER_DELAY	(80*MSECS)
-#define	READER_MAXWAIT	(120*SECS)	/* 120 seconds max wait for reader */
+#define	READER_MAXWAIT	(240*SECS)	/* 240 seconds max wait for reader */
 
 LOCAL	char	*buf;
 LOCAL	char	*bufbase;
@@ -127,9 +151,14 @@ LOCAL	char*	mkshare		__PR((int size));
 #ifdef	USE_USGSHM
 LOCAL	char*	mkshm		__PR((int size));
 #endif
+#ifdef	USE_OS2SHM
+LOCAL	char*	mkos2shm	__PR((int size));
+#endif
+
 EXPORT	BOOL	init_faio	__PR((int tracks, track_t *track, int));
 EXPORT	BOOL	await_faio	__PR((void));
 EXPORT	void	kill_faio	__PR((void));
+EXPORT	int	wait_faio	__PR((void));
 LOCAL	void	faio_reader	__PR((int tracks, track_t *track));
 LOCAL	void	faio_read_track	__PR((track_t *trackp));
 LOCAL	void	faio_wait_on_buffer __PR((faio_t *f, fowner_t s,
@@ -166,6 +195,10 @@ init_fifo(fs)
 #if	defined(USE_USGSHM)
 	buf = mkshm(buflen);
 #endif
+#if	defined(USE_OS2SHM)
+	buf = mkos2shm(buflen);
+#endif
+
 	bufbase = buf;
 	bufend = buf + buflen;
 	EDEBUG(("buf: %X bufend: %X, buflen: %ld\n", buf, bufend, buflen));
@@ -178,6 +211,11 @@ init_fifo(fs)
 	 * we're trying to lock too much memory
 	 */
 	fillbytes(buf, buflen, '\0');
+
+#ifdef	XDEBUG
+	if (debug)
+		ef = fopen("/tmp/ef", "w");
+#endif
 }
 
 #ifdef	USE_MMAP
@@ -255,10 +293,33 @@ mkshm(size)
 }
 #endif
 
+#ifdef	USE_OS2SHM
+LOCAL char *
+mkos2shm(size)
+	int	size;
+{
+	char	*addr;
+
+	/*
+	 * The OS/2 implementation of shm (using shm.dll) limits the size of one shared
+	 * memory segment to 0x3fa000 (aprox. 4MBytes). Using OS/2 native API we have
+	 * no such restriction so I decided to use it allowing fifos of arbitrary size.
+         */
+	if(DosAllocSharedMem(&addr,NULL,size,0X100L | 0x1L | 0x2L | 0x10L))
+		comerr("DosAllocSharedMem() failed\n");
+
+	if (debug)
+		errmsgno(EX_BAD, "shared memory allocated at address: %x\n", addr);
+
+	return (addr);
+}
+#endif
+
 LOCAL	int	faio_buffers;
 LOCAL	int	faio_buf_size;
 LOCAL	int	buf_idx;
 LOCAL	pid_t	faio_pid;
+LOCAL	BOOL	faio_didwait;
 
 /*#define	faio_ref(n)	(&((faio_t *)buf)[n])*/
 
@@ -288,7 +349,10 @@ init_faio(tracks, track, bufsize)
 
 	/*
 	 * Compute space for buffer headers.
+	 * Round bufsize up to pagesize to make each FIFO segment
+	 * properly page aligned.
 	 */
+	bufsize = roundup(bufsize, pagesize);
 	faio_buffers = (buflen - sizeof(*sp)) / bufsize;
 	EDEBUG(("bufsize: %d buffers: %d hdrsize %d\n", bufsize, faio_buffers, faio_buffers * sizeof(struct faio)));
 
@@ -306,7 +370,7 @@ init_faio(tracks, track, bufsize)
 						MIN_BUFFERS*bufsize/1024);
 		return (FALSE);
 	}
-	
+
 	if (debug)
 		printf("Using %d buffers of %d bytes.\n", faio_buffers, faio_buf_size);
 
@@ -330,9 +394,17 @@ init_faio(tracks, track, bufsize)
 	if (faio_pid == 0) {
 		/* child process */
 		raisepri(1);		/* almost max priority */
+
+#ifdef USE_OS2SHM
+		DosGetSharedMem(buf,3);	/* PAG_READ|PAG_WRITE */
+#endif
+		/* Ignoring SIGALRM cures the SCO usleep() bug */
+/*		signal(SIGALRM, SIG_IGN);*/
 		faio_reader(tracks, track);
 		/* NOTREACHED */
 	} else {
+		faio_didwait = FALSE;
+
 		/* close all file-descriptors that only the child will use */
 		for (n = 1; n <= tracks; n++)
 			close(track[n].f);
@@ -352,7 +424,7 @@ await_faio()
 	 * Wait until the reader is active and has filled the buffer.
 	 */
 	if (lverbose || debug) {
-		printf("Waiting for reader process to fill input-buffer ... ");
+		printf("Waiting for reader process to fill input buffer ... ");
 		flush();
 	}
 
@@ -360,7 +432,7 @@ await_faio()
 			    500*MSECS, 0);
 
 	if (lverbose || debug)
-		printf("input-buffer ready.\n");
+		printf("input buffer ready.\n");
 
 	sp->empty = sp->full = 0L;	/* set correct stat state */
 	sp->cont_low = faio_buffers;	/* set cont to max value  */
@@ -381,7 +453,17 @@ await_faio()
 EXPORT void
 kill_faio()
 {
-	kill(faio_pid, SIGKILL);
+	if (faio_pid > 0)
+		kill(faio_pid, SIGKILL);
+}
+
+EXPORT int
+wait_faio()
+{
+	if (faio_pid > 0 && !faio_didwait)
+		return (wait(0));
+	faio_didwait = TRUE;
+	return (0);
 }
 
 LOCAL void
@@ -408,6 +490,13 @@ faio_reader(tracks, track)
 	if (sp->gets == 0)
 		faio_ref(faio_buffers - 1)->owner = owner_reader;
 
+#ifdef	USE_OS2SHM
+	DosFreeMem(buf);
+	sleep(30000);	/* XXX If calling _exit() here the parent process seems to be blocked */
+			/* XXX This should be fixed soon */
+#endif
+	if (debug)
+		error("\nfaio_reader _exit(0)\n");
 	_exit(0);
 }
 
@@ -477,7 +566,10 @@ faio_wait_on_buffer(f, s, delay, max_wait)
 	max_loops = max_wait / delay + 1;
 
 	while (max_wait == 0 || max_loops--) {
+		USDEBUG1;
 		usleep(delay);
+		USDEBUG2;
+
 		if (f->owner == s)
 			return;
 	}
@@ -582,6 +674,9 @@ again:
 EXPORT void
 fifo_stats()
 {
+	if (sp == NULL)	/* We might not use a FIFO */
+		return;
+
 	errmsgno(EX_BAD, "fifo had %ld puts and %ld gets.\n",
 		sp->puts, sp->gets);
 	errmsgno(EX_BAD, "fifo was %ld times empty and %ld times full, min fill was %ld%%.\n",
@@ -615,6 +710,7 @@ EXPORT	void	init_fifo	__PR((long));
 EXPORT	BOOL	init_faio	__PR((int tracks, track_t *track, int));
 EXPORT	BOOL	await_faio	__PR((void));
 EXPORT	void	kill_faio	__PR((void));
+EXPORT	int	wait_faio	__PR((void));
 EXPORT	int	faio_read_buf	__PR((int f, char *bp, int size));
 EXPORT	int	faio_get_buf	__PR((int f, char **bpp, int size));
 EXPORT	void	fifo_stats	__PR((void));
@@ -646,6 +742,12 @@ await_faio()
 EXPORT void
 kill_faio()
 {
+}
+
+EXPORT int
+wait_faio()
+{
+	return (0);
 }
 
 EXPORT int

@@ -1,32 +1,44 @@
-# @(#)README	1.14 98/10/18 Copyright 1996 J. Schilling
+# @(#)README	1.18 00/01/17 Copyright 1996 J. Schilling
 
-This is Version 1.6.1 of cdrecord
+This is Version 1.8 of cdrecord
 
 Cdrecord allows you to create CD's on a CD-Recorder.
 Cdrecord runs on:
 
 SunOS 4.1.3 or later:	sparc.
 Solaris 2.3 or later:	sparc and x86.
-Linux:			x86 sparc ppc and alpha.
-NetBSD/FreeBSD/OpenBSD:	x86 sparc
+Linux:			x86 sparc sparc64 ppc strongarm and alpha.
+NetBSD/FreeBSD/OpenBSD:	x86 sparc alpha amiga and m68k
 SGI IRIX:		mips
 HP-UX:			hppa
 AIX:			rs6000
 OSF1:			alpha
+BSD/OS (BSDi):		x86
+SCO Openserver 5.x:	x86
+SCO Unixware 2.x:	x86
+SCO Unixware 7.x:	x86
+NeXt Step:		mc68xxx x86 and hppa
+Apple Rhapsody:		ppc, x86
+Apple MacOS X:		ppc
+OS/2:			x86
+VMS:			*VAX
+BeOS:			x86
+Win95:			x86
+Win98:			x86
+WinNT:			x86
+QNX:			x86 (coming soon)
+
 
 To learn how to compile and install cdrecord, read README.compile
 
 For multi session please read README.multi
 
-Cdrecord runs without problems on a loded Solaris system.
-On SunOS, Linux and other systems without realtime scheduler you have to test.
-
-Cdrecord has been designed with a similar user interface as cdwrite
-written by
-	Adam J. Richter <adam@yggdrasil.com>
-now maintained by
-	H. Peter Anvin <hpa@transmeta.com>
-but the dev= option is slightly different for portability.
+Cdrecord runs without problems on a loaded Solaris system.
+On Solaris, cdrecord uses the SVr4 priocntl() call to establish
+SVr4 real-time scheduling which grants to run cdrecord in a higher priority
+than all kernel processes. On system that provide POSIX real-time scheduling
+the result may be slightly worse as POSIX RT doesn't seem to grant latter
+real time behaviour.
 
 The cdrecord distribution contains a SCSI user level transport library.
 The SCSI library is suitable to talk to any SCSI device without having
@@ -43,26 +55,22 @@ On SunOS/Solaris:
 You *need* the SCSI general driver 'scg' in order to run cdrecord.
 
 SunOS 4.1.3 only:
-The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
-it is supplied binary in a loadable format.
-There is no future support, there is no non loadable support.
+	The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
+	it is supplied binary in a loadable format.
+	There is no future support, there is no non loadable support.
 
 Solaris only:
-The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
-it is supplied binary in pkgadd(1m) format and is tested 
-on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
+	The 'scg' driver is Copyright 1986-1995 Jörg Schilling,
+	it is supplied binary in pkgadd(1m) format and is tested 
+	on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
 
 Solaris only:
-It is _nice to have_ the 'fbk' driver to mount files that contain 
-images of file systems. Fbk means File simulates Block Device.
+	It is _nice to have_ the 'fbk' driver to mount files that contain 
+	images of file systems. Fbk means File simulates Block Device.
 
-The 'fbk' driver is Copyright 1988-1995 Jörg Schilling,
-it is supplied binary in pkgadd(1m) format and is tested
-on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
-
-cdrecord compiles and runs on Solaris x86, thanks to 
-gert@fwi.uva.nl (Gert Poletiek) who did the tests.
-The bitorder problems have been eliminated.
+	The 'fbk' driver is Copyright 1988-1995 Jörg Schilling,
+	it is supplied binary in pkgadd(1m) format and is tested
+	on Solaris 2.3, Solaris 2.4 & Solaris 2.5 (sparc).
 
 Cdrecord-1.3 or later adopts the right BUF_SIZE for each architecture.
 This is to reduce some performance problems on Solaris x86.
@@ -75,16 +83,40 @@ be needed on Linux anyway.
 Cdrecord has been implemented with a Philips CDD 521.
 Cdrecord now is maintained with the following drives:
 
+	Plextor PX-W8220
+	Plextor PX-W4220
+	Plextor PX-R820
+	Plextor PX-R412C
+	Yamaha CRW-4416
+	Yamaha CDR-400
+	Ricoh MP-7040A
+	Ricoh MP-7040S
+	Ricoh MP-7060S
+	TEAC CD-R55S
+	Sony CDU948S
 	COMPRO/Matsushita/Panasonic CW-7502
 	Philips CDD-2000
-	TEAC CD-R55S
-	Yamaha CDR-400
+	Goldstar 8080
 
 It should run also on:
 
 	All SCSI-3/mmc compliant drives
 	All ATAPI/mmc compliant drives
 
+	NOTE:
+
+	It seems that all drives that have been initially released in 1999
+	or later are MMC compliant. If a recent drive does not work with
+	cdrecord, you most likely found a firmware bug.
+
+Drives that have been reported to work or should work because
+Andy MCFadden (see also http://www.fadden.com/cdrfaq/faq05.html) listed
+them to be identical to working drives:
+
+	ACER CR-1420C
+	ACER CDRW 6206A
+	AOPEN CRW9420 (Re-writeable)
+	BTC BCE 621E
 	COMPRO CW-7502
 	Dysan CR-622 ???? See Wearnes 622
 	Dysan CR-1622
@@ -99,32 +131,45 @@ It should run also on:
 	HP 7110
 	HP 7200
 	HP 8100
+	HP 8210
+	HP CD-Writer+ M820
 	Hi-Val CD-R (see Pinnacle RCD-4x4)
+	IMATION CD-RW IMW040420
 	JVC XR-W2001 (uses TEAC code - see below - audio not working)
 	JVC XR-W2010 (uses TEAC code - see below - audio not working)
 	JVC XR-W2020 (uses TEAC code - see below - audio not working)
+	JVC XR-W2080 (first MMC drive from JVC)
 	Kodak PCD-200 or Kodak PCD-200 Plus
 	Kodak PCD-225
 	Kodak PCD-240
-	Kodak PCD-600 (not tested)
+	Kodak PCD-600
 	Matsushita CW-7502
+	Matsushita CW-7503
+	Matsushita CW-7582
 	Memorex CR-622 ???? See Wearnes 622
-	Memorex CR-1622	
+	Memorex CR-1622
+	Memorex CRW-1622
 	Microboards PlayWrite 2000 (use cdrecord driver=sony_cdu924 and report inquiry)
 	Microboards PlayWrite 4000 (use cdrecord driver=yamaha_cdr100 and report inquiry)
 	Microboards PlayWrite 4001RW
 	MicroNet MasterCD Plus 4x4 (use cdrecord driver=yamaha_cdr100 and report inquiry)
 	MicroNet MasterCD Plus 4x6
-	Mitsumi CR-2401-TS (not tested)
+	Mitsubishi MCA-CDRW 226
+	Mitsumi CR-2401-TS
 	Mitsumi CR-2600-TE
-	Mitsumi CR-2801
-	Mitsumi CR-4801
+	Mitsumi CR-2801-TE
+	Mitsumi CR-4801-TE
+	Mitsumi CR-4802-TE ???
+	Nomai 680.rw
 	Olympus CDS615E
 	Olympus CDS620E (use cdrecord driver=sony_cdu924   and report inquiry)
 	Olympus CD-R2x6 (use cdrecord driver=sony_cdu924   and report inquiry)
-	Optima Dis Kovery 650 CD-R (use cdrecord driver=sony_cdu924   and report inquiry)
+	Optima Dis Kovery 650 CD-R
 	OTI CDRW 965
+	OTI-975 Socrates 1.0 (CDRW)
 	Panasonic CW-7502
+	Panasonic CW-7503
+	Panasonic CW-7582
 	Philips CDD 521 (CDD521/02  Revision: 2.06 has bad firmware - seems not to work)
 	Philips CDD 521 (upgraded units only: ID: CDD521/10  Revision: 2.07)
 	Philips CDD 522
@@ -132,25 +177,33 @@ It should run also on:
 	Philips CDD 2600
 	Philips CDD 3600
 	Philips CDD 3610
+	Philips CDRW400
 	Philips Omniwriter 26
 	Philips Omniwriter 26A
+	Philips CDD4201 CD-RW
 	Pinnacle Micro RCD-1000 (see TEAC/JVC): Need to upgrade firmware to 2.35
 	Pinnacle Micro RCD-5020 (see TEAC/JVC - audio not working)
 	Pinnacle Micro RCD-5040 (see TEAC/JVC - audio not working)
 	Pinnacle Micro RCD-4x4
 	Pioneer DW-S114X
-	Plasmon CDR 4220 (not tested)
+	Plasmon CDR 4220
 	Plasmon RF-4100
 	Plasmon RF-4102
 	Plasmon CDR 4400 (use cdrecord driver=yamaha_cdr100 and report inquiry)
 	Plasmon CDR 480
 	Plextor PX-R24CS (use cdrecord driver=ricoh_ro1420c and report inquiry)
 	Plextor PX-R412C
+	Plextor PX-R820
+	Plextor PX-W4220
+	Plextor PX-W8220
 	Procom PCDR 4 (use cdrecord driver=yamaha_cdr100 and report inquiry)
 	Ricoh RO-1420C
 	Ricoh MP-6200
 	Ricoh MP-6200I
 	Ricoh MP-6201
+	Ricoh MP-7040A
+	Ricoh MP-7040S
+	Ricoh MP-7060S
 	Smart & Friendly CD-R1002 (use cdrecord driver=sony_cdu924   and report inquiry)
 	Smart & Friendly CD-R1004 (use cdrecord driver=yamaha_cdr100 and report inquiry)
 	Smart & Friendly CD-R2004 (use cdrecord driver=sony_cdu924   and report inquiry)
@@ -160,17 +213,25 @@ It should run also on:
 	Smart & Friendly CD-R4006
 	Smart & Friendly CD-R4012
 	Smart & Friendly CD-RW226
+	Smart & Friendly CD-R8020
 	Sony CDU920S
 	Sony CDU924S
 	Sony CDU926S
-	Sony CDU928
+	Sony CDU928S
 	Sony CDU940S
+	Sony CDU948S
+	Sony CRX-100
+	Taiyo Yuden CD-WO EW-50
 	TEAC CD-R50S
 	TEAC CD-R55S
-	Taiyo Yuden CD-WO EW-50
+	TEAC CD-R56S
+	TEAC CD-R58S
+	That's Write CDR-N820S
+	Traxdata CDRW-2260EL-PRO
 	Traxdata CDR-4120
 	Traxdata CDRW-4260
 	Turtle Beach 2040R (use cdrecord driver=ricoh_ro1420c and report inquiry)
+	WAITEK WT2036
 	Wearnes CD-R622
 	Wearnes CD-R632P
 	Yamaha CDR-100
@@ -180,7 +241,12 @@ It should run also on:
 	Yamaha CDR-401
 	Yamaha CRW-4001
 	Yamaha CRW-2260
+	Yamaha CRW-2261
 	Yamaha CRW-4260
+	Yamaha CRW-4261
+	Yamaha CRW-4416
+	Yamaha CRW-6416
+	Yamaha CRW-8424
 
 Multi-session has not been tested with the Plasmon RF-4100
 
@@ -200,14 +266,16 @@ The following dries are curently not supported because I don't get specs:
 	JVC XR-W2001
 	JVC XR-W2010
 	JVC XR-W2020
-	Panasonic CW-7501
 	Pinnacle Micro RCD-1000
 	Pinnacle Micro RCD-5020
 	Pinnacle Micro RCD-5040
 	Plasmon CDR-4240
-	Ricoh RS-1060C
 	Sony CDW-900E
-	
+
+The following drives may get support soon:
+
+	Panasonic CW-7501
+	Ricoh RS-1060C
 
 To install get:
 
@@ -239,12 +307,8 @@ ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/ ...
 ftp://ftp.fokus.gmd.de/pub/unix/kernel/scg/ ...
 ftp://ftp.fokus.gmd.de/pub/unix/kernel/fbk/ ...
 
-If you need mkisofs, it is located on:
-
-ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/mkisofs-1.12.1.tar.gz
-
-but it is also contained in cdrecord-1.6.1
-
+Only use the mkisofs that is contained in this release.
+All other mkisofs versions are too buggy.
 
 
 Installation Process:
@@ -267,7 +331,7 @@ Solaris only:
 
 NOTE:
 	Be very careful. pkgadd does not check for the right target 
-	architecture. Do not indstall drivers for intel on sparc
+	architecture. Do not install drivers for intel on sparc
 	and vice versa. You will get a corrupt system.
 
 	You need to be root because you need access to /dev/scg? and to be
@@ -295,9 +359,9 @@ If you want to use the CD-recorder as CD-ROM device, have a look at
 Solaris only:
 ftp://ftp.fokus.gmd.de/pub/unix/kernel/sd
 
-Actual information on cdrecord may be found on:
+Current information on cdrecord may be found on:
 
-	http://www.fokus.gmd.de/nthp/employees/schilling/cdrecord.html
+	http://www.fokus.gmd.de/research/cc/glone/employees/joerg.schilling/private/cdrecord.html
 
 
 	Joerg Schilling

@@ -1,4 +1,4 @@
-/* @(#)raisecond.c	1.10 98/09/05 Copyright 1985 J. Schilling */
+/* @(#)raisecond.c	1.11 99/09/11 Copyright 1985 J. Schilling */
 /*
  *	raise a condition (software signal)
  */
@@ -65,7 +65,7 @@ LOCAL	void raiseabort  __PR((const char *));
 
 #ifdef	HAVE_SCANSTACK
 
-#include "frame.h"
+#include <stkframe.h>
 
 LOCAL	BOOL framehandle __PR((SIGBLK *, const char *, const char *, long));
 

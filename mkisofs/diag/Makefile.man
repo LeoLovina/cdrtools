@@ -1,0 +1,18 @@
+#ident %W% %E% %Q%
+###########################################################################
+# Sample makefile for installing manual pages
+###########################################################################
+SRCROOT=	../..
+RULESDIR=	RULES
+include		$(SRCROOT)/$(RULESDIR)/rules.top
+###########################################################################
+
+MANDIR=		man
+TARGETMAN=	isoinfo
+MANSECT=	$(MANSECT_ADMIN)
+MANSUFFIX=	$(MANSUFF_ADMIN)
+MANFILE=	isoinfo.8
+
+###########################################################################
+include		$(SRCROOT)/$(RULESDIR)/rules.man
+###########################################################################

@@ -1,4 +1,4 @@
-/* @(#)error.c	1.10 98/09/05 Copyright 1985 J. Schilling */
+/* @(#)error.c	1.11 99/09/08 Copyright 1985 J. Schilling */
 /*
  *	fprintf() on standard error stdio stream
  *
@@ -42,7 +42,7 @@ int error(fmt, va_alist)
 #else
 	va_start(args);
 #endif
-	ret = fprintf(stderr, "%r", fmt, args);
+	ret = js_fprintf(stderr, "%r", fmt, args);
 	va_end(args);
 	return (ret);
 }

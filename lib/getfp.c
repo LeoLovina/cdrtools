@@ -1,4 +1,4 @@
-/* @(#)getfp.c	1.8 98/05/31 Copyright 1988 J. Schilling */
+/* @(#)getfp.c	1.9 99/09/11 Copyright 1988 J. Schilling */
 /*
  *	Get frame pointer
  *
@@ -30,7 +30,7 @@
 #endif
 
 #ifdef	HAVE_SCANSTACK
-#include "frame.h"
+#include <stkframe.h>
 
 #define	MAXWINDOWS	32
 #define	NWINDOWS	7

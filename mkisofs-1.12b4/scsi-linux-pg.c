@@ -1,1 +1,0 @@
-../cdrecord/scsi-linux-pg.c

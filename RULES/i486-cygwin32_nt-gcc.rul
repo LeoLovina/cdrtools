@@ -1,4 +1,4 @@
-#ident "@(#)i486-cygwin32_nt-gcc.rul	1.1 98/08/18 "
+#ident "@(#)i486-cygwin32_nt-gcc.rul	1.2 99/08/29 "
 ###########################################################################
 # Written 1998 by B. Bochow
 ###########################################################################
@@ -72,6 +72,6 @@ LORDER=		echo
 TSORT=		cat
 
 RMDEP=		:
-MKDEP=		@echo "	==> MAKE DEPENDENCIES \"$@\""; $(RMDEP); gcc -M
+MKDEP=		@echo "	==> MAKING DEPENDENCIES \"$@\""; $(RMDEP); gcc -M
 MKDEP_OUT=
 

@@ -1,8 +1,12 @@
 This was taken out of mails from From: Dave Cohen <dcohen@richmond.infi.net>
 and From: Gadi Oxman <gadio@netvision.net.il>
-(slightly modified marked ***JS *** execpt typo corrects)
+(slightly modified marked ***JS *** except typo corrects)
 
 It is only valid for Linux !
+
+As all actual Linux versions support ATAPI support for cdrecord,
+I removed the patch section. If you are running a Linux version
+that does not support ATAPI SCSI command transport, please upgrade.
 
 The basic driver design in Solaris would also allow to use ATAPI
 drives but unfortunately, Sun made a mistake in the mid-level design.
@@ -12,23 +16,16 @@ concept.
 
 Please use cdrecord-1.6 final or later (if available), it includes the
 modifications needed for ATAPI drives and is still working with other 
-SCSI drives. If you want to use older revisions of cdrecord (not recommended)
-you need to apply some patches as described below.
+SCSI drives. Older revisions of cdrecord do not support ATAPI drives.
 
-If you use Linux Kernel version 2.1.73 and later there are no
-kernel patches needed to run cdrecord. If you are using a Linux
-kernel prior to 2.1.73 you need to apply some patches to 
-the  kernel sources ide.h and ide-scsi.c (see below).
+If you are using Linux Kernel version prior to 2.1.73 or prior to
+2.0.35, please upgrade before you try to compile and use cdrecord.
 
-If you are using Linux 2.0.35 or later you also don't need to patch.
+In any case, you need to configure a kernel with ATAPI/SCSI hostadapter
+emulation. Read carefully the following instructions:
 
-If you like to use ATAPI drives, I recommend to use the newer releases
-mentioned above to avoid the need for a patch. However, you still need
-to configure a kernel with ATAPI/SCSI hostadapter emulation. Read 
-carefully the following instructions:
-
-In any case, you need to disable generic IDE support in order to make
-ATAPI SCSI emulation working.
+In any case, you need to disable generic IDE/ATAPI CDROM support in 
+order to make ATAPI SCSI emulation working.
 
 Many people ask why I use ATAPI-SCSI emulation.
 
@@ -42,15 +39,18 @@ Many people ask why I use ATAPI-SCSI emulation.
 	supporting ATAPI devices.
 
 If you have problems to talk to the device when it is jumpered as "slave"
-try to use it as "master".
+try to use it  as "master". If you connect a hard disk to the same IDE
+cable as the CD writer or if you try to read/write data from another drive
+that is connected to the same IDE cable as the CD writer you may get
+problems too.
 
 NOTICE:
 
-With the newer kernels it seems to be possible to run SCSI/ATAPI hostadapter
-emulation and generic IDE at the same time by selectively telling the 
-kernel what to use for which drive.  However, this would not be needed
-if the Linux SCSI CD-ROM driver would be more up to date and supports
-standard comforming drives.
+With the newer 2.1.x or 2.2.x kernels it seems to be possible to run 
+SCSI/ATAPI hostadapter emulation and generic IDE at the same time by 
+selectively telling the kernel what to use for which drive.  However,
+this would not be needed if the Linux SCSI CD-ROM driver would be more 
+up to date and supports standard conforming drives.
 
 Jörg Schilling <schilling@fokus.gmd.de>
 
@@ -99,11 +99,13 @@ IDE/SCSI translation was first added in this kernel. Because your CD-RW is
 an ATAPI device, it will support SCSI command sets.  The translation
 allows you to map the device as a SCSI generic device. This will allow
 cdrecord to recognize it as a SCSI device.
+**** 2.0.31 still needs patches, get 2.0.35 or later **** JS
 
 3. Get the patches and apply them
 
 Attached find kernel patches for kernel sources ide.h and ide-scsi.c, and
 cdrecord source scsi_cdr.c (version 1.5 only). 
+**** Get cdrecord-1.6 or later **** JS
 
 3. Recompile kernel with SCSI emulation support
 
@@ -118,6 +120,12 @@ kernel.
 4. WARNING: Disable generic IDE/ATAPI support		*** JS ***
 
 If you don't do this, the SCSI emulation will not work  *** JS ***
+
+5. This is impartant too:
+You also need to enable SCSI and SCSI generic support   *** JS ***
+
+6. Make sure that /dev/sg* exists.
+If thet are missing, create them.
 
 Dave Cohen
 dcohen@richmond.infi.net 
@@ -158,133 +166,78 @@ work again.
 
 
 -------------------------------------------------------------------------------
-HOTE: The patches below are not needed anymore!
+HOTE: 
 
 1)	Actual cdrecord releases support ATAPI
 
 2)	Linux 2.0.35 or Linux 2.1.73 or later include ATAPI support
 -------------------------------------------------------------------------------
+From whampton@staffnet.com Fri Jan 14 05:21:34 2000
+From: "W. Wade, Hampton IV" <whampton@staffnet.com>
 
+You may wish to include/append these notes to your ATAPI notes....
 
-----------------linux/drivers/block/ide.h----------------------
-159c159
-< #define WAIT_CMD	(10*HZ)	/* 10sec  - maximum wait for an IRQ to happen */
----
-> #define WAIT_CMD	(1000*HZ)	/* 1000sec  - maximum wait for an IRQ to happen */
+I have my 4X Acer CD-R/RW ATAPI drive working with Linux.   My platform
+is
+RedHat 6.1 with kernel 2.2.14.  My first ATAPI CD device is a DVD with
+the second
+the CD-R.  I made the following changes:
 
+Steps:
 
-******* 400 seconds seems to be enough JS *****
+1.  Identify which device is the CD-R -- in my case the fourth ATAPI
+device, /dev/hdd.
 
-----------------linux/drivers/scsi/ide-scsi.c------------------
+2.  Compile the kernel to include ATAPI CDROM and SCSI emulation:
 
-162a163
-> #if 0
-170a172
-> #endif
-180a183
-> #if 0
-186a190
-> #endif
-433a438,439
-> 	printk ("ATAPI overlap supported: %s\n",
-> 		drive->id->capability & 0x20 ? "Yes" : "No");	
+     Under the block devices menu:
+                Y or M     Include IDE/ATAPI CDROM support
+                Y or M     SCSI emulation
 
+3.  Build and install the upgraded kernel.
 
+4.  If you selected modules, add them to the /etc/conf.modules file.
 
+5.  In the /etc/lilo.conf file add an append line for ide-scsi, in my
+case:
+        append = "hdc=ide-scsi hdd=ide-scsi"
 
------------------------cdrecord-1.5/cdrecord/scsi_cdr----------------
+6.  Reboot to the new kernel and make sure the ide-scsi module is loaded
 
-If you want to use cdrecord-1.5 replace the old functions by the following
-if you use cdrecord-1.6a5 you don't need this *** JS ***
+        /sbin/lsmod | grep ide-scsi
 
-EXPORT int
-mode_select(dp, cnt, smp, pf)
-	u_char	*dp;
-	int	cnt;
-	int	smp;
-	int	pf;
-{
-	u_char	xmode[256+4];
+7.  Make a link from the proper SCSI device to a symbolic, e.g.,
+/dev/cdrom:
+      In my case the DVD is the first CD, hence appears as /dev/scd0 to
+scd7
+      (cat /proc/scsi/scsi to get a full list of devices -- the first
+CD-ROM will
+      appear as scd0, etc.)  With the current ATAPI-SCSI module, each CD
 
-	movebytes(&dp[4], &xmode[8], cnt-4);
-	xmode[0] = 0;
-	xmode[1] = 0;
-	xmode[2] = dp[1];
-	xmode[3] = dp[2];
-	xmode[4] = 0;
-	xmode[5] = 0;
-	i_to_short(&xmode[6], dp[3]);
+      device appears as 8 SCSI devices (different logical units).  If
+you have
+      two devices, like I do, you may have to make a node for the second
+device.
+      In my case I had to make scd8:
 
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)xmode;
-	scmd.size = cnt+4;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x55;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt+4);
+            cd /dev
+            mknod scd8 b 11 8
 
-	if (verbose) {
-		printf("%s ", smp?"Save":"Set ");
-		scsiprbytes("Mode Parameters", dp, cnt);
-	}
+        Then make links, in my case:
 
-	return (scsicmd("mode select g1"));
-}
+            ln -s scd0 cdrom
+            ln -s scd8 cdr
 
-EXPORT int
-mode_sense(dp, cnt, page, pcf)
-	u_char	*dp;
-	int	cnt;
-	int	page;
-	int	pcf;
-{
-	u_char	xmode[256+4];
-	int	amt = cnt;
-	int	len;
+        Note, many CD-ROM player programs expect the audio CD drive to
+        be located at /dev/cdrom (xplaycd, etc.), hence this link is
+recommended.
 
-	fillbytes((caddr_t)xmode, sizeof(scmd), '\0');
-	if (amt < 4) {
-		amt += 1;
-	} else if (amt == 4) {
-		amt += 3;
-	} else {
-		amt += 4;
-	}
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)xmode;
-	scmd.size = 0xFF;
-	scmd.size = amt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x5A;
-	scmd.cdb.g1_cdb.lun = lun;
-#ifdef	nonono
-	scmd.cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
-#endif
-	scmd.cdb.g1_cdb.addr[0] = (page&0x3F) | ((pcf<<6)&0xC0);
-	g1_cdblen(&scmd.cdb.g1_cdb, amt);
+        If you try to use /dev/hdc (or wherever your CD or CD-R is)
+after loading
+        the ide-scsi module, you may not be able to mount CD's or play
+audio
+        discs -- you have to use the new SCSI names for the device.
 
-	if (scsicmd("mode sense g1") < 0)
-		return (-1);
-
-	if (verbose) scsiprbytes("Mode Sense Data", xmode, amt - scmd.resid);
-	amt -= scsigetresid();
-	movebytes(&xmode[8], &dp[4], amt-4);
-	len = a_to_u_short(xmode);
-	dp[0] = len - 3;
-	dp[1] = xmode[2];
-	dp[2] = xmode[3];
-	len = a_to_u_short(&xmode[6]);
-	dp[3] = len;
-
-	if (verbose) scsiprbytes("Mode Sense Data", dp, cnt - scmd.resid);
-	return (0);
-}
+8.  Fix your /etc/fstab file to mount the /dev/cdrom and /dev/cdr
 
 

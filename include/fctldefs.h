@@ -1,4 +1,4 @@
-/* @(#)fctldefs.h	1.2 98/10/08 Copyright 1996 J. Schilling */
+/* @(#)fctldefs.h	1.4 99/05/02 Copyright 1996 J. Schilling */
 /*
  *	Generic header for users of open(), creat() and chmod()
  *
@@ -41,17 +41,23 @@
 #endif	/* HAVE_FCNTL_H */
 
 /*
- * Do not define more than O_RDONLY / O_WRONLY / O_RDWR
+ * Do not define more than O_RDONLY / O_WRONLY / O_RDWR / O_BINARY
  * The values may differ.
+ *
+ * O_BINARY is defined here to allow all applications to compile on a non DOS
+ * environment without repeating this definition.
  */
 #ifndef	O_RDONLY
-#define	O_RDONLY	0
+#	define	O_RDONLY	0
 #endif
 #ifndef	O_WRONLY
-#define	O_WRONLY	1
+#	define	O_WRONLY	1
 #endif
 #ifndef	O_RDWR
-#define	O_RDWR		2
+#	define	O_RDWR		2
+#endif
+#ifndef	O_BINARY			/* Only present on DOS or similar */
+#	define	O_BINARY	0
 #endif
 
 #endif	/* _FCTLDEFS_H */

@@ -1,0 +1,198 @@
+
+
+
+ISOINFO(8)           Maintenance Procedures            ISOINFO(8)
+
+
+
+NNNNAAAAMMMMEEEE
+     devdump, isoinfo, isovfy, isodump  -  Utility  programs  for
+     dumping and verifying iso9660 images.
+
+SSSSYYYYNNNNOOOOPPPPSSSSIIIISSSS
+     ddddeeeevvvvdddduuuummmmpppp _i_s_o_i_m_a_g_e
+
+     iiiissssoooodddduuuummmmpppp _i_s_o_i_m_a_g_e
+
+     iiiissssooooiiiinnnnffffoooo [ ----hhhh ] [ ----RRRR ] [ ----JJJJ ] [ ----ffff ] [ ----llll ] [ ----pppp ] [ ----TTTT  _s_e_c_-
+     _t_o_r ] [ ----NNNN _s_e_c_t_o_r ] [ ----iiii _i_s_o_i_m_a_g_e ] [ ----xxxx _p_a_t_h ]
+
+     iiiissssoooovvvvffffyyyy _i_s_o_i_m_a_g_e
+
+DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
+     ddddeeeevvvvdddduuuummmmpppp is a crude utility to interactively display the con-
+     tents of device or filesystem images.  The initial screen is
+     a display of the first 256 bytes of the first 2048 byte sec-
+     tor.  The commands are the same as with iiiissssoooodddduuuummmmpppp.
+
+     iiiissssoooodddduuuummmmpppp is a crude utility to interactively display the con-
+     tents  of  iso9660  images  in  order  to  verify  directory
+     integrity.  The initial screen is a  display  of  the  first
+     part  of  the  root  directory, and the prompt shows you the
+     extent number and offset in the extent.
+
+          You can use the 'a' and 'b' commands to move  backwards
+          and  forwards  within the image. The 'g' command allows
+          you to goto an arbitrary extent, and  the  'f'  command
+          specifies  a  search string to be used. The '+' command
+          searches forward for the next instance  of  the  search
+          string, and the 'q' command exits ddddeeeevvvvdddduuuummmmpppp or iiiissssoooodddduuuummmmpppp.
+
+     iiiissssooooiiiinnnnffffoooo is a utility to perform directory like  listings  of
+     iso9660 images.
+
+     iiiissssoooovvvvffffyyyy is a utility to verify the integrity  of  an  iso9660
+     image.  Most  of  the  tests in iiiissssoooovvvvffffyyyy were added after bugs
+     were discovered in early versions of mmmmkkkkiiiissssooooffffssss.... It  isn't  all
+     that  clear  how useful this is anymore, but it doesn't hurt
+     to have this around.
+
+
+OOOOPPPPTTTTIIIIOOOONNNNSSSS
+     Only the iiiissssooooiiiinnnnffffoooo program has any command line options. These
+     are:
+
+     ----hhhh    print a summary of all options.
+
+     ----ffff    generate output as if a 'find .  -print'  command  had
+          been  run  on the iso9660 image. You should not use the
+          ----llll image with the ----ffff option.
+
+
+
+Version 1.12b5      Last change: 23 Feb 1997                    1
+
+
+
+
+
+
+ISOINFO(8)           Maintenance Procedures            ISOINFO(8)
+
+
+
+     ----iiii iiiissssoooo____iiiimmmmaaaaggggeeee
+          Specifies the path of the iso9660 image that we wish to
+          examine.
+
+     ----llll    generate output as if a 'ls -lR' command had been  run
+          on  the iso9660 image.  You should not use the ----ffff image
+          with the ----llll option.
+
+     ----NNNN sssseeeeccccttttoooorrrr
+          Quick hack to help examine single  session  disc  files
+          that  are  to  be  written to a multi-session disc. The
+          sector number specified is the sector number  at  which
+          the  iso9660  image  should be written when send to the
+          cd-writer. Not used for the first session on the disc.
+
+     ----pppp    Print path table information.
+
+     ----RRRR    Extract information from  Rock  Ridge  extensions  (if
+          present) for permissions, file names and ownerships.
+
+      ---- JJJJ    Extract  information  from  Joliet  extensions   (if
+          present) for file names.
+
+     ----TTTT sssseeeeccccttttoooorrrr
+          Quick hack to help examine  multi-session  images  that
+          have  already  been burned to a multi-session disc. The
+          sector number specified is the sector  number  for  the
+          start of the session we wish to display.
+
+     ----xxxx ppppaaaatttthhhhnnnnaaaammmmeeee
+          Extract specified file to stdout.
+
+AAAAUUUUTTTTHHHHOOOORRRR
+     Eric       Youngdale        <ericy@gnu.ai.mit.edu>        or
+     <eric@andante.jic.com>  is  to blame for these shoddy hacks.
+     Patches  to  improve  general  usability  would  be   gladly
+     accepted.
+
+BBBBUUUUGGGGSSSS
+     The user interface really sucks.
+
+FFFFUUUUTTTTUUUURRRREEEE IIIIMMMMPPPPRRRROOOOVVVVEEEEMMMMEEEENNNNTTTTSSSS
+     These utilities are really quick hacks, which are very  use-
+     ful  for  debugging  problems  in  mkisofs  or in an iso9660
+     filesystem. In the long run, it would be nice to have a dae-
+     mon that would NFS export a iso9660 image.
+
+     The isoinfo program is probably the program that is  of  the
+     most use to the general user.
+
+AAAAVVVVAAAAIIIILLLLAAAABBBBIIIILLLLIIIITTTTYYYY
+     These utilities come  with  the  mkisofs  package,  and  the
+
+
+
+Version 1.12b5      Last change: 23 Feb 1997                    2
+
+
+
+
+
+
+ISOINFO(8)           Maintenance Procedures            ISOINFO(8)
+
+
+
+     primary      ftp      site      is     tsx-11.mit.edu     in
+     /pub/linux/BETA/cdrom/mkisofs and many other  mirror  sites.
+     Despite the name, the software is not beta.
+
+SSSSEEEEEEEE AAAALLLLSSSSOOOO
+     mkisofs(8)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Version 1.12b5      Last change: 23 Feb 1997                    3
+
+
+

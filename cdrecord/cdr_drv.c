@@ -1,7 +1,7 @@
-/* @(#)cdr_drv.c	1.9 98/09/06 Copyright 1997 J. Schilling */
+/* @(#)cdr_drv.c	1.19 00/01/07 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)cdr_drv.c	1.9 98/09/06 Copyright 1997 J. Schilling";
+	"@(#)cdr_drv.c	1.19 00/01/07 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device abstraction layer
@@ -27,8 +27,10 @@ static	char sccsid[] =
 #include <stdxlib.h>
 #include <standard.h>
 
-#include <scsidefs.h>
-#include <scsireg.h>
+#include <scg/scsidefs.h>
+#include <scg/scsireg.h>
+#include <scg/scsitransp.h>
+
 #include "cdrecord.h"
 
 extern	cdr_t	cdr_oldcd;
@@ -47,18 +49,22 @@ extern	cdr_t	cdr_pioneer_dw_s114x;
 extern	cdr_t	cdr_plasmon_rf4100;
 extern	cdr_t	cdr_yamaha_cdr100;
 extern	cdr_t	cdr_sony_cdu924;
+extern	cdr_t	cdr_ricoh_ro1060;
 extern	cdr_t	cdr_ricoh_ro1420;
 extern	cdr_t	cdr_teac_cdr50;
 extern	cdr_t	cdr_cdr_simul;
 extern	cdr_t	cdr_dvd_simul;
 
-EXPORT	cdr_t 	*drive_identify		__PR((cdr_t *, struct scsi_inquiry *ip));
-EXPORT	int	drive_attach		__PR((cdr_t *));
+EXPORT	cdr_t 	*drive_identify		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *ip));
+EXPORT	int	drive_attach		__PR((SCSI *scgp, cdr_t *));
 EXPORT	int	attach_unknown		__PR((void));
-EXPORT	int	blank_dummy		__PR((long addr, int blanktype));
-EXPORT	int	drive_getdisktype	__PR((cdr_t *dp, dstat_t *dsp));
-EXPORT	int	cmd_dummy		__PR((void));
-EXPORT	cdr_t	*get_cdrcmds		__PR((void));
+EXPORT	int	blank_dummy		__PR((SCSI *scgp, long addr, int blanktype));
+EXPORT	int	drive_getdisktype	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
+EXPORT	int	cmd_ill			__PR((SCSI *scgp));
+EXPORT	int	cmd_dummy		__PR((SCSI *scgp));
+EXPORT	int	buf_dummy		__PR((SCSI *scgp, long *sp, long *fp));
+EXPORT	BOOL	set_cdrcmds		__PR((char *name, cdr_t **dpp));
+EXPORT	cdr_t	*get_cdrcmds		__PR((SCSI *scgp));
 
 /*
  * List of CD-R drivers
@@ -79,6 +85,7 @@ cdr_t	*drivers[] = {
 	&cdr_pioneer_dw_s114x,
 	&cdr_plasmon_rf4100,
 	&cdr_yamaha_cdr100,
+	&cdr_ricoh_ro1060,
 	&cdr_ricoh_ro1420,
 	&cdr_sony_cdu924,
 	&cdr_teac_cdr50,
@@ -88,7 +95,8 @@ cdr_t	*drivers[] = {
 };
 
 EXPORT cdr_t *
-drive_identify(dp, ip)
+drive_identify(scgp, dp, ip)
+	SCSI			*scgp;
 	cdr_t			*dp;
 	struct scsi_inquiry	*ip;
 {
@@ -96,7 +104,8 @@ drive_identify(dp, ip)
 }
 
 EXPORT int
-drive_attach(dp)
+drive_attach(scgp, dp)
+	SCSI			*scgp;
 	cdr_t			*dp;
 {
 	return (0);
@@ -110,7 +119,8 @@ attach_unknown()
 }
 
 EXPORT int
-blank_dummy(addr, blanktype)
+blank_dummy(scgp, addr, blanktype)
+	SCSI	*scgp;
 	long	addr;
 	int	blanktype;
 {
@@ -119,7 +129,8 @@ blank_dummy(addr, blanktype)
 }
 
 EXPORT int
-drive_getdisktype(dp, dsp)
+drive_getdisktype(scgp, dp, dsp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	dstat_t	*dsp;
 {
@@ -127,12 +138,40 @@ drive_getdisktype(dp, dsp)
 }
 
 EXPORT int
-cmd_dummy()
+cmd_ill(scgp)
+	SCSI	*scgp;
+{
+	errmsgno(EX_BAD, "Unspecified command not implemented for this drive.\n");
+	return (-1);
+}
+
+EXPORT int
+cmd_dummy(scgp)
+	SCSI	*scgp;
 {
 	return (0);
 }
 
-EXPORT void
+EXPORT int
+no_sendcue(scgp, tracks, trackp)
+	SCSI	*scgp;
+	int	tracks;
+	track_t	*trackp;
+{
+	errmsgno(EX_BAD, "SAO writing not available or not implemented for this drive.\n");
+	return (-1);
+}
+
+EXPORT int
+buf_dummy(scgp, sp, fp)
+	SCSI	*scgp;
+	long	*sp;
+	long	*fp;
+{
+	return (-1);
+}
+
+EXPORT BOOL
 set_cdrcmds(name, dpp)
 	char	*name;
 	cdr_t	**dpp;
@@ -142,10 +181,14 @@ set_cdrcmds(name, dpp)
 
 	for (d = drivers; *d != (cdr_t *)NULL; d++) {
 		if (streql((*d)->cdr_drname, name)) {
-			*dpp = *d;
-			return;
+			if (dpp != NULL)
+				*dpp = *d;
+			return (TRUE);
 		}
 	}
+	if (dpp == NULL)
+		return (FALSE);
+
 	if (!streql("help", name))
 		error("Illegal driver type '%s'.\n", name);
 
@@ -160,19 +203,20 @@ set_cdrcmds(name, dpp)
 	if (streql("help", name))
 		exit(0);
 	exit(EX_BAD);
+	return (FALSE);		/* Make lint happy */
 }
 
 EXPORT cdr_t *
-get_cdrcmds()
+get_cdrcmds(scgp)
+	SCSI	*scgp;
 {
 	cdr_t	*dp = (cdr_t *)0;
 	BOOL	is_dvd = FALSE;
-	extern	struct scsi_inquiry inq;
 
 	/*
 	 * First check for SCSI-3/mmc drives.
 	 */
-	if (is_mmc(&is_dvd)) {
+	if (is_mmc(scgp, &is_dvd)) {
 #ifdef	DRV_DVD
 		if (is_dvd)
 			dp = &cdr_dvd;
@@ -180,7 +224,7 @@ get_cdrcmds()
 #endif
 			dp = &cdr_mmc;
 
-	} else switch (dev) {
+	} else switch (scgp->dev) {
 
 	case DEV_CDROM:		dp = &cdr_oldcd;		break;
 	case DEV_MMC_CDROM:	dp = &cdr_cd;			break;
@@ -192,10 +236,13 @@ get_cdrcmds()
 	case DEV_CDD_522:
 	case DEV_CDD_2000:
 	case DEV_CDD_2600:	dp = &cdr_philips_cdd522;	break;
+	case DEV_PCD_600:	dp = &cdr_kodak_pcd600;		break;
 	case DEV_YAMAHA_CDR_100:dp = &cdr_yamaha_cdr100;	break;
+	case DEV_MATSUSHITA_7502:
 	case DEV_YAMAHA_CDR_400:dp = &cdr_mmc;			break;
 	case DEV_PLASMON_RF_4100:dp = &cdr_plasmon_rf4100;	break;
 	case DEV_SONY_CDU_924:	dp = &cdr_sony_cdu924;		break;
+	case DEV_RICOH_RO_1060C:dp = &cdr_ricoh_ro1060;		break;
 	case DEV_RICOH_RO_1420C:dp = &cdr_ricoh_ro1420;		break;
 	case DEV_TEAC_CD_R50S:	dp = &cdr_teac_cdr50;		break;
 
@@ -208,7 +255,7 @@ get_cdrcmds()
 	}
 
 	if (dp != (cdr_t *)0)
-		dp = dp->cdr_identify(dp, &inq);
+		dp = dp->cdr_identify(scgp, dp, scgp->inq);
 
 	return (dp);
 }

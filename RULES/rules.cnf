@@ -1,9 +1,9 @@
-#ident @(#)rules.cnf	1.1 98/09/27 
+#ident @(#)rules.cnf	1.5 98/12/06 
 ###########################################################################
 # Written 1998 by J. Schilling
 ###########################################################################
 #
-# Make Rule dynamic configuration rules
+# Make Rules for global dynamic configuration
 #
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
@@ -23,22 +23,31 @@
 
 config: $(OINCSDIR)/rules.cnf
 
-$(OINCSDIR)/Inull: $(OINCSDIR)
+$(OINCSDIR)/Inull:
+	$(MKDIR) -p $(OINCSDIR)
 	@echo > $@
 
 $(OINCSDIR):
 	$(MKDIR) -p $@
 
-$(OINCSDIR)/rules.cnf: $(OINCSDIR)/Inull $(OINCSDIR)/xconfig.h
-	$(RUL_CONF) > $@
+#
+# Hack until the <mach>-<os>-*cc.rul files are updated
+#
+_CCCOM=	$(OARCH:%-gcc=gcc)
+CCCOM=	$(_CCCOM:%-cc=cc)
 
-$(OINCSDIR)/xconfig.h:
-	$(INC_CONF) > $@
+CONFFLAGS +=	-cc=$(CCCOM)
+
+$(OINCSDIR)/rules.cnf $(OINCSDIR)/xconfig.h: $(OINCSDIR)/Inull \
+						$(SRCROOT)/conf/configure \
+						$(SRCROOT)/conf/rules.cnf.in \
+						$(SRCROOT)/conf/xconfig.h.in
+	$(RUL_CONF)
 
 ###########################################################################
-RUL_CONF=	@echo "	==> CONFIGURING RULES \"$@\""; $(RM_F) $@; sh $(SRCROOT)/conf/rconfig.sh
-INC_CONF=	@echo "	==> CONFIGURING INCLUDES \"$@\""; $(RM_F) $@; sh $(SRCROOT)/conf/iconfig.sh
+RUL_CONF=	@echo "	==> CONFIGURING RULES \"$@\""; $(RM_F) $@; cd $(OINCSDIR); CFLAGS="$(CFLAGS)" sh ../../conf/configure $(CONFFLAGS)
 ###########################################################################
 include $(OINCSDIR)/Inull
 include $(OINCSDIR)/rules.cnf
 ###########################################################################
+include	$(SRCROOT)/$(RULESDIR)/$(LCONFIG)

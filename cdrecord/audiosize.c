@@ -1,7 +1,7 @@
-/* @(#)audiosize.c	1.9 98/05/06 Copyright 1998 J. Schilling */
+/* @(#)audiosize.c	1.13 99/10/17 Copyright 1998 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)audiosize.c	1.9 98/05/06 Copyright 1998 J. Schilling";
+	"@(#)audiosize.c	1.13 99/10/17 Copyright 1998 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1998 J. Schilling
@@ -27,12 +27,14 @@ static	char sccsid[] =
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <statdefs.h>
 #include <unixstd.h>
 #include <standard.h>
 #include <utypes.h>
 #include <strdefs.h>
+#include <intcvt.h>
 
-#include <scgio.h>
+#include <scg/scgcmd.h>
 #include "auheader.h"
 
 typedef struct {
@@ -139,7 +141,7 @@ ausize(f)
 	if (fstat(f, &sb) < 0)
 		return (-1L);
 	mode = (long)(sb.st_mode & S_IFMT);
-	if (mode != S_IFREG && mode != S_IFBLK && mode != S_IFCHR)
+	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
 
 	if (read(f, &hdr, sizeof(hdr)) != sizeof(hdr))
@@ -150,20 +152,20 @@ ausize(f)
 
 	ret = AU_BAD_CODING;
 
-	size = a_to_u_long(hdr.encoding);
+	size = a_to_u_4_byte(hdr.encoding);
 	if (size != SUN_AU_LINEAR16)
 		goto err;
 
-	size = a_to_u_long(hdr.channels);
+	size = a_to_u_4_byte(hdr.channels);
 	if (size != 2)
 		goto err;
 
-	size = a_to_u_long(hdr.sample_rate);
+	size = a_to_u_4_byte(hdr.sample_rate);
 	if (size != 44100)
 		goto err;
 
-	size = a_to_u_long(hdr.hdr_size);
-	if (size < sizeof(hdr) || size > 512)
+	size = a_to_u_4_byte(hdr.hdr_size);
+	if (size < (long)sizeof(hdr) || size > 512)
 		goto err;
 	lseek(f, (off_t)size, SEEK_SET);
 
@@ -214,7 +216,7 @@ wavsize(f)
 	if (fstat(f, &sb) < 0)
 		return (-1L);
 	mode = (long)(sb.st_mode & S_IFMT);
-	if (mode != S_IFREG && mode != S_IFBLK && mode != S_IFCHR)
+	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
 
 	cursor = 0;
@@ -233,7 +235,7 @@ wavsize(f)
 			size = sizeof (riff);
 
 		} else if (strncmp((char *)chunk.ckid, WAV_FMT_MAGIC, 4) == 0) {
-			if (size < sizeof (fmt)) goto err;
+			if (size < (long)sizeof (fmt)) goto err;
 			if (sizeof (fmt) != read(f, &fmt, sizeof (fmt))) goto err;
 			if (le_a_to_u_short(fmt.channels) != 2 ||
 			    le_a_to_u_long(fmt.sample_rate) != 44100 ||
@@ -248,7 +250,7 @@ wavsize(f)
 				ret = AU_BAD_CODING;
 				goto err;
 			}
-			if ((cursor + size + sizeof (chunk)) > sb.st_size)
+			if ((long)(cursor + size + sizeof (chunk)) > sb.st_size)
 				size = sb.st_size - (cursor  + sizeof (chunk));
 			return (size);
 		}

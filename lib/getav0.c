@@ -1,7 +1,7 @@
-/* @(#)getav0.c	1.8 98/05/31 Copyright 1985 J. Schilling */
+/* @(#)getav0.c	1.9 99/09/11 Copyright 1985 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)getav0.c	1.8 98/05/31 Copyright 1985 J. Schilling";
+	"@(#)getav0.c	1.9 99/09/11 Copyright 1985 J. Schilling";
 #endif
 /*
  *	Get arg vector by scanning the stack
@@ -42,7 +42,7 @@ static	char sccsid[] =
 
 #ifdef	HAVE_SCANSTACK
 
-#include "frame.h"
+#include <stkframe.h>
 
 #define	is_even(p)	((((long)(p)) & 1) == 0)
 #define	even(p)		(((long)(p)) & ~1L)

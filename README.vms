@@ -1,0 +1,100 @@
+This README was written by Dr. Eberhard Heuser-Hofmann
+	vaxinf@chclu.chemie.uni-konstanz.de
+
+If you are looking for a *.zip file instead of the tar arvhive,
+check this address:
+
+ftp://v36.chemie.uni-konstanz.de/
+
+The first version that compiles on VMS is at:
+
+ftp://v36.chemie.uni-konstanz.de/cdrecord_1_8a9/
+ 
+/*--------------------------------------------------------------------------*/
+Hi,
+
+this is the first Version of J.Schilling's cdrecord-program for OpenVMS.
+
+I'm using a HP6020-CD-recorder to test the program. Please send comments
+to Eberhard.Heuser-Hofmann@uni-konstanz.de.
+
+There is a command-procedure called build_all.com in the [.cdrecord] subdir,
+that compiles and links the code. The cdrecord-program is been produced in
+[.cdrecord.vms] subdirectory.
+
+Define this program as a symbol via
+
+$ cdrecord:==$disk:[dir]cdrecord.exe
+
+$ cdrecord -help gives an idea about the options, that are possible:
+
+$ cdrecord -help
+$41$dkb100:[nb.cdrecord_1_8a9.cdrecord.vms]cdrecord.exe;1: Usage: $41$dkb100:[nb
+.cdrecord_1_8a9.cdrecord.vms]cdrecord.exe;1 [options] track1...trackn
+Options:
+        -version        print version information and exit
+        -v              increment general verbose level by one
+        -V              increment SCSI command transport verbose level by one
+        -debug          print additional debug messages
+        dev=target      SCSI target to use as CD/DVD-Recorder
+        timeout=#       set the default SCSI command timeout to #.
+        driver=name     user supplied driver name, use with extreme care
+        -checkdrive     check if a driver for the drive is present
+        -prcap          print drive capabilities for MMC compliant drives
+        -inq            do an inquiry for the drive end exit
+        -scanbus        scan the SCSI bus end exit
+        -reset          reset the SCSI bus with the cdrecorder (if possible)
+        -ignsize        ignore the known size of a medium (may cause problems)
+        speed=#         set speed of drive
+        blank=type      blank a CD-RW disc (see blank=help)
+        -load           load the disk and exit (works only with tray loader)
+        -eject          eject the disk after doing the work
+        -dummy          do everything with laser turned off
+        -msinfo         retrieve multi-session info for mkisofs >= 1.10
+        -toc            retrieve and print TOC/PMA data
+        -multi          generate a TOC that allows multi session
+                        In this case default track type is CD-ROM XA2
+        -fix            fixate a corrupt or unfixated disk (generate a TOC)
+        -nofix          do not fixate disk after writing tracks
+        tsize=#         Length of valid data in next track
+        padsize=#       Amount of padding for next track
+        pregap=#        Amount of pre-gap sectors before next track
+        defpregap=#     Amount of pre-gap sectors for all but track #1
+        -audio          Subsequent tracks are CD-DA audio tracks
+        -data           Subsequent tracks are CD-ROM data mode 1 (default)
+        -mode2          Subsequent tracks are CD-ROM data mode 2
+        -xa1            Subsequent tracks are CD-ROM XA mode 1
+        -xa2            Subsequent tracks are CD-ROM XA mode 2
+        -cdi            Subsequent tracks are CDI tracks
+        -isosize        Use iso9660 file system size for next data track
+        -preemp         Audio tracks are mastered with 50/15 µs preemphasis
+        -nopreemp       Audio tracks are mastered with no preemphasis (default)
+        -pad            Pad data tracks with 15 zeroed sectors
+                        Pad audio tracks to a multiple of 2352 bytes
+        -nopad          Do not pad data tracks (default)
+        -swab           Audio data source is byte-swapped (little-endian/Intel)
+The type of the first track is used for the toc type.
+Currently only form 1 tracks are supported.
+
+One important point is how the CDR-device is being selected:
+
+dev=i,j,k
+
+where:
+i: 0   1   2   3   4   5   6   7 
+   dka dkb dkc dkd gka gkb gkc gkd
+
+j: scsi-id
+k: sub-lun (usually 0)
+
+As an example:
+
+dev=1,5,2 selects dkb502:
+
+An typical example how to put virtual disk data onto a cd-rom is given here:
+
+$ cdrecord -speed 2 dev=0,4,0 dka200:[000000]vda0.dsk
+
+Be aware that cdrecord has copyright on it.
+
+Eberhard

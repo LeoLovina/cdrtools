@@ -1,4 +1,4 @@
-/* @(#)comerr.c	1.19 98/09/05 Copyright 1985 J. Schilling */
+/* @(#)comerr.c	1.21 99/12/24 Copyright 1985 J. Schilling */
 /*
  *	Routines for printing command errors
  *
@@ -31,7 +31,40 @@ extern	char	*sys_errlist[];
 extern	int	sys_nerr;
 #endif
 
-LOCAL	int	_comerr __PR((int, int, const char *, va_list));
+EXPORT	int	on_comerr	__PR((void (*fun)(int, void *), void *arg));
+EXPORT	void	comerr		__PR((const char *, ...));
+EXPORT	void	comerrno	__PR((int, const char *, ...));
+EXPORT	int	errmsg		__PR((const char *, ...));
+EXPORT	int	errmsgno	__PR((int, const char *, ...));
+LOCAL	int	_comerr		__PR((int, int, const char *, va_list));
+EXPORT	void	comexit		__PR((int));
+EXPORT	char	*errmsgstr	__PR((int));
+
+typedef	struct ex {
+	struct ex *next;
+	void	(*func) __PR((int, void *));
+	void	*arg;
+} ex_t;
+
+LOCAL	ex_t	*exfuncs;
+
+EXPORT	int
+on_comerr(func, arg)
+	void	(*func) __PR((int, void *));
+	void	*arg;
+{
+	ex_t	*fp;
+
+	fp = malloc(sizeof(*fp));
+	if (fp == NULL)
+		return (-1);
+
+	fp->func = func;
+	fp->arg  = arg;
+	fp->next = exfuncs;
+	exfuncs = fp;
+	return (0);
+}
 
 /* VARARGS1 */
 #ifdef	PROTOTYPES
@@ -142,13 +175,25 @@ LOCAL int _comerr(exflg, err, msg, args)
 		error("%s: %s. %r", prognam, errnam, msg, args);
 	}
 	if (exflg) {
-		exit(err);
+		comexit(err);
 		/* NOTREACHED */
 	}
 	return(err);
 }
 
-char *
+EXPORT void
+comexit(err)
+	int	err;
+{
+	while (exfuncs) {
+		(*exfuncs->func)(err, exfuncs->arg);
+		exfuncs = exfuncs->next;
+	}
+	exit(err);
+	/* NOTREACHED */
+}
+
+EXPORT char *
 errmsgstr(err)
 	int	err;
 {

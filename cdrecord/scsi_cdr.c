@@ -1,7 +1,11 @@
-/* @(#)scsi_cdr.c	1.56 98/10/18 Copyright 1995 J. Schilling */
+/*
+XXX
+SIZEOF testen !!!
+*/
+/* @(#)scsi_cdr.c	1.84 00/01/28 Copyright 1995 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.56 98/10/18 Copyright 1995 J. Schilling";
+	"@(#)scsi_cdr.c	1.84 00/01/28 Copyright 1995 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
@@ -44,289 +48,114 @@ static	char sccsid[] =
 
 #include <utypes.h>
 #include <btorder.h>
-#include <scgio.h>
-#include <scsidefs.h>
-#include <scsireg.h>
+#include <intcvt.h>
+#include <scg/scgcmd.h>
+#include <scg/scsidefs.h>
+#include <scg/scsireg.h>
+#include <scg/scsitransp.h>
 
 #include "cdrecord.h"
-#include "scsitransp.h"
 
 #define	strbeg(s1,s2)	(strstr((s2), (s1)) == (s2))
 
-struct	scg_cmd		scmd;
-struct	scsi_inquiry	inq;
-struct scsi_capacity cap = { 0, 2048 };
-/*struct scsi_capacity cap = { 0, 2352 };*/
-
-extern	int	scsibus;
-extern	int	target;
-extern	int	lun;
-
-extern	int	silent;
-extern	int	debug;
-extern	int	verbose;
-extern	int	lverbose;
-
-EXPORT	int	open_scsi	__PR((char *scsidev, int timeout,
-								int be_verbose));
-LOCAL	int	scsi_scandev	__PR((char *devp, int *xp1, int *xp2, int *xp3));
-EXPORT	void	scsi_settimeout	__PR((int timeout));
-
-EXPORT	BOOL	unit_ready	__PR((void));
-EXPORT	BOOL	wait_unit_ready	__PR((int secs));
-EXPORT	int	test_unit_ready	__PR((void));
-EXPORT	int	rezero_unit	__PR((void));
-EXPORT	int	request_sense	__PR((void));
-EXPORT	int	inquiry		__PR((caddr_t, int));
-EXPORT	int	read_capacity	__PR((void));
-EXPORT	int	scsi_load_unload __PR((int));
-EXPORT	int	load_unload_philips __PR((int));
-EXPORT	int	scsi_prevent_removal __PR((int));
-EXPORT	int	scsi_start_stop_unit __PR((int, int));
-EXPORT	int	scsi_set_speed	__PR((int readspeed, int writespeed));
-EXPORT	int	qic02		__PR((int));
-EXPORT	int	write_xg0	__PR((caddr_t, long, long, int));
-EXPORT	int	write_xg1	__PR((caddr_t, long, long, int));
-EXPORT	int	write_xg5	__PR((caddr_t, long, long, int));
-EXPORT	int	write_track	__PR((long, int));
-EXPORT	int	scsi_flush_cache __PR((void));
-EXPORT	int	read_toc	__PR((caddr_t, int, int, int, int));
-EXPORT	int	read_toc_philips __PR((caddr_t, int, int, int, int));
-EXPORT	int	read_header	__PR((caddr_t, long, int, int));
-EXPORT	int	read_disk_info	__PR((caddr_t, int));
-EXPORT	int	read_track_info	__PR((caddr_t, int, int));
-EXPORT	int	read_track_info_philips	__PR((caddr_t, int, int));
-EXPORT	int	close_track_philips __PR((int track, track_t *trackp));
-EXPORT	int	fixation	__PR((int, int, int, int tracks, track_t *trackp));
-EXPORT	int	scsi_close_tr_session __PR((int type, int track));
-EXPORT	int	scsi_blank	__PR((long addr, int blanktype));
-EXPORT	int	recover		__PR((int));
-EXPORT	int	first_writable_addr __PR((long *, int, int, int, int));
-EXPORT	int	reserve_track	__PR((unsigned long));
-EXPORT	BOOL	allow_atapi	__PR((BOOL new));
-EXPORT	int	mode_select	__PR((u_char *, int, int, int));
-EXPORT	int	mode_sense	__PR((u_char *dp, int cnt, int page, int pcf));
-EXPORT	int	mode_select_sg0	__PR((u_char *, int, int, int));
-EXPORT	int	mode_sense_sg0	__PR((u_char *dp, int cnt, int page, int pcf));
-EXPORT	int	mode_select_g0	__PR((u_char *, int, int, int));
-EXPORT	int	mode_select_g1	__PR((u_char *, int, int, int));
-EXPORT	int	mode_sense_g0	__PR((u_char *dp, int cnt, int page, int pcf));
-EXPORT	int	mode_sense_g1	__PR((u_char *dp, int cnt, int page, int pcf));
-EXPORT	int	speed_select_yamaha	__PR((int speed, int dummy));
-EXPORT	int	speed_select_philips	__PR((int speed, int dummy));
-EXPORT	int	write_track_info __PR((int));
-EXPORT	int	read_tochdr	__PR((cdr_t *, int *, int *));
-EXPORT	int	read_trackinfo	__PR((int, long *, struct msf *, int *, int *, int *));
-EXPORT	int	read_B0		__PR((BOOL isbcd, long *b0p, long *lop));
-EXPORT	int	read_session_offset __PR((long *));
-EXPORT	int	read_session_offset_philips __PR((long *));
-EXPORT	int	sense_secsize	__PR((int current));
-EXPORT	int	select_secsize	__PR((int));
-EXPORT	BOOL	is_cddrive	__PR((void));
-EXPORT	BOOL	is_unknown_dev	__PR((void));
-EXPORT	int	read_scsi	__PR((caddr_t, long, int));
-EXPORT	int	read_g0		__PR((caddr_t, long, int));
-EXPORT	int	read_g1		__PR((caddr_t, long, int));
-EXPORT	BOOL	getdev		__PR((BOOL));
-EXPORT	void	printdev	__PR((void));
-EXPORT	BOOL	do_inquiry	__PR((BOOL));
-EXPORT	BOOL	recovery_needed	__PR((void));
-EXPORT	int	scsi_load	__PR((void));
-EXPORT	int	scsi_unload	__PR((void));
-EXPORT	int	scsi_cdr_write	__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
-EXPORT	struct cd_mode_page_2A * mmc_cap __PR((u_char *modep));
+EXPORT	BOOL	unit_ready	__PR((SCSI *scgp));
+EXPORT	BOOL	wait_unit_ready	__PR((SCSI *scgp, int secs));
+EXPORT	int	test_unit_ready	__PR((SCSI *scgp));
+EXPORT	int	rezero_unit	__PR((SCSI *scgp));
+EXPORT	int	request_sense	__PR((SCSI *scgp));
+EXPORT	int	inquiry		__PR((SCSI *scgp, caddr_t, int));
+EXPORT	int	read_capacity	__PR((SCSI *scgp));
+EXPORT	int	scsi_load_unload __PR((SCSI *scgp, int));
+EXPORT	int	scsi_prevent_removal __PR((SCSI *scgp, int));
+EXPORT	int	scsi_start_stop_unit __PR((SCSI *scgp, int, int));
+EXPORT	int	scsi_set_speed	__PR((SCSI *scgp, int readspeed, int writespeed));
+EXPORT	int	scsi_get_speed	__PR((SCSI *scgp, int *readspeedp, int *writespeedp));
+EXPORT	int	qic02		__PR((SCSI *scgp, int));
+EXPORT	int	write_xg0	__PR((SCSI *scgp, caddr_t, long, long, int));
+EXPORT	int	write_xg1	__PR((SCSI *scgp, caddr_t, long, long, int));
+EXPORT	int	write_xg5	__PR((SCSI *scgp, caddr_t, long, long, int));
+EXPORT	int	scsi_flush_cache __PR((SCSI *scgp));
+EXPORT	int	read_buffer	__PR((SCSI *scgp, caddr_t bp, int cnt, int mode));
+EXPORT	int	read_subchannel	__PR((SCSI *scgp, caddr_t bp, int track,
+					int cnt,int msf, int subq, int fmt));
+EXPORT	int	read_toc	__PR((SCSI *scgp, caddr_t, int, int, int, int));
+EXPORT	int	read_toc_philips __PR((SCSI *scgp, caddr_t, int, int, int, int));
+EXPORT	int	read_header	__PR((SCSI *scgp, caddr_t, long, int, int));
+EXPORT	int	read_disk_info	__PR((SCSI *scgp, caddr_t, int));
+EXPORT	int	read_track_info	__PR((SCSI *scgp, caddr_t, int, int));
+EXPORT	int	read_track_info_philips	__PR((SCSI *scgp, caddr_t, int, int));
+EXPORT	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track));
+EXPORT	int	read_master_cue	__PR((SCSI *scgp, caddr_t bp, int sheet, int cnt));
+EXPORT	int	send_cue_sheet	__PR((SCSI *scgp, caddr_t bp, long size));
+EXPORT	int	read_buff_cap	__PR((SCSI *scgp, long *, long *));
+EXPORT	int	scsi_blank	__PR((SCSI *scgp, long addr, int blanktype));
+EXPORT	BOOL	allow_atapi	__PR((SCSI *scgp, BOOL new));
+EXPORT	int	mode_select	__PR((SCSI *scgp, Uchar *, int, int, int));
+EXPORT	int	mode_sense	__PR((SCSI *scgp, Uchar *dp, int cnt, int page, int pcf));
+EXPORT	int	mode_select_sg0	__PR((SCSI *scgp, Uchar *, int, int, int));
+EXPORT	int	mode_sense_sg0	__PR((SCSI *scgp, Uchar *dp, int cnt, int page, int pcf));
+EXPORT	int	mode_select_g0	__PR((SCSI *scgp, Uchar *, int, int, int));
+EXPORT	int	mode_select_g1	__PR((SCSI *scgp, Uchar *, int, int, int));
+EXPORT	int	mode_sense_g0	__PR((SCSI *scgp, Uchar *dp, int cnt, int page, int pcf));
+EXPORT	int	mode_sense_g1	__PR((SCSI *scgp, Uchar *dp, int cnt, int page, int pcf));
+EXPORT	int	read_tochdr	__PR((SCSI *scgp, cdr_t *, int *, int *));
+EXPORT	int	read_cdtext	__PR((SCSI *scgp));
+EXPORT	int	read_trackinfo	__PR((SCSI *scgp, int, long *, struct msf *, int *, int *, int *));
+EXPORT	int	read_B0		__PR((SCSI *scgp, BOOL isbcd, long *b0p, long *lop));
+EXPORT	int	read_session_offset __PR((SCSI *scgp, long *));
+EXPORT	int	read_session_offset_philips __PR((SCSI *scgp, long *));
+EXPORT	int	sense_secsize	__PR((SCSI *scgp, int current));
+EXPORT	int	select_secsize	__PR((SCSI *scgp, int));
+EXPORT	BOOL	is_cddrive	__PR((SCSI *scgp));
+EXPORT	BOOL	is_unknown_dev	__PR((SCSI *scgp));
+EXPORT	int	read_scsi	__PR((SCSI *scgp, caddr_t, long, int));
+EXPORT	int	read_g0		__PR((SCSI *scgp, caddr_t, long, int));
+EXPORT	int	read_g1		__PR((SCSI *scgp, caddr_t, long, int));
+EXPORT	BOOL	getdev		__PR((SCSI *scgp, BOOL));
+EXPORT	void	printdev	__PR((SCSI *scgp));
+EXPORT	BOOL	do_inquiry	__PR((SCSI *scgp, BOOL));
+EXPORT	BOOL	recovery_needed	__PR((SCSI *scgp));
+EXPORT	int	scsi_load	__PR((SCSI *scgp));
+EXPORT	int	scsi_unload	__PR((SCSI *scgp));
+EXPORT	int	scsi_cdr_write	__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+EXPORT	struct cd_mode_page_2A * mmc_cap __PR((SCSI *scgp, Uchar *modep));
 EXPORT	void	mmc_getval	__PR((struct cd_mode_page_2A *mp,
 					BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
 					BOOL *dvdp));
-EXPORT	BOOL	is_mmc		__PR((BOOL *dvdp));
-EXPORT	BOOL	mmc_check	__PR((BOOL *cdrrp, BOOL *cdwrp,
+EXPORT	BOOL	is_mmc		__PR((SCSI *scgp, BOOL *dvdp));
+EXPORT	BOOL	mmc_check	__PR((SCSI *scgp, BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
 					BOOL *dvdp));
-EXPORT	void	print_capabilities __PR((void));
-
-/*
- * Open a SCSI device.
- *
- * Possible syntax is:
- *
- * Preferred:
- *	dev=target,lun / dev=scsibus,target,lun
- *
- * Needed on some systems:
- *	dev=devicename:target,lun / dev=devicename:scsibus,target,lun
- *
- * On systems that don't support SCSI Bus scanning this syntax helps:
- *	dev=devicename:@ / dev=devicename:@,lun
- * or	dev=devicename (undocumented)
- *
- * NOTE: As the 'lun' is part of the SCSI command descriptor block, it
- * 	 must always be known. If the OS cannot map it, it must be
- *	 specified on command line.
- */
-EXPORT int
-open_scsi(scsidev, timeout, be_verbose)
-	char	*scsidev;
-	int	timeout;
-	int	be_verbose;
-{
-	char	devname[256];
-	char	*devp = NULL;
-	int	x1, x2, x3;
-	int	n = 0;
-	extern	int	deftimeout;
-
-	if (timeout >= 0)
-		deftimeout = timeout;
-
-	devname[0] = '\0';
-	if (scsidev != NULL) {
-		if ((devp = strchr(scsidev, ':')) == NULL) {
-			if (strchr(scsidev, ',') == NULL) {
-				/* Notation form: 'devname' (undocumented)   */
-				/* Fetch bus/tgt/lun values from OS	     */
-				n = -1;
-				lun = -2;	/* Lun must be known	     */
-				strncpy(devname, scsidev, sizeof(devname)-1);
-				devname[sizeof(devname)-1] = '\0';
-			} else {
-				/* Basic notation form: 'bus,tgt,lun'	     */
-				devp = scsidev;
-			}
-		} else {
-			/* Notation form: 'devname:bus,tgt,lun'/'devname:@'  */
-			x1 = devp - scsidev;
-			if (x1 >= sizeof(devname))
-				x1 = sizeof(devname)-1;
-			strncpy(devname, scsidev, x1);
-			devname[x1] = '\0';
-			devp++;
-			/* Check for a notation in the form 'devname:@'	     */
-			if (devp[0] == '@') {
-				if (devp[1] == '\0') {
-					lun = -2;
-				} else if (devp[1] == ',') {
-					if (*astoi(&devp[2], &lun) != '\0')
-						return (-1);
-				}
-				n = -1;
-				devp = NULL;
-			}
-		}
-	}
-	if (devp != NULL) {
-		n = scsi_scandev(devp, &x1, &x2, &x3);
-		if (n < 0) {
-			errno = EINVAL;
-			return (-1);
-		}
-	}
-	if (n == 3) {		/* Got bus,target,lun			*/
-		scsibus = x1;
-		target = x2;
-		lun = x3;
-	} else if (n == 2) {	/* Got target,lun			*/
-		scsibus = 0;
-		target = x1;
-		lun = x2;
-	} else if (n == -1) {	/* Got device:@, fetch bus/lun from OS	*/
-		scsibus = target = -2;
-	} else if (devp != NULL) {
-		printf("WARNING: device not valid, trying to use default target...\n");
-		scsibus = 0;
-		target = 6;
-		lun = 0;
-	}
-	if (be_verbose && scsidev != NULL) {
-		printf("scsidev: '%s'\n", scsidev);
-		if (devname[0] != '\0')
-			printf("devname: '%s'\n", devname);
-		printf("scsibus: %d target: %d lun: %d\n",
-						scsibus, target, lun);
-	}
-	return (scsi_open(devname, scsibus, target, lun));
-}
-
-/*
- * Convert target,lun or scsibus,target,lun syntax.
- * Check for bad syntax and invalid values.
- * This is definitely better than using scanf() as it checks for syntax errors.
- */
-LOCAL int
-scsi_scandev(devp, xp1, xp2, xp3)
-	char	*devp;
-	int	*xp1;
-	int	*xp2;
-	int	*xp3;
-{
-	int	n = 0;
-
-	*xp1 = *xp2 = *xp3 = 0;
-
-	if (*devp != '\0') {
-		devp = astoi(devp, xp1);
-		if (*devp == ',') {
-			devp++;
-			n++;
-		} else {
-			return (-1);
-		}
-	}
-	if (*devp != '\0') {
-		devp = astoi(devp, xp2);
-		if (*devp == ',' || *devp == '\0') {
-			if (*devp != '\0')
-				devp++;
-			n++;
-		} else {
-			return (-1);
-		}
-	}
-	if (*devp != '\0') {
-		devp = astoi(devp, xp3);
-		if (*devp == '\0') {
-			n++;
-		} else {
-			return (-1);
-		}
-	}
-	if (*xp1 < 0 || *xp2 < 0 || *xp3 < 0)
-		return (-1);
-	return (n);
-}
-
-EXPORT void
-scsi_settimeout(timeout)
-	int	timeout;
-{
-	extern	int	deftimeout;
-
-	deftimeout = timeout / 100;
-}
+EXPORT	void	print_capabilities __PR((SCSI *scgp));
 
 EXPORT BOOL
-unit_ready()
+unit_ready(scgp)
+	SCSI	*scgp;
 {
-	if (test_unit_ready() >= 0)		/* alles OK */
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	if (test_unit_ready(scgp) >= 0)		/* alles OK */
 		return (TRUE);
-	else if (scmd.error >= SCG_FATAL)	/* nicht selektierbar */
+	else if (scmd->error >= SCG_FATAL)	/* nicht selektierbar */
 		return (FALSE);
 
-	if (scmd.sense.code < 0x70) {		/* non extended Sense */
-		if (scmd.sense.code == 0x04)	/* NOT_READY */
+	if (scmd->sense.code < 0x70) {		/* non extended Sense */
+		if (scmd->sense.code == 0x04)	/* NOT_READY */
 			return (FALSE);
 		return (TRUE);
 	}
-	if (((struct scsi_ext_sense *)&scmd.sense)->key == SC_UNIT_ATTENTION) {
-		if (test_unit_ready() >= 0)	/* alles OK */
+	if (((struct scsi_ext_sense *)&scmd->sense)->key == SC_UNIT_ATTENTION) {
+		if (test_unit_ready(scgp) >= 0)	/* alles OK */
 			return (TRUE);
 	}
 						/* FALSE wenn NOT_READY */
-	return (((struct scsi_ext_sense *)&scmd.sense)->key != SC_NOT_READY);
+	return (((struct scsi_ext_sense *)&scmd->sense)->key != SC_NOT_READY);
 }
 
 EXPORT BOOL
-wait_unit_ready(secs)
+wait_unit_ready(scgp, secs)
+	SCSI	*scgp;
 	int	secs;
 {
 	int	i;
@@ -334,127 +163,155 @@ wait_unit_ready(secs)
 	int	k;
 	int	ret;
 
-	silent++;
-	ret = test_unit_ready();		/* eat up unit attention */
-	silent--;
+	scgp->silent++;
+	ret = test_unit_ready(scgp);		/* eat up unit attention */
+	if (ret < 0)
+		ret = test_unit_ready(scgp);	/* got power on condition? */
+	scgp->silent--;
 
 	if (ret >= 0)				/* success that's enough */
 		return (TRUE);
 
-	silent++;
-	for (i=0; i < secs && (ret = test_unit_ready()) < 0; i++) {
-		if (scmd.scb.busy != 0) {
+	scgp->silent++;
+	for (i=0; i < secs && (ret = test_unit_ready(scgp)) < 0; i++) {
+		if (scgp->scmd->scb.busy != 0) {
 			sleep(1);
 			continue;
 		}
-		c = scsi_sense_code();
-		k = scsi_sense_key();
+		c = scsi_sense_code(scgp);
+		k = scsi_sense_key(scgp);
 		if (k == SC_NOT_READY && (c == 0x3A || c == 0x30)) {
-			scsiprinterr("test_unit_ready");
-			silent--;
+			if (scgp->silent <= 1)
+				scsiprinterr(scgp);
+			scgp->silent--;
 			return (FALSE);
 		}
 		sleep(1);
 	}
-	silent--;
+	scgp->silent--;
 	if (ret < 0)
 		return (FALSE);
 	return (TRUE);
 }
 
 EXPORT int
-test_unit_ready()
+test_unit_ready(scgp)
+	SCSI	*scgp;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_DISRE_ENA | (silent ? SCG_SILENT:0);
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_TEST_UNIT_READY;
-	scmd.cdb.g0_cdb.lun = lun;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA | (scgp->silent ? SCG_SILENT:0);
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_TEST_UNIT_READY;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
 	
-	return (scsicmd("test unit ready"));
+	scgp->cmdname = "test unit ready";
+
+	return (scsicmd(scgp));
 }
 
 EXPORT int
-rezero_unit()
+rezero_unit(scgp)
+	SCSI	*scgp;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_REZERO_UNIT;
-	scmd.cdb.g0_cdb.lun = lun;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_REZERO_UNIT;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
 	
-	return (scsicmd("rezero unit"));
+	scgp->cmdname = "rezero unit";
+
+	return (scsicmd(scgp));
 }
 
 EXPORT int
-request_sense()
+request_sense(scgp)
+	SCSI	*scgp;
 {
-	char	sensebuf[CCS_SENSE_LEN];
+		 char	sensebuf[CCS_SENSE_LEN];
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = sensebuf;
-	scmd.size = sizeof(sensebuf);;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_REQUEST_SENSE;
-	scmd.cdb.g0_cdb.lun = lun;
-	scmd.cdb.g0_cdb.count = CCS_SENSE_LEN;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = sensebuf;
+	scmd->size = sizeof(sensebuf);;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_REQUEST_SENSE;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.count = CCS_SENSE_LEN;
 	
-	if (scsicmd("request_sense") < 0)
+	scgp->cmdname = "request_sense";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	scsiprsense((u_char *)sensebuf, CCS_SENSE_LEN - scmd.resid);
+	scsiprsense((Uchar *)sensebuf, CCS_SENSE_LEN - scsigetresid(scgp));
 	return (0);
 }
 
 EXPORT int
-inquiry(bp, cnt)
+inquiry(scgp, bp, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	int	cnt;
 {
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
 	fillbytes(bp, cnt, '\0');
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_INQUIRY;
-	scmd.cdb.g0_cdb.lun = lun;
-	scmd.cdb.g0_cdb.count = cnt;
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_INQUIRY;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.count = cnt;
 	
-	if (scsicmd("inquiry") < 0)
+	scgp->cmdname = "inquiry";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	if (verbose)
-		scsiprbytes("Inquiry Data   :", (u_char *)bp, cnt - scmd.resid);
+	if (scgp->verbose)
+		scsiprbytes("Inquiry Data   :", (Uchar *)bp, cnt - scsigetresid(scgp));
 	return (0);
 }
 
 EXPORT int
-read_capacity()
+read_capacity(scgp)
+	SCSI	*scgp;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)&cap;
-	scmd.size = sizeof(cap);
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x25;	/* Read Capacity */
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdblen(&scmd.cdb.g1_cdb, 0); /* Full Media */
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)scgp->cap;
+	scmd->size = sizeof(struct scsi_capacity);
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x25;	/* Read Capacity */
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdblen(&scmd->cdb.g1_cdb, 0); /* Full Media */
 	
-	if (scsicmd("read capacity") < 0) {
+	scgp->cmdname = "read capacity";
+
+	if (scsicmd(scgp) < 0) {
 		return (-1);
 	} else {
 		long	kb;
@@ -464,252 +321,352 @@ read_capacity()
 		long	cbsize;
 		long	cbaddr;
 
-		cbsize = a_to_u_long(&cap.c_bsize);
-		cbaddr = a_to_u_long(&cap.c_baddr);
-		cap.c_bsize = cbsize;
-		cap.c_baddr = cbaddr;
+		/*
+		 * c_bsize & c_baddr are signed Int32_t
+		 * so we use signed int conversion here.
+		 */
+		cbsize = a_to_4_byte(&scgp->cap->c_bsize);
+		cbaddr = a_to_4_byte(&scgp->cap->c_baddr);
+		scgp->cap->c_bsize = cbsize;
+		scgp->cap->c_baddr = cbaddr;
 
-		if (silent)
+		if (scgp->silent)
 			return (0);
 
-		dkb =  (cap.c_baddr+1.0) * (cap.c_bsize/1024.0);
+		dkb =  (scgp->cap->c_baddr+1.0) * (scgp->cap->c_bsize/1024.0);
 		kb = dkb;
 		mb = dkb / 1024.0;
 		prmb = dkb / 1000.0 * 1.024;
 		printf("Capacity: %ld Blocks = %ld kBytes = %ld MBytes = %ld prMB\n",
-			cap.c_baddr+1, kb, mb, prmb);
-		printf("Sectorsize: %ld Bytes\n", cap.c_bsize);
+			(long)scgp->cap->c_baddr+1, kb, mb, prmb);
+		printf("Sectorsize: %ld Bytes\n", (long)scgp->cap->c_bsize);
 	}
 	return (0);
 }
 
 EXPORT int
-scsi_load_unload(load)
+scsi_load_unload(scgp, load)
+	SCSI	*scgp;
 	int	load;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g5_cdb.cmd = 0xA6;
-	scmd.cdb.g5_cdb.lun = lun;
-	scmd.cdb.g5_cdb.addr[1] = load?3:2;
-	scmd.cdb.g5_cdb.count[2] = 0; /* slot # */
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g5_cdb.cmd = 0xA6;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.addr[1] = load?3:2;
+	scmd->cdb.g5_cdb.count[2] = 0; /* slot # */
 	
-	if (scsicmd("medium load/unload") < 0)
+	scgp->cmdname = "medium load/unload";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-load_unload_philips(load)
-	int	load;
-{
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xE7;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.count[1] = !load;
-	
-	if (scsicmd("medium load/unload") < 0)
-		return (-1);
-	return (0);
-}
-
-
-EXPORT int
-scsi_prevent_removal(prevent)
+scsi_prevent_removal(scgp, prevent)
+	SCSI	*scgp;
 	int	prevent;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = 0x1E;
-	scmd.cdb.g0_cdb.lun = lun;
-	scmd.cdb.g0_cdb.count = prevent & 1;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = 0x1E;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.count = prevent & 1;
 	
-	if (scsicmd("prevent/allow medium removal") < 0)
+	scgp->cmdname = "prevent/allow medium removal";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 
 EXPORT int
-scsi_start_stop_unit(flg, loej)
+scsi_start_stop_unit(scgp, flg, loej)
+	SCSI	*scgp;
 	int	flg;
 	int	loej;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = 0x1B;	/* Start Stop Unit */
-	scmd.cdb.g0_cdb.lun = lun;
-	scmd.cdb.g0_cdb.count = (flg ? 1:0) | (loej ? 2:0);
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = 0x1B;	/* Start Stop Unit */
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.count = (flg ? 1:0) | (loej ? 2:0);
 	
-	return (scsicmd("start/stop unit"));
+	scgp->cmdname = "start/stop unit";
+
+	return (scsicmd(scgp));
 }
 
 EXPORT int
-scsi_set_speed(readspeed, writespeed)
+scsi_set_speed(scgp, readspeed, writespeed)
+	SCSI	*scgp;
 	int	readspeed;
 	int	writespeed;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g5_cdb.cmd = 0xBB;
-	scmd.cdb.g5_cdb.lun = lun;
-	i_to_short(&scmd.cdb.g5_cdb.addr[0], readspeed);
-	i_to_short(&scmd.cdb.g5_cdb.addr[2], writespeed);
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (scsicmd("set cd speed") < 0)
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g5_cdb.cmd = 0xBB;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+	i_to_2_byte(&scmd->cdb.g5_cdb.addr[0], readspeed);
+	i_to_2_byte(&scmd->cdb.g5_cdb.addr[2], writespeed);
+
+	scgp->cmdname = "set cd speed";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-qic02(cmd)
+scsi_get_speed(scgp, readspeedp, writespeedp)
+	SCSI	*scgp;
+	int	*readspeedp;
+	int	*writespeedp;
+{
+	struct	cd_mode_page_2A *mp;
+	Uchar	m[256];
+	int	val;
+
+	scgp->silent++;
+	mp = mmc_cap(scgp, m);/* Get MMC capabilities in allocated mp */
+	scgp->silent--;
+	if (mp == NULL)
+		return (-1);	/* Pre SCSI-3/mmc drive	 	*/
+
+	val = a_to_u_2_byte(mp->cur_read_speed);
+	if (readspeedp)
+		*writespeedp = val;
+
+	val = a_to_u_2_byte(mp->cur_write_speed);
+	if (writespeedp)
+		*writespeedp = val;
+
+	return (0);
+}
+
+
+EXPORT int
+qic02(scgp, cmd)
+	SCSI	*scgp;
 	int	cmd;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = DEF_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = 0x0D;	/* qic02 Sysgen SC4000 */
-	scmd.cdb.g0_cdb.lun = lun;
-	scmd.cdb.g0_cdb.mid_addr = cmd;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = DEF_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = 0x0D;	/* qic02 Sysgen SC4000 */
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.mid_addr = cmd;
 	
-	return (scsicmd("qic 02"));
+	scgp->cmdname = "qic 02";
+	return (scsicmd(scgp));
 }
 
 EXPORT int
-write_xg0(bp, addr, size, cnt)
+write_xg0(scgp, bp, addr, size, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	addr;		/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
 	int	cnt;		/* sectorcount */
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = size;
-	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
-/*	scmd.flags = SCG_DISRE_ENA;*/
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_WRITE;
-	scmd.cdb.g0_cdb.lun = lun;
-	g0_cdbaddr(&scmd.cdb.g0_cdb, addr);
-	scmd.cdb.g0_cdb.count = cnt;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = size;
+	scmd->flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
+/*	scmd->flags = SCG_DISRE_ENA;*/
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_WRITE;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	g0_cdbaddr(&scmd->cdb.g0_cdb, addr);
+	scmd->cdb.g0_cdb.count = cnt;
 	
-	if (scsicmd("write_g0") < 0)
+	scgp->cmdname = "write_g0";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	return (size - scmd.resid);
+	return (size - scsigetresid(scgp));
 }
 
 EXPORT int
-write_xg1(bp, addr, size, cnt)
+write_xg1(scgp, bp, addr, size, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	addr;		/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
 	int	cnt;		/* sectorcount */
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = size;
-	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
-/*	scmd.flags = SCG_DISRE_ENA;*/
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = SC_EWRITE;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, addr);
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = size;
+	scmd->flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
+/*	scmd->flags = SCG_DISRE_ENA;*/
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = SC_EWRITE;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
-	if (scsicmd("write_g1") < 0)
+	scgp->cmdname = "write_g1";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	return (size - scmd.resid);
+	return (size - scsigetresid(scgp));
 }
 
 EXPORT int
-write_xg5(bp, addr, size, cnt)
+write_xg5(scgp, bp, addr, size, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	addr;		/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
 	int	cnt;		/* sectorcount */
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = size;
-	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
-/*	scmd.flags = SCG_DISRE_ENA;*/
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g5_cdb.cmd = 0xAA;
-	scmd.cdb.g5_cdb.lun = lun;
-	g5_cdbaddr(&scmd.cdb.g5_cdb, addr);
-	g5_cdblen(&scmd.cdb.g5_cdb, cnt);
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = size;
+	scmd->flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
+/*	scmd->flags = SCG_DISRE_ENA;*/
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g5_cdb.cmd = 0xAA;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+	g5_cdbaddr(&scmd->cdb.g5_cdb, addr);
+	g5_cdblen(&scmd->cdb.g5_cdb, cnt);
 	
-	if (scsicmd("write_g5") < 0)
+	scgp->cmdname = "write_g5";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	return (size - scmd.resid);
+	return (size - scsigetresid(scgp));
 }
 
 EXPORT int
-write_track(track, sectype)
-	long	track;		/* track number 0 == new track */
-	int	sectype;
+scsi_flush_cache(scgp)
+	SCSI	*scgp;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
-/*	scmd.flags = SCG_DISRE_ENA;*/
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xE6;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, track);
-	scmd.cdb.g1_cdb.res6 = sectype;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 2 * 60;		/* Max: sizeof(CDR-cache)/150KB/s */
+	scmd->cdb.g1_cdb.cmd = 0x35;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
 	
-	if (scsicmd("write_track") < 0)
+	scgp->cmdname = "flush cache";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-scsi_flush_cache()
+read_buffer(scgp, bp, cnt, mode)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	cnt;
+	int	mode;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 2 * 60;		/* Max: sizeof(CDR-cache)/150KB/s */
-	scmd.cdb.g1_cdb.cmd = 0x35;
-	scmd.cdb.g1_cdb.lun = lun;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->dma_read = 1;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x3C;	/* Read Buffer */
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.cmd_cdb[1] |= (mode & 7);
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
-	if (scsicmd("flush cache") < 0)
+	scgp->cmdname = "read buffer";
+
+	return (scsicmd(scgp));
+}
+
+EXPORT int
+read_subchannel(scgp, bp, track, cnt, msf, subq, fmt)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	track;
+	int	cnt;
+	int	msf;
+	int	subq;
+	int	fmt;
+
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x42;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	if (msf)
+		scmd->cdb.g1_cdb.res = 1;
+	if (subq)
+		scmd->cdb.g1_cdb.addr[0] = 0x40;
+	scmd->cdb.g1_cdb.addr[1] = fmt;
+	scmd->cdb.g1_cdb.res6 = track;
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	scgp->cmdname = "read subchannel";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-read_toc(bp, track, cnt, msf, fmt)
+read_toc(scgp, bp, track, cnt, msf, fmt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	int	track;
 	int	cnt;
@@ -717,28 +674,33 @@ read_toc(bp, track, cnt, msf, fmt)
 	int	fmt;
 
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x43;
-	scmd.cdb.g1_cdb.lun = lun;
-	if (msf)
-		scmd.cdb.g1_cdb.res = 1;
-	scmd.cdb.g1_cdb.addr[0] = fmt & 0x0F;
-	scmd.cdb.g1_cdb.res6 = track;
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (scsicmd("read toc") < 0)
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x43;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	if (msf)
+		scmd->cdb.g1_cdb.res = 1;
+	scmd->cdb.g1_cdb.addr[0] = fmt & 0x0F;
+	scmd->cdb.g1_cdb.res6 = track;
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	scgp->cmdname = "read toc";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-read_toc_philips(bp, track, cnt, msf, fmt)
+read_toc_philips(scgp, bp, track, cnt, msf, fmt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	int	track;
 	int	cnt;
@@ -746,279 +708,307 @@ read_toc_philips(bp, track, cnt, msf, fmt)
 	int	fmt;
 
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x43;
-	scmd.cdb.g1_cdb.lun = lun;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 4 * 60;		/* May last  174s on a TEAC CD-R55S */
+	scmd->cdb.g1_cdb.cmd = 0x43;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
 	if (msf)
-		scmd.cdb.g1_cdb.res = 1;
-	scmd.cdb.g1_cdb.res6 = track;
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+		scmd->cdb.g1_cdb.res = 1;
+	scmd->cdb.g1_cdb.res6 = track;
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
 	if (fmt & 1)
-		scmd.cdb.g1_cdb.vu_96 = 1;
+		scmd->cdb.g1_cdb.vu_96 = 1;
 	if (fmt & 2)
-		scmd.cdb.g1_cdb.vu_97 = 1;
+		scmd->cdb.g1_cdb.vu_97 = 1;
 
-	if (scsicmd("read toc") < 0)
+	scgp->cmdname = "read toc";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-read_header(bp, addr, cnt, msf)
+read_header(scgp, bp, addr, cnt, msf)
+	SCSI	*scgp;
 	caddr_t	bp;
 	long	addr;
 	int	cnt;
 	int	msf;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x44;
-	scmd.cdb.g1_cdb.lun = lun;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x44;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
 	if (msf)
-		scmd.cdb.g1_cdb.res = 1;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, addr);
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+		scmd->cdb.g1_cdb.res = 1;
+	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
-	if (scsicmd("read header") < 0)
+	scgp->cmdname = "read header";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-read_disk_info(bp, cnt)
+read_disk_info(scgp, bp, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	int	cnt;
 
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 4 * 60;		/* Needs up to 2 minutes */
-	scmd.cdb.g1_cdb.cmd = 0x51;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (scsicmd("read disk info") < 0)
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 4 * 60;		/* Needs up to 2 minutes */
+	scmd->cdb.g1_cdb.cmd = 0x51;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	scgp->cmdname = "read disk info";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-read_track_info(bp, track, cnt)
-	caddr_t	bp;
-	int	track;
-	int	cnt;
-
-{
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 4 * 60;		/* Needs up to 2 minutes */
-	scmd.cdb.g1_cdb.cmd = 0x52;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.reladr = 1;	/* Track */
-	g1_cdbaddr(&scmd.cdb.g1_cdb, track);
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
-
-	if (scsicmd("read track info") < 0)
-		return (-1);
-	return (0);
-}
-
-EXPORT int
-read_track_info_philips(bp, track, cnt)
+read_track_info(scgp, bp, track, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	int	track;
 	int	cnt;
 
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xE5;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, track);
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (scsicmd("read track info") < 0)
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 4 * 60;		/* Needs up to 2 minutes */
+	scmd->cdb.g1_cdb.cmd = 0x52;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.reladr = 1;	/* Track */
+	g1_cdbaddr(&scmd->cdb.g1_cdb, track);
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	scgp->cmdname = "read track info";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
-/*
- * Needed for JVC too.
- */
 EXPORT int
-close_track_philips(track, trackp)
+read_track_info_philips(scgp, bp, track, cnt)
+	SCSI	*scgp;
+	caddr_t	bp;
 	int	track;
-	track_t	*trackp;
-{
-	return (scsi_flush_cache());
-}
+	int	cnt;
 
-EXPORT int
-fixation(onp, dummy, type, tracks, trackp)
-	int	onp;	/* open next program area */
-	int	dummy;
-	int	type;	/* TOC type 0: CD-DA, 1: CD-ROM, 2: CD-ROM/XA1, 3: CD-ROM/XA2, 4: CDI */
-	int	tracks;
-	track_t	*trackp;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 8 * 60;		/* Needs up to 4 minutes */
-	scmd.cdb.g1_cdb.cmd = 0xE9;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.count[1] = (onp ? 8 : 0) | type;
-	
-	if (scsicmd("fixation") < 0)
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0xE5;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdbaddr(&scmd->cdb.g1_cdb, track);
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	scgp->cmdname = "read track info";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-scsi_close_tr_session(type, track)
+scsi_close_tr_session(scgp, type, track)
+	SCSI	*scgp;
 	int	type;
 	int	track;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 8 * 60;		/* Needs up to 4 minutes */
-	scmd.cdb.g1_cdb.cmd = 0x5B;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.addr[0] = type;
-	scmd.cdb.g1_cdb.addr[3] = track;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 8 * 60;		/* Needs up to 4 minutes */
+	scmd->cdb.g1_cdb.cmd = 0x5B;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.addr[0] = type;
+	scmd->cdb.g1_cdb.addr[3] = track;
 
 #ifdef	nono
-	scmd.cdb.g1_cdb.reladr = 1;	/* IMM hack to test Mitsumi behaviour*/
+	scmd->cdb.g1_cdb.reladr = 1;	/* IMM hack to test Mitsumi behaviour*/
 #endif
 	
-	if (scsicmd("close track/session") < 0)
+	scgp->cmdname = "close track/session";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
 	return (0);
 }
 
 EXPORT int
-scsi_blank(addr, blanktype)
+read_master_cue(scgp, bp, sheet, cnt)
+	SCSI	*scgp;
+	caddr_t	bp;		/* address of master cue sheet	*/
+	int	sheet;		/* Sheet number			*/
+	int	cnt;		/* Transfer count		*/
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x59;		/* Read master cue */
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g1_cdb.addr[2] = sheet;
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	scgp->cmdname = "read master cue";
+
+	if (scsicmd(scgp) < 0)
+		return (-1);
+	return (0);
+}
+
+EXPORT int
+send_cue_sheet(scgp, bp, size)
+	SCSI	*scgp;
+	caddr_t	bp;		/* address of cue sheet buffer */
+	long	size;		/* number of bytes to transfer */
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = size;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x5D;	/* Send CUE sheet */
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdblen(&scmd->cdb.g1_cdb, size); 
+
+	scgp->cmdname = "send_cue_sheet";
+
+	if (scsicmd(scgp) < 0)
+		return (-1);
+	return (size - scmd->resid);
+}
+
+EXPORT int
+read_buff_cap(scgp, sp, fp)
+	SCSI	*scgp;
+	long	*sp;	/* Size pointer */
+	long	*fp;	/* Free pointer */
+{
+	char	resp[12];
+	Ulong	freespace;
+	Ulong	bufsize;
+	int	per;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)resp;
+	scmd->size = sizeof(resp);
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x5C;		/* Read buffer cap */
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdblen(&scmd->cdb.g1_cdb, sizeof(resp));
+	
+	scgp->cmdname = "read buffer cap";
+
+	if (scsicmd(scgp) < 0)
+		return (-1);
+
+	bufsize   = a_to_u_4_byte(&resp[4]);
+	freespace = a_to_u_4_byte(&resp[8]);
+	if (sp)
+		*sp = bufsize;
+	if (fp)
+		*fp = freespace;
+	
+	if (scgp->verbose || (sp == 0 && fp == 0))
+		printf("BFree: %ld K BSize: %ld K\n", freespace >> 10, bufsize >> 10);
+
+	if (bufsize == 0)
+		return (0);
+	per = (100 * (bufsize - freespace)) / bufsize;
+	if (per < 0)
+		return (0);
+	if (per > 100)
+		return (100);
+	return (per);
+}
+
+EXPORT int
+scsi_blank(scgp, addr, blanktype)
+	SCSI	*scgp;
 	long	addr;
 	int	blanktype;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 160 * 60; /* full blank at 1x could take 80 minutes */
-	scmd.cdb.g5_cdb.cmd = 0xA1;	/* Blank */
-	scmd.cdb.g0_cdb.high_addr = blanktype;
-	g1_cdbaddr(&scmd.cdb.g5_cdb, addr);
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	return (scsicmd("blank unit"));
-}
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 160 * 60; /* full blank at 1x could take 80 minutes */
+	scmd->cdb.g5_cdb.cmd = 0xA1;	/* Blank */
+	scmd->cdb.g0_cdb.high_addr = blanktype;
+	g1_cdbaddr(&scmd->cdb.g5_cdb, addr);
 
-EXPORT int
-recover(track)
-	int	track;
-{
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xEC;
-	scmd.cdb.g1_cdb.lun = lun;
-	
-	if (scsicmd("recover") < 0)
-		return (-1);
-	return (0);
-}
+	scgp->cmdname = "blank unit";
 
-struct	fwa {
-	char	len;
-	char	addr[4];
-	char	res;
-};
-
-EXPORT int
-first_writable_addr(ap, track, isaudio, preemp, npa)
-	long	*ap;
-	int	track;
-	int	isaudio;
-	int	preemp;
-	int	npa;
-{
-	struct	fwa	fwa;
-
-	fillbytes((caddr_t)&fwa, sizeof(fwa), '\0');
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)&fwa;
-	scmd.size = sizeof(fwa);
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xE2;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g1_cdb.addr[0] = track;
-	scmd.cdb.g1_cdb.addr[1] = isaudio ? (preemp ? 5 : 4) : 1;
-
-	scmd.cdb.g1_cdb.count[0] = npa?1:0;
-	scmd.cdb.g1_cdb.count[1] = sizeof(fwa);
-	
-	if (scsicmd("first writeable address") < 0)
-		return (-1);
-
-	if (ap)
-		*ap = a_to_u_long(fwa.addr);
-	return (0);
-}
-
-EXPORT int
-reserve_track(len)
-	unsigned long len;
-{
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0xE4;
-	scmd.cdb.g1_cdb.lun = lun;
-	i_to_long(&scmd.cdb.g1_cdb.addr[3], len);
-	
-	if (scsicmd("reserve_track") < 0)
-		return (-1);
-	return (0);
+	return (scsicmd(scgp));
 }
 
 /*
@@ -1029,61 +1019,65 @@ reserve_track(len)
 LOCAL BOOL	is_atapi;
 
 EXPORT BOOL
-allow_atapi(new)
+allow_atapi(scgp, new)
+	SCSI	*scgp;
 	BOOL	new;
 {
 	BOOL	old = is_atapi;
-	u_char	mode[256];
+	Uchar	mode[256];
 
 	if (new == old)
 		return (old);
 
-	silent++;
+	scgp->silent++;
 	if (new &&
-	    mode_sense_g1(mode, 8, 0x3F, 0) < 0) {	/* All pages current */
+	    mode_sense_g1(scgp, mode, 8, 0x3F, 0) < 0) {	/* All pages current */
 		new = FALSE;
 	}
-	silent--;
+	scgp->silent--;
 
 	is_atapi = new;
 	return (old);
 }
 
 EXPORT int
-mode_select(dp, cnt, smp, pf)
-	u_char	*dp;
+mode_select(scgp, dp, cnt, smp, pf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	smp;
 	int	pf;
 {
 	if (is_atapi)
-		return (mode_select_sg0(dp, cnt, smp, pf));
-	return (mode_select_g0(dp, cnt, smp, pf));
+		return (mode_select_sg0(scgp, dp, cnt, smp, pf));
+	return (mode_select_g0(scgp, dp, cnt, smp, pf));
 }
 
 EXPORT int
-mode_sense(dp, cnt, page, pcf)
-	u_char	*dp;
+mode_sense(scgp, dp, cnt, page, pcf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	page;
 	int	pcf;
 {
 	if (is_atapi)
-		return (mode_sense_sg0(dp, cnt, page, pcf));
-	return (mode_sense_g0(dp, cnt, page, pcf));
+		return (mode_sense_sg0(scgp, dp, cnt, page, pcf));
+	return (mode_sense_g0(scgp, dp, cnt, page, pcf));
 }
 
 /*
  * Simulate mode select g0 with mode select g1.
  */
 EXPORT int
-mode_select_sg0(dp, cnt, smp, pf)
-	u_char	*dp;
+mode_select_sg0(scgp, dp, cnt, smp, pf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	smp;
 	int	pf;
 {
-	u_char	xmode[256+4];
+	Uchar	xmode[256+4];
 	int	amt = cnt;
 
 	if (amt < 1 || amt > 255) {
@@ -1103,24 +1097,25 @@ mode_select_sg0(dp, cnt, smp, pf)
 	xmode[3] = dp[2];
 	xmode[4] = 0;
 	xmode[5] = 0;
-	i_to_short(&xmode[6], dp[3]);
+	i_to_2_byte(&xmode[6], (unsigned int)dp[3]);
 
-	if (verbose) scsiprbytes("Mode Parameters (un-converted)", dp, cnt);
+	if (scgp->verbose) scsiprbytes("Mode Parameters (un-converted)", dp, cnt);
 
-	return (mode_select_g1(xmode, amt, smp, pf));
+	return (mode_select_g1(scgp, xmode, amt, smp, pf));
 }
 
 /*
  * Simulate mode sense g0 with mode sense g1.
  */
 EXPORT int
-mode_sense_sg0(dp, cnt, page, pcf)
-	u_char	*dp;
+mode_sense_sg0(scgp, dp, cnt, page, pcf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	page;
 	int	pcf;
 {
-	u_char	xmode[256+4];
+	Uchar	xmode[256+4];
 	int	amt = cnt;
 	int	len;
 
@@ -1129,19 +1124,19 @@ mode_sense_sg0(dp, cnt, page, pcf)
 		return (-1);
 	}
 
-	fillbytes((caddr_t)xmode, sizeof(scmd), '\0');
+	fillbytes((caddr_t)xmode, sizeof(xmode), '\0');
 	if (amt < 4) {		/* Data length. medium type & VU */
 		amt += 1;
 	} else {
 		amt += 4;
 	}
-	if (mode_sense_g1(xmode, amt, page, pcf) < 0)
+	if (mode_sense_g1(scgp, xmode, amt, page, pcf) < 0)
 		return (-1);
 
-	amt = cnt - scsigetresid();
+	amt = cnt - scsigetresid(scgp);
 	if (amt > 4)
 		movebytes(&xmode[8], &dp[4], amt-4);
-	len = a_to_u_short(xmode);
+	len = a_to_u_2_byte(xmode);
 	if (len == 0) {
 		dp[0] = 0;
 	} else if (len < 6) {
@@ -1153,233 +1148,143 @@ mode_sense_sg0(dp, cnt, page, pcf)
 	}
 	dp[1] = xmode[2];
 	dp[2] = xmode[3];
-	len = a_to_u_short(&xmode[6]);
+	len = a_to_u_2_byte(&xmode[6]);
 	dp[3] = len;
 
-	if (verbose) scsiprbytes("Mode Sense Data (converted)", dp, amt);
+	if (scgp->verbose) scsiprbytes("Mode Sense Data (converted)", dp, amt);
 	return (0);
 }
 
 EXPORT int
-mode_select_g0(dp, cnt, smp, pf)
-	u_char	*dp;
+mode_select_g0(scgp, dp, cnt, smp, pf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	smp;
 	int	pf;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)dp;
-	scmd.size = cnt;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_MODE_SELECT;
-	scmd.cdb.g0_cdb.lun = lun;
-	scmd.cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
-	scmd.cdb.g0_cdb.count = cnt;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (verbose) {
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)dp;
+	scmd->size = cnt;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_MODE_SELECT;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
+	scmd->cdb.g0_cdb.count = cnt;
+
+	if (scgp->verbose) {
 		printf("%s ", smp?"Save":"Set ");
 		scsiprbytes("Mode Parameters", dp, cnt);
 	}
 
-	return (scsicmd("mode select g0"));
+	scgp->cmdname = "mode select g0";
+
+	return (scsicmd(scgp));
 }
 
 EXPORT int
-mode_select_g1(dp, cnt, smp, pf)
-	u_char	*dp;
+mode_select_g1(scgp, dp, cnt, smp, pf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	smp;
 	int	pf;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)dp;
-	scmd.size = cnt;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x55;
-	scmd.cdb.g1_cdb.lun = lun;
-	scmd.cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (verbose) {
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)dp;
+	scmd->size = cnt;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x55;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	scmd->cdb.g0_cdb.high_addr = smp ? 1 : 0 | pf ? 0x10 : 0;
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
+
+	if (scgp->verbose) {
 		printf("%s ", smp?"Save":"Set ");
 		scsiprbytes("Mode Parameters", dp, cnt);
 	}
 
-	return (scsicmd("mode select g1"));
+	scgp->cmdname = "mode select g1";
+
+	return (scsicmd(scgp));
 }
 
 EXPORT int
-mode_sense_g0(dp, cnt, page, pcf)
-	u_char	*dp;
+mode_sense_g0(scgp, dp, cnt, page, pcf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	page;
 	int	pcf;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)dp;
-	scmd.size = 0xFF;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_MODE_SENSE;
-	scmd.cdb.g0_cdb.lun = lun;
-#ifdef	nonono
-	scmd.cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
-#endif
-	scmd.cdb.g0_cdb.mid_addr = (page&0x3F) | ((pcf<<6)&0xC0);
-	scmd.cdb.g0_cdb.count = page ? 0xFF : 24;
-	scmd.cdb.g0_cdb.count = cnt;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (scsicmd("mode sense g0") < 0)
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)dp;
+	scmd->size = 0xFF;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_MODE_SENSE;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+#ifdef	nonono
+	scmd->cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
+#endif
+	scmd->cdb.g0_cdb.mid_addr = (page&0x3F) | ((pcf<<6)&0xC0);
+	scmd->cdb.g0_cdb.count = page ? 0xFF : 24;
+	scmd->cdb.g0_cdb.count = cnt;
+
+	scgp->cmdname = "mode sense g0";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	if (verbose) scsiprbytes("Mode Sense Data", dp, cnt - scmd.resid);
+	if (scgp->verbose) scsiprbytes("Mode Sense Data", dp, cnt - scsigetresid(scgp));
 	return (0);
 }
 
 EXPORT int
-mode_sense_g1(dp, cnt, page, pcf)
-	u_char	*dp;
+mode_sense_g1(scgp, dp, cnt, page, pcf)
+	SCSI	*scgp;
+	Uchar	*dp;
 	int	cnt;
 	int	page;
 	int	pcf;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)dp;
-	scmd.size = cnt;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = 0x5A;
-	scmd.cdb.g1_cdb.lun = lun;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)dp;
+	scmd->size = cnt;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = 0x5A;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
 #ifdef	nonono
-	scmd.cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
+	scmd->cdb.g0_cdb.high_addr = 1<<4;	/* DBD Disable Block desc. */
 #endif
-	scmd.cdb.g1_cdb.addr[0] = (page&0x3F) | ((pcf<<6)&0xC0);
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	scmd->cdb.g1_cdb.addr[0] = (page&0x3F) | ((pcf<<6)&0xC0);
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 
-	if (scsicmd("mode sense g1") < 0)
+	scgp->cmdname = "mode sense g1";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	if (verbose) scsiprbytes("Mode Sense Data", dp, cnt - scmd.resid);
+	if (scgp->verbose) scsiprbytes("Mode Sense Data", dp, cnt - scsigetresid(scgp));
 	return (0);
-}
-
-struct cdd_52x_mode_page_21 {	/* write track information */
-		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x0E = 14 Bytes */
-	u_char	res_2;
-	u_char	sectype;
-	u_char	track;
-	u_char	ISRC[9];
-	u_char	res[2];
-};
-
-struct cdd_52x_mode_page_23 {	/* speed selection */
-		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x06 = 6 Bytes */
-	u_char	speed;
-	u_char	dummy;
-	u_char	res[4];
-
-};
-
-#if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
-
-struct yamaha_mode_page_31 {	/* drive configuration */
-		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x02 = 2 Bytes */
-	u_char	res;
-	Ucbit	dummy		: 4;
-	Ucbit	speed		: 4;
-};
-
-#else				/* Motorola byteorder */
-
-struct yamaha_mode_page_31 {	/* drive configuration */
-		MP_P_CODE;		/* parsave & pagecode */
-	u_char	p_len;			/* 0x02 = 2 Bytes */
-	u_char	res;
-	Ucbit	speed		: 4;
-	Ucbit	dummy		: 4;
-};
-#endif
-
-struct cdd_52x_mode_data {
-	struct scsi_mode_header	header;
-	union cdd_pagex	{
-		struct cdd_52x_mode_page_21	page21;
-		struct cdd_52x_mode_page_23	page23;
-		struct yamaha_mode_page_31	page31;
-	} pagex;
-};
-
-EXPORT int
-speed_select_yamaha(speed, dummy)
-	int	speed;
-	int	dummy;
-{
-	struct cdd_52x_mode_data md;
-	int	count;
-
-	fillbytes((caddr_t)&md, sizeof(md), '\0');
-
-	count  = sizeof(struct scsi_mode_header) +
-		sizeof(struct yamaha_mode_page_31);
-
-	speed >>= 1;
-	md.pagex.page31.p_code = 0x31;
-	md.pagex.page31.p_len =  0x02;
-	md.pagex.page31.speed = speed;
-	md.pagex.page31.dummy = dummy?1:0;
-	
-	return (mode_select((u_char *)&md, count, 0, inq.data_format >= 2));
-}
-
-EXPORT int
-speed_select_philips(speed, dummy)
-	int	speed;
-	int	dummy;
-{
-	struct cdd_52x_mode_data md;
-	int	count;
-
-	fillbytes((caddr_t)&md, sizeof(md), '\0');
-
-	count  = sizeof(struct scsi_mode_header) +
-		sizeof(struct cdd_52x_mode_page_23);
-
-	md.pagex.page23.p_code = 0x23;
-	md.pagex.page23.p_len =  0x06;
-	md.pagex.page23.speed = speed;
-	md.pagex.page23.dummy = dummy?1:0;
-	
-	return (mode_select((u_char *)&md, count, 0, inq.data_format >= 2));
-}
-
-EXPORT int
-write_track_info(sectype)
-	int	sectype;
-{
-	struct cdd_52x_mode_data md;
-	int	count = sizeof(struct scsi_mode_header) +
-			sizeof(struct cdd_52x_mode_page_21);
-
-	fillbytes((caddr_t)&md, sizeof(md), '\0');
-	md.pagex.page21.p_code = 0x21;
-	md.pagex.page21.p_len =  0x0E;
-				/* is sectype ok ??? */
-	md.pagex.page21.sectype = sectype;
-	md.pagex.page21.track = 0;	/* 0 : create new track */
-	
-	return (mode_select((u_char *)&md, count, 0, inq.data_format >= 2));
 }
 
 struct tocheader {
@@ -1466,7 +1371,8 @@ struct fdiskinfo {
 
 
 EXPORT	int
-read_tochdr(dp, fp, lp)
+read_tochdr(scgp, dp, fp, lp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	int	*fp;
 	int	*lp;
@@ -1478,12 +1384,12 @@ read_tochdr(dp, fp, lp)
 	tp = (struct tocheader *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc(xb, 0, sizeof(struct tocheader), 0, FMT_TOC) < 0) {
-		if (silent == 0)
+	if (read_toc(scgp, xb, 0, sizeof(struct tocheader), 0, FMT_TOC) < 0) {
+		if (scgp->silent == 0)
 			errmsgno(EX_BAD, "Cannot read TOC header\n");
 		return (-1);
 	}
-	len = a_to_u_short(tp->len) + sizeof(struct tocheader)-2;
+	len = a_to_u_2_byte(tp->len) + sizeof(struct tocheader)-2;
 	if (len >= 4) {
 		if (fp)
 			*fp = tp->first;
@@ -1495,7 +1401,40 @@ read_tochdr(dp, fp, lp)
 }
 	
 EXPORT	int
-read_trackinfo(track, offp, msfp, adrp, controlp, modep)
+read_cdtext(scgp)
+	SCSI	*scgp;
+{
+	struct	tocheader *tp;
+	char	xb[256];
+	int	len;
+	char	xxb[10000];
+
+	tp = (struct tocheader *)xb;
+
+	fillbytes((caddr_t)xb, sizeof(xb), '\0');
+	if (read_toc(scgp, xb, 0, sizeof(struct tocheader), 0, FMT_CDTEXT) < 0) {
+		if (scgp->silent == 0 || scgp->verbose > 0)
+			errmsgno(EX_BAD, "Cannot read CD-Text header\n");
+		return (-1);
+	}
+	len = a_to_u_2_byte(tp->len) + sizeof(struct tocheader)-2;
+	printf("CD-Text len: %d\n", len);
+
+	if (read_toc(scgp, xxb, 0, len, 0, FMT_CDTEXT) < 0) {
+		if (scgp->silent == 0)
+			errmsgno(EX_BAD, "Cannot read CD-Text\n");
+		return (-1);
+	}
+	{
+		FILE	*f = fileopen("cdtext.dat", "wct");
+		filewrite(f, xxb, len);
+	}
+	return (0);
+}
+	
+EXPORT	int
+read_trackinfo(scgp, track, offp, msfp, adrp, controlp, modep)
+	SCSI	*scgp;
 	int	track;
 	long	*offp;
 	struct msf *msfp;
@@ -1510,35 +1449,44 @@ read_trackinfo(track, offp, msfp, adrp, controlp, modep)
 	dp = (struct diskinfo *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc(xb, track, sizeof(struct diskinfo), 0, FMT_TOC) < 0) {
-		if (silent <= 0)
+	if (read_toc(scgp, xb, track, sizeof(struct diskinfo), 0, FMT_TOC) < 0) {
+		if (scgp->silent <= 0)
 			errmsgno(EX_BAD, "Cannot read TOC\n");
 		return (-1);
 	}
-	len = a_to_u_short(dp->hd.len) + sizeof(struct tocheader)-2;
-	if (len <  sizeof(struct diskinfo))
+	len = a_to_u_2_byte(dp->hd.len) + sizeof(struct tocheader)-2;
+	if (len <  (int)sizeof(struct diskinfo))
 		return (-1);
 
 	if (offp)
-		*offp = a_to_u_long(dp->desc[0].addr);
+		*offp = a_to_4_byte(dp->desc[0].addr);
 	if (adrp)
 		*adrp = dp->desc[0].adr;
 	if (controlp)
 		*controlp = dp->desc[0].control;
 
 	if (msfp) {
-		silent++;
-		if (read_toc(xb, track, sizeof(struct diskinfo), 1, FMT_TOC)
+		scgp->silent++;
+		if (read_toc(scgp, xb, track, sizeof(struct diskinfo), 1, FMT_TOC)
 									>= 0) {
 			msfp->msf_min = dp->desc[0].addr[1];
 			msfp->msf_sec = dp->desc[0].addr[2];
 			msfp->msf_frame = dp->desc[0].addr[3];
+		} else if (read_toc(scgp, xb, track, sizeof(struct diskinfo), 0, FMT_TOC)
+									>= 0) {
+			/*
+			 * Some drives (e.g. the Philips CDD-522) don't support
+			 * to read the TOC in MSF mode.
+			 */
+			long off = a_to_4_byte(dp->desc[0].addr);
+
+			lba_to_msf(off, msfp);
 		} else {
 			msfp->msf_min = 0;
 			msfp->msf_sec = 0;
 			msfp->msf_frame = 0;
 		}
-		silent--;
+		scgp->silent--;
 	}
 
 	if (modep == NULL)
@@ -1551,20 +1499,21 @@ read_trackinfo(track, offp, msfp, adrp, controlp, modep)
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
 
-	silent++;
-	if (read_header(xb, *offp, 8, 0) >= 0) {
+	scgp->silent++;
+	if (read_header(scgp, xb, *offp, 8, 0) >= 0) {
 		*modep = xb[0];
-	} else if (read_track_info_philips(xb, track, 14) >= 0) {
+	} else if (read_track_info_philips(scgp, xb, track, 14) >= 0) {
 		*modep = xb[0xb] & 0xF;
 	} else {
 		*modep = -1;
 	}
-	silent--;
+	scgp->silent--;
 	return (0);
 }
 
 EXPORT	int
-read_B0(isbcd, b0p, lop)
+read_B0(scgp, isbcd, b0p, lop)
+	SCSI	*scgp;
 	BOOL	isbcd;
 	long	*b0p;
 	long	*lop;
@@ -1579,18 +1528,19 @@ read_B0(isbcd, b0p, lop)
 	dp = (struct fdiskinfo *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc_philips(xb, 1, sizeof(struct tocheader), 0, FMT_FULLTOC) < 0) {
+	if (read_toc_philips(scgp, xb, 1, sizeof(struct tocheader), 0, FMT_FULLTOC) < 0) {
 		return (-1);
 	}
-	len = a_to_u_short(dp->hd.len) + sizeof(struct tocheader)-2;
-	if (len <  sizeof(struct fdiskinfo))
+	len = a_to_u_2_byte(dp->hd.len) + sizeof(struct tocheader)-2;
+	if (len <  (int)sizeof(struct fdiskinfo))
 		return (-1);
-	if (read_toc_philips(xb, 1, len, 0, FMT_FULLTOC) < 0) {
+	if (read_toc_philips(scgp, xb, 1, len, 0, FMT_FULLTOC) < 0) {
 		return (-1);
 	}
-	if (verbose) {
+	if (scgp->verbose) {
 		scsiprbytes("TOC data: ", (Uchar *)xb,
-			len > sizeof(xb) - scsigetresid() ? sizeof(xb) - scsigetresid() : len);
+			len > (int)sizeof(xb) - scsigetresid(scgp) ?
+				sizeof(xb) - scsigetresid(scgp) : len);
 
 		tp = &dp->desc[0];
 		pe = &xb[len];
@@ -1608,7 +1558,7 @@ read_B0(isbcd, b0p, lop)
 			continue;
 		if (tp->point != 0xB0)
 			continue;
-		if (verbose)
+		if (scgp->verbose)
 			scsiprbytes("B0: ", (Uchar *)tp, 11);
 		if (isbcd) {
 			l = msf_to_lba(from_bcd(tp->amin),
@@ -1622,7 +1572,7 @@ read_B0(isbcd, b0p, lop)
 		if (b0p)
 			*b0p = l;
 
-		if (verbose)
+		if (scgp->verbose)
 			printf("B0 start: %ld\n", l);
 
 		if (isbcd) {
@@ -1635,7 +1585,7 @@ read_B0(isbcd, b0p, lop)
 				tp->pframe);
 		}
 
-		if (verbose)
+		if (scgp->verbose)
 			printf("B0 lout: %ld\n", l);
 		if (lop)
 			*lop = l;
@@ -1649,7 +1599,8 @@ read_B0(isbcd, b0p, lop)
  * Return address of first track in last session (SCSI-3/mmc version).
  */
 EXPORT int
-read_session_offset(offp)
+read_session_offset(scgp, offp)
+	SCSI	*scgp;
 	long	*offp;
 {
 	struct	diskinfo *dp;
@@ -1659,28 +1610,28 @@ read_session_offset(offp)
 	dp = (struct diskinfo *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc((caddr_t)xb, 0, sizeof(struct tocheader), 0, FMT_SINFO) < 0)
+	if (read_toc(scgp, (caddr_t)xb, 0, sizeof(struct tocheader), 0, FMT_SINFO) < 0)
 		return (-1);
 
-	if (verbose)
+	if (scgp->verbose)
 		scsiprbytes("tocheader: ",
-		(u_char *)xb, sizeof(struct tocheader) - scsigetresid());
+		(Uchar *)xb, sizeof(struct tocheader) - scsigetresid(scgp));
 
-	len = a_to_u_short(dp->hd.len) + sizeof(struct tocheader)-2;
-	if (len > sizeof(xb)) {
+	len = a_to_u_2_byte(dp->hd.len) + sizeof(struct tocheader)-2;
+	if (len > (int)sizeof(xb)) {
 		errmsgno(EX_BAD, "Session info too big.\n");
 		return (-1);
 	}
-	if (read_toc((caddr_t)xb, 0, len, 0, FMT_SINFO) < 0)
+	if (read_toc(scgp, (caddr_t)xb, 0, len, 0, FMT_SINFO) < 0)
 		return (-1);
 
-	if (verbose)
+	if (scgp->verbose)
 		scsiprbytes("tocheader: ",
-			(u_char *)xb, len - scsigetresid());
+			(Uchar *)xb, len - scsigetresid(scgp));
 
 	dp = (struct diskinfo *)xb;
 	if (offp)
-		*offp = a_to_u_long(dp->desc[0].addr);
+		*offp = a_to_u_4_byte(dp->desc[0].addr);
 	return (0);
 }
 
@@ -1688,7 +1639,8 @@ read_session_offset(offp)
  * Return address of first track in last session (pre SCSI-3 version).
  */
 EXPORT int
-read_session_offset_philips(offp)
+read_session_offset_philips(scgp, offp)
+	SCSI	*scgp;
 	long	*offp;
 {
 	struct	sinfo *sp;
@@ -1698,14 +1650,14 @@ read_session_offset_philips(offp)
 	sp = (struct sinfo *)xb;
 
 	fillbytes((caddr_t)xb, sizeof(xb), '\0');
-	if (read_toc_philips((caddr_t)xb, 0, sizeof(struct siheader), 0, FMT_SINFO) < 0)
+	if (read_toc_philips(scgp, (caddr_t)xb, 0, sizeof(struct siheader), 0, FMT_SINFO) < 0)
 		return (-1);
-	len = a_to_u_short(sp->hd.len) + sizeof(struct siheader)-2;
-	if (len > sizeof(xb)) {
+	len = a_to_u_2_byte(sp->hd.len) + sizeof(struct siheader)-2;
+	if (len > (int)sizeof(xb)) {
 		errmsgno(EX_BAD, "Session info too big.\n");
 		return (-1);
 	}
-	if (read_toc_philips((caddr_t)xb, 0, len, 0, FMT_SINFO) < 0)
+	if (read_toc_philips(scgp, (caddr_t)xb, 0, len, 0, FMT_SINFO) < 0)
 		return (-1);
 	/*
 	 * Old drives return the number of finished sessions in first/finished
@@ -1717,40 +1669,41 @@ read_session_offset_philips(offp)
 	 */
 	sp = (struct sinfo *)xb;
 	if (offp)
-		*offp = a_to_u_long(sp->desc[sp->hd.finished-1].addr);
+		*offp = a_to_u_4_byte(sp->desc[sp->hd.finished-1].addr);
 	return (0);
 }
 
 EXPORT int
-sense_secsize(current)
+sense_secsize(scgp, current)
+	SCSI	*scgp;
 	int	current;
 {
-	u_char	mode[0x100];
-	u_char	*p;
-	u_char	*ep;
+	Uchar	mode[0x100];
+	Uchar	*p;
+	Uchar	*ep;
 	int	secsize = -1;
 
-	silent++;
-	(void)unit_ready();
-	silent--;
+	scgp->silent++;
+	(void)unit_ready(scgp);
+	scgp->silent--;
 
 	/* XXX Quick and dirty, musz verallgemeinert werden !!! */
 
 	fillbytes(mode, sizeof(mode), '\0');
-	silent++;
-	if (mode_sense(mode, 0xFF, 0x3F, current?0:2) < 0) {	/* All Pages */
+	scgp->silent++;
+	if (mode_sense(scgp, mode, 0xFF, 0x3F, current?0:2) < 0) {	/* All Pages */
 		fillbytes(mode, sizeof(mode), '\0');
-		if (mode_sense(mode, 0xFF, 0, current?0:2) < 0)	{/* VU (block desc) */
-			silent--;
+		if (mode_sense(scgp, mode, 0xFF, 0, current?0:2) < 0)	{/* VU (block desc) */
+			scgp->silent--;
 			return (-1);
 		}
 	}
-	silent--;
+	scgp->silent--;
 
 	ep = mode+mode[0];	/* Points to last byte of data */
 	p = &mode[4];
 	p += mode[3];
-	if (debug) {
+	if (scgp->debug) {
 		printf("Pages: ");
 		while (p < ep) {
 			printf("0x%x ", *p&0x3F);
@@ -1760,45 +1713,46 @@ sense_secsize(current)
 	}
 
 	if (mode[3] == 8) {
-		if (debug) {
+		if (scgp->debug) {
 			printf("Density: 0x%x\n", mode[4]);
-			printf("Blocks:  %ld\n", a_to_3_byte(&mode[5]));
-			printf("Blocklen:%ld\n", a_to_3_byte(&mode[9]));
+			printf("Blocks:  %ld\n", a_to_u_3_byte(&mode[5]));
+			printf("Blocklen:%ld\n", a_to_u_3_byte(&mode[9]));
 		}
-		secsize = a_to_3_byte(&mode[9]);
+		secsize = a_to_u_3_byte(&mode[9]);
 	}
 	return (secsize);
 }
 
 EXPORT int
-select_secsize(secsize)
+select_secsize(scgp, secsize)
+	SCSI	*scgp;
 	int	secsize;
 {
 	struct scsi_mode_data md;
 	int	count = sizeof(struct scsi_mode_header) +
 			sizeof(struct scsi_mode_blockdesc);
 
-	(void)test_unit_ready();	/* clear any error situation */
+	(void)test_unit_ready(scgp);	/* clear any error situation */
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 	md.header.blockdesc_len = 8;
 	i_to_3_byte(md.blockdesc.lblen, secsize);
 	
-	return (mode_select((u_char *)&md, count, 0, inq.data_format >= 2));
-}
-
-int	dev = DEV_CDD_521;
-
-EXPORT BOOL
-is_cddrive()
-{
-	return (inq.type == INQ_ROMD || inq.type == INQ_WORM);
+	return (mode_select(scgp, (Uchar *)&md, count, 0, scgp->inq->data_format >= 2));
 }
 
 EXPORT BOOL
-is_unknown_dev()
+is_cddrive(scgp)
+	SCSI	*scgp;
 {
-	return (dev == DEV_UNKNOWN);
+	return (scgp->inq->type == INQ_ROMD || scgp->inq->type == INQ_WORM);
+}
+
+EXPORT BOOL
+is_unknown_dev(scgp)
+	SCSI	*scgp;
+{
+	return (scgp->dev == DEV_UNKNOWN);
 }
 
 #define	DEBUG
@@ -1806,96 +1760,116 @@ is_unknown_dev()
 #define	G0_MAXADDR	0x1FFFFFL
 
 EXPORT int
-read_scsi(bp, addr, cnt)
+read_scsi(scgp, bp, addr, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	long	addr;
 	int	cnt;
 {
-	if(addr <= G0_MAXADDR && cnt < 256)
-		return (read_g0(bp, addr, cnt));
+	if(addr <= G0_MAXADDR && cnt < 256 && !is_atapi)
+		return (read_g0(scgp, bp, addr, cnt));
 	else
-		return (read_g1(bp, addr, cnt));
+		return (read_g1(scgp, bp, addr, cnt));
 }
 
 EXPORT int
-read_g0(bp, addr, cnt)
+read_g0(scgp, bp, addr, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	long	addr;
 	int	cnt;
 {
-	if (cap.c_bsize <= 0)
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	if (scgp->cap->c_bsize <= 0)
 		raisecond("capacity_not_set", 0L);
 
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt*cap.c_bsize;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G0_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g0_cdb.cmd = SC_READ;
-	scmd.cdb.g0_cdb.lun = lun;
-	g0_cdbaddr(&scmd.cdb.g0_cdb, addr);
-	scmd.cdb.g0_cdb.count = cnt;
-/*	scmd.cdb.g0_cdb.vu_56 = 1;*/
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt*scgp->cap->c_bsize;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G0_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g0_cdb.cmd = SC_READ;
+	scmd->cdb.g0_cdb.lun = scgp->lun;
+	g0_cdbaddr(&scmd->cdb.g0_cdb, addr);
+	scmd->cdb.g0_cdb.count = cnt;
+/*	scmd->cdb.g0_cdb.vu_56 = 1;*/
 	
-	return (scsicmd("read_g0"));
+	scgp->cmdname = "read_g0";
+
+	return (scsicmd(scgp));
 }
 
 EXPORT int
-read_g1(bp, addr, cnt)
+read_g1(scgp, bp, addr, cnt)
+	SCSI	*scgp;
 	caddr_t	bp;
 	long	addr;
 	int	cnt;
 {
-	if (cap.c_bsize <= 0)
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	if (scgp->cap->c_bsize <= 0)
 		raisecond("capacity_not_set", 0L);
 
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = cnt*cap.c_bsize;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = SC_EREAD;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, addr);
-	g1_cdblen(&scmd.cdb.g1_cdb, cnt);
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt*scgp->cap->c_bsize;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = SC_EREAD;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdbaddr(&scmd->cdb.g1_cdb, addr);
+	g1_cdblen(&scmd->cdb.g1_cdb, cnt);
 	
-	return (scsicmd("read_g1"));
+	scgp->cmdname = "read_g1";
+
+	return (scsicmd(scgp));
 }
 #endif	/* DEBUG */
 
 EXPORT BOOL
-getdev(print)
+getdev(scgp, print)
+	SCSI	*scgp;
 	BOOL	print;
 {
-	BOOL	got_inquiry = TRUE;
-	char	vendor_info[8+1];
-	char	prod_ident[16+1];
-	char	prod_revision[4+1];
+		 BOOL	got_inquiry = TRUE;
+		 char	vendor_info[8+1];
+		 char	prod_ident[16+1];
+		 char	prod_revision[4+1];
+		 int	inq_len = 0;
+	register struct	scg_cmd	*scmd = scgp->scmd;
+	register struct scsi_inquiry *inq = scgp->inq;
 
-	fillbytes((caddr_t)&inq, sizeof(inq), '\0');
-	dev = DEV_UNKNOWN;
-	silent++;
-	(void)unit_ready();
-	if (scmd.error >= SCG_FATAL &&
-				!(scmd.scb.chk && scmd.sense_count > 0)) {
-		silent--;
+
+	fillbytes((caddr_t)inq, sizeof(*inq), '\0');
+	scgp->dev = DEV_UNKNOWN;
+	scgp->silent++;
+	(void)unit_ready(scgp);
+	if (scmd->error >= SCG_FATAL &&
+				!(scmd->scb.chk && scmd->sense_count > 0)) {
+		scgp->silent--;
 		return (FALSE);
 	}
 
 
-/*	if (scmd.error < SCG_FATAL || scmd.scb.chk && scmd.sense_count > 0){*/
+/*	if (scmd->error < SCG_FATAL || scmd->scb.chk && scmd->sense_count > 0){*/
 
-	if (inquiry((caddr_t)&inq, sizeof(inq)) < 0) {
+	if (inquiry(scgp, (caddr_t)inq, sizeof(*inq)) < 0) {
 		got_inquiry = FALSE;
-		if (verbose) {
+	} else {
+		inq_len = sizeof(*inq) - scsigetresid(scgp);
+	}
+	if (!got_inquiry) {
+		if (scgp->verbose) {
 			printf(
 		"error: %d scb.chk: %d sense_count: %d sense.code: 0x%x\n",
-				scmd.error, scmd.scb.chk,
-				scmd.sense_count, scmd.sense.code);
+				scmd->error, scmd->scb.chk,
+				scmd->sense_count, scmd->sense.code);
 		}
 			/*
 			 * Folgende Kontroller kennen das Kommando
@@ -1909,30 +1883,31 @@ getdev(print)
 			 * sie sind dann nicht zu unterscheiden.
 			 */
 
-		if (scmd.scb.chk && scmd.sense_count == 4) {
-			/* Test auf SYSGEN			 */
-			(void)qic02(0x12);	/* soft lock on  */
-			if (qic02(1) < 0) {	/* soft lock off */
-				dev = DEV_ACB40X0;
-/*				dev = acbdev();*/
+		if (scmd->scb.chk && scmd->sense_count == 4) {
+			/* Test auf SYSGEN				 */
+			(void)qic02(scgp, 0x12);	/* soft lock on  */
+			if (qic02(scgp, 1) < 0) {	/* soft lock off */
+				scgp->dev = DEV_ACB40X0;
+/*				scgp->dev = acbdev();*/
 			} else {
-				dev = DEV_SC4000;
-				inq.type = INQ_SEQD;
-				inq.removable = 1;
+				scgp->dev = DEV_SC4000;
+				inq->type = INQ_SEQD;
+				inq->removable = 1;
 			}
 		}
-	} else if (verbose) {
+	} else if (scgp->verbose) {
 		int	i;
-		int	len = inq.add_len + 5;
+		int	len = inq->add_len + 5;
 		Uchar	ibuf[256+5];
-		Uchar	*ip = (Uchar *)&inq;
+		Uchar	*ip = (Uchar *)inq;
 		Uchar	c;
 
-		if (len > sizeof (inq) && inquiry((caddr_t)ibuf, inq.add_len+5) >= 0) {
-			len = inq.add_len+5 - scsigetresid();
+		if (len > (int)sizeof (*inq) &&
+				inquiry(scgp, (caddr_t)ibuf, inq->add_len+5) >= 0) {
+			len = inq->add_len+5 - scsigetresid(scgp);
 			ip = ibuf;
 		} else {
-			len = sizeof (inq);
+			len = sizeof (*inq);
 		}
 		printf("Inquiry Data   : ");
 		for (i = 0; i < len; i++) {
@@ -1945,76 +1920,96 @@ getdev(print)
 		printf("\n");
 	}
 
-	strncpy(vendor_info, inq.vendor_info, sizeof(inq.vendor_info));
-	strncpy(prod_ident, inq.prod_ident, sizeof(inq.prod_ident));
-	strncpy(prod_revision, inq.prod_revision, sizeof(inq.prod_revision));
+	strncpy(vendor_info, inq->vendor_info, sizeof(inq->vendor_info));
+	strncpy(prod_ident, inq->prod_ident, sizeof(inq->prod_ident));
+	strncpy(prod_revision, inq->prod_revision, sizeof(inq->prod_revision));
 
-	vendor_info[sizeof(inq.vendor_info)] = '\0';
-	prod_ident[sizeof(inq.prod_ident)] = '\0';
-	prod_revision[sizeof(inq.prod_revision)] = '\0';
+	vendor_info[sizeof(inq->vendor_info)] = '\0';
+	prod_ident[sizeof(inq->prod_ident)] = '\0';
+	prod_revision[sizeof(inq->prod_revision)] = '\0';
 
-	switch (inq.type) {
+	switch (inq->type) {
 
 	case INQ_DASD:
-		if (inq.add_len == 0) {
-			if (dev == DEV_UNKNOWN && got_inquiry) {
-				dev = DEV_ACB5500;
-				strcpy(inq.vendor_info,
+		if (inq->add_len == 0 && inq->vendor_info[0] != '\0') {
+			Uchar	*p;
+			/*
+			 * NT-4.0 creates fake inquiry data for IDE disks.
+			 * Unfortunately, it does not set add_len wo we
+			 * check if vendor_info, prod_ident and prod_revision
+			 * contains valid chars for a CCS inquiry.
+			 */
+			if (inq_len >= 36)
+				inq->add_len = 31;
+
+			for (p = (Uchar *)&inq->vendor_info[0];
+					p < (Uchar *)&inq->prod_revision[4];
+									p++) {
+				if (*p < 0x20 || *p > 0x7E) {
+					inq->add_len = 0;
+					break;
+				}
+			}
+		}
+		if (inq->add_len == 0) {
+			if (scgp->dev == DEV_UNKNOWN && got_inquiry) {
+				scgp->dev = DEV_ACB5500;
+				strcpy(inq->vendor_info,
 					"ADAPTEC ACB-5500        FAKE");
 
-			} else switch (dev) {
+			} else switch (scgp->dev) {
 
 			case DEV_ACB40X0:
-				strcpy(inq.vendor_info,
+				strcpy(inq->vendor_info,
 					"ADAPTEC ACB-40X0        FAKE");
 				break;
 			case DEV_ACB4000:
-				strcpy(inq.vendor_info,
+				strcpy(inq->vendor_info,
 					"ADAPTEC ACB-4000        FAKE");
 				break;
 			case DEV_ACB4010:
-				strcpy(inq.vendor_info,
+				strcpy(inq->vendor_info,
 					"ADAPTEC ACB-4010        FAKE");
 				break;
 			case DEV_ACB4070:
-				strcpy(inq.vendor_info,
+				strcpy(inq->vendor_info,
 					"ADAPTEC ACB-4070        FAKE");
 				break;
 			}
-		} else if (inq.add_len < 31) {
-			dev = DEV_NON_CCS_DSK;
+		} else if (inq->add_len < 31) {
+			scgp->dev = DEV_NON_CCS_DSK;
 
 		} else if (strbeg("EMULEX", vendor_info)) {
 			if (strbeg("MD21", prod_ident))
-				dev = DEV_MD21;
+				scgp->dev = DEV_MD21;
 			if (strbeg("MD23", prod_ident))
-				dev = DEV_MD23;
+				scgp->dev = DEV_MD23;
 			else
-				dev = DEV_CCS_GENDISK;
+				scgp->dev = DEV_CCS_GENDISK;
 		} else if (strbeg("ADAPTEC", vendor_info)) {
 			if (strbeg("ACB-4520", prod_ident))
-				dev = DEV_ACB4520A;
+				scgp->dev = DEV_ACB4520A;
 			if (strbeg("ACB-4525", prod_ident))
-				dev = DEV_ACB4525;
+				scgp->dev = DEV_ACB4525;
 			else
-				dev = DEV_CCS_GENDISK;
+				scgp->dev = DEV_CCS_GENDISK;
 		} else if (strbeg("SONY", vendor_info) &&
 					strbeg("SMO-C501", prod_ident)) {
-			dev = DEV_SONY_SMO;
+			scgp->dev = DEV_SONY_SMO;
 		} else {
-			dev = DEV_CCS_GENDISK;
+			scgp->dev = DEV_CCS_GENDISK;
 		}
 		break;
 
 	case INQ_SEQD:
-		if (dev == DEV_SC4000) {
-			strcpy(inq.vendor_info,
+		if (scgp->dev == DEV_SC4000) {
+			strcpy(inq->vendor_info,
 				"SYSGEN  SC4000          FAKE");
-		} else if (inq.add_len == 0 &&
-					inq.removable &&
-						inq.ansi_version == 1) {
-			dev = DEV_MT02;
-			strcpy(inq.vendor_info,
+		} else if (inq->add_len == 0 &&
+					inq->removable &&
+						inq->ansi_version == 1) {
+			scgp->dev = DEV_MT02;
+			strcpy(inq->vendor_info,
 				"EMULEX  MT02            FAKE");
 		}
 		break;
@@ -2023,34 +2018,46 @@ getdev(print)
 	case INQ_ROMD:
 	case INQ_WORM:
 		if (strbeg("RXT-800S", prod_ident))
-			dev = DEV_RXT800S;
+			scgp->dev = DEV_RXT800S;
 
 		/*
 		 * Start of CD-Recorders:
 		 */
-		if (strbeg("GRUNDIG", vendor_info)) {
+		if (strbeg("ACER", vendor_info)) { 
+			if (strbeg("CR-4020C", prod_ident)) 
+                                scgp->dev = DEV_RICOH_RO_1420C;
+
+		} else if (strbeg("CREATIVE", vendor_info)) { 
+			if (strbeg("CDR2000", prod_ident))
+				scgp->dev = DEV_RICOH_RO_1060C;
+
+		} else if (strbeg("GRUNDIG", vendor_info)) { 
 			if (strbeg("CDR100IPW", prod_ident))
-				dev = DEV_CDD_2000;
+				scgp->dev = DEV_CDD_2000;
 
 		} else if (strbeg("JVC", vendor_info)) {
 			if (strbeg("XR-W2001", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 			else if (strbeg("XR-W2010", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 			else if (strbeg("R2626", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 
 		} else if (strbeg("MITSBISH", vendor_info)) {
 
 #ifdef	XXXX_REALLY
 			/* It's MMC compliant */
 			if (strbeg("CDRW226", prod_ident))
-				dev = DEV_MMC_CDRW;
+				scgp->dev = DEV_MMC_CDRW;
 #endif
 
 		} else if (strbeg("MITSUMI", vendor_info)) {
 			/* Don't know any product string */
-			dev = DEV_CDD_522;
+			scgp->dev = DEV_CDD_522;
+
+		} else if (strbeg("OPTIMA", vendor_info)) {
+			if (strbeg("CD-R 650", prod_ident))
+				scgp->dev = DEV_SONY_CDU_924;
 
 		} else if (strbeg("PHILIPS", vendor_info) ||
 				strbeg("IMS", vendor_info) ||
@@ -2058,194 +2065,193 @@ getdev(print)
 				strbeg("HP", vendor_info)) {
 
 			if (strbeg("CDD521/00", prod_ident))
-				dev = DEV_CDD_521_OLD;
+				scgp->dev = DEV_CDD_521_OLD;
+			else if (strbeg("CDD521/02", prod_ident))
+				scgp->dev = DEV_CDD_521_OLD;		/* PCD 200R? */
 			else if (strbeg("CDD521", prod_ident))
-				dev = DEV_CDD_521;
+				scgp->dev = DEV_CDD_521;
 
 			if (strbeg("CDD522", prod_ident))
-				dev = DEV_CDD_522;
+				scgp->dev = DEV_CDD_522;
 			if (strbeg("PCD225", prod_ident))
-				dev = DEV_CDD_522;
+				scgp->dev = DEV_CDD_522;
 			if (strbeg("KHSW/OB", prod_ident))	/* PCD600 */
-				dev = DEV_PCD_600;
+				scgp->dev = DEV_PCD_600;
 			if (strbeg("CDR-240", prod_ident))
-				dev = DEV_CDD_2000;
+				scgp->dev = DEV_CDD_2000;
 
 			if (strbeg("CDD20", prod_ident))
-				dev = DEV_CDD_2000;
+				scgp->dev = DEV_CDD_2000;
 			if (strbeg("CDD26", prod_ident))
-				dev = DEV_CDD_2600;
+				scgp->dev = DEV_CDD_2600;
 
 			if (strbeg("C4324/C4325", prod_ident))
-				dev = DEV_CDD_2000;
+				scgp->dev = DEV_CDD_2000;
 			if (strbeg("CD-Writer 6020", prod_ident))
-				dev = DEV_CDD_2600;
+				scgp->dev = DEV_CDD_2600;
 
 		} else if (strbeg("PINNACLE", vendor_info)) {
 			if (strbeg("RCD-1000", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 			if (strbeg("RCD5020", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 			if (strbeg("RCD5040", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 			if (strbeg("RCD 4X4", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 
 		} else if (strbeg("PIONEER", vendor_info)) {
 			if (strbeg("CD-WO DW-S114X", prod_ident))
-				dev = DEV_PIONEER_DW_S114X;
+				scgp->dev = DEV_PIONEER_DW_S114X;
 			else if (strbeg("DVD-R DVR-S101", prod_ident))
-				dev = DEV_PIONEER_DVDR_S101;
+				scgp->dev = DEV_PIONEER_DVDR_S101;
 
 		} else if (strbeg("PLASMON", vendor_info)) {
 			if (strbeg("RF4100", prod_ident))
-				dev = DEV_PLASMON_RF_4100;
+				scgp->dev = DEV_PLASMON_RF_4100;
 			else if (strbeg("CDR4220", prod_ident))
-				dev = DEV_CDD_2000;
+				scgp->dev = DEV_CDD_2000;
 
 		} else if (strbeg("PLEXTOR", vendor_info)) {
 			if (strbeg("CD-R   PX-R24CS", prod_ident))
-				dev = DEV_RICOH_RO_1420C;
+				scgp->dev = DEV_RICOH_RO_1420C;
 
 		} else if (strbeg("RICOH", vendor_info)) {
 			if (strbeg("RO-1420C", prod_ident))
-				dev = DEV_RICOH_RO_1420C;
+				scgp->dev = DEV_RICOH_RO_1420C;
+			if (strbeg("RO1060C", prod_ident))
+				scgp->dev = DEV_RICOH_RO_1060C;
 
 		} else if (strbeg("SAF", vendor_info)) {	/* Smart & Friendly */
 			if (strbeg("CD-R2004", prod_ident) ||
 			    strbeg("CD-R2006 ", prod_ident))
-				dev = DEV_SONY_CDU_924;
+				scgp->dev = DEV_SONY_CDU_924;
 			else if (strbeg("CD-R2006PLUS", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 			else if (strbeg("CD-RW226", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 			else if (strbeg("CD-R4012", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 
 		} else if (strbeg("SONY", vendor_info)) {
 			if (strbeg("CD-R   CDU92", prod_ident) ||
 			    strbeg("CD-R   CDU94", prod_ident))
-				dev = DEV_SONY_CDU_924;
+				scgp->dev = DEV_SONY_CDU_924;
 
 		} else if (strbeg("TEAC", vendor_info)) {
 			if (strbeg("CD-R50S", prod_ident) ||
 			    strbeg("CD-R55S", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 
 		} else if (strbeg("TRAXDATA", vendor_info) ||
 				strbeg("Traxdata", vendor_info)) {
 			if (strbeg("CDR4120", prod_ident))
-				dev = DEV_TEAC_CD_R50S;
+				scgp->dev = DEV_TEAC_CD_R50S;
 
 		} else if (strbeg("T.YUDEN", vendor_info)) {
 			if (strbeg("CD-WO EW-50", prod_ident))
-				dev = DEV_CDD_521;
+				scgp->dev = DEV_CDD_521;
 
 		} else if (strbeg("WPI", vendor_info)) {	/* Wearnes */
 			if (strbeg("CDR-632P", prod_ident))
-				dev = DEV_CDD_2600;
+				scgp->dev = DEV_CDD_2600;
 
 		} else if (strbeg("YAMAHA", vendor_info)) {
 			if (strbeg("CDR10", prod_ident))
-				dev = DEV_YAMAHA_CDR_100;
+				scgp->dev = DEV_YAMAHA_CDR_100;
 			if (strbeg("CDR200", prod_ident))
-				dev = DEV_YAMAHA_CDR_400;
+				scgp->dev = DEV_YAMAHA_CDR_400;
 			if (strbeg("CDR400", prod_ident))
-				dev = DEV_YAMAHA_CDR_400;
+				scgp->dev = DEV_YAMAHA_CDR_400;
 
 		} else if (strbeg("MATSHITA", vendor_info)) {
 			if (strbeg("CD-R   CW-7501", prod_ident))
-				dev = DEV_MATSUSHITA_7501;
+				scgp->dev = DEV_MATSUSHITA_7501;
 			if (strbeg("CD-R   CW-7502", prod_ident))
-				dev = DEV_MATSUSHITA_7502;
+				scgp->dev = DEV_MATSUSHITA_7502;
 		}
-		if (dev == DEV_UNKNOWN) {
+		if (scgp->dev == DEV_UNKNOWN) {
 			/*
 			 * We do not have Manufacturer strings for
 			 * the following drives.
 			 */
 			if (strbeg("CDS615E", prod_ident))	/* Olympus */
-				dev = DEV_SONY_CDU_924;
+				scgp->dev = DEV_SONY_CDU_924;
 		}
-		if (dev == DEV_UNKNOWN && inq.type == INQ_ROMD) {
+		if (scgp->dev == DEV_UNKNOWN && inq->type == INQ_ROMD) {
 			BOOL	cdrr	 = FALSE;
 			BOOL	cdwr	 = FALSE;
 			BOOL	cdrrw	 = FALSE;
 			BOOL	cdwrw	 = FALSE;
 			BOOL	dvd	 = FALSE;
 
-			dev = DEV_CDROM;
+			scgp->dev = DEV_CDROM;
 
-			if (mmc_check(&cdrr, &cdwr, &cdrrw, &cdwrw, &dvd))
-				dev = DEV_MMC_CDROM;
+			if (mmc_check(scgp, &cdrr, &cdwr, &cdrrw, &cdwrw, &dvd))
+				scgp->dev = DEV_MMC_CDROM;
 			if (cdwr)
-				dev = DEV_MMC_CDR;
+				scgp->dev = DEV_MMC_CDR;
 			if (cdwrw)
-				dev = DEV_MMC_CDRW;
+				scgp->dev = DEV_MMC_CDRW;
 			if (dvd)
-				dev = DEV_MMC_DVD;
+				scgp->dev = DEV_MMC_DVD;
 		}
 
 	case INQ_PROCD:
 		if (strbeg("BERTHOLD", vendor_info)) {
 			if (strbeg("", prod_ident))
-				dev = DEV_HRSCAN;
+				scgp->dev = DEV_HRSCAN;
 		}
 		break;
 
 	case INQ_SCAN:
-		dev = DEV_MS300A;
+		scgp->dev = DEV_MS300A;
 		break;
 	}
-	silent--;
+	scgp->silent--;
 	if (!print)
 		return (TRUE);
 
-	if (dev == DEV_UNKNOWN && !got_inquiry) {
+	if (scgp->dev == DEV_UNKNOWN && !got_inquiry) {
 #ifdef	PRINT_INQ_ERR
-		/*
-		 * Der String 'inquiry" kann falsch sein!
-		 * Das ist dann, wenn ein Gerät angeschlossen ist,
-		 * das nonextended sense liefert und mit dem
-		 * qic02() Kommando nicht identifiziert werden kann.
-		 */
-		scsiprinterr("inquiry");
+		scsiprinterr(scgp);
 #endif
 		return (FALSE);
 	}
 
 	printf("Device type    : ");
-	scsiprintdev(&inq);
-	printf("Version        : %d\n", inq.ansi_version);
-	printf("Response Format: %d\n", inq.data_format);
-	if (inq.data_format >= 2) {
+	scsiprintdev(inq);
+	printf("Version        : %d\n", inq->ansi_version);
+	printf("Response Format: %d\n", inq->data_format);
+	if (inq->data_format >= 2) {
 		printf("Capabilities   : ");
-		if (inq.aenc)		printf("AENC ");
-		if (inq.termiop)	printf("TERMIOP ");
-		if (inq.reladr)		printf("RELADR ");
-		if (inq.wbus32)		printf("WBUS32 ");
-		if (inq.wbus16)		printf("WBUS16 ");
-		if (inq.sync)		printf("SYNC ");
-		if (inq.linked)		printf("LINKED ");
-		if (inq.cmdque)		printf("CMDQUE ");
-		if (inq.softreset)	printf("SOFTRESET ");
+		if (inq->aenc)		printf("AENC ");
+		if (inq->termiop)	printf("TERMIOP ");
+		if (inq->reladr)	printf("RELADR ");
+		if (inq->wbus32)	printf("WBUS32 ");
+		if (inq->wbus16)	printf("WBUS16 ");
+		if (inq->sync)		printf("SYNC ");
+		if (inq->linked)	printf("LINKED ");
+		if (inq->cmdque)	printf("CMDQUE ");
+		if (inq->softreset)	printf("SOFTRESET ");
 		printf("\n");
 	}
-	if (inq.add_len >= 31 ||
-			inq.info[0] || inq.ident[0] || inq.revision[0]) {
-		printf("Vendor_info    : '%.8s'\n", inq.info);
-		printf("Identifikation : '%.16s'\n", inq.ident);
-		printf("Revision       : '%.4s'\n", inq.revision);
+	if (inq->add_len >= 31 ||
+			inq->info[0] || inq->ident[0] || inq->revision[0]) {
+		printf("Vendor_info    : '%.8s'\n", inq->info);
+		printf("Identifikation : '%.16s'\n", inq->ident);
+		printf("Revision       : '%.4s'\n", inq->revision);
 	}
 	return (TRUE);
 }
 
 EXPORT void
-printdev()
+printdev(scgp)
+	SCSI	*scgp;
 {
 	printf("Device seems to be: ");
 
-	switch (dev) {
+	switch (scgp->dev) {
 
 	case DEV_UNKNOWN:	printf("unknown");		break;
 	case DEV_ACB40X0:	printf("Adaptec 4000/4010/4070");break;
@@ -2281,6 +2287,7 @@ printdev()
 	case DEV_YAMAHA_CDR_400:printf("Yamaha CDR-400");	break;
 	case DEV_PLASMON_RF_4100:printf("Plasmon RF-4100");	break;
 	case DEV_SONY_CDU_924:	printf("Sony CDU-924S");	break;
+	case DEV_RICOH_RO_1060C:printf("Ricoh RO-1060C");	break;
 	case DEV_RICOH_RO_1420C:printf("Ricoh RO-1420C");	break;
 	case DEV_TEAC_CD_R50S:	printf("Teac CD-R50S");		break;
 	case DEV_MATSUSHITA_7501:printf("Matsushita CW-7501");	break;
@@ -2290,7 +2297,7 @@ printdev()
 	case DEV_PIONEER_DVDR_S101:printf("Pioneer DVD-R S101");break;
 
 	default:		printf("Missing Entry for dev %d",
-							 dev);	break;
+						scgp->dev);	break;
 
 	}
 	printf(".\n");
@@ -2298,12 +2305,13 @@ printdev()
 }
 
 EXPORT BOOL
-do_inquiry(print)
+do_inquiry(scgp, print)
+	SCSI	*scgp;
 	int	print;
 {
-	if (getdev(print)) {
+	if (getdev(scgp, print)) {
 		if (print)
-			printdev();
+			printdev(scgp);
 		return (TRUE);
 	} else {
 		return (FALSE);
@@ -2311,62 +2319,78 @@ do_inquiry(print)
 }
 
 EXPORT BOOL
-recovery_needed()
+recovery_needed(scgp)
+	SCSI	*scgp;
 {
-	int err;
+		 int err;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	silent++;
-	err = test_unit_ready();
-	silent--;
+	scgp->silent++;
+	err = test_unit_ready(scgp);
+	scgp->silent--;
 
 	if (err >= 0)
 		return (FALSE);
-	else if (scmd.error >= SCG_FATAL)	/* nicht selektierbar */
+	else if (scmd->error >= SCG_FATAL)	/* nicht selektierbar */
 		return (FALSE);
 
-	if (scmd.sense.code < 0x70)		/* non extended Sense */
+	if (scmd->sense.code < 0x70)		/* non extended Sense */
 		return (FALSE);
-	return (((struct scsi_ext_sense *)&scmd.sense)->sense_code == 0xD0);
+
+						/* XXX Old Philips code */
+	return (((struct scsi_ext_sense *)&scmd->sense)->sense_code == 0xD0);
 }
 
 EXPORT int
-scsi_load()
+scsi_load(scgp)
+	SCSI	*scgp;
 {
-	return (scsi_start_stop_unit(1, 1));
+	return (scsi_start_stop_unit(scgp, 1, 1));
 }
 
 EXPORT int
-scsi_unload()
+scsi_unload(scgp)
+	SCSI	*scgp;
 {
-	return (scsi_start_stop_unit(0, 1));
+	return (scsi_start_stop_unit(scgp, 0, 1));
 }
 
 EXPORT int
-scsi_cdr_write(bp, sectaddr, size, blocks, islast)
+scsi_cdr_write(scgp, bp, sectaddr, size, blocks, islast)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	sectaddr;	/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
 	int	blocks;		/* sector count */
 	BOOL	islast;		/* last write for track */
 {
-	return (write_xg1(bp, sectaddr, size, blocks));
+	return (write_xg1(scgp, bp, sectaddr, size, blocks));
 }
 
 EXPORT struct cd_mode_page_2A *
-mmc_cap(modep)
-	u_char	*modep;
+mmc_cap(scgp, modep)
+	SCSI	*scgp;
+	Uchar	*modep;
 {
 	int	len;
 	int	val;
-	u_char	mode[0x100];
+	Uchar	mode[0x100];
 	struct	cd_mode_page_2A *mp;
 	struct	cd_mode_page_2A *mp2;
 
+
+retry:
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
-	if (!get_mode_params(0x2A, "CD capabilities",
-			mode, (u_char *)0, (u_char *)0, (u_char *)0, &len))
-		return (NULL);
+	if (!get_mode_params(scgp, 0x2A, "CD capabilities",
+			mode, (Uchar *)0, (Uchar *)0, (Uchar *)0, &len)) {
+
+		if (scsi_sense_key(scgp) == SC_NOT_READY) {
+			if (wait_unit_ready(scgp, 60))
+				goto retry;
+		}
+		return (NULL);		/* Pre SCSI-3/mmc drive	 	*/
+	}
 
 	if (len == 0)			/* Pre SCSI-3/mmc drive	 	*/
 		return (NULL);
@@ -2383,11 +2407,11 @@ mmc_cap(modep)
 	if (mp->p_len < 0x10)
 		return (NULL);
 
-	val = a_to_u_short(mp->max_read_speed);
+	val = a_to_u_2_byte(mp->max_read_speed);
 	if (val != 0 && val < 176)
 		return (NULL);
 
-	val = a_to_u_short(mp->cur_read_speed);
+	val = a_to_u_2_byte(mp->cur_read_speed);
 	if (val != 0 && val < 176)
 		return (NULL);
 
@@ -2429,34 +2453,36 @@ mmc_getval(mp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
 }
 
 EXPORT BOOL
-is_mmc(dvdp)
+is_mmc(scgp, dvdp)
+	SCSI	*scgp;
 	BOOL	*dvdp;
 {
-	return (mmc_check(NULL, NULL, NULL, NULL, dvdp));
+	return (mmc_check(scgp, NULL, NULL, NULL, NULL, dvdp));
 }
 
 EXPORT BOOL
-mmc_check(cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
+mmc_check(scgp, cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
+	SCSI	*scgp;
 	BOOL	*cdrrp;
 	BOOL	*cdwrp;
 	BOOL	*cdrrwp;
 	BOOL	*cdwrwp;
 	BOOL	*dvdp;
 {
-	u_char	mode[0x100];
+	Uchar	mode[0x100];
 	BOOL	was_atapi;
 	struct	cd_mode_page_2A *mp;
 
-	if (inq.type != INQ_ROMD)
+	if (scgp->inq->type != INQ_ROMD)
 		return (FALSE);
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
-	was_atapi = allow_atapi(TRUE);
-	silent++;
-	mp = mmc_cap(mode);
-	silent--;
-	allow_atapi(was_atapi);
+	was_atapi = allow_atapi(scgp, TRUE);
+	scgp->silent++;
+	mp = mmc_cap(scgp, mode);
+	scgp->silent--;
+	allow_atapi(scgp, was_atapi);
 	if (mp == NULL)
 		return (FALSE);
 
@@ -2471,10 +2497,11 @@ mmc_check(cdrrp, cdwrp, cdrrwp, cdwrwp, dvdp)
 #define	SVAL(what,val)	printf("  %s: %s\n", what, val);
 
 EXPORT void
-print_capabilities()
+print_capabilities(scgp)
+	SCSI	*scgp;
 {
 	BOOL	was_atapi;
-	u_char	mode[0x100];
+	Uchar	mode[0x100];
 	struct	cd_mode_page_2A *mp;
 static	const	char	*bclk[4] = {"32", "16", "24", "24 (I2S)"};
 static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
@@ -2482,16 +2509,16 @@ static	const	char	*load[8] = {"caddy", "tray", "pop-up", "reserved(3)",
 				"reserved(6)", "reserved(7)" };
 
 
-	if (inq.type != INQ_ROMD)
+	if (scgp->inq->type != INQ_ROMD)
 		return;
 
 	fillbytes((caddr_t)mode, sizeof(mode), '\0');
 
-	was_atapi = allow_atapi(TRUE);	/* Try to switch to 10 byte mode cmds */
-	silent++;
-	mp = mmc_cap(mode);
-	silent--;
-	allow_atapi(was_atapi);
+	was_atapi = allow_atapi(scgp, TRUE);	/* Try to switch to 10 byte mode cmds */
+	scgp->silent++;
+	mp = mmc_cap(scgp, mode);
+	scgp->silent--;
+	allow_atapi(scgp, was_atapi);
 	if (mp == NULL)
 		return;
 

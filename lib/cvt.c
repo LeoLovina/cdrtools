@@ -1,6 +1,11 @@
-/* @(#)cvt.c	1.1 98/07/19 Copyright 1998 J. Schilling */
+/* @(#)cvt.c	1.3 99/09/08 Copyright 1998 J. Schilling */
 /*
- *	Compatibility routines for 4.4BSD based C-libraries
+ *	Compatibility routines for 4.4BSD based C-libraries ecvt()/fcvt()
+ *	and a working gcvt() that is needed on 4.4BSD and GNU libc systems.
+ *
+ *	On 4.4BSD, gcvt() is missing, the gcvt() implementation from GNU libc
+ *	is not working correctly.
+ *
  *	Neither __dtoa() nor [efg]cvt() are MT safe.
  *
  *	Copyright (c) 1998 J. Schilling
@@ -25,12 +30,22 @@
 #include <utypes.h>
 #include <standard.h>
 
+#ifdef	HAVE_DTOA	/* 4.4BSD floating point implementation */
 extern	char *__dtoa	__PR((double value, int mode, int ndigit, int *decpt, int *sign, char **ep));
+#endif
 
+#ifndef	HAVE_ECVT
 EXPORT	char *ecvt	__PR((double value, int ndigit, int *decpt, int *sign));
+#endif
+#ifndef	HAVE_FCVT
 EXPORT	char *fcvt	__PR((double value, int ndigit, int *decpt, int *sign));
+#endif
+#ifndef	HAVE_GCVT
 EXPORT	char *gcvt	__PR((double value, int ndigit, char *buf));
+#endif
 
+#if	!defined(HAVE_ECVT) && defined(HAVE_DTOA)
+#define	HAVE_ECVT
 char *
 ecvt(value, ndigit, decpt, sign)
 	double	value;
@@ -72,7 +87,10 @@ static	char	*buf;
 
 	return (bp);
 }
+#endif
 
+#if	!defined(HAVE_FCVT) && defined(HAVE_DTOA)
+#define	HAVE_FCVT
 char *
 fcvt(value, ndigit, decpt, sign)
 	double	value;
@@ -115,7 +133,10 @@ static	char	*buf;
 
 	return (bp);
 }
+#endif
 
+#ifndef	HAVE_GCVT
+#define	HAVE_GCVT
 char *
 gcvt(number, ndigit, buf)
 	double	number;
@@ -187,3 +208,4 @@ gcvt(number, ndigit, buf)
 	*rs = '\0';
 	return (buf);
 }
+#endif

@@ -1,7 +1,7 @@
-/* @(#)modes.c	1.6 98/10/07 Copyright 1988 J. Schilling */
+/* @(#)modes.c	1.13 99/06/06 Copyright 1988 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)modes.c	1.6 98/10/07 Copyright 1988 J. Schilling";
+	"@(#)modes.c	1.13 99/06/06 Copyright 1988 J. Schilling";
 #endif
 /*
  *	SCSI mode page handling
@@ -27,31 +27,28 @@ static	char sccsid[] =
 #include <mconfig.h>
 #include <sys/types.h>
 #include <standard.h>
-#include <scsireg.h>
-#include <scgio.h>
+#include <scg/scgcmd.h>
+#include <scg/scsireg.h>
+#include <scg/scsitransp.h>
 
 #include "cdrecord.h"
-#include "scsitransp.h"
 
-extern struct scsi_inquiry inq;
-
-EXPORT int	verbose;
-EXPORT int	silent;
 EXPORT int	scsi_compliant;
 
-LOCAL	BOOL	has_mode_page	__PR((int page, char *pagename, int *lenp));
-EXPORT	BOOL	get_mode_params	__PR((int page, char *pagename,
+LOCAL	BOOL	has_mode_page	__PR((SCSI *scgp, int page, char *pagename, int *lenp));
+EXPORT	BOOL	get_mode_params	__PR((SCSI *scgp, int page, char *pagename,
 					u_char *modep, u_char *cmodep,
 					u_char *dmodep, u_char *smodep,
 					int *lenp));
-EXPORT	BOOL	set_mode_params	__PR((char *pagename, u_char *modep,
+EXPORT	BOOL	set_mode_params	__PR((SCSI *scgp, char *pagename, u_char *modep,
 					int len, int save, int secsize));
 
 #define	XXX
 
 #ifdef	XXX
 LOCAL
-BOOL has_mode_page(page, pagename, lenp)
+BOOL has_mode_page(scgp, page, pagename, lenp)
+	SCSI	*scgp;
 	int	page;
 	char	*pagename;
 	int	*lenp;
@@ -67,32 +64,32 @@ again:
 	if (lenp)
 		*lenp = 0;
 
-	(void)test_unit_ready();
-	silent++;
+	(void)test_unit_ready(scgp);
+	scgp->silent++;
 /* Maxoptix bringt Aborted cmd 0x0B mit code 0x4E (overlapping cmds)*/
 
 	/*
 	 * The Matsushita CW-7502 will sometimes deliver a zeroed
 	 * mode page 2A if "Page n default" is used instead of "current".
 	 */
-	if (mode_sense(mode, len, page, 0) < 0) {	/* Page n current */
-		silent--;
+	if (mode_sense(scgp, mode, len, page, 0) < 0) {	/* Page n current */
+		scgp->silent--;
 		return (FALSE);
 	} else {
 		len = ((struct scsi_mode_header *)mode)->sense_data_len + 1;
 	}
-	if (mode_sense(mode, len, page, 0) < 0) {	/* Page n current */
-		silent--;
+	if (mode_sense(scgp, mode, len, page, 0) < 0) {	/* Page n current */
+		scgp->silent--;
 		return (FALSE);
 	}
-	silent--;
+	scgp->silent--;
 
-	if (verbose)
-		scsiprbytes("Mode Sense Data", mode, len - scsigetresid());
+	if (scgp->verbose)
+		scsiprbytes("Mode Sense Data", mode, len - scsigetresid(scgp));
 	hdlen = sizeof(struct scsi_mode_header) +
 			((struct scsi_mode_header *)mode)->blockdesc_len;
 	mp = (struct scsi_mode_page_header *)(mode + hdlen);
-	if (verbose)
+	if (scgp->verbose)
 		scsiprbytes("Mode Page  Data", (u_char *)mp, mp->p_len+2);
 
 	if (mp->p_len == 0) {
@@ -115,13 +112,20 @@ again:
 								pagename);
 	}
 	if (!scsi_compliant &&
-	    (len < (mp->p_len + hdlen + 2))) {
+	    (len < (int)(mp->p_len + hdlen + 2))) {
 		len = mp->p_len + hdlen + 2;
 
 		/* XXX if (!nowarn) */
 		errmsgno(EX_BAD,
 			"Warning: controller returns wrong size for %s page.\n",
 								pagename);
+	}
+	if (mp->p_code != page) {
+		/* XXX if (!nowarn) */
+		errmsgno(EX_BAD,
+			"Warning: controller returns wrong page %X for %s page (%X).\n",
+						mp->p_code, pagename, page);
+		return (FALSE);
 	}
 
 	if (lenp)
@@ -131,7 +135,8 @@ again:
 #endif
 
 EXPORT
-BOOL get_mode_params(page, pagename, modep, cmodep, dmodep, smodep, lenp)
+BOOL get_mode_params(scgp, page, pagename, modep, cmodep, dmodep, smodep, lenp)
+	SCSI	*scgp;
 	int	page;
 	char	*pagename;
 	u_char	*modep;
@@ -146,11 +151,11 @@ BOOL get_mode_params(page, pagename, modep, cmodep, dmodep, smodep, lenp)
 #ifdef	XXX
 	if (lenp)
 		*lenp = 0;
-	if (!has_mode_page(page, pagename, &len)) {
-		if (!silent) errmsgno(EX_BAD,
+	if (!has_mode_page(scgp, page, pagename, &len)) {
+		if (!scgp->silent) errmsgno(EX_BAD,
 			"Warning: controller does not support %s page.\n",
 								pagename);
-		return (TRUE);	/* Hoffentlich klappt's trotzdem */
+		return (FALSE);
 	}
 	if (lenp)
 		*lenp = len;
@@ -161,42 +166,42 @@ BOOL get_mode_params(page, pagename, modep, cmodep, dmodep, smodep, lenp)
 
 	if (modep) {
 		fillbytes(modep, 0x100, '\0');
-		if (mode_sense(modep, len, page, 0) < 0) {/* Page x current */
+		if (mode_sense(scgp, modep, len, page, 0) < 0) {/* Page x current */
 			errmsgno(EX_BAD, "Cannot get %s data.\n", pagename);
 			ret = FALSE;
-		} else if (verbose) {
-			scsiprbytes("Mode Sense Data", modep, len - scsigetresid());
+		} else if (scgp->verbose) {
+			scsiprbytes("Mode Sense Data", modep, len - scsigetresid(scgp));
 		}
 	}
 
 	if (cmodep) {
 		fillbytes(cmodep, 0x100, '\0');
-		if (mode_sense(cmodep, len, page, 1) < 0) {/* Page x change */
+		if (mode_sense(scgp, cmodep, len, page, 1) < 0) {/* Page x change */
 			errmsgno(EX_BAD, "Cannot get %s mask.\n", pagename);
 			ret = FALSE;
-		} else if (verbose) {
-			scsiprbytes("Mode Sense Data", cmodep, len - scsigetresid());
+		} else if (scgp->verbose) {
+			scsiprbytes("Mode Sense Data", cmodep, len - scsigetresid(scgp));
 		}
 	}
 
 	if (dmodep) {
 		fillbytes(dmodep, 0x100, '\0');
-		if (mode_sense(dmodep, len, page, 2) < 0) {/* Page x default */
+		if (mode_sense(scgp, dmodep, len, page, 2) < 0) {/* Page x default */
 			errmsgno(EX_BAD, "Cannot get default %s data.\n",
 								pagename);
 			ret = FALSE;
-		} else if (verbose) {
-			scsiprbytes("Mode Sense Data", dmodep, len - scsigetresid());
+		} else if (scgp->verbose) {
+			scsiprbytes("Mode Sense Data", dmodep, len - scsigetresid(scgp));
 		}
 	}
 
 	if (smodep) {
 		fillbytes(smodep, 0x100, '\0');
-		if (mode_sense(smodep, len, page, 3) < 0) {/* Page x saved */
+		if (mode_sense(scgp, smodep, len, page, 3) < 0) {/* Page x saved */
 			errmsgno(EX_BAD, "Cannot get saved %s data.\n", pagename);
 			ret = FALSE;
-		} else if (verbose) {
-			scsiprbytes("Mode Sense Data", smodep, len - scsigetresid());
+		} else if (scgp->verbose) {
+			scsiprbytes("Mode Sense Data", smodep, len - scsigetresid(scgp));
 		}
 	}
 
@@ -204,7 +209,8 @@ BOOL get_mode_params(page, pagename, modep, cmodep, dmodep, smodep, lenp)
 }
 
 EXPORT
-BOOL set_mode_params(pagename, modep, len, save, secsize)
+BOOL set_mode_params(scgp, pagename, modep, len, save, secsize)
+	SCSI	*scgp;
 	char	*pagename;
 	u_char	*modep;
 	int	len;
@@ -226,8 +232,8 @@ BOOL set_mode_params(pagename, modep, len, save, secsize)
 							secsize);
 	}
 
-	if (save == 0 || mode_select(modep, len, save, inq.data_format >= 2) < 0) {
-		if (mode_select(modep, len, 0, inq.data_format >= 2) < 0) {
+	if (save == 0 || mode_select(scgp, modep, len, save, scgp->inq->data_format >= 2) < 0) {
+		if (mode_select(scgp, modep, len, 0, scgp->inq->data_format >= 2) < 0) {
 			errmsgno(EX_BAD,
 			   "Warning: using default %s data.\n", pagename);
 			scsiprbytes("Mode Select Data", modep, len);

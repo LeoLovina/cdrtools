@@ -1,7 +1,7 @@
-/* @(#)scsi_scan.c	1.1 97/08/24 Copyright 1997 J. Schilling */
+/* @(#)scsi_scan.c	1.7 00/01/26 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)scsi_scan.c	1.1 97/08/24 Copyright 1997 J. Schilling";
+	"@(#)scsi_scan.c	1.7 00/01/26 Copyright 1997 J. Schilling";
 #endif
 /*
  *	Scan SCSI Bus.
@@ -29,29 +29,18 @@ static	char sccsid[] =
 #include <stdxlib.h>
 #include <standard.h>
 #include <btorder.h>
-#include <scgio.h>
-#include <scsidefs.h>
-#include <scsireg.h>
+#include <errno.h>
+#include <scg/scgcmd.h>
+#include <scg/scsidefs.h>
+#include <scg/scsireg.h>
+#include <scg/scsitransp.h>
 
-#include "cdrecord.h"
 #include "scsi_scan.h"
-#include "scsitransp.h"
-
-extern	struct	scg_cmd		scmd;
-extern	struct	scsi_inquiry	inq;
-extern	struct	scsi_capacity	cap;
-
-extern	int	scsibus;
-extern	int	target;
-extern	int	lun;
-
-extern	int	silent;
-extern	int	verbose;
-extern	int	lverbose;
+#include "cdrecord.h"
 
 LOCAL	void	print_product		__PR((struct scsi_inquiry *ip));
-EXPORT	void	select_target		__PR((void));
-LOCAL	void	select_unit		__PR((void));
+EXPORT	void	select_target		__PR((SCSI *scgp));
+LOCAL	void	select_unit		__PR((SCSI *scgp));
 
 LOCAL void
 print_product(ip)
@@ -67,36 +56,53 @@ print_product(ip)
 }
 
 EXPORT void
-select_target()
+select_target(scgp)
+	SCSI	*scgp;
 {
 	int	initiator;
-	int	cscsibus = scsibus;
-	int	ctarget = target;
-	int	clun	= lun;
+	int	cscsibus = scgp->scsibus;
+	int	ctarget =  scgp->target;
+	int	clun	=  scgp->lun;
 	int	n;
 	int	low	= -1;
 	int	high	= -1;
+	BOOL	have_tgt;
 
-	silent++;
+	scgp->silent++;
 
-	for (scsibus=0; scsibus < 8; scsibus++) {
-		initiator = -1;
-/*		initiator = scg_initiator_id(scsibus);*/
-		if (!scsi_havebus(scsibus))
+	for (scgp->scsibus=0; scgp->scsibus < 16; scgp->scsibus++) {
+		if (!scsi_havebus(scgp, scgp->scsibus))
 			continue;
-		printf("scsibus%d:\n", scsibus);
 
-		for (target=0, lun=0; target < 8; target++) {
-			n = scsibus*100 + target;
+		initiator = scsi_initiator_id(scgp);
+		printf("scsibus%d:\n", scgp->scsibus);
+
+		for (scgp->target=0, scgp->lun=0; scgp->target < 16; scgp->target++) {
+			n = scgp->scsibus*100 + scgp->target;
 		
-/*			if (print_disknames(scsibus, target, -1) < 8)*/
+			have_tgt = unit_ready(scgp) || scgp->scmd->error != SCG_FATAL;
+
+
+			if (!have_tgt && scgp->target > 7) {
+				if (scgp->scmd->ux_errno == EINVAL)
+					break;
+/*				if ((high%100) < 8)*/
+				continue;
+			}
+
+/*			if (print_disknames(scgp->scsibus, scgp->target, -1) < 8)*/
+/*				printf("\t");*/
+			printf("\t");
+			if (printf("%d,%d,%d", scgp->scsibus, scgp->target, scgp->lun) < 8)
 				printf("\t");
-			printf("\t%3d) ", n);
-			if (target == initiator) {
+			else
+				printf(" ");
+			printf("%3d) ", n);
+			if (scgp->target == initiator) {
 				printf("HOST ADAPTOR\n");
 				continue;
 			}
-			if (!unit_ready() && scmd.error == SCG_FATAL) {
+			if (!have_tgt) {
 				printf("*\n");
 				continue;
 			}
@@ -104,76 +110,82 @@ select_target()
 				low = n;
 			high = n;
 
-			getdev(FALSE);
-			print_product(&inq);
+			getdev(scgp, FALSE);
+			print_product(scgp->inq);
 		}
 	}
-	silent--;
+	scgp->silent--;
 
 	if (low < 0)
 		comerrno(EX_BAD, "No target found.\n");
 	n = -1;
 /*	getint("Select target", &n, low, high); */
 exit(0);
-	scsibus = n/10;
-	target = n%10;
-	select_unit();
+	scgp->scsibus = n/10;
+	scgp->target = n%10;
+	select_unit(scgp);
 
-	scsibus	= cscsibus;
-	target	= ctarget;
-	lun	= clun;
+	scgp->scsibus	= cscsibus;
+	scgp->target	= ctarget;
+	scgp->lun	= clun;
 }
 
 LOCAL void
-select_unit()
+select_unit(scgp)
+	SCSI	*scgp;
 {
 	int	initiator;
-	int	clun	= lun;
+	int	clun	= scgp->lun;
 	int	low	= -1;
 	int	high	= -1;
 
-	silent++;
+	scgp->silent++;
 
-	printf("scsibus%d target %d:\n", scsibus, target);
+	printf("scsibus%d target %d:\n", scgp->scsibus, scgp->target);
 
-	initiator = -1;
-/*	initiator = scg_initiator_id(scsibus);*/
-	for (lun=0; lun < 8; lun++) {
+	initiator = scsi_initiator_id(scgp);
+	for (scgp->lun=0; scgp->lun < 8; scgp->lun++) {
 
-/*		if (print_disknames(scsibus, target, lun) < 8)*/
+/*		if (print_disknames(scgp->scsibus, scgp->target, scgp->lun) < 8)*/
+/*			printf("\t");*/
+
+		printf("\t");
+		if (printf("%d,%d,%d", scgp->scsibus, scgp->target, scgp->lun) < 8)
 			printf("\t");
-		printf("\t%3d) ", lun);
-		if (target == initiator) {
+		else
+			printf(" ");
+		printf("%3d) ", scgp->lun);
+		if (scgp->target == initiator) {
 			printf("HOST ADAPTOR\n");
 			continue;
 		}
-		if (!unit_ready() && scmd.error == SCG_FATAL) {
+		if (!unit_ready(scgp) && scgp->scmd->error == SCG_FATAL) {
 			printf("*\n");
 			continue;
 		}
-		if (unit_ready()) {
+		if (unit_ready(scgp)) {
 			/* non extended sense illegal lun */
-			if (scmd.sense.code == 0x25) {
+			if (scgp->scmd->sense.code == 0x25) {
 				printf("BAD UNIT\n");
 				continue;
 			}
 		}
 		if (low < 0)
-			low = lun;
-		high = lun;
+			low = scgp->lun;
+		high = scgp->lun;
 
-		getdev(FALSE);
-		print_product(&inq);
+		getdev(scgp, FALSE);
+		print_product(scgp->inq);
 	}
-	silent--;
+	scgp->silent--;
 
 	if (low < 0)
 		comerrno(EX_BAD, "No lun found.\n");
-	lun = -1;
-/*	getint("Select lun", &lun, low, high); */
+	scgp->lun = -1;
+/*	getint("Select lun", &scgp->lun, low, high); */
 exit(0);
 /*	format_one();*/
 	
-	lun	= clun;
+	scgp->lun	= clun;
 }
 

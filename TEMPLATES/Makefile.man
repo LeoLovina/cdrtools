@@ -1,0 +1,19 @@
+#ident %W% %E% %Q%
+###########################################################################
+# Sample makefile for installing manual pages
+###########################################################################
+SRCROOT=	../..
+RULESDIR=	RULES
+include		$(SRCROOT)/$(RULESDIR)/rules.top
+###########################################################################
+
+INSMODE=	0644
+MANDIR=		man
+TARGETMAN=	test
+MANSECT=	$(MANSECT_LIB)
+MANSUFFIX=	$(MANSUFF_LIB)
+MANFILE=	test.tr
+
+###########################################################################
+include		$(SRCROOT)/$(RULESDIR)/rules.man
+###########################################################################

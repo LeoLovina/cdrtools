@@ -1,4 +1,4 @@
-/* @(#)fconv.c	1.16 98/10/07 Copyright 1985 J. Schilling */
+/* @(#)fconv.c	1.22 00/01/22 Copyright 1985 J. Schilling */
 /*
  *	Convert floating point numbers to strings for format.c
  *	Should rather use the MT-safe routines [efg]convert()
@@ -35,10 +35,15 @@ extern	char	*fcvt __PR((double, int, int *, int *));
 
 #include <math.h>
 
-#ifdef	hpux
+#if	defined(__hpux) || defined(VMS) || defined(_SCO_DS) || defined(__QNX__)
+#ifndef	isnan
 #define	isnan(val)	(0)
+#endif
+#ifndef	isinf
 #define	isinf(val)	(0)
 #endif
+#endif
+
 #ifdef	SVR4
 #include <ieeefp.h>
 #define	isnan	isnand
@@ -51,9 +56,9 @@ extern	char	*fcvt __PR((double, int, int *, int *));
 #define	isnan	IS_NAN
 #endif 
 
-#ifdef	HAVE_DTOA	/* 4.4BSD floating point implementation */
+#if !defined(HAVE_ECVT) || !defined(HAVE_FCVT) || !defined(HAVE_GCVT)
 #include "cvt.c"
-#endif	/* HAVE_DTOA */
+#endif
 
 static	char	_nan[] = "(NaN)";
 static	char	_inf[] = "(Infinity)";
@@ -120,6 +125,13 @@ ftoes(s, val, fieldwidth, ndigits)
 	return rs - s;
 }
 
+/*
+ * fcvt() from Cygwin32 is buggy.
+ */
+#if	!defined(HAVE_FCVT) && defined(HAVE_ECVT)
+#define	USE_ECVT
+#endif
+
 EXPORT int
 ftofs(s, val, fieldwidth, ndigits)
 	register	char 	*s;
@@ -137,7 +149,11 @@ ftofs(s, val, fieldwidth, ndigits)
 	if ((len = _ferr(s, val)) > 0)
 		return len;
 	rs = s;
+#ifdef	USE_ECVT
+	b = ecvt(val, ndigits, &decpt, &sign);
+#else
 	b = fcvt(val, ndigits, &decpt, &sign);
+#endif
 	rdecpt = decpt;
 	len = rdecpt + ndigits + 1;
 	if (rdecpt < 0)
@@ -167,6 +183,10 @@ ftofs(s, val, fieldwidth, ndigits)
 	}
 	while (*b && ndigits-- > 0)
 		*rs++ = *b++;
+#ifdef	USE_ECVT
+	while (ndigits-- > 0)
+		*rs++ = '0';
+#endif
 	*rs = '\0';
 	return rs - s;
 }

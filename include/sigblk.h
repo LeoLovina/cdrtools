@@ -1,4 +1,4 @@
-/* @(#)sigblk.h	1.5 96/02/04 Copyright 1985 J. Schilling */
+/* @(#)sigblk.h	1.6 99/11/14 Copyright 1985 J. Schilling */
 /*
  *	software signal block definition
  *
@@ -14,7 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -23,37 +23,28 @@
 #ifndef	_SIGBLK_H
 #define	_SIGBLK_H
 
+#ifndef _MCONFIG_H
+#include <mconfig.h>
+#endif
+#ifndef _STANDARD_H
+#include <standard.h>
+#endif
+
 typedef struct sigblk {
 	long		**sb_savfp;
 	struct sigblk	*sb_signext;
 	short		sb_siglen;
-#ifdef	__STDC__
 	const char	*sb_signame;
-	int		(*sb_sigfun)(const char *, long, long);
-#else
-	char		*sb_signame;
-	int		(*sb_sigfun)();
-#endif
+	int		(*sb_sigfun)	__PR((const char *, long, long));
 	long		sb_sigarg;
 } SIGBLK;
 
-#if	defined(__STDC__)
+typedef	int	(*handlefunc_t)		__PR((const char *, long, long));
 
-typedef	int	(*handlefunc_t)(const char *, long, long);
-
-extern	void	handlecond(const char *, SIGBLK *,
-				int(*)(const char *, long, long), long);
-extern	void	raisecond(const char *, long);
-extern	void	unhandlecond(void);
-
-#else
-
-typedef	int	(*handlefunc_t)();
-
-extern	void	handlecond();
-extern	void	raisecond();
-extern	void	unhandlecond();
-
-#endif
+extern	void	handlecond		__PR((const char *, SIGBLK *,
+					      int(*)(const char *, long, long),
+									long));
+extern	void	raisecond		__PR((const char *, long));
+extern	void	unhandlecond		__PR((void));
 
 #endif	/* _SIGBLK_H */

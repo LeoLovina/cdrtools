@@ -1,7 +1,7 @@
-/** @(#)drv_jvc.c	1.31 98/09/15 Copyright 1997 J. Schilling */
+/** @(#)drv_jvc.c	1.46 99/10/17 Copyright 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)drv_jvc.c	1.31 98/09/15 Copyright 1997 J. Schilling";
+	"@(#)drv_jvc.c	1.46 99/10/17 Copyright 1997 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
@@ -24,6 +24,8 @@ static	char sccsid[] =
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+/*#define	XXDEBUG*/
+/*#define	XXBUFFER*/
 
 #include <mconfig.h>
 
@@ -33,18 +35,19 @@ static	char sccsid[] =
 #include <errno.h>
 #include <strdefs.h>
 #include <unixstd.h>
+#ifdef	XXDEBUG
+#include <stdxlib.h>
+#endif
 
 #include <utypes.h>
 #include <btorder.h>
-#include <scgio.h>
-#include <scsidefs.h>
-#include <scsireg.h>
+#include <intcvt.h>
+#include <scg/scgcmd.h>
+#include <scg/scsidefs.h>
+#include <scg/scsireg.h>
+#include <scg/scsitransp.h>
 
 #include "cdrecord.h"
-#include "scsitransp.h"
-
-struct	scg_cmd		scmd;
-struct	scsi_inquiry	inq;
 
 /* just a hack */
 long	lba_addr;
@@ -58,12 +61,6 @@ BOOL	last_done;
 #define LBA_FRM(x)	((x)%75)
 #define MSF_CONV(a)	((((a)%100)/10)*16 + ((a)%10))
 
-extern	int	scsibus;
-extern	int	target;
-extern	int	lun;
-
-extern	int	silent;
-extern	int	verbose;
 extern	int	lverbose;
 
 #if defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
@@ -210,28 +207,38 @@ struct isrc_subcode {		/* subcode for ISRC code */
 #endif
 
 
-LOCAL	int	teac_attach	__PR((cdr_t *dp));
-LOCAL	int	teac_getdisktype __PR((cdr_t *dp, dstat_t *dsp));
-LOCAL	int	speed_select_teac __PR((int speed, int dummy));
-LOCAL	int	select_secsize_teac __PR((track_t *trackp));
-LOCAL	int	next_wr_addr_jvc __PR((int track, track_t *, long *ap));
-LOCAL	int	write_teac_xg1	__PR((caddr_t, long, long, int, BOOL));
-LOCAL	int	cdr_write_teac	__PR((caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
-LOCAL	int	open_track_jvc	__PR((cdr_t *dp, int track, track_t *trackp));
-LOCAL	int	teac_fixation	__PR((int onp, int dummy, int toctype, int tracks, track_t *trackp));
-LOCAL	int	close_track_teac __PR((int track, track_t *trackp));
-LOCAL	int	teac_open_session __PR((int tracks, track_t *trackp, int toctype, int multi));
-LOCAL	int	teac_calibrate __PR((int toctype, int multi));
-LOCAL	int	opt_power_judge	__PR((int judge));
-LOCAL	int	clear_subcode	__PR((void));
-LOCAL	int	set_limits	__PR((long lba, long length));
-LOCAL	int	set_subcode	__PR((u_char *subcode_data, int length));
-LOCAL	int	read_disk_info_teac __PR((u_char *data, int length, int type));
-LOCAL	int	teac_freeze	__PR((int bp_flag));
-LOCAL	int	teac_wr_pma	__PR((void));
-LOCAL	int	teac_rd_pma	__PR((void));
-LOCAL	int	next_wr_addr_teac __PR((long start_lba, long last_lba));
-LOCAL	int	blank_jvc	__PR((long addr, int blanktype));
+LOCAL	int	teac_attach		__PR((SCSI *scgp, cdr_t *dp));
+LOCAL	int	teac_getdisktype	__PR((SCSI *scgp, cdr_t *dp, dstat_t *dsp));
+LOCAL	int	speed_select_teac	__PR((SCSI *scgp, int *speedp, int dummy));
+LOCAL	int	select_secsize_teac	__PR((SCSI *scgp, track_t *trackp));
+LOCAL	int	next_wr_addr_jvc	__PR((SCSI *scgp, int track, track_t *, long *ap));
+LOCAL	int	write_teac_xg1		__PR((SCSI *scgp, caddr_t, long, long, int, BOOL));
+LOCAL	int	cdr_write_teac		__PR((SCSI *scgp, caddr_t bp, long sectaddr, long size, int blocks, BOOL islast));
+LOCAL	int	open_track_jvc		__PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
+LOCAL	int	teac_fixation		__PR((SCSI *scgp, int onp, int dummy, int toctype, int tracks, track_t *trackp));
+LOCAL	int	close_track_teac	__PR((SCSI *scgp, int track, track_t *trackp));
+LOCAL	int	teac_open_session	__PR((SCSI *scgp, int tracks, track_t *trackp, int toctype, int multi));
+LOCAL	int	teac_calibrate		__PR((SCSI *scgp, int toctype, int multi));
+LOCAL	int	opt_power_judge		__PR((SCSI *scgp, int judge));
+LOCAL	int	clear_subcode		__PR((SCSI *scgp));
+LOCAL	int	set_limits		__PR((SCSI *scgp, long lba, long length));
+LOCAL	int	set_subcode		__PR((SCSI *scgp, u_char *subcode_data, int length));
+LOCAL	int	read_disk_info_teac	__PR((SCSI *scgp, u_char *data, int length, int type));
+LOCAL	int	teac_freeze		__PR((SCSI *scgp, int bp_flag));
+LOCAL	int	teac_wr_pma		__PR((SCSI *scgp));
+LOCAL	int	teac_rd_pma		__PR((SCSI *scgp));
+LOCAL	int	next_wr_addr_teac	__PR((SCSI *scgp, long start_lba, long last_lba));
+LOCAL	int	blank_jvc		__PR((SCSI *scgp, long addr, int blanktype));
+LOCAL	int	buf_cap_teac		__PR((SCSI *scgp, long *sp, long *fp));
+LOCAL	long	read_peak_buffer_cap_teac __PR((SCSI *scgp));
+LOCAL	int	buffer_inquiry_teac	__PR((SCSI *scgp, int fmt));
+#ifdef	XXBUFFER
+LOCAL	void	check_buffer_teac	__PR((SCSI *scgp));
+#endif
+#ifdef	XXDEBUG
+LOCAL	void	xxtest_teac		__PR((SCSI *scgp));
+#endif
+
 
 cdr_t	cdr_teac_cdr50 = {
 	0,
@@ -244,13 +251,15 @@ cdr_t	cdr_teac_cdr50 = {
 	teac_getdisktype,
 	scsi_load,
 	scsi_unload,
-	recovery_needed,
-	recover,
+	buf_cap_teac,
+	(int(*)__PR((SCSI *)))cmd_dummy,	/* recovery_needed	*/
+	(int(*)__PR((SCSI *, int)))cmd_dummy,	/* recover		*/
 	speed_select_teac,
 	select_secsize,
 	next_wr_addr_jvc,
-	reserve_track,
+	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
 	cdr_write_teac,
+	no_sendcue,
 	open_track_jvc,
 	close_track_teac,
 	teac_open_session,
@@ -262,7 +271,8 @@ cdr_t	cdr_teac_cdr50 = {
 };
 
 LOCAL int
-teac_getdisktype(dp, dsp)
+teac_getdisktype(scgp, dp, dsp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	dstat_t	*dsp;
 {
@@ -275,8 +285,8 @@ teac_getdisktype(dp, dsp)
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
-	(void)test_unit_ready();
-	if (mode_sense((u_char *)&md, count, page, 0) < 0) {	/* Page n current */
+	(void)test_unit_ready(scgp);
+	if (mode_sense(scgp, (u_char *)&md, count, page, 0) < 0) {	/* Page n current */
 		return (-1);
 	} else {
 		len = ((struct scsi_mode_header *)&md)->sense_data_len + 1;
@@ -284,19 +294,24 @@ teac_getdisktype(dp, dsp)
 	if (((struct scsi_mode_header *)&md)->blockdesc_len < 8)
 		return (-1);
 
-	l = a_to_3_byte(md.blockdesc.nlblock);
+	l = a_to_u_3_byte(md.blockdesc.nlblock);
 	dsp->ds_maxblocks = l;
 	return (0);
 }
 
 LOCAL int
-speed_select_teac(speed, dummy)
-	int	speed;
+speed_select_teac(scgp, speedp, dummy)
+	SCSI	*scgp;
+	int	*speedp;
 	int	dummy;
 {
 	struct cdd_52x_mode_data md;
 	int	count;
 	int	status;
+	int	speed = 1;
+
+	if (speedp)
+		speed = *speedp;
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
@@ -307,9 +322,12 @@ speed_select_teac(speed, dummy)
 	md.pagex.teac_page21.p_len =  0x01;
 	md.pagex.teac_page21.dummy = dummy?3:0;
 
-	status = mode_select((u_char *)&md, count, 0, inq.data_format >= 2);
+	status = mode_select(scgp, (u_char *)&md, count, 0, scgp->inq->data_format >= 2);
 	if (status < 0)
 		return (status);
+
+	if (speedp == 0)
+		return (0);
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
@@ -321,11 +339,12 @@ speed_select_teac(speed, dummy)
 	md.pagex.teac_page31.p_len =  0x02;
 	md.pagex.teac_page31.speed = speed;
 
-	return (mode_select((u_char *)&md, count, 0, inq.data_format >= 2));
+	return (mode_select(scgp, (u_char *)&md, count, 0, scgp->inq->data_format >= 2));
 }
 
 LOCAL int
-select_secsize_teac(trackp)
+select_secsize_teac(scgp, trackp)
+	SCSI	*scgp;
 	track_t	*trackp;
 {
 	struct scsi_mode_data md;
@@ -336,8 +355,8 @@ select_secsize_teac(trackp)
 
 	fillbytes((caddr_t)&md, sizeof(md), '\0');
 
-	(void)test_unit_ready();
-	if (mode_sense((u_char *)&md, count, page, 0) < 0) {	/* Page n current */
+	(void)test_unit_ready(scgp);
+	if (mode_sense(scgp, (u_char *)&md, count, page, 0) < 0) {	/* Page n current */
 		return (-1);
 	} else {
 		len = ((struct scsi_mode_header *)&md)->sense_data_len + 1;
@@ -353,11 +372,12 @@ select_secsize_teac(trackp)
 		md.blockdesc.density = 4;
 	i_to_3_byte(md.blockdesc.lblen, trackp->secsize);
 	
-	return (mode_select((u_char *)&md, count, 0, inq.data_format >= 2));
+	return (mode_select(scgp, (u_char *)&md, count, 0, scgp->inq->data_format >= 2));
 }
 
 LOCAL int
-next_wr_addr_jvc(track, trackp, ap)
+next_wr_addr_jvc(scgp, track, trackp, ap)
+	SCSI	*scgp;
 	int	track;
 	track_t	*trackp;
 	long	*ap;
@@ -367,7 +387,7 @@ next_wr_addr_jvc(track, trackp, ap)
 	} else {
 		long	nwa;
 
-		if (read_B0(TRUE, &nwa, NULL) < 0)
+		if (read_B0(scgp, TRUE, &nwa, NULL) < 0)
 			return (-1);
 
 		*ap = nwa + 150;
@@ -376,34 +396,40 @@ next_wr_addr_jvc(track, trackp, ap)
 }
 
 LOCAL int
-write_teac_xg1(bp, sectaddr, size, blocks, extwr)
+write_teac_xg1(scgp, bp, sectaddr, size, blocks, extwr)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	sectaddr;	/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
 	int	blocks;		/* sector count */
 	BOOL	extwr;		/* is an extended write */
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = bp;
-	scmd.size = size;
-	scmd.flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
-/*	scmd.flags = SCG_DISRE_ENA;*/
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.cdb.g1_cdb.cmd = SC_EWRITE;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdbaddr(&scmd.cdb.g1_cdb, sectaddr);
-	g1_cdblen(&scmd.cdb.g1_cdb, blocks);
-	scmd.cdb.g1_cdb.vu_97 = extwr;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	if (scsicmd("write_teac_g1") < 0)
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = size;
+	scmd->flags = SCG_DISRE_ENA|SCG_CMD_RETRY;
+/*	scmd->flags = SCG_DISRE_ENA;*/
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->cdb.g1_cdb.cmd = SC_EWRITE;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdbaddr(&scmd->cdb.g1_cdb, sectaddr);
+	g1_cdblen(&scmd->cdb.g1_cdb, blocks);
+	scmd->cdb.g1_cdb.vu_97 = extwr;
+
+	scgp->cmdname = "write_teac_g1";
+
+	if (scsicmd(scgp) < 0)
 		return (-1);
-	return (size - scmd.resid);
+	return (size - scsigetresid(scgp));
 }
 
 LOCAL int
-cdr_write_teac(bp, sectaddr, size, blocks, islast)
+cdr_write_teac(scgp, bp, sectaddr, size, blocks, islast)
+	SCSI	*scgp;
 	caddr_t	bp;		/* address of buffer */
 	long	sectaddr;	/* disk address (sector) to put */
 	long	size;		/* number of bytes to transfer */
@@ -415,16 +441,20 @@ cdr_write_teac(bp, sectaddr, size, blocks, islast)
 	if (islast)
 		last_done = TRUE;
 
-	ret = write_teac_xg1(bp, sectaddr, size, blocks, !islast);
+	ret = write_teac_xg1(scgp, bp, sectaddr, size, blocks, !islast);
 	if (ret < 0)
 		return (ret);
 
 	lba_addr = sectaddr + blocks;
+#ifdef	XXBUFFER
+	check_buffer_teac(scgp);
+#endif
 	return (ret);
 }
 
 LOCAL int
-open_track_jvc(dp, track, trackp)
+open_track_jvc(scgp, dp, track, trackp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	int	track;
 	track_t	*trackp;
@@ -436,11 +466,11 @@ open_track_jvc(dp, track, trackp)
 
 	last_done = FALSE;
 
-	if (select_secsize_teac(trackp) < 0)
+	if (select_secsize_teac(scgp, trackp) < 0)
 		return (-1);
 
-	status = clear_subcode();
-/*next_wr_addr_teac();*/
+	status = clear_subcode(scgp);
+/*next_wr_addr_teac(scgp);*/
 	if (status < 0)
 		return (status);
 
@@ -450,7 +480,7 @@ if (trackp->pregapsize != 0) {
 		lba_addr, trackp->pregapsize, lba_addr + trackp->pregapsize);
 	}
 
-	status = set_limits(lba_addr, trackp->pregapsize);
+	status = set_limits(scgp, lba_addr, trackp->pregapsize);
 	if (status < 0)
 		return (status);
 
@@ -463,7 +493,7 @@ if (trackp->pregapsize != 0) {
 	if (lverbose > 1)
 		scsiprbytes("Subcode:", (u_char *)&sc, sizeof(sc));
 
-	status = set_subcode((u_char *)&sc, sizeof(sc));
+	status = set_subcode(scgp, (u_char *)&sc, sizeof(sc));
 	if (status < 0)
 		return (status);
 
@@ -476,7 +506,7 @@ if (trackp->pregapsize != 0) {
 		printf("pad_track(%ld, %ld)-> %ld\n",
 			lba_addr, pregapsize, lba_addr + pregapsize);
 	}
-	if (pad_track(dp, track, trackp,
+	if (pad_track(scgp, dp, track, trackp,
 			lba_addr, pregapsize*trackp->secsize,
 			FALSE, (long *)0) < 0)
 		return (-1);
@@ -503,7 +533,7 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0)
 		printf("set_limits(%ld, %ld)-> %ld\n",
 			lba_addr, blocks, lba_addr + blocks);
 	}
-	status = set_limits(lba_addr, blocks);
+	status = set_limits(scgp, lba_addr, blocks);
 	if (status < 0)
 		return (status);
 
@@ -516,7 +546,7 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0)
 	if (lverbose > 1)
 		scsiprbytes("Subcode:", (u_char *)&sc, sizeof(sc));
 
-	status = set_subcode((u_char *)&sc, sizeof(sc));
+	status = set_subcode(scgp, (u_char *)&sc, sizeof(sc));
 	if (status < 0)
 		return (status);
 
@@ -529,7 +559,7 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0) {
 		blocks, pregapsize, blocks + pregapsize);
 	}
 
-	status = set_limits(blocks, pregapsize);
+	status = set_limits(scgp, blocks, pregapsize);
 	if (status < 0)
 		return (status);
 
@@ -544,7 +574,7 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0) {
 	if (lverbose > 1)
 		scsiprbytes("Subcode:", (u_char *)&sc, sizeof(sc));
 
-	status = set_subcode((u_char *)&sc, sizeof(sc));
+	status = set_subcode(scgp, (u_char *)&sc, sizeof(sc));
 	if (status < 0)
 		return (status);
 }
@@ -554,7 +584,8 @@ if (!is_last(trackp) && trackp[1].pregapsize == 0) {
 LOCAL	char	sector[3000];
 
 LOCAL int
-close_track_teac(track, trackp)
+close_track_teac(scgp, track, trackp)
+	SCSI	*scgp;
 	int	track;
 	track_t	*trackp;
 {
@@ -567,12 +598,12 @@ close_track_teac(track, trackp)
 		 * XXX do we really need this ?
 		 * XXX if we need this can we set blocks to 0 ?
 		 */
-		ret =  write_teac_xg1(sector, lba_addr, 2352, 1, FALSE);
+		ret =  write_teac_xg1(scgp, sector, lba_addr, 2352, 1, FALSE);
 		lba_addr++;
 	}
 	if (!is_audio(trackp))
 		lba_addr += 2;
-	teac_wr_pma();
+	teac_wr_pma(scgp);
 	return (ret);
 }
 
@@ -642,15 +673,21 @@ static const char *sd_teac50_error_str[] = {
 };
 
 LOCAL int
-teac_attach(dp)
+teac_attach(scgp, dp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 {
-	scsi_setnonstderrs(sd_teac50_error_str);
+	scsi_setnonstderrs(scgp, sd_teac50_error_str);
+#ifdef	XXDEBUG
+	xxtest_teac(scgp);
+	exit(0);
+#endif
 	return (0);
 }
 
 LOCAL int
-teac_fixation(onp, dummy, toctype, tracks, trackp)
+teac_fixation(scgp, onp, dummy, toctype, tracks, trackp)
+	SCSI	*scgp;
 	int	onp;
 	int	dummy;
 	int	toctype;
@@ -669,7 +706,7 @@ extern	char	*buf;
 		 * As long as we cannot read and interpret the PMA, we must
 		 * abort here.
 		 */
-		teac_rd_pma();
+		teac_rd_pma(scgp);
 /*		errmsgno(EX_BAD, "Cannot fixate zero track disk.\n");;*/
 		errmsgno(EX_BAD, "Cannot fixate without track list (not yet implemented).\n");;
 		return (-1);
@@ -678,7 +715,7 @@ extern	char	*buf;
 
 	sleep(1);
 
-	status = clear_subcode();
+	status = clear_subcode(scgp);
 	sleep(1);
 	if (status < 0)
 		return (status);
@@ -754,7 +791,7 @@ extern	char	*buf;
 		printf("Subcode len: %d\n", status);
 		scsiprbytes("Subcode:", (u_char *)buf, status);
 	}
-	status = set_subcode((u_char *)buf, status);
+	status = set_subcode(scgp, (u_char *)buf, status);
 	sleep(1);
 	if (status < 0)
 		return (status);
@@ -762,13 +799,14 @@ extern	char	*buf;
 	/*
 	 * now write the toc
 	 */
-	status = teac_freeze(!onp);
+	status = teac_freeze(scgp, !onp);
 	return (status);
 
 }
 
 LOCAL int
-teac_open_session(tracks, trackp, toctype, multi)
+teac_open_session(scgp, tracks, trackp, toctype, multi)
+	SCSI	*scgp;
 	int	tracks;
 	track_t	*trackp;
 	int	toctype;
@@ -787,22 +825,23 @@ teac_open_session(tracks, trackp, toctype, multi)
 			return (-1);
 		}
 	}
-	return (teac_calibrate(toctype, multi));
+	return (teac_calibrate(scgp, toctype, multi));
 }
 
 LOCAL int
-teac_calibrate(toctype, multi)
+teac_calibrate(scgp, toctype, multi)
+	SCSI	*scgp;
 	int	toctype;
 	int	multi;
 {
 	int	status;
 
-	silent++;
-	if (read_B0(TRUE, &lba_addr, NULL) < 0)
+	scgp->silent++;
+	if (read_B0(scgp, TRUE, &lba_addr, NULL) < 0)
 		lba_addr = -150;
-	silent--;
+	scgp->silent--;
 
-	status = clear_subcode();
+	status = clear_subcode(scgp);
 	if (status < 0)
 		return (status);
 
@@ -810,7 +849,7 @@ teac_calibrate(toctype, multi)
 		fprintf(stdout, "Judging disk...");
 		flush();
 	}
-	status = opt_power_judge(1);
+	status = opt_power_judge(scgp, 1);
 	if (status < 0) {
 		printf("\n");
 		return (status);
@@ -820,16 +859,16 @@ teac_calibrate(toctype, multi)
 		flush();
 	}
 
-	status = opt_power_judge(0);
+	status = opt_power_judge(scgp, 0);
 	if (lverbose) {
 		fprintf(stdout, "done.\n");
 	}
-	silent++;
-	if (next_wr_addr_teac(-1, -1) < 0) {
-		if (verbose == 0 && scsi_sense_key() != SC_ILLEGAL_REQUEST)
-			scsiprinterr("next writable address");
+	scgp->silent++;
+	if (next_wr_addr_teac(scgp, -1, -1) < 0) {
+		if (scgp->verbose == 0 && scsi_sense_key(scgp) != SC_ILLEGAL_REQUEST)
+			scsiprinterr(scgp);
 	}
-	silent--;
+	scgp->silent--;
 	return (status);
 }
 
@@ -838,190 +877,240 @@ teac_calibrate(toctype, multi)
 #define SC_SET_SUBCODE		0xc2		/* teac 10 byte command */
 #define SC_READ_PMA		0xc4		/* teac 10 byte command */
 #define SC_READ_DISK_INFO	0xc7		/* teac 10 byte command */
+#define SC_BUFFER_INQUIRY	0xe0		/* teac 12 byte command */
+
 #define SC_WRITE_PMA		0xe1		/* teac 12 byte command */
 #define SC_FREEZE		0xe3		/* teac 12 byte command */
 #define SC_OPC_EXECUTE		0xec		/* teac 12 byte command */
 #define SC_CLEAR_SUBCODE	0xe4		/* teac 12 byte command */
 #define SC_NEXT_WR_ADDRESS	0xe6		/* teac 12 byte command */
 
+#define SC_READ_PEAK_BUF_CAP	0xef		/* teac 12 byte command */
+
 /* -----------------------------------------------------------------
  * Optimum power calibration for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
-opt_power_judge(judge)
+opt_power_judge(scgp, judge)
+	SCSI	*scgp;
 	int	judge;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 60;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	scmd.cdb.g5_cdb.cmd = SC_OPC_EXECUTE;
-	scmd.cdb.g5_cdb.lun = lun;
-	scmd.cdb.g5_cdb.reladr = judge; /* Judge the Disc */
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 60;
 
-	return (scsicmd("opt_power_judge"));
+	scmd->cdb.g5_cdb.cmd = SC_OPC_EXECUTE;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.reladr = judge; /* Judge the Disc */
+
+	scgp->cmdname = "opt_power_judge";
+
+	return (scsicmd(scgp));
 }
 
 /* -----------------------------------------------------------------
  * Clear subcodes for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
-clear_subcode()
+clear_subcode(scgp)
+	SCSI	*scgp;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	scmd.cdb.g5_cdb.cmd = SC_CLEAR_SUBCODE;
-	scmd.cdb.g5_cdb.lun = lun;
-	scmd.cdb.g5_cdb.addr[3] = 0x80;
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
 
-	return (scsicmd("clear subcode"));
+	scmd->cdb.g5_cdb.cmd = SC_CLEAR_SUBCODE;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.addr[3] = 0x80;
+
+	scgp->cmdname = "clear subcode";
+
+	return (scsicmd(scgp));
 }
 
 /* -----------------------------------------------------------------
  * Set limits for command linking for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
-set_limits(lba, length)
+set_limits(scgp, lba, length)
+	SCSI	*scgp;
 	long	lba;
 	long	length;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	scmd.cdb.g5_cdb.cmd = SC_SET_LIMITS;
-	scmd.cdb.g5_cdb.lun = lun;
-	i_to_long(&scmd.cdb.g5_cdb.addr[0], lba);
-	i_to_long(&scmd.cdb.g5_cdb.count[0], length);
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
 
-	return (scsicmd("set limits"));
+	scmd->cdb.g5_cdb.cmd = SC_SET_LIMITS;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+	i_to_4_byte(&scmd->cdb.g5_cdb.addr[0], lba);
+	i_to_4_byte(&scmd->cdb.g5_cdb.count[0], length);
+
+	scgp->cmdname = "set limits";
+
+	return (scsicmd(scgp));
 }
 
 /* -----------------------------------------------------------------
  * Set subcode for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
-set_subcode(subcode_data, length)
+set_subcode(scgp, subcode_data, length)
+	SCSI	*scgp;
 	u_char	*subcode_data;
 	int	length;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)subcode_data;
-	scmd.size = length;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	scmd.cdb.g1_cdb.cmd = SC_SET_SUBCODE;
-	scmd.cdb.g1_cdb.lun = lun;
-	g1_cdblen(&scmd.cdb.g1_cdb, length);
-	return (scsicmd("set subcode"));
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)subcode_data;
+	scmd->size = length;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+
+	scmd->cdb.g1_cdb.cmd = SC_SET_SUBCODE;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+	g1_cdblen(&scmd->cdb.g1_cdb, length);
+
+	scgp->cmdname = "set subcode";
+
+	return (scsicmd(scgp));
 }
 
 LOCAL int
-read_disk_info_teac(data, length, type)
+read_disk_info_teac(scgp, data, length, type)
+	SCSI	*scgp;
 	u_char	*data;
 	int	length;
 	int	type;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)data;
-	scmd.size = length;
-	scmd.flags = SCG_RECV_DATA |SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	scmd.cdb.g1_cdb.cmd = SC_READ_DISK_INFO;
-	scmd.cdb.g1_cdb.lun = lun;
-	return (scsicmd("read disk info teac"));
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)data;
+	scmd->size = length;
+	scmd->flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+
+	scmd->cdb.g1_cdb.cmd = SC_READ_DISK_INFO;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+
+	scmd->cdb.g1_cdb.reladr = type & 1;
+	scmd->cdb.g1_cdb.res    = (type & 2) >> 1;
+
+	scgp->cmdname = "read disk info teac";
+
+	return (scsicmd(scgp));
 }
 
 /* -----------------------------------------------------------------
  * Perform the freeze command for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
-teac_freeze(bp_flag)
+teac_freeze(scgp, bp_flag)
+	SCSI	*scgp;
 	int	bp_flag;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
-	scmd.timeout = 8 * 60;		/* Needs up to 4 minutes */
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	scmd.cdb.g5_cdb.cmd = SC_FREEZE;
-	scmd.cdb.g5_cdb.lun = lun;
-	scmd.cdb.g5_cdb.addr[3] = bp_flag ? 0x80 : 0;
-	return (scsicmd("teac_freeze"));
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+	scmd->timeout = 8 * 60;		/* Needs up to 4 minutes */
+
+	scmd->cdb.g5_cdb.cmd = SC_FREEZE;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+	scmd->cdb.g5_cdb.addr[3] = bp_flag ? 0x80 : 0;
+
+	scgp->cmdname = "teac_freeze";
+
+	return (scsicmd(scgp));
 }
 
 LOCAL int
-teac_wr_pma()
+teac_wr_pma(scgp)
+	SCSI	*scgp;
 {
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)0;
-	scmd.size = 0;
-	scmd.flags = SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
-	scmd.cdb.g5_cdb.cmd = SC_WRITE_PMA;
-	scmd.cdb.g5_cdb.lun = lun;
-	return (scsicmd("teac_write_pma"));
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+
+	scmd->cdb.g5_cdb.cmd = SC_WRITE_PMA;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+
+	scgp->cmdname = "teac_write_pma";
+
+	return (scsicmd(scgp));
 }
 
 /* -----------------------------------------------------------------
  * Read PMA for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
-teac_rd_pma()
+teac_rd_pma(scgp)
+	SCSI	*scgp;
 {
 	unsigned char	xx[256];
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
 	fillbytes((caddr_t)xx, sizeof(xx), '\0');
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)xx;
-	scmd.size = sizeof(xx);
-	scmd.flags = SCG_RECV_DATA |SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G1_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)xx;
+	scmd->size = sizeof(xx);
+	scmd->flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
 
-	scmd.cdb.g1_cdb.cmd = SC_READ_PMA;
-	scmd.cdb.g1_cdb.lun = lun;
+	scmd->cdb.g1_cdb.cmd = SC_READ_PMA;
+	scmd->cdb.g1_cdb.lun = scgp->lun;
 
-	g1_cdblen(&scmd.cdb.g1_cdb, sizeof(xx));
+	g1_cdblen(&scmd->cdb.g1_cdb, sizeof(xx));
 
-/*	return (scsicmd("teac_read_pma"));*/
-	if (scsicmd("teac_read_pma") < 0)
+	scgp->cmdname = "teac_read_pma";
+
+/*	return (scsicmd(scgp));*/
+	if (scsicmd(scgp) < 0)
 		return (-1);
 
-	if (verbose) {
-		scsiprbytes("PMA Data", xx, sizeof(xx) - scsigetresid());
+	if (scgp->verbose) {
+		scsiprbytes("PMA Data", xx, sizeof(xx) - scsigetresid(scgp));
 	}
 	if (lverbose) {
-		int	i;
+		unsigned i;
 		Uchar	*p;
 
 		scsiprbytes("PMA Header: ", xx, 4);
@@ -1039,51 +1128,329 @@ teac_rd_pma()
  * Next writable address for Teac Drives.
 ----------------------------------------------------------------- */
 LOCAL int
-next_wr_addr_teac(start_lba, last_lba)
+next_wr_addr_teac(scgp, start_lba, last_lba)
+	SCSI	*scgp;
 	long	start_lba;
 	long	last_lba;
 {
 	unsigned char	xx[256];
+	register struct	scg_cmd	*scmd = scgp->scmd;
 
 	fillbytes((caddr_t)xx, sizeof(xx), '\0');
-	fillbytes((caddr_t)&scmd, sizeof(scmd), '\0');
-	scmd.addr = (caddr_t)xx;
-	scmd.size = sizeof(xx);
-	scmd.flags = SCG_RECV_DATA |SCG_DISRE_ENA;
-	scmd.cdb_len = SC_G5_CDBLEN;
-	scmd.sense_len = CCS_SENSE_LEN;
-	scmd.target = target;
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)xx;
+	scmd->size = sizeof(xx);
+	scmd->flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
 
-	scmd.cdb.g5_cdb.cmd = SC_NEXT_WR_ADDRESS;
-	scmd.cdb.g5_cdb.lun = lun;
+	scmd->cdb.g5_cdb.cmd = SC_NEXT_WR_ADDRESS;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
 
-	i_to_long(&scmd.cdb.g5_cdb.addr[0], start_lba);
-	i_to_long(&scmd.cdb.g5_cdb.count[0], last_lba);
+	i_to_4_byte(&scmd->cdb.g5_cdb.addr[0], start_lba);
+	i_to_4_byte(&scmd->cdb.g5_cdb.count[0], last_lba);
 
-	if (verbose)
+	if (scgp->verbose)
 		printf("start lba: %ld last lba: %ld\n",
 					start_lba, last_lba);
 
-/*	return (scsicmd("next writable address"));*/
-	if (scsicmd("next writable address") < 0)
+	scgp->cmdname = "next writable address";
+
+/*	return (scsicmd(scgp));*/
+	if (scsicmd(scgp) < 0)
 		return (-1);
 
-	if (verbose) {
-		scsiprbytes("WRa Data", xx, sizeof(xx) - scsigetresid());
-		printf("NWA: %ld\n", a_to_u_long(xx));
+	if (scgp->verbose) {
+		scsiprbytes("WRa Data", xx, sizeof(xx) - scsigetresid(scgp));
+		printf("NWA: %ld\n", a_to_4_byte(xx));
 	}
 	return (0);
 }
 
 LOCAL int
-blank_jvc(addr, blanktype)
+blank_jvc(scgp, addr, blanktype)
+	SCSI	*scgp;
 	long	addr;
 	int	blanktype;
 {
 	extern	char	*blank_types[];
 
-	if (lverbose)
+	if (lverbose) {
 		printf("Blanking %s\n", blank_types[blanktype & 0x07]);
+		flush();
+	}
 
-	return (scsi_blank(addr, blanktype));
+	return (scsi_blank(scgp, addr, blanktype));
 }
+
+LOCAL int
+buf_cap_teac(scgp, sp, fp)
+	SCSI	*scgp;
+	long	*sp;	/* Size pointer */
+	long	*fp;	/* Free pointer */
+{
+	Ulong	freespace;
+	Ulong	bufsize;
+	long	ret;
+	int	per;
+
+	ret = read_peak_buffer_cap_teac(scgp);
+	if (ret < 0)
+		return (-1);
+	bufsize = ret;
+	freespace = 0;
+	if (sp)
+		*sp = bufsize;
+	if (fp)
+		*fp = freespace;
+	
+	if (scgp->verbose || (sp == 0 && fp == 0))
+		printf("BFree: %ld K BSize: %ld K\n", freespace >> 10, bufsize >> 10);
+
+	if (bufsize == 0)
+		return (0);
+	per = (100 * (bufsize - freespace)) / bufsize;
+	if (per < 0)
+		return (0);
+	if (per > 100)
+		return (100);
+	return (per);
+}
+
+LOCAL long
+read_peak_buffer_cap_teac(scgp)
+	SCSI	*scgp;
+{
+	Uchar	xx[4];
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)xx, sizeof(xx), '\0');
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)xx;
+	scmd->size = sizeof(xx);
+	scmd->flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+
+	scmd->cdb.g5_cdb.cmd = SC_READ_PEAK_BUF_CAP;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+
+	scgp->cmdname = "read peak buffer capacity";
+
+#define	BDEBUG
+#ifndef	BDEBUG
+	return (scsicmd(scgp));
+#else
+	if (scsicmd(scgp) < 0)
+		return (-1);
+
+/*	if (scgp->verbose) {*/
+		scsiprbytes("WRa Data", xx, sizeof(xx) - scsigetresid(scgp));
+		printf("Buffer cap: %ld\n", a_to_u_3_byte(&xx[1]));
+/*	}*/
+	return (a_to_u_3_byte(&xx[1]));
+/*	return (0);*/
+#endif
+}
+
+#define	BI_ONE_BYTE	0xC0
+#define	BI_448_BYTE	0x40
+#define	BI_APP_CODE	0x10
+
+LOCAL int
+buffer_inquiry_teac(scgp, fmt)
+	SCSI	*scgp;
+	int	fmt;
+{
+	Uchar	xx[448];
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)xx, sizeof(xx), '\0');
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)xx;
+	scmd->size = sizeof(xx);
+	scmd->size = 448;
+	scmd->flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+
+	scmd->cdb.g5_cdb.cmd = SC_BUFFER_INQUIRY;
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+
+	if (fmt > 0) {
+		scmd->cdb.g5_cdb.addr[3] = fmt;
+		if (fmt == BI_ONE_BYTE)
+			scmd->size = 1;
+	} else {
+		scmd->cdb.g5_cdb.addr[3] = BI_448_BYTE;
+/*		scmd->cdb.g5_cdb.addr[3] = BI_APP_CODE;*/
+	}
+
+	scgp->cmdname = "buffer inquiry";
+
+#define	BDEBUG
+#ifndef	BDEBUG
+	return (scsicmd(scgp));
+#else
+	if (scsicmd(scgp) < 0)
+		return (-1);
+
+/*	if (scgp->verbose) {*/
+/*		scsiprbytes("WRa Data", xx, sizeof(xx) - scsigetresid(scgp));*/
+/*		scsiprbytes("WRa Data", xx, 1);*/
+
+		if (fmt > 0) printf("fmt: %X ", fmt);
+		scsiprbytes("WRa Data", xx, 9);
+		printf("%d\n", xx[8] - xx[1]);
+/*		printf("Buffer cap: %ld\n", a_to_u_3_byte(&xx[1]));*/
+/*	}*/
+	return (0);
+#endif
+}
+
+#ifdef	XXBUFFER
+LOCAL void
+check_buffer_teac(scgp)
+	SCSI	*scgp;
+{
+	printf("-------\n");
+	buffer_inquiry_teac(scgp, 0);
+#ifdef	SL
+	usleep(40000);
+	buffer_inquiry_teac(scgp, 0);
+#endif
+	read_peak_buffer_cap_teac(scgp);
+}
+#endif
+/*--------------------------------------------------------------------------*/
+#ifdef	XXDEBUG
+#include "scsimmc.h"
+
+LOCAL	int	g7_teac			__PR((SCSI *scgp));
+LOCAL	int	g6_teac			__PR((SCSI *scgp));
+
+LOCAL int
+g7_teac(scgp)
+	SCSI	*scgp;
+{
+	Uchar	xx[2048];
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)xx, sizeof(xx), '\0');
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)xx;
+	scmd->size = sizeof(xx);
+	scmd->flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+
+	scmd->cdb.g5_cdb.cmd = 0xDf;
+/*	scmd->cdb.g5_cdb.cmd = 0xE5;*/
+	scmd->cdb.g5_cdb.lun = scgp->lun;
+
+/*	scmd->cdb.g5_cdb.addr[3] = BI_ONE_BYTE;*/
+/*	scmd->size = 1;*/
+
+/*	scmd->cdb.g5_cdb.addr[3] = BI_448_BYTE;*/
+/*	scmd->cdb.g5_cdb.addr[3] = BI_APP_CODE;*/
+
+	scgp->cmdname = "g7 teac";
+
+/*	return (scsicmd(scgp));*/
+	if (scsicmd(scgp) < 0)
+		return (-1);
+
+/*	if (scgp->verbose) {*/
+		scsiprbytes("WRa Data", xx, sizeof(xx) - scsigetresid(scgp));
+/*		scsiprbytes("WRa Data", xx, 1);*/
+/*		scsiprbytes("WRa Data", xx, 9);*/
+/*printf("%d\n", xx[8] - xx[1]);*/
+/*		printf("Buffer cap: %ld\n", a_to_u_3_byte(&xx[1]));*/
+/*	}*/
+	return (0);
+}
+
+LOCAL int
+g6_teac(scgp)
+	SCSI	*scgp;
+{
+	Uchar	xx[2048];
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)xx, sizeof(xx), '\0');
+	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	scmd->addr = (caddr_t)xx;
+	scmd->size = sizeof(xx);
+	scmd->flags = SCG_RECV_DATA |SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->target = scgp->target;
+
+	scmd->cdb.g1_cdb.cmd = 0xC1;
+	scmd->cdb.g1_cdb.cmd = 0xC3;
+	scmd->cdb.g1_cdb.cmd = 0xC6;
+	scmd->cdb.g1_cdb.cmd = 0xC7;	/* Read TOC */
+	scmd->cdb.g1_cdb.cmd = 0xCe;
+	scmd->cdb.g1_cdb.cmd = 0xCF;
+	scmd->cdb.g1_cdb.cmd = 0xC7;	/* Read TOC */
+	scmd->cdb.g1_cdb.lun = scgp->lun;
+
+	scgp->cmdname = "g6 teac";
+
+/*	return (scsicmd(scgp));*/
+	if (scsicmd(scgp) < 0)
+		return (-1);
+
+/*	if (scgp->verbose) {*/
+		scsiprbytes("WRa Data", xx, sizeof(xx) - scsigetresid(scgp));
+/*		scsiprbytes("WRa Data", xx, 1);*/
+/*		scsiprbytes("WRa Data", xx, 9);*/
+/*printf("%d\n", xx[8] - xx[1]);*/
+/*		printf("Buffer cap: %ld\n", a_to_u_3_byte(&xx[1]));*/
+/*	}*/
+	return (0);
+}
+
+LOCAL void
+xxtest_teac(scgp)
+	SCSI	*scgp;
+{
+	read_peak_buffer_cap_teac(scgp);
+
+/*#define	XDI*/
+#ifdef	XDI
+	{
+		u_char cbuf[512];
+
+/*		read_disk_info_teac(scgp, data, length, type)*/
+/*		read_disk_info_teac(scgp, cbuf, 512, 2);*/
+/*		read_disk_info_teac(scgp, cbuf, 512, 2);*/
+		read_disk_info_teac(scgp, cbuf, 512, 3);
+		scsiprbytes("DI Data", cbuf, sizeof(cbuf) - scsigetresid(scgp));
+	}
+#endif	/* XDI */
+
+	buffer_inquiry_teac(scgp, -1);
+
+/*#define	XBU*/
+#ifdef	XBU
+	{
+		int i;
+
+		for (i = 0; i < 63; i++) {
+			scgp->silent++;
+			buffer_inquiry_teac(scgp, i<<2);
+			scgp->silent--;
+		}
+	}
+#endif	/* XBU */
+
+/*	printf("LLLL\n");*/
+/*	g7_teac(scgp);*/
+/*	g6_teac(scgp);*/
+}
+#endif	/* XXDEBUG */

@@ -23,15 +23,14 @@ If you want to copy such a CD directly with cdrecord, you may call:
 	cdrecord -v dev=... -isosize /dev/rdsk/c0t6d0s0
 
 But this may fail if the master gives read errors. To copy such a CD to a file
-you may use the program 'scgskeleton' from
+you may use the program 'readcd' from this package
 
-ftp://ftp.fokus.gmd.de/pub/unix/scgskeleton/
-
-Call 'scgskeleton [target] [lun] [scsibusno]' and select funtion 11.
-To prevent scgskeleton from reading the run-out sectors, reduce the 
+Call 'readcd [target] [lun] [scsibusno]' and select funtion 11.
+Or call readcd -help to get alternate usage.
+To prevent readcd from reading the run-out sectors, reduce the 
 number of sectors to copy by 2.
 
 If the master disk is made of several partitions (like a Solaris boot CD),
-the best way to copy a CD is to use the program 'scgskeleton'. It ignores
+the best way to copy a CD is to use the program 'readcd'. It ignores
 the partition info and does raw SCSI reads.
 

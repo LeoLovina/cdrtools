@@ -1,4 +1,4 @@
-/* @(#)iso9660.h	1.2 97/03/04 Copyright 1996 J. Schilling */
+/* @(#)iso9660.h	1.4 99/10/18 Copyright 1996 J. Schilling */
 /*
  *	Copyright (c) 1996 J. Schilling
  */
@@ -160,58 +160,10 @@ struct iso9660_eattr {
 #define	PERM_XOTH	0x4000
 
 
-#define	i_to_long(a, i)		(((u_char *)(a))[0] = ((i) >> 24)& 0xFF,\
-				 ((u_char *)(a))[1] = ((i) >> 16)& 0xFF,\
-				 ((u_char *)(a))[2] = ((i) >> 8) & 0xFF,\
-				 ((u_char *)(a))[3] = (i) & 0xFF)
-
-#define	i_to_3_byte(a, i)	(((u_char *)(a))[0] = ((i) >> 16)& 0xFF,\
-				 ((u_char *)(a))[1] = ((i) >> 8) & 0xFF,\
-				 ((u_char *)(a))[2] = (i) & 0xFF)
-
-#define	i_to_short(a, i)	(((u_char *)(a))[0] = ((i) >> 8) & 0xFF,\
-				 ((u_char *)(a))[1] = (i) & 0xFF)
-
-
-#define	a_to_c(a)	(((char*) a)[0])
-
-
-#define	a_to_u_c(a)	((unsigned char) \
-			(((unsigned char*) a)[0]       & 0xFF))
-
-
-#define	a_to_u_short(a)	((unsigned short) \
-			((((unsigned char*) a)[1]       & 0xFF) | \
-			 (((unsigned char*) a)[0] << 8  & 0xFF00)))
-
-#define	a_to_3_byte(a)	((unsigned long) \
-			((((unsigned char*) a)[2]       & 0xFF) | \
-			 (((unsigned char*) a)[1] << 8  & 0xFF00) | \
-			 (((unsigned char*) a)[0] << 16 & 0xFF0000)))
-
-#ifdef	__STDC__
-#	define	__TOP_BYTE	0xFF000000UL
-#else
-#	define	__TOP_BYTE	0xFF000000
-#endif
-
-#define	a_to_u_long(a)	((unsigned long) \
-			((((unsigned char*) a)[3]       & 0xFF) | \
-			 (((unsigned char*) a)[2] << 8  & 0xFF00) | \
-			 (((unsigned char*) a)[1] << 16 & 0xFF0000) | \
-			 (((unsigned char*) a)[0] << 24 & __TOP_BYTE)))
-
-#define	la_to_u_long(a)	((unsigned long) \
-			((((unsigned char*) a)[0]       & 0xFF) | \
-			 (((unsigned char*) a)[1] << 8  & 0xFF00) | \
-			 (((unsigned char*) a)[2] << 16 & 0xFF0000) | \
-			 (((unsigned char*) a)[3] << 24 & __TOP_BYTE)))
-
-
-#define	GET_UBYTE(a)	a_to_u_c(a)
-#define	GET_SBYTE(a)	a_to_c(a)
-#define	GET_SHORT(a)	a_to_u_short(&((unsigned char *) (a))[0])
-#define	GET_BSHORT(a)	a_to_u_short(&((unsigned char *) (a))[2])
-#define	GET_INT(a)	a_to_u_long(&((unsigned char *) (a))[0])
-#define	GET_LINT(a)	la_to_u_long(&((unsigned char *) (a))[0])
-#define	GET_BINT(a)	a_to_u_long(&((unsigned char *) (a))[4])
+#define	GET_UBYTE(a)	a_to_u_byte(a)
+#define	GET_SBYTE(a)	a_to_byte(a)
+#define	GET_SHORT(a)	a_to_u_2_byte(&((unsigned char *) (a))[0])
+#define	GET_BSHORT(a)	a_to_u_2_byte(&((unsigned char *) (a))[2])
+#define	GET_INT(a)	a_to_4_byte(&((unsigned char *) (a))[0])
+#define	GET_LINT(a)	la_to_4_byte(&((unsigned char *) (a))[0])
+#define	GET_BINT(a)	a_to_4_byte(&((unsigned char *) (a))[4])

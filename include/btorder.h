@@ -1,4 +1,4 @@
-/* @(#)btorder.h	1.7 98/07/20 Copyright 1996 J. Schilling */
+/* @(#)btorder.h	1.11 00/01/05 Copyright 1996 J. Schilling */
 /*
  *	Definitions for Bitordering
  *
@@ -26,14 +26,34 @@
 
 #include <sys/types.h>			/* try to load isa_defs.h on Solaris */
 
+#ifndef _MCONFIG_H
+#include <mconfig.h>
+#endif
+
+#if defined(HAVE_C_BITFIELDS)	&& \
+    defined(BITFIELDS_LTOH)		/* Use definition from xconfig.h */
+#define	_BIT_FIELDS_LTOH
+#endif
+
+#if defined(HAVE_C_BITFIELDS)	&& \
+    defined(BITFIELDS_HTOL)		/* Use definition from xconfig.h */
+#define	_BIT_FIELDS_HTOL
+#endif
+
+#if defined(HAVE_C_BITFIELDS)	&& \
+   !defined(BITFIELDS_HTOL)		/* Use definition from xconfig.h */
+#define	BITFIELDS_LTOH
+#define	_BIT_FIELDS_LTOH
+#endif
+
 
 #if	defined(_BIT_FIELDS_LTOH) || defined(_BIT_FIELDS_HTOL)
 /*
- * Bitorder is known.
+ * Bitorder is already known.
  */
 #else
 /*
- * Bitorder not known.
+ * Bitorder not yet known.
  */
 #	if defined(sun3) || defined(mc68000) || \
 	   defined(sun4) || defined(__sparc) || defined(sparc) || \
@@ -45,13 +65,14 @@
 #		define _BIT_FIELDS_HTOL
 #	endif
 
-#	if defined(__i386) || defined(i386) || \
-	   defined(__alpha) || defined(alpha)
+#	if defined(__i386__) || defined(__i386) || defined(i386) || \
+	   defined(__alpha__) || defined(__alpha) || defined(alpha) || \
+	   defined(__arm__) || defined(__arm) || defined(arm)
 #		define _BIT_FIELDS_LTOH
 #	endif
 
 #	if defined(__ppc__) || defined(ppc) || defined(__ppc) || \
-	   defined(__PPC) || defined(powerpc)
+	   defined(__PPC) || defined(powerpc) || defined(__powerpc__)
 
 #		if	defined(__BIG_ENDIAN__)
 #			define _BIT_FIELDS_HTOL

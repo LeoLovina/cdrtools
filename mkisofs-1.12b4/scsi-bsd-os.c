@@ -1,1 +1,0 @@
-../cdrecord/scsi-bsd-os.c

@@ -1,7 +1,7 @@
-/* @(#)isosize.c	1.3 97/07/17 Copyright 1996 J. Schilling */
+/* @(#)isosize.c	1.6 99/10/18 Copyright 1996 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)isosize.c	1.3 97/07/17 Copyright 1996 J. Schilling";
+	"@(#)isosize.c	1.6 99/10/18 Copyright 1996 J. Schilling";
 #endif
 /*
  *	Copyright (c) 1996 J. Schilling
@@ -24,8 +24,11 @@ static	char sccsid[] =
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <statdefs.h>
 #include <unixstd.h>
 #include <standard.h>
+#include <utypes.h>
+#include <intcvt.h>
 
 #include "iso9660.h"
 
@@ -51,7 +54,7 @@ isosize(f)
 	if (fstat(f, &sb) < 0)
 		return (-1L);
 	mode = (long)(sb.st_mode & S_IFMT);
-	if (mode != S_IFREG && mode != S_IFBLK && mode != S_IFCHR)
+	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
 
 	if (lseek(f, (off_t)(16L * 2048L), SEEK_SET) == -1)

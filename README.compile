@@ -17,7 +17,7 @@ Short overview for those who don't read manuals:
 
 	on: ftp://ftp.fokus.gmd.de/pub/unix/makefiles/makefiles-*
 
-	The newest binaries are
+	The newest 'smake' binaries are
 	on: ftp://ftp.fokus.gmd.de/pub/unix/makefiles/bin/*
 
 	If you have the choice between all three make programs, the
@@ -34,6 +34,12 @@ Short overview for those who don't read manuals:
 			WARNING
 	Do not use 'mc' to extract the tar file!
 	All mc versions before 4.0.14 cannot extract symbolic links correctly.
+
+	The versions of WinZip that support tar arvchives cannot be used too.
+	The reason is that they don't support symbolic links.
+	Star and Gnutar do support symbolic links even on win32 systems.
+	To support symbolic links on win32, you need to link with the
+	Cygwin32 POSIX library.
 
 	To unpack an archive use:
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 ###########################################################################
-#ident "@(#)MKLINKS	1.18 98/09/30 "
+#ident "@(#)MKLINKS	1.28 00/01/09 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -23,19 +23,46 @@ ln -s	r-make.c4x		r-gmake.c4x
 ln -s	r-make.c4x-dep		r-gmake.c4x-dep
 ln -s	r-make.obj		r-gmake.obj
 ln -s	9000-725-hp-ux-cc.rul	9000-710-hp-ux-cc.rul
+ln -s	9000-725-hp-ux-cc.rul	9000-712-hp-ux-cc.rul
 ln -s	9000-725-hp-ux-cc.rul	9000-715-hp-ux-cc.rul
 ln -s	9000-725-hp-ux-cc.rul	9000-735-hp-ux-cc.rul
 ln -s	9000-725-hp-ux-cc.rul	9000-743-hp-ux-cc.rul
 ln -s	9000-725-hp-ux-cc.rul	9000-755-hp-ux-cc.rul
+ln -s	9000-725-hp-ux-cc.rul	9000-777-hp-ux-cc.rul
+ln -s	9000-725-hp-ux-cc.rul	9000-780-hp-ux-cc.rul
+ln -s	9000-725-hp-ux-cc.rul	9000-782-hp-ux-cc.rul
+ln -s	9000-725-hp-ux-cc.rul	9000-820-hp-ux-cc.rul
+ln -s	9000-725-hp-ux-cc.rul	9000-899-hp-ux-cc.rul
 ln -s	9000-725-hp-ux-gcc.rul	9000-710-hp-ux-gcc.rul
+ln -s	9000-725-hp-ux-gcc.rul	9000-712-hp-ux-gcc.rul
 ln -s	9000-725-hp-ux-gcc.rul	9000-715-hp-ux-gcc.rul
 ln -s	9000-725-hp-ux-gcc.rul	9000-735-hp-ux-gcc.rul
 ln -s	9000-725-hp-ux-gcc.rul	9000-743-hp-ux-gcc.rul
 ln -s	9000-725-hp-ux-gcc.rul	9000-755-hp-ux-gcc.rul
+ln -s	9000-725-hp-ux-gcc.rul	9000-777-hp-ux-gcc.rul
+ln -s	9000-725-hp-ux-gcc.rul	9000-780-hp-ux-gcc.rul
+ln -s	9000-725-hp-ux-gcc.rul	9000-782-hp-ux-gcc.rul
+ln -s	9000-725-hp-ux-gcc.rul	9000-820-hp-ux-gcc.rul
+ln -s	9000-725-hp-ux-gcc.rul	9000-899-hp-ux-gcc.rul
+ln -s	hppa-nextstep-cc.rul	i386-nextstep-cc.rul
+ln -s	hppa-nextstep-cc.rul	m68k-nextstep-cc.rul
+ln -s	hppa-nextstep-cc.rul	sparc-nextstep-cc.rul
+ln -s	hppa-nextstep-cc.rul	i386-nextstep-gcc.rul
+ln -s	hppa-nextstep-cc.rul	m68k-nextstep-gcc.rul
+ln -s	hppa-nextstep-cc.rul	sparc-nextstep-gcc.rul
+ln -s	os-irix.id		os-irix64.id
+ln -s	ip22-irix-cc.rul	ip20-irix-cc.rul
+ln -s	ip22-irix-cc.rul	ip28-irix-cc.rul
 ln -s	ip22-irix-cc.rul	ip30-irix-cc.rul
 ln -s	ip22-irix-cc.rul	ip32-irix-cc.rul
+ln -s	i386-netbsd-cc.rul	alpha-netbsd-cc.rul
+ln -s	i386-netbsd-gcc.rul	alpha-netbsd-gcc.rul
 ln -s	i386-netbsd-cc.rul	sparc-netbsd-cc.rul
 ln -s	i386-netbsd-gcc.rul	sparc-netbsd-gcc.rul
+ln -s	i386-netbsd-cc.rul	mac68k-netbsd-cc.rul
+ln -s	i386-netbsd-gcc.rul	mac68k-netbsd-gcc.rul
+ln -s	i386-netbsd-cc.rul	amiga-netbsd-cc.rul
+ln -s	i386-netbsd-gcc.rul	amiga-netbsd-gcc.rul
 ln -s	i386-bsd-os-gcc.rul	sparc-bsd-os-gcc.rul
 ln -s	i586-linux-cc.rul	i386-linux-cc.rul
 ln -s	i586-linux-cc.rul	i486-linux-cc.rul
@@ -45,12 +72,19 @@ ln -s	i586-linux-gcc.rul	i486-linux-gcc.rul
 ln -s	i586-linux-gcc.rul	i686-linux-gcc.rul
 ln -s	i586-linux-cc.rul	sparc-linux-cc.rul
 ln -s	i586-linux-gcc.rul	sparc-linux-gcc.rul
+ln -s	i586-linux-cc.rul	sparc64-linux-cc.rul
+ln -s	i586-linux-gcc.rul	sparc64-linux-gcc.rul
 ln -s	i586-linux-cc.rul	alpha-linux-cc.rul
 ln -s	i586-linux-gcc.rul	alpha-linux-gcc.rul
 ln -s	i586-linux-cc.rul	ppc-linux-cc.rul
 ln -s	i586-linux-gcc.rul	ppc-linux-gcc.rul
 ln -s	i586-linux-cc.rul	m68k-linux-cc.rul
 ln -s	i586-linux-gcc.rul	m68k-linux-gcc.rul
+ln -s	i586-linux-cc.rul	armv4l-linux-cc.rul
+ln -s	i586-linux-gcc.rul	armv4l-linux-gcc.rul
+ln -s	os-cygwin32_nt.id	os-cygwin_nt-4.0.id
+ln -s	os-cygwin32_nt.id	os-cygwin_95-4.0.id
+ln -s	os-cygwin32_nt.id	os-cygwin_98-4.0.id
 ln -s	i486-cygwin32_nt-cc.rul	i586-cygwin32_nt-cc.rul
 ln -s	i486-cygwin32_nt-cc.rul	i686-cygwin32_nt-cc.rul
 ln -s	i486-cygwin32_nt-gcc.rul	i586-cygwin32_nt-gcc.rul

@@ -1,4 +1,4 @@
-/* @(#)getargs.h	1.5 96/05/09 Copyright 1985 J. Schilling */
+/* @(#)getargs.h	1.6 99/11/14 Copyright 1985 J. Schilling */
 /*
  *	Definitions for getargs()/getallargs()/getfiles()
  *
@@ -14,7 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -22,6 +22,10 @@
 
 #ifndef	_GETARGS_H
 #define	_GETARGS_H
+
+#ifndef _MCONFIG_H
+#include <mconfig.h>
+#endif
 
 #define	NOARGS		  0	/* No more args			*/
 #define	NOTAFLAG	  1	/* Not a flag type argument	*/

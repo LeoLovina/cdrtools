@@ -1,4 +1,4 @@
-#ident "@(#)rules.hlp	1.5 98/09/27 "
+#ident "@(#)rules.hlp	1.6 99/12/20 "
 ###########################################################################
 # Written 1996 by J. Schilling
 ###########################################################################
@@ -29,6 +29,7 @@
 # - config					: rules.cnf
 # - tags, TAGS					: rules.tag
 # - .help					: rules.hlp
+# - tinfo					: rules.dir/rules.rdi
 #
 ###########################################################################
 .help:
@@ -48,3 +49,4 @@
 	@echo "	tags		make vi/ved compatible tag file"
 	@echo "	TAGS		make emacs compatible tag file"
 	@echo "	.help		display this help"
+	@echo "	tinfo		display target info for slottable target components"

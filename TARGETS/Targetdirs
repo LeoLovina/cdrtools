@@ -1,4 +1,4 @@
 #ident %W% %E% %Q%
 ###########################################################################
-DIRS=		patches conf inc lib cdrecord mkisofs-1.12b4 man
+DIRS=		patches conf inc lib libdeflt libscg cdrecord mkisofs mkisofs/diag cdda2wav misc man
 ###########################################################################

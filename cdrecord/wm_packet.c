@@ -1,7 +1,7 @@
-/* @(#)wm_packet.c	1.7 98/10/08 Copyright 1995, 1997 J. Schilling */
+/* @(#)wm_packet.c	1.11 99/01/31 Copyright 1995, 1997 J. Schilling */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)wm_packet.c	1.7 98/10/08 Copyright 1995, 1997 J. Schilling";
+	"@(#)wm_packet.c	1.11 99/01/31 Copyright 1995, 1997 J. Schilling";
 #endif
 /*
  *	CDR write method abtraction layer
@@ -34,6 +34,7 @@ static	char sccsid[] =
 #include <sys/types.h>
 #include <utypes.h>
 
+#include <scg/scsitransp.h>
 #include "cdrecord.h"
 
 extern	int	debug;
@@ -42,10 +43,11 @@ extern	int	lverbose;
 
 extern	char	*buf;			/* The transfer buffer */
 
-EXPORT	int	write_packet_data __PR((cdr_t *dp, int track, track_t *trackp));
+EXPORT	int	write_packet_data __PR((SCSI *scgp, cdr_t *dp, int track, track_t *trackp));
 
 EXPORT int
-write_packet_data(dp, track, trackp)
+write_packet_data(scgp, dp, track, trackp)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	int	track;
 	track_t	*trackp;
@@ -90,10 +92,10 @@ write_packet_data(dp, track, trackp)
 
 	if (lverbose) {
 		if (tracksize > 0)
-			printf("Track %02d:   0 of %3ld MB written.\r",
+			printf("\rTrack %02d:   0 of %3ld MB written.",
 			       track, tracksize >> 20);
 		else
-			printf("Track %02d:   0 MB written.\r", track);
+			printf("\rTrack %02d:   0 MB written.", track);
 		flush();
 		neednl = TRUE;
 	}
@@ -152,10 +154,10 @@ write_packet_data(dp, track, trackp)
 		retry:
 		/* XXX Fixed-packet writes can be very slow*/
 		if (is_packet(trackp) && trackp->pktsize > 0)
-			scsi_settimeout(10000);
+			scsi_settimeout(scgp, 100);
 		/* XXX */
 		if (is_packet(trackp) && trackp->pktsize == 0) {
-			if ((*dp->cdr_next_wr_address)(track, trackp, &nextblock) == 0) {
+			if ((*dp->cdr_next_wr_address)(scgp, track, trackp, &nextblock) == 0) {
 				/*
 				 * Some drives (e.g. Ricoh MPS6201S) do not
 				 * increment the Next Writable Address value to
@@ -170,13 +172,13 @@ write_packet_data(dp, track, trackp)
 			}
 		}
 
-		amount = (*dp->cdr_write_trackdata)(bp, startsec, bytespt, secspt, islast);
+		amount = (*dp->cdr_write_trackdata)(scgp, bp, startsec, bytespt, secspt, islast);
 		if (amount < 0) {
 			if (is_packet(trackp) && trackp->pktsize == 0 && !retried) {
 				printf("%swrite track data: error after %ld bytes, retry with new packet\n",
 					neednl?"\n":"", bytes);
 				retried = 1;
-				neednl = 0;
+				neednl = FALSE;
 				goto retry;
 			}
 			printf("%swrite track data: error after %ld bytes\n",
@@ -189,7 +191,7 @@ write_packet_data(dp, track, trackp)
 		if (lverbose && (bytes >= (savbytes + 0x100000))) {
 			int	fper;
 
-			printf("Track %02d: %3ld", track, bytes >> 20);
+			printf("\rTrack %02d: %3ld", track, bytes >> 20);
 			if (tracksize > 0)
 				printf(" of %3ld MB", tracksize >> 20);
 			else
@@ -198,7 +200,7 @@ write_packet_data(dp, track, trackp)
 			fper = fifo_percent(TRUE);
 			if (fper >= 0)
 				printf(" (fifo %3d%%)", fper);
-			printf(".\r");
+			printf(".");
 			savbytes = (bytes >> 20) << 20;
 			flush();
 			neednl = TRUE;
@@ -211,16 +213,18 @@ write_packet_data(dp, track, trackp)
 			trackp->padsize = 300 * secsize - bytes;
 	}
 	if (trackp->padsize) {
+		if (neednl) {
+			printf("\n");
+			neednl = FALSE;
+		}
 		if ((trackp->padsize >> 20) > 0) {
-			if (neednl)
-				printf("\n");
 			neednl = TRUE;
 		} else if (lverbose) {
 			printf("Track %02d: writing %3ld KB of pad data.\n",
 						track, trackp->padsize >> 10);
 			neednl = FALSE;
 		}
-		pad_track(dp, track, trackp, startsec, trackp->padsize,
+		pad_track(scgp, dp, track, trackp, startsec, trackp->padsize,
 					TRUE, &amount);
 		bytes += amount;
 		startsec += amount / secsize;
