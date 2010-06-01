@@ -1,34 +1,28 @@
-/* @(#)gethostname.c	1.15 03/10/04 Copyright 1995 J. Schilling */
+/* @(#)gethostname.c	1.20 09/08/04 Copyright 1995-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)gethostname.c	1.15 03/10/04 Copyright 1995 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)gethostname.c	1.20 09/08/04 Copyright 1995-2009 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1995 J. Schilling
+ *	Copyright (c) 1995-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <standard.h>
-#include <stdxlib.h>
-#ifdef	HAVE_SYS_SYSTEMINFO_H
-#include <sys/systeminfo.h>
-#endif
-#include <libport.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/systeminfo.h>
+#include <schily/hostname.h>
 
 #ifndef	HAVE_GETHOSTNAME
 EXPORT	int	gethostname	__PR((char *name, int namelen));
@@ -47,9 +41,9 @@ gethostname(name, namelen)
 }
 #else
 
-#if	defined(HAVE_UNAME) && defined(HAVE_SYS_UTSNAME_H)
-#include <sys/utsname.h>
-#include <strdefs.h>
+#ifdef	HAVE_UNAME
+#include <schily/utsname.h>
+#include <schily/string.h>
 
 EXPORT int
 gethostname(name, namelen)
@@ -62,6 +56,22 @@ gethostname(name, namelen)
 		return (-1);
 
 	strncpy(name, uts.nodename, namelen);
+	return (0);
+}
+#else
+#include <schily/errno.h>
+
+EXPORT int
+gethostname(name, namelen)
+	char	*name;
+	int	namelen;
+{
+	if (namelen < 0) {
+		seterrno(EINVAL);
+		return (-1);
+	}
+	if (namelen > 0)
+		name[0] = '\0';
 	return (0);
 }
 #endif

@@ -1,7 +1,8 @@
-/* @(#)data.c	1.5 02/02/10 joerg */
+/* @(#)data.c	1.8 09/07/11 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)data.c	1.5 02/02/10 joerg";
+static	UConst char sccsid[] =
+	"@(#)data.c	1.8 09/07/11 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -22,9 +23,8 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
-#include <strdefs.h>
-#include <timedefs.h>
+#include <schily/string.h>
+#include <schily/time.h>
 
 #include "internal.h"
 #include "data.h"

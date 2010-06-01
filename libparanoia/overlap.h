@@ -1,14 +1,12 @@
-/* @(#)overlap.h	1.7 04/02/18 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)overlap.h	1.8 06/05/06 J. Schilling from cdparanoia-III-alpha9.8 */
 /*
- *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
- */
-/*
- * CopyPolicy: GNU Public License 2 applies
- * Copyright (C) by Monty (xiphmont@mit.edu)
+ * CopyPolicy: GNU Lesser General Public License v2.1 applies
+ * Copyright (C) 1997-2001 by Monty (xiphmont@mit.edu)
+ * Copyright (C) 2002-2006 by J. Schilling
  */
 
-#ifndef	_OVERLAP_H_
-#define	_OVERLAP_H_
+#ifndef	_OVERLAP_H
+#define	_OVERLAP_H
 
 extern	void	paranoia_resetcache	__PR((cdrom_paranoia * p));
 extern	void	paranoia_resetall	__PR((cdrom_paranoia * p));
@@ -20,4 +18,4 @@ extern	void	offset_add_value	__PR((cdrom_paranoia * p,
 						offsets * o, long value,
 						void (*callback) (long, int)));
 
-#endif
+#endif	/* _OVERLAP_H */

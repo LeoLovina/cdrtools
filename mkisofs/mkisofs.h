@@ -1,11 +1,11 @@
-/* @(#)mkisofs.h	1.94 04/05/27 joerg */
+/* @(#)mkisofs.h	1.140 10/04/25 joerg */
 /*
  * Header file mkisofs.h - assorted structure definitions and typecasts.
  *
  * Written by Eric Youngdale (1993).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999,2000-2003 J. Schilling
+ * Copyright (c) 1999,2000-2010 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +24,16 @@
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
-#include <mconfig.h>	/* Must be before stdio.h for LARGEFILE support */
-#include <stdio.h>
-#include <statdefs.h>
-#include <stdxlib.h>
-#include <unixstd.h>	/* Needed for for LARGEFILE support */
-#include <strdefs.h>
-#include <dirdefs.h>
-#include <utypes.h>
-#include <standard.h>
-#include <libport.h>
+#include <schily/mconfig.h>	/* Must be before stdio.h for LARGEFILE support */
+#include <schily/stdio.h>
+#include <schily/stat.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>	/* Needed for for LARGEFILE support */
+#include <schily/string.h>
+#include <schily/dirent.h>
+#include <schily/utypes.h>
+#include <schily/standard.h>
+#include <schily/libport.h>
 #include "scsi.h"
 
 #ifdef	DVD_VIDEO
@@ -42,8 +42,7 @@
 #endif
 #endif
 
-/*#if	_LFS_LARGEFILE*/
-#ifdef	HAVE_LARGEFILES
+#ifdef	USE_LARGEFILES
 /*
  * XXX Hack until fseeko()/ftello() are available everywhere or until
  * XXX we know a secure way to let autoconf ckeck for fseeko()/ftello()
@@ -59,21 +58,22 @@
 #endif
 #endif
 
-#ifndef __SVR4
-extern int	optind;
-extern char	*optarg;
-
-/* extern int getopt (int __argc, char **__argv, char *__optstring); */
-#endif
-
 #include "iso9660.h"
 #include "defaults.h"
-#include <unls.h>
+#include <schily/siconv.h>
 
-extern struct nls_table *in_nls;	/* input UNICODE conversion table */
-extern struct nls_table *out_nls;	/* output UNICODE conversion table */
-extern struct nls_table *hfs_inls;	/* input HFS UNICODE conversion table */
-extern struct nls_table *hfs_onls;	/* output HFS UNICODE conversion table */
+extern siconvt_t	*in_nls;	/* input UNICODE conversion table */
+extern siconvt_t	*out_nls;	/* output UNICODE conversion table */
+extern siconvt_t	*hfs_inls;	/* input HFS UNICODE conversion table */
+extern siconvt_t	*hfs_onls;	/* output HFS UNICODE conversion table */
+
+/*
+ * Structure used to pass arguments via trewalk() to walkfun().
+ */
+struct wargs {
+	void	*dir;			/* Pointer to struct directory *root */
+	char	*name;			/* NULL or alternative short name    */
+};
 
 #ifdef APPLE_HYB
 #include "mactypes.h"
@@ -95,6 +95,7 @@ struct directory_entry {
 	struct iso_directory_record isorec;
 	unsigned int	starting_block;
 	off_t		size;
+	int		mxpart;		/* Extent number	  */
 	unsigned short	priority;
 	unsigned char	jreclen;	/* Joliet record len */
 	char		*name;
@@ -102,7 +103,13 @@ struct directory_entry {
 	char		*whole_name;
 	struct directory *filedir;
 	struct directory_entry *parent_rec;
+	struct directory_entry *mxroot;	/* Pointer to orig entry */
 	unsigned int	de_flags;
+#ifdef UDF
+	mode_t	mode;	/* used for udf */
+	uid_t	uid;	/* used for udf */
+	gid_t	gid;	/* used for udf */
+#endif
 	ino_t		inode;		/* Used in the hash table */
 	dev_t		dev;		/* Used in the hash table */
 	unsigned char	*rr_attributes;
@@ -127,6 +134,7 @@ struct file_hash {
 	struct file_hash *next;
 	ino_t		inode;		/* Used in the hash table */
 	dev_t		dev;		/* Used in the hash table */
+	nlink_t		nlink;		/* Used to compute new link count */
 	unsigned int	starting_block;
 	off_t		size;
 #ifdef SORTING
@@ -158,7 +166,7 @@ struct file_hash {
  */
 struct output_fragment {
 	struct output_fragment *of_next;
-	int		(*of_size)	__PR((int));
+	int		(*of_size)	__PR((UInt32_t));
 	int		(*of_generate)	__PR((void));
 	int		(*of_write)	__PR((FILE *));
 	char		*of_name;			/* Textual description */
@@ -239,8 +247,9 @@ struct directory {
 	struct directory_entry *contents;
 	struct directory_entry *jcontents;
 	struct directory_entry *self;
-	char		*whole_name;	/* Entire path */
-	char		*de_name;	/* Entire path */
+	char		*whole_name;	/* Entire source path */
+	char		*de_path;	/* Entire path iside ISO-9660 */
+	char		*de_name;	/* Last path name component */
 	unsigned int	ce_bytes;	/* Number of bytes of CE entries read */
 					/* for this dir */
 	unsigned int	depth;
@@ -270,6 +279,10 @@ struct deferred_write {
 	struct directory_entry *s_entry;
 	unsigned int	pad;
 	off_t		off;
+	unsigned int	dw_flags;
+#ifdef APPLE_HYB
+	int		hfstype;
+#endif
 };
 
 struct eltorito_boot_entry_info {
@@ -286,10 +299,10 @@ struct eltorito_boot_entry_info {
 extern int	goof;
 extern struct directory *root;
 extern struct directory *reloc_dir;
-extern unsigned int next_extent;
-extern unsigned int last_extent;
-extern unsigned int last_extent_written;
-extern unsigned int session_start;
+extern UInt32_t next_extent;
+extern UInt32_t last_extent;
+extern UInt32_t last_extent_written;
+extern UInt32_t session_start;
 
 extern unsigned int path_table_size;
 extern unsigned int path_table[4];
@@ -346,9 +359,12 @@ extern int	omit_version_number;
 extern int	no_rr;
 extern int	transparent_compression;
 extern Uint	RR_relocation_depth;
+extern int	do_largefiles;
+extern off_t	maxnonlarge;
 extern int	iso9660_level;
 extern int	iso9660_namelen;
 extern int	full_iso9660_filenames;
+extern int	nolimitpathtables;
 extern int	relaxed_filenames;
 extern int	allow_lowercase;
 extern int	allow_multidot;
@@ -369,6 +385,7 @@ extern int	dvd_video;
 
 
 #ifdef APPLE_HYB
+extern int	donotwrite_macpart;
 extern int	apple_hyb;	/* create HFS hybrid */
 extern int	apple_ext;	/* use Apple extensions */
 extern int	apple_both;	/* common flag (for above) */
@@ -413,30 +430,27 @@ extern int	do_sort;
 extern int stat_filter __PR((char *, struct stat *));
 extern int lstat_filter __PR((char *, struct stat *));
 extern int sort_tree __PR((struct directory *));
+extern void attach_dot_entries __PR((struct directory * dirnode,
+					struct stat * this_stat,
+					struct stat * parent_stat));
 extern struct directory *
 		find_or_create_directory __PR((struct directory *,
-				const char *,
+				char *,
 				struct directory_entry * self, int));
 extern void	finish_cl_pl_entries __PR((void));
 extern int	scan_directory_tree __PR((struct directory * this_dir,
 				char *path,
 				struct directory_entry * self));
 
-#ifdef APPLE_HYB
 extern int	insert_file_entry __PR((struct directory *, char *,
-				char *, int));
+				char *, struct stat *, int));
 
-#else
-extern int	insert_file_entry __PR((struct directory *, char *,
-				char *));
-
-#endif	/* APPLE_HYB */
-
+extern	struct directory_entry *
+		dup_directory_entry	__PR((struct directory_entry *s_entry));
 extern void generate_iso9660_directories __PR((struct directory *, FILE *));
 extern void dump_tree __PR((struct directory * node));
 extern struct directory_entry *search_tree_file __PR((struct
 				directory * node, char *filename));
-extern void update_nlink_field __PR((struct directory * node));
 extern void init_fstatbuf __PR((void));
 extern struct stat root_statbuf;
 extern struct stat fstatbuf;
@@ -445,38 +459,44 @@ extern struct stat fstatbuf;
 extern void init_boot_catalog __PR((const char *path));
 extern void insert_boot_cat __PR((void));
 extern void get_boot_entry	__PR((void));
-extern void new_boot_entry	__PR((void));
+extern int  new_boot_entry	__PR((void));
+extern void ex_boot_enoent	__PR((char *msg, char *pname));
 
 /* boot.c */
-extern void sparc_boot_label __PR((char *label));
-extern void sunx86_boot_label __PR((char *label));
-extern void scan_sparc_boot __PR((char *files));
-extern void scan_sunx86_boot __PR((char *files));
+extern int sparc_boot_label __PR((char *label));
+extern int sunx86_boot_label __PR((char *label));
+extern int scan_sparc_boot __PR((char *files));
+extern int scan_sunx86_boot __PR((char *files));
 extern int make_sun_label __PR((void));
 extern int make_sunx86_label __PR((void));
 
+/* isonum.c */
+extern void set_721 __PR((void *, UInt32_t));
+extern void set_722 __PR((void *, UInt32_t));
+extern void set_723 __PR((void *, UInt32_t));
+extern void set_731 __PR((void *, UInt32_t));
+extern void set_732 __PR((void *, UInt32_t));
+extern void set_733 __PR((void *, UInt32_t));
+
+extern UInt32_t get_711 __PR((void *));
+extern UInt32_t get_721 __PR((void *));
+extern UInt32_t get_723 __PR((void *));
+extern UInt32_t get_731 __PR((void *));
+extern UInt32_t get_732 __PR((void *));
+extern UInt32_t get_733 __PR((void *));
+
 /* write.c */
-extern int get_731 __PR((char *));
-extern int get_732 __PR((char *));
-extern int get_733 __PR((char *));
-extern int isonum_733 __PR((unsigned char *));
-extern void set_723 __PR((char *, unsigned int));
-extern void set_731 __PR((char *, unsigned int));
-extern void set_721 __PR((char *, unsigned int));
-extern void set_733 __PR((char *, unsigned int));
 extern int sort_directory __PR((struct directory_entry **, int));
 extern void generate_one_directory __PR((struct directory *, FILE *));
 extern void memcpy_max __PR((char *, char *, int));
-extern int oneblock_size __PR((int starting_extent));
+extern int oneblock_size __PR((UInt32_t starting_extent));
 extern struct iso_primary_descriptor vol_desc;
 extern void xfwrite __PR((void *buffer, int size, int count, FILE * file, int submode, BOOL islast));
-extern void set_732 __PR((char *pnt, unsigned int i));
-extern void set_722 __PR((char *pnt, unsigned int i));
 extern void outputlist_insert __PR((struct output_fragment * frag));
 
 #ifdef APPLE_HYB
 extern Ulong get_adj_size __PR((int Csize));
-extern int adj_size __PR((int Csize, int start_extent, int extra));
+extern int adj_size __PR((int Csize, UInt32_t start_extent, int extra));
 extern void adj_size_other __PR((struct directory * dpnt));
 extern int insert_padding_file __PR((int size));
 extern int gen_mac_label __PR((struct deferred_write *));
@@ -504,11 +524,14 @@ extern int get_session_start __PR((int *));
 /* joliet.c */
 #ifdef	UDF
 extern	void	convert_to_unicode	__PR((unsigned char *buffer,
-			int size, char *source, struct nls_table *inls));
-extern	int	joliet_strlen		__PR((const char *string));
+			int size, char *source, siconvt_t *inls));
+extern	int	joliet_strlen		__PR((const char *string, size_t maxlen,
+						siconvt_t *inls));
 #endif
-extern unsigned char conv_charset __PR((unsigned char, struct nls_table *,
-				struct nls_table *));
+extern void conv_charset __PR((unsigned char *to, size_t *tosizep,
+				unsigned char *from, size_t *fromsizep,
+				siconvt_t *,
+				siconvt_t *));
 extern int joliet_sort_tree __PR((struct directory * node));
 
 /* match.c */
@@ -555,9 +578,17 @@ extern void	match_cl_re_entries __PR((void));
 extern void	finish_cl_pl_for_prev_session __PR((void));
 extern char	*find_rr_attribute __PR((unsigned char *pnt, int len, char *attr_type));
 
+extern void	udf_set_extattr_macresfork __PR((unsigned char *buf, off_t size, unsigned rba));
+extern void	udf_set_extattr_freespace __PR((unsigned char *buf, off_t size, unsigned rba));
+extern int	udf_get_symlinkcontents __PR((char *, char *, off_t *));
+
+/* inode.c */
+extern	void	do_inode		__PR((struct directory *dpnt));
+extern	void	do_dir_nlink		__PR((struct directory *dpnt));
+
 #ifdef APPLE_HYB
 /* volume.c */
-extern int make_mac_volume __PR((struct directory * dpnt, int start_extent));
+extern int make_mac_volume __PR((struct directory * dpnt, UInt32_t start_extent));
 extern int write_fork __PR((hfsfile * hfp, long tot));
 
 /* apple.c */
@@ -573,6 +604,8 @@ extern void delete_rsrc_ent __PR((struct directory_entry *));
 extern void clean_hfs __PR((void));
 extern void perr __PR((char *));
 extern void set_root_info __PR((char *));
+extern int file_is_resource __PR((char *fname, int hfstype));
+extern int hfs_excludepath __PR((char *));
 
 /* desktop.c */
 
@@ -595,9 +628,22 @@ extern void	clean_magic __PR((void));
 
 #endif	/* APPLE_HYB */
 
+#ifdef	USE_FIND
+/*
+ * The callback function for treewalk() from walk.c
+ */
+#ifdef	_SCHILY_WALK_H
+EXPORT	int	walkfunc	__PR((char *nm, struct stat *fs, int type,
+					struct WALK *state));
+#endif
+#endif
+
 extern char	*extension_record;
-extern int	extension_record_extent;
-extern int	n_data_extents;
+extern UInt32_t	extension_record_extent;
+/*extern int	n_data_extents;*/
+extern	BOOL	archive_isreg;
+extern	dev_t	archive_dev;
+extern	ino_t	archive_ino;
 
 /*
  * These are a few goodies that can be specified on the command line, and are
@@ -623,8 +669,13 @@ extern struct eltorito_boot_entry_info *first_boot_entry;
 extern struct eltorito_boot_entry_info *last_boot_entry;
 extern struct eltorito_boot_entry_info *current_boot_entry;
 
+extern	UInt32_t null_inodes;
+extern	BOOL	correct_inodes;
+extern	BOOL	rrip112;
+
 extern char	*findgequal	__PR((char *));
 extern void	*e_malloc	__PR((size_t));
+extern char	*e_strdup	__PR((const char *));
 
 /*
  * Note: always use these macros to avoid problems.
@@ -653,37 +704,25 @@ extern void	*e_malloc	__PR((size_t));
 #endif	/* APPLE_HYB */
 
 /*
- * Rock Ridge defines
+ * Inode and device values for special purposes.
  */
-#define	NEED_RE		1	/* Need Relocated Direcotry	*/
-#define	NEED_PL		2	/* Need Parent link		*/
-#define	NEED_CL		4	/* Need Child link		*/
-#define	NEED_CE		8	/* Need Continuation Area	*/
-#define	NEED_SP		16	/* Need SUSP record		*/
+#define	PREV_SESS_DEV	((dev_t)-2)
+#define	TABLE_INODE	((ino_t)-2)
+#define	UNCACHED_INODE	((ino_t)-1)
+#define	UNCACHED_DEVICE	((dev_t)-1)
 
-#define	RR_FLAG_PX	1	/* POSIX attributes		*/
-#define	RR_FLAG_PN	2	/* POSIX device number		*/
-#define	RR_FLAG_SL	4	/* Symlink			*/
-#define	RR_FLAG_NM	8	/* Alternate Name		*/
-#define	RR_FLAG_CL	16	/* Child link			*/
-#define	RR_FLAG_PL	32	/* Parent link			*/
-#define	RR_FLAG_RE	64	/* Relocated Direcotry		*/
-#define	RR_FLAG_TF	128	/* Time stamp			*/
-
-#define	RR_FLAG_SP	1024	/* SUSP record			*/
-#define	RR_FLAG_AA	2048	/* Apple Signature record	*/
-#define	RR_FLAG_XA	4096	/* XA signature record		*/
-
-#define	RR_FLAG_CE	8192	/* SUSP Continuation aerea	*/
-#define	RR_FLAG_ER	16384	/* Extension record for RR signature */
-#define	RR_FLAG_RR	32768	/* RR Signature in every file	*/
-#define	RR_FLAG_ZF	65535	/* Linux compression extension	*/
-
-
-#define	PREV_SESS_DEV	(sizeof (dev_t) >= 4 ? 0x7ffffffd : 0x7ffd)
-#define	TABLE_INODE	(sizeof (ino_t) >= 4 ? 0x7ffffffe : 0x7ffe)
-#define	UNCACHED_INODE	(sizeof (ino_t) >= 4 ? 0x7fffffff : 0x7fff)
-#define	UNCACHED_DEVICE	(sizeof (dev_t) >= 4 ? 0x7fffffff : 0x7fff)
+/*
+ * The highest value used for the inodes we assign to files that do not have
+ * a starting block address (zero length files, symlinks, dev nodes, pipes,
+ * socket).
+ * We need to make sure that these numbers are valid ISO-9660 block addresses,
+ * this is why we use unsigned 32-bit integer values.
+ * We need to make sure that the inode numbers assigned for zero sized files
+ * is in a proper range, this is why we use numbers above the range of block
+ * addresses we use in the image. We start counting backwards from 0xFFFFFFF0
+ * to leave enough space for special numbers from the range listed above.
+ */
+#define	NULL_INO_MAX	((UInt32_t)0xFFFFFFF0)
 
 #ifdef VMS
 #define	STAT_INODE(X)	(X.st_ino[0])
@@ -711,6 +750,10 @@ extern void	*e_malloc	__PR((size_t));
 #define	MEMORY_FILE		   0x80		/* de_flags only  */
 #define	HIDDEN_FILE		   0x100	/* de_flags only  */
 #define	DIR_WAS_SCANNED		   0x200	/* dir_flags only */
+#define	RESOURCE_FORK		   0x400	/* de_flags only  */
+#define	IS_SYMLINK		   0x800	/* de_flags only  */
+#define	MULTI_EXTENT		   0x1000	/* de_flags only  */
+#define	INHIBIT_UDF_ENTRY	   0x2000
 
 /*
  * Volume sequence number to use in all of the iso directory records.
@@ -727,9 +770,8 @@ extern void	*e_malloc	__PR((size_t));
  * XXX Eric's wrong comment:
  * XXX From what I can tell SunOS is the only one with this trouble.
  */
-#ifdef	HAVE_LIMITS_H
-#include <limits.h>
-#endif
+#include <schily/limits.h>
+
 #ifndef NAME_MAX
 #ifdef FILENAME_MAX
 #define	NAME_MAX	FILENAME_MAX
@@ -747,6 +789,16 @@ extern void	*e_malloc	__PR((size_t));
 #endif
 
 /*
+ * Cygwin seems to have PATH_MAX == 260 which is less than the usable
+ * path length. We raise PATH_MAX to at least 1024 for now for all platforms
+ * unless someone reports problems with mkisofs memory size.
+ */
+#if	PATH_MAX < 1024
+#undef	PATH_MAX
+#define	PATH_MAX	1024
+#endif
+
+/*
  * XXX JS: Some structures have odd lengths!
  * Some compilers (e.g. on Sun3/mc68020) padd the structures to even length.
  * For this reason, we cannot use sizeof (struct iso_path_table) or
@@ -756,4 +808,22 @@ extern void	*e_malloc	__PR((size_t));
  */
 #ifndef	offsetof
 #define	offsetof(TYPE, MEMBER)	((size_t) &((TYPE *)0)->MEMBER)
+#endif
+
+#ifdef UDF
+extern int	use_udf;
+#endif
+extern int	create_udfsymlinks;
+
+#if !defined(HAVE_MEMSET) && !defined(memset)
+#define	memset(s, c, n)		fillbytes(s, n, c)
+#endif
+#if !defined(HAVE_MEMCHR) && !defined(memchr)
+#define	memchr(s, c, n)		findbytes(s, n, c)
+#endif
+#if !defined(HAVE_MEMCPY) && !defined(memcpy)
+#define	memcpy(s1, s2, n)	movebytes(s2, s1, n)
+#endif
+#if !defined(HAVE_MEMMOVE) && !defined(memmove)
+#define	memmove(s1, s2, n)	movebytes(s2, s1, n)
 #endif

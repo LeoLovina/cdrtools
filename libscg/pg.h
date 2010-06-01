@@ -1,5 +1,6 @@
+/* @(#)pg.h	1.2 06/05/15 1998 J. Schilling */
+
 /* 	pg.h (c) 1998  Grant R. Guenther <grant@torque.net>
- 		       Under the terms of the GNU public license
 
 
 	pg.h defines the user interface to the generic ATAPI packet

@@ -1,38 +1,38 @@
-/* @(#)xio.c	1.11 04/07/11 Copyright 2003-2004 J. Schilling */
+/* @(#)xio.c	1.20 09/07/18 Copyright 2003-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)xio.c	1.11 04/07/11 Copyright 2003-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)xio.c	1.20 09/07/18 Copyright 2003-2009 J. Schilling";
 #endif
 /*
  *	EXtended I/O functions for cdrecord
  *
- *	Copyright (c) 2003-2004 J. Schilling
+ *	Copyright (c) 2003-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <unixstd.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <standard.h>
-#include <fctldefs.h>
+#include <schily/mconfig.h>
+#include <schily/unistd.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/standard.h>
+#include <schily/fcntl.h>
+#include <schily/io.h>				/* for setmode() prototype */
 
-#ifdef	NEED_O_BINARY
-#include <io.h>					/* for setmode() prototype */
+#ifdef	VMS
+#include <vms_init.h>
+#define	open(n, p, m)	(open)((n), (p), (m), \
+				"acc", acc_cb, &open_id)
 #endif
 
 #include "xio.h"
@@ -41,10 +41,12 @@ LOCAL xio_t	x_stdin = {
 	NULL,		/* x_next	*/
 	NULL,		/* x_name	*/
 	0,		/* x_off	*/
+	0,		/* x_startoff	*/
 	STDIN_FILENO,	/* x_file	*/
 	999,		/* x_refcnt	*/
 	O_RDONLY,	/* x_oflag	*/
-	0		/* x_omode	*/
+	0,		/* x_omode	*/
+	0		/* x_xflags	*/
 };
 
 LOCAL xio_t	*x_root = &x_stdin;
@@ -52,7 +54,9 @@ LOCAL xio_t	**x_tail = NULL;
 
 
 LOCAL	xio_t	*xnewnode	__PR((char *name));
-EXPORT	void	*xopen		__PR((char *name, int oflag, int mode));
+EXPORT	void	*xopen		__PR((char *name, int oflag, int mode,
+								int xflags));
+EXPORT	off_t	xmarkpos	__PR((void *vp));
 EXPORT	int	xclose		__PR((void *vp));
 
 LOCAL xio_t *
@@ -71,18 +75,21 @@ xnewnode(name)
 		return ((xio_t *) NULL);
 	}
 	xp->x_off = 0;
+	xp->x_startoff = (off_t)0;
 	xp->x_file = -1;
 	xp->x_refcnt = 1;
 	xp->x_oflag = 0;
 	xp->x_omode = 0;
+	xp->x_xflags = 0;
 	return (xp);
 }
 
 EXPORT void *
-xopen(name, oflag, mode)
+xopen(name, oflag, mode, xflags)
 	char	*name;
 	int	oflag;
 	int	mode;
+	int	xflags;
 {
 	int	f;
 	xio_t	*xp;
@@ -93,11 +100,9 @@ xopen(name, oflag, mode)
 	if (name == NULL) {
 		xp = &x_stdin;
 		xp->x_refcnt++;
-#ifdef	NEED_O_BINARY
 		if ((oflag & O_BINARY) != 0) {
 			setmode(STDIN_FILENO, O_BINARY);
 		}
-#endif
 		return (xp);
 	}
 	for (; pp; pp = pp->x_next) {
@@ -122,9 +127,32 @@ xopen(name, oflag, mode)
 	xp->x_file = f;
 	xp->x_oflag = oflag;
 	xp->x_omode = mode;
+	xp->x_xflags = xflags & X_UFLAGS;
 	*x_tail = xp;
 	x_tail = &xp->x_next;
 	return ((void *)xp);
+}
+
+EXPORT off_t
+xmarkpos(vp)
+	void	*vp;
+{
+	xio_t	*xp = vp;
+	off_t	off = (off_t)0;
+
+	if (xp == (xio_t *)NULL)
+		return ((off_t)-1);
+
+	xp->x_startoff = off = lseek(xp->x_file, (off_t)0, SEEK_CUR);
+	if (xp->x_startoff == (off_t)-1) {
+		xp->x_startoff = (off_t)0;
+		xp->x_xflags |= X_NOSEEK;
+	}
+	if (isatty(xp->x_file)) {
+		off = (off_t)-1;
+		xp->x_xflags |= X_NOSEEK;
+	}
+	return (off);
 }
 
 EXPORT int
@@ -140,6 +168,7 @@ xclose(vp)
 	if (x_tail == NULL)
 		x_tail = &x_stdin.x_next;
 
+/*error("xclose(%p) refcnt = %d\n", vp, xp->x_refcnt);*/
 	if (--xp->x_refcnt <= 0) {
 		ret = close(xp->x_file);
 		while (pp) {
@@ -157,6 +186,8 @@ xclose(vp)
 
 		free(xp->x_name);
 		free(xp);
+	} else if ((xp->x_xflags & (X_NOREWIND|X_NOSEEK)) == 0) {
+		lseek(xp->x_file, xp->x_startoff, SEEK_SET);
 	}
 	return (ret);
 }

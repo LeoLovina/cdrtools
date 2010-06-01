@@ -1,7 +1,8 @@
-/* @(#)low.c	1.4 04/06/17 joerg */
+/* @(#)low.c	1.10 09/10/17 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)low.c	1.4 04/06/17 joerg";
+static	UConst char sccsid[] =
+	"@(#)low.c	1.10 09/10/17 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -22,12 +23,11 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
-#include <strdefs.h>
-#include <stdxlib.h>
-#include <errno.h>
-#include <unixstd.h>
-#include <fctldefs.h>
+#include <schily/string.h>
+#include <schily/stdlib.h>
+#include <schily/errno.h>
+#include <schily/unistd.h>
+#include <schily/fcntl.h>
 
 #include "internal.h"
 #include "data.h"
@@ -380,7 +380,7 @@ int l_writemdb(vol)
   hfsfile *cat = &vol->cat.f;
   int i;
 
-  memset(&b, 0, sizeof(b));
+  memset(b, 0, sizeof(b));
 
   mdb->drXTFlSize = ext->cat.u.fil.filPyLen;
   mdb->drXTClpSiz = ext->clump;
@@ -454,7 +454,7 @@ int l_writemdb(vol)
     {
 #ifdef APPLE_HYB
       /* "write" alternative MDB to memory copy */
-      memcpy(vol->hce->hfs_alt_mdb, &b, sizeof(b));
+      memcpy(vol->hce->hfs_alt_mdb, b, sizeof(b));
 #else
       if (b_writelb(vol, vol->vlen - 2, &b) < 0)
 	return -1;
@@ -474,6 +474,7 @@ int l_readvbm(vol)
 {
   int vbmst = vol->mdb.drVBMSt;
   int vbmsz = (vol->mdb.drNmAlBlks + 4095) / (unsigned)4096;
+  int s2 = (vol->vlen / vol->lpa + 4095) / 4096;
   block *bp;
 
   if ((int)(vol->mdb.drAlBlSt - vbmst) < vbmsz)
@@ -482,6 +483,8 @@ int l_readvbm(vol)
       return -1;
     }
 
+  if (s2 > vbmsz)
+	vbmsz = s2;
   bp = ALLOC(block, vbmsz);
   if (bp == 0)
     {

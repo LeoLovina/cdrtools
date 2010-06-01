@@ -1,37 +1,33 @@
-/* @(#)dmaresid.c	1.6 04/09/08 Copyright 1998,2001 J. Schilling */
+/* @(#)dmaresid.c	1.11 09/07/11 Copyright 1998-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)dmaresid.c	1.6 04/09/08 Copyright 1998,2001 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)dmaresid.c	1.11 09/07/11 Copyright 1998-2009 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1998,2001 J. Schilling
+ *	Copyright (c) 1998-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <strdefs.h>
-#include <schily.h>
-#include <standard.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/string.h>
+#include <schily/schily.h>
+#include <schily/standard.h>
 
-#include <utypes.h>
-#include <btorder.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
@@ -62,34 +58,27 @@ dmaresid(scgp)
 	BOOL	passed;
 
 	printf("Ready to start test for working DMA residual count? Enter <CR> to continue: ");
-	fprintf(logfile, "**********> Testing for working DMA residual count.\n");
-	flushit();
-	(void) getline(abuf, sizeof (abuf));
+	(void) chkgetline(abuf, sizeof (abuf));
 
-	printf("**********> Testing for working DMA residual count == 0.\n");
-	fprintf(logfile, "**********> Testing for working DMA residual count == 0.\n");
+	chkprint("**********> Testing for working DMA residual count.\n");
+	chkprint("**********> Testing for working DMA residual count == 0.\n");
 	passed = TRUE;
 	dmacnt = cnt;
 	ret = xtinquiry(scgp, cnt, dmacnt);
 	if (ret == dmacnt) {
-		printf("---------->	Wanted %d bytes, got it.\n", dmacnt);
-		fprintf(logfile, "---------->	Wanted %d bytes, got it.\n", dmacnt);
+		chkprint("---------->	Wanted %d bytes, got it.\n", dmacnt);
 	}
 	if (ret != dmacnt) {
-		printf("---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
-		fprintf(logfile, "---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
+		chkprint("---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
 	}
 	if (ret != scg_getdmacnt(scgp)) {
 		passed = FALSE;
-		printf("---------->	Libscg says %d bytes but got (%d)\n", scg_getdmacnt(scgp), ret);
-		fprintf(logfile, "---------->	Libscg says %d bytes but got (%d)\n", scg_getdmacnt(scgp), ret);
+		chkprint("---------->	Libscg says %d bytes but got (%d)\n", scg_getdmacnt(scgp), ret);
 	}
 	if (passed && ret == dmacnt) {
-		printf("----------> SCSI DMA residual count == 0 test PASSED\n");
-		fprintf(logfile, "----------> SCSI DMA residual count == 0 test PASSED\n");
+		chkprint("----------> SCSI DMA residual count == 0 test PASSED\n");
 	} else {
-		printf("----------> SCSI DMA residual count == 0 test FAILED\n");
-		fprintf(logfile, "----------> SCSI DMA residual count == 0 test FAILED\n");
+		chkprint("----------> SCSI DMA residual count == 0 test FAILED\n");
 	}
 
 	printf("Ready to start test for working DMA residual count == DMA count? Enter <CR> to continue: ");
@@ -128,9 +117,9 @@ dmaresid(scgp)
 	}
 
 	printf("Ready to start test for working DMA residual count == 1? Enter <CR> to continue: ");
-	fprintf(logfile, "**********> Testing for working DMA residual count == 1.\n");
 	flushit();
 	(void) getline(abuf, sizeof (abuf));
+	chkprint("**********> Testing for working DMA residual count == 1.\n");
 	passed = TRUE;
 	dmacnt = cnt+1;
 	ret = xtinquiry(scgp, cnt, dmacnt);
@@ -156,8 +145,10 @@ dmaresid(scgp)
 		fprintf(logfile, "----------> SCSI DMA residual count == 1 test FAILED\n");
 	}
 
-	printf("**********> Testing for working DMA overrun test.\n");
-	fprintf(logfile, "**********> Testing for working DMA overrun test.\n");
+	printf("Ready to start test for working DMA overrun detection? Enter <CR> to continue: ");
+	flushit();
+	(void) getline(abuf, sizeof (abuf));
+	chkprint("**********> Testing for working DMA overrun detection.\n");
 	passed = TRUE;
 	dmacnt = cnt-1;
 	ret = xtinquiry(scgp, cnt, dmacnt);
@@ -167,6 +158,7 @@ dmaresid(scgp)
 		fprintf(logfile, "---------->	Wanted %d bytes, got it - DMA overrun not blocked.\n", cnt);
 	}
 	if (ret != dmacnt) {
+		passed = FALSE;
 		printf("---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
 		fprintf(logfile, "---------->	Wanted %d bytes, got (%d)\n", dmacnt, ret);
 	}
@@ -175,7 +167,7 @@ dmaresid(scgp)
 		printf("---------->	Libscg says %d bytes but got (%d)\n", scg_getdmacnt(scgp), ret);
 		fprintf(logfile, "---------->	Libscg says %d bytes but got (%d)\n", scg_getdmacnt(scgp), ret);
 	}
-	if (passed && ret == cnt && scg_getresid(scgp) < 0) {
+	if (passed && scg_getresid(scgp) < 0) {
 		printf("----------> SCSI DMA overrun test PASSED\n");
 		fprintf(logfile, "----------> SCSI DMA overrun test PASSED\n");
 	} else {

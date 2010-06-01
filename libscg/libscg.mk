@@ -1,4 +1,4 @@
-#ident %W% %E% %Q%
+#ident @(#)libscg.mk	1.3 08/08/01 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -9,8 +9,10 @@ include		$(SRCROOT)/$(RULESDIR)/rules.top
 #VPATH=		.:stdio:$(ARCHDIR)
 INSDIR=		lib
 TARGETLIB=	scg
-#CPPOPTS +=	-Ispecincl
+CPPOPTS +=	-I.
 CPPOPTS +=	-DUSE_PG
+CPPOPTS +=	-DSCHILY_PRINT
+
 include		Targets
 LIBS=		
 

@@ -1,7 +1,8 @@
-/* @(#)hfs.c	1.9 04/06/17 joerg */
+/* @(#)hfs.c	1.15 09/11/07 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)hfs.c	1.9 04/06/17 joerg";
+static	UConst char sccsid[] =
+	"@(#)hfs.c	1.15 09/11/07 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -24,14 +25,13 @@ static	char sccsid[] =
 
 /* APPLE_HYB James Pearson j.pearson@ps.ucl.ac.uk 16/7/97 */
 
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <fctldefs.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <ctype.h>
-#include <statdefs.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/fcntl.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/ctype.h>
+#include <schily/stat.h>
 
 #include "internal.h"
 #include "data.h"
@@ -405,7 +405,7 @@ void hfs_umountall()
 {
   while (hfs_mounts)
 #ifdef APPLE_HYB
-    continue;
+    hfs_umount(hfs_mounts, 0L, 0L);
 #else
     hfs_umount(hfs_mounts);
 #endif /* APPLE_HYB */
@@ -911,7 +911,7 @@ int hfs_format(path, pnum, vname)
 
       /* write boot blocks */
 
-      memset(&b, 0, sizeof(b));
+      memset(b, 0, sizeof(b));
       b_writelb(&vol, 0, &b);
       b_writelb(&vol, 1, &b);
 

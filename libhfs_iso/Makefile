@@ -1,23 +1,13 @@
-#ident @(#)Makefile	1.3 01/01/21 
-###########################################################################
-# Sample makefile for non-shared libraries
+#ident @(#)Makefile	1.4 06/09/15 
+#ident "@(#)Makefile	1.5 06/07/21 "
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
 include		$(SRCROOT)/$(RULESDIR)/rules.top
 ###########################################################################
 
-INSDIR=		lib
-TARGETLIB=	hfs
-CPPOPTS +=	-DAPPLE_HYB
-CFILES=		data.c block.c low.c file.c btree.c node.c record.c \
-		volume.c hfs.c\
-		gdata.c
-HFILES=		block.h btree.h data.h file.h hfs.h hybrid.h internal.h \
-		low.h node.h record.h volume.h
-LIBS=
-XMK_FILE=	Makefile.man
+MK_FILES= libhfs.mk libhfs_p.mk $(NO_SHL)shlhfs.mk
 
 ###########################################################################
-include		$(SRCROOT)/$(RULESDIR)/rules.lib
+include		$(SRCROOT)/$(RULESDIR)/rules.mks
 ###########################################################################

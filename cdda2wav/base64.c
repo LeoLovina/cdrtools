@@ -1,30 +1,18 @@
-/* @(#)base64.c	1.4 02/04/06 Copyright 1998,1999 Heiko Eissfeldt */
+/* @(#)base64.c	1.10 09/07/10 Copyright 1998,1999 Heiko Eissfeldt, Copyright 2006-2009 J. Schilling */
+#include "config.h"
 #ifndef lint
-static char     sccsid[] =
-"@(#)base64.c	1.4 02/04/06 Copyright 1998,1999 Heiko Eissfeldt";
+static	UConst char sccsid[] =
+"@(#)base64.c	1.10 09/07/10 Copyright 1998,1999 Heiko Eissfeldt, Copyright 2006-2009 J. Schilling";
 
 #endif
-/*____________________________________________________________________________
-//
-//   CD Index - The Internet CD Index
-//
-//   This program is free software; you can redistribute it and/or modify
-//   it under the terms of the GNU General Public License as published by
-//   the Free Software Foundation; either version 2 of the License, or
-//   (at your option) any later version.
-//
-//   This program is distributed in the hope that it will be useful,
-//   but WITHOUT ANY WARRANTY; without even the implied warranty of
-//   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//   GNU General Public License for more details.
-//
-//   You should have received a copy of the GNU General Public License
-//   along with this program; if not, write to the Free Software
-//   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
-//   $Id: base64.c,v 1.1.1.3 1999/04/29 00:57:14 marc Exp $
-//____________________________________________________________________________
-*/
+/*
+ * A hacked version of rfc822_binary() for the Internet CD Index
+ *
+ * This is not a true RFC822 rfc822_binary() anymore. The characters
+ * '/', '+', and '=' do not work well as part of an URL.
+ * '_', '.', and '-' are used as an replacement.
+ * A final CRLF is not added.
+ */
 /*
  * Program:	RFC-822 routines (originally from SMTP)
  *
@@ -69,49 +57,49 @@ static char     sccsid[] =
  */
 
 #include "config.h"
-#include <stdio.h>
-#include <stdxlib.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
 
 #include "base64.h"
 
-/* NOTE: This is not true RFC822 anymore. The use of the characters
-// '/', '+', and '=' is no bueno when the ID will be used as part of a URL.
-// '_', '.', and '-' have been used instead
-*/
-
-/* Convert binary contents to BASE64
+/*
+ * Convert binary contents to BASE64
  * Accepts: source
  *	    length of source
  *	    pointer to return destination length
  * Returns: destination as BASE64
  */
 
-unsigned char *rfc822_binary (src, srcl, len)
-	char *src;
-	unsigned long srcl;
-	unsigned long *len;
+unsigned char *
+rfc822_binary(src, srcl, len)
+	void		*src;
+	unsigned long	srcl;
+	unsigned long	*len;
 {
-  unsigned char *ret,*d;
-  unsigned char *s = (unsigned char *) src;
-  char *v = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._";
-  unsigned long i = ((srcl + 2) / 3) * 4;
-  *len = i += 2 * ((i / 60) + 1);
-  d = ret = malloc ((size_t) ++i);
-  for (i = 0; srcl; s += 3) {	/* process tuplets */
-    *d++ = v[s[0] >> 2];	/* byte 1: high 6 bits (1) */
-				/* byte 2: low 2 bits (1), high 4 bits (2) */
-    *d++ = v[((s[0] << 4) + (--srcl ? (s[1] >> 4) : 0)) & 0x3f];
-				/* byte 3: low 4 bits (2), high 2 bits (3) */
-    *d++ = srcl ? v[((s[1] << 2) + (--srcl ? (s[2] >> 6) : 0)) & 0x3f] : '-';
-				/* byte 4: low 6 bits (3) */
-    *d++ = srcl ? v[s[2] & 0x3f] : '-';
-    if (srcl) srcl--;		/* count third character if processed */
-    if ((++i) == 15) {		/* output 60 characters? */
-      i = 0;			/* restart line break count, insert CRLF */
-      *d++ = '\015'; *d++ = '\012';
-    }
-  }
-  *d = '\0';			/* tie off string */
+	unsigned char	*ret;
+	unsigned char	*d;
+	unsigned char	*s = (unsigned char *) src;
+/*	char		*v = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";*/
+	char		*v = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._";
+	unsigned long	i = ((srcl + 2) / 3) * 4;
 
-  return ret;			/* return the resulting string */
+	*len = i += 2 * ((i / 60) + 1);
+	d = ret = malloc((size_t) ++i);
+	for (i = 0; srcl; s += 3) {	/* process tuplets */
+		*d++ = v[s[0] >> 2];	/* byte 1: high 6 bits (1) */
+					/* byte 2: low 2 bits (1), high 4 bits (2) */
+		*d++ = v[((s[0] << 4) + (--srcl ? (s[1] >> 4) : 0)) & 0x3f];
+					/* byte 3: low 4 bits (2), high 2 bits (3) */
+		*d++ = srcl ? v[((s[1] << 2) + (--srcl ? (s[2] >> 6) : 0)) & 0x3f] : '-';
+					/* byte 4: low 6 bits (3) */
+		*d++ = srcl ? v[s[2] & 0x3f] : '-';
+		if (srcl) srcl--;	/* count third character if processed */
+		if ((++i) == 15) {	/* output 60 characters? */
+			i = 0;		/* restart line break count, insert CRLF */
+			*d++ = '\015'; *d++ = '\012';
+		}
+	}
+	*d = '\0';			/* tie off string */
+
+	return (ret);			/* return the resulting string */
 }

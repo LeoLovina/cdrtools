@@ -1,37 +1,53 @@
-/* @(#)interface.h	1.12 02/05/27 Copyright 1998-2001 Heiko Eissfeldt */
+/* @(#)interface.h	1.23 09/04/19 Copyright 1998-2001 Heiko Eissfeldt, Copyright 2005-2009 J. Schilling */
 
-/***
- * CopyPolicy: GNU Public License 2 applies
+/*
  * Copyright (C) by Heiko Eissfeldt
+ * Copyright (c) 2005-2008 J. Schilling
  *
- * header file interface.h for cdda2wav */
+ * header file interface.h for cdda2wav
+ */
+/*
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * See the file CDDL.Schily.txt in this distribution for details.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
+ */
 
-#ifndef CD_FRAMESIZE
-#define CD_FRAMESIZE 2048
+#ifndef	DEF_BUFSIZE
+#define	DEF_BUFSIZE		(3*1024*1024)	/* Max def. SCSI Buf size 3M */
 #endif
 
-#ifndef CD_FRAMESIZE_RAW
-#define CD_FRAMESIZE_RAW 2352
+#ifndef	CD_FRAMESIZE
+#define	CD_FRAMESIZE		2048
 #endif
 
-#define CD_FRAMESAMPLES (CD_FRAMESIZE_RAW / 4)
+#ifndef	CD_FRAMESIZE_RAW
+#define	CD_FRAMESIZE_RAW	2352
+#endif
+
+#define	CD_FRAMESAMPLES		(CD_FRAMESIZE_RAW / 4)
 
 extern unsigned interface;
 
 extern int trackindex_disp;
-#ifndef NSECTORS
-#define NSECTORS 75
+#ifndef	NSECTORS
+#define	NSECTORS		75
 #endif
 
 /* interface types */
-#define GENERIC_SCSI	0
-#define COOKED_IOCTL	1
+#define	GENERIC_SCSI		0
+#define	COOKED_IOCTL		1
 
 /* constants for sub-q-channel info */
-#define GET_ALL			0
-#define GET_POSITIONDATA	1
-#define GET_CATALOGNUMBER	2
-#define GET_TRACK_ISRC		3
+#define	GET_ALL			0
+#define	GET_POSITIONDATA	1
+#define	GET_CATALOGNUMBER	2
+#define	GET_TRACK_ISRC		3
 
 typedef struct subq_chnl {
     unsigned char reserved;
@@ -41,8 +57,8 @@ typedef struct subq_chnl {
     unsigned char control_adr;
     unsigned char track;
     unsigned char index;
-    unsigned char data[40];	/* this has subq_all, subq_position,
-				   subq_catalog or subq_track_isrc format */
+    unsigned char data[40];	/* this has subq_all, subq_position,	  */
+				/* subq_catalog or subq_track_isrc format */
 } subq_chnl;
 
 typedef struct subq_all {
@@ -54,7 +70,7 @@ typedef struct subq_all {
     unsigned char trel_sec;
     unsigned char trel_frame;
     unsigned char trel_reserved;
-    unsigned char mc_valid;     /* MSB */
+    unsigned char mc_valid;	/* MSB */
     unsigned char media_catalog_number[13];
     unsigned char zero;
     unsigned char aframe;
@@ -87,29 +103,56 @@ typedef struct subq_track_isrc {
 
 #if	!defined	NO_SCSI_STUFF
 
-struct TOC;
-
 /* cdrom access function pointer */
-extern void     (*EnableCdda) __PR((SCSI *scgp, int Switch, unsigned uSectorsize));
-extern unsigned (*doReadToc) __PR(( SCSI *scgp ));
-extern void	(*ReadTocText) __PR(( SCSI *scgp ));
-extern unsigned (*ReadLastAudio) __PR(( SCSI *scgp ));
-extern int      (*ReadCdRom) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
-extern int      (*ReadCdRomSub) __PR((SCSI *scgp, UINT4 *p, unsigned lSector, unsigned SectorBurstVal ));
-extern int      (*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p, unsigned lSector, unsigned SectorBurstVal ));
-extern subq_chnl *(*ReadSubQ) __PR(( SCSI *scgp, unsigned char sq_format, unsigned char track ));
-extern subq_chnl *(*ReadSubChannels) __PR(( SCSI *scgp, unsigned lSector ));
-extern void     (*SelectSpeed) __PR(( SCSI *scgp, unsigned speed ));
-extern int	(*Play_at) __PR(( SCSI *scgp, unsigned from_sector, unsigned sectors));
-extern int	(*StopPlay) __PR(( SCSI *scgp));
-extern void	(*trash_cache) __PR((UINT4 *p, unsigned lSector, unsigned SectorBurstVal));
+extern	void	(*EnableCdda)	__PR((SCSI *scgp, int Switch,
+						unsigned uSectorsize));
+extern	unsigned (*doReadToc)	__PR((SCSI *scgp));
+extern	void	(*ReadTocText)	__PR((SCSI *scgp));
+extern	unsigned (*ReadLastAudio) __PR((SCSI *scgp));
+extern	int	(*ReadCdRom)	__PR((SCSI *scgp, UINT4 *p, unsigned lSector,
+						unsigned SectorBurstVal));
+extern	int	(*ReadCdRomSub)	__PR((SCSI *scgp, UINT4 *p, unsigned lSector,
+						unsigned SectorBurstVal));
+extern	int	(*ReadCdRomData) __PR((SCSI *scgp, unsigned char *p,
+						unsigned lSector,
+						unsigned SectorBurstVal));
+extern	subq_chnl *(*ReadSubQ)	__PR((SCSI *scgp, unsigned char sq_format,
+						unsigned char track));
+extern	subq_chnl *(*ReadSubChannels) __PR((SCSI *scgp, unsigned lSector));
+extern	void	(*SelectSpeed)	__PR((SCSI *scgp, unsigned speed));
+extern	int	(*Play_at)	__PR((SCSI *scgp, unsigned from_sector,
+						unsigned sectors));
+extern	int	(*StopPlay)	__PR((SCSI *scgp));
+extern	void	(*trash_cache)	__PR((UINT4 *p, unsigned lSector,
+						unsigned SectorBurstVal));
 
-SCSI    *get_scsi_p __PR(( void ));
+extern	SCSI	*get_scsi_p	__PR((void));
 #endif
 
-extern unsigned char *bufferTOC;
-extern subq_chnl *SubQbuffer;
+extern	unsigned char	*bufferTOC;
+extern	int		bufTOCsize;
+extern	subq_chnl	*SubQbuffer;
 
 
-void SetupInterface __PR(( void ));
-int	Toshiba3401 __PR(( void ));
+extern	void	SetupInterface	__PR((void));
+extern	int	Toshiba3401	__PR((void));
+
+extern	void	priv_init	__PR((void));
+extern	void	priv_on		__PR((void));
+extern	void	priv_off	__PR((void));
+
+extern int	poll_in			__PR((void));
+
+/*
+ * The callback interface for libparanoia to the CD-ROM interface
+ *
+ * cdda_read() is in interface.c the other functions are in toc.c
+ */
+extern long	cdda_disc_firstsector	__PR((void *d));		/* -> long sector */
+extern long	cdda_disc_lastsector	__PR((void *d));		/* -> long sector */
+extern long	cdda_read		__PR((void *d, void *buffer, long beginsector, long sectors));	/* -> long sectors */
+extern int	cdda_sector_gettrack	__PR((void *d, long sector));	/* -> int trackno */
+extern int	cdda_track_audiop	__PR((void *d, int track));	/* -> int Is audiotrack */
+extern long	cdda_track_firstsector	__PR((void *d, int track));	/* -> long sector */
+extern long	cdda_track_lastsector	__PR((void *d, int track));	/* -> long sector */
+extern int	cdda_tracks		__PR((void *d));		/* -> int tracks */

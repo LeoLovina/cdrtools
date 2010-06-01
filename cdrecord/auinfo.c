@@ -1,37 +1,34 @@
-/* @(#)auinfo.c	1.23 04/03/01 Copyright 1998-2004 J. Schilling */
+/* @(#)auinfo.c	1.32 10/01/31 Copyright 1998-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)auinfo.c	1.23 04/03/01 Copyright 1998-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)auinfo.c	1.32 10/01/31 Copyright 1998-2010 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1998-2004 J. Schilling
+ *	Copyright (c) 1998-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <statdefs.h>
-#include <stdio.h>
-#include <standard.h>
-#include <strdefs.h>
-#include <deflts.h>
-#include <utypes.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/stat.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/string.h>
+#include <schily/deflts.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
 
 #include "cdtext.h"
 #include "cdrecord.h"
@@ -39,7 +36,9 @@ static	char sccsid[] =
 extern	int	debug;
 extern	int	xdebug;
 
+LOCAL	int	auinfopen	__PR((char *name));
 EXPORT	BOOL	auinfosize	__PR((char *name, track_t *trackp));
+EXPORT	BOOL	auinfhidden	__PR((char *name, int track, track_t *trackp));
 EXPORT	void	auinfo		__PR((char *name, int track, track_t *trackp));
 EXPORT	textptr_t *gettextptr	__PR((int track, track_t *trackp));
 LOCAL	char 	*savestr	__PR((char *name));
@@ -60,6 +59,23 @@ main(ac, av)
 	auinfo("/mnt2/CD3/audio_01.wav");
 }
 #endif
+
+LOCAL int
+auinfopen(name)
+	char	*name;
+{
+	char	infname[1024];
+	char	*p;
+
+	strncpy(infname, name, sizeof (infname)-1);
+	infname[sizeof (infname)-1] = '\0';
+	p = strrchr(infname, '.');
+	if (p != 0 && &p[4] < &name[sizeof (infname)]) {
+		strcpy(&p[1], "inf");
+	}
+
+	return (defltopen(infname));
+}
 
 EXPORT BOOL
 auinfosize(name, trackp)
@@ -140,165 +156,221 @@ auinfosize(name, trackp)
 	return (TRUE);
 }
 
+EXPORT BOOL
+auinfhidden(name, track, trackp)
+	char	*name;
+	int	track;
+	track_t	*trackp;
+{
+	char	*p;
+	long	l;
+	long	tr = -1;
+	long	tno = -1;
+	BOOL	isdao = !is_tao(&trackp[0]);
+
+	if (auinfopen(name) != 0)
+		return (FALSE);
+
+	p = readtag("Track=");		/* Track no, first track is 1 */
+	if (p && isdao)
+		astol(p, &tr);
+	if (tr != 0)
+		return (FALSE);
+	p = readtag("Tracknumber=");	/* Track no, first track >= 1 */
+	if (p && isdao)
+		astol(p, &tno);
+
+	p = readtag("Trackstart=");
+	if (p && isdao) {
+		l = -1L;
+		astol(p, &l);
+		if (track == 1 && tno == 0 && l == 0)
+			return (TRUE);
+	}
+	return (FALSE);
+}
+
 EXPORT void
 auinfo(name, track, trackp)
 	char	*name;
 	int	track;
 	track_t	*trackp;
 {
-	char	infname[1024];
 	char	*p;
 	track_t	*tp = &trackp[track];
 	textptr_t *txp;
 	long	l;
+	long	tr = -1;
 	long	tno = -1;
 	BOOL	isdao = !is_tao(&trackp[0]);
 
-	strncpy(infname, name, sizeof (infname)-1);
-	infname[sizeof (infname)-1] = '\0';
-	p = strrchr(infname, '.');
-	if (p != 0 && &p[4] < &name[sizeof (infname)]) {
-		strcpy(&p[1], "inf");
+	if (auinfopen(name) != 0)
+		return;
+
+	p = readtstr("CDINDEX_DISCID=");
+	p = readtag("CDDB_DISKID=");
+
+	p = readtag("MCN=");
+	if (p && *p) {
+		setmcn(p, &trackp[0]);
+		txp = gettextptr(0, trackp); /* MCN is isrc for trk 0*/
+		txp->tc_isrc = savestr(p);
 	}
 
-	if (defltopen(infname) == 0) {
+	p = readtag("ISRC=");
+	if (p && *p && track > 0) {
+		setisrc(p, &trackp[track]);
+		txp = gettextptr(track, trackp);
+		txp->tc_isrc = savestr(p);
+	}
 
-		p = readtstr("CDINDEX_DISCID=");
-		p = readtag("CDDB_DISKID=");
+	p = readtstr("Albumperformer=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp); /* Album perf. in trk 0*/
+		txp->tc_performer = savestr(p);
+	}
+	p = readtstr("Performer=");
+	if (p && *p && track > 0) {
+		txp = gettextptr(track, trackp);
+		txp->tc_performer = savestr(p);
+	}
+	p = readtstr("Albumtitle=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp); /* Album title in trk 0*/
+		txp->tc_title = savestr(p);
+	}
+	p = readtstr("Tracktitle=");
+	if (p && *p && track > 0) {
+		txp = gettextptr(track, trackp);
+		txp->tc_title = savestr(p);
+	}
+	p = readtstr("Albumsongwriter=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp);
+		txp->tc_songwriter = savestr(p);
+	}
+	p = readtstr("Songwriter=");
+	if (p && *p && track > 0) {
+		txp = gettextptr(track, trackp);
+		txp->tc_songwriter = savestr(p);
+	}
+	p = readtstr("Albumcomposer=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp);
+		txp->tc_composer = savestr(p);
+	}
+	p = readtstr("Composer=");
+	if (p && *p && track > 0) {
+		txp = gettextptr(track, trackp);
+		txp->tc_composer = savestr(p);
+	}
+	p = readtstr("Albumarranger=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp);
+		txp->tc_arranger = savestr(p);
+	}
+	p = readtstr("Arranger=");
+	if (p && *p && track > 0) {
+		txp = gettextptr(track, trackp);
+		txp->tc_arranger = savestr(p);
+	}
+	p = readtstr("Albummessage=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp);
+		txp->tc_message = savestr(p);
+	}
+	p = readtstr("Message=");
+	if (p && *p && track > 0) {
+		txp = gettextptr(track, trackp);
+		txp->tc_message = savestr(p);
+	}
+	p = readtstr("Diskid=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp); /* Disk id is in trk 0*/
+		txp->tc_diskid = savestr(p);
+	}
+	p = readtstr("Albumclosed_info=");
+	if (p && *p) {
+		txp = gettextptr(0, trackp);
+		txp->tc_closed_info = savestr(p);
+	}
+	p = readtstr("Closed_info=");
+	if (p && *p && track > 0) {
+		txp = gettextptr(track, trackp);
+		txp->tc_closed_info = savestr(p);
+	}
 
-		p = readtag("MCN=");
-		if (p && *p) {
-			setmcn(p, &trackp[0]);
-			txp = gettextptr(0, trackp); /* MCN is isrc for trk 0*/
-			txp->tc_isrc = savestr(p);
-		}
+	p = readtag("Track=");		/* Track no, first track is 1 */
+	if (p && isdao)
+		astol(p, &tr);
+	p = readtag("Tracknumber=");	/* Track no, first track >= 1 */
+	if (p && isdao)
+		astol(p, &tno);
+	if (tr < 0 && tno > 0)		/* Support old inf files	*/
+		tr = tno;
 
-		p = readtag("ISRC=");
-		if (p && *p) {
-			setisrc(p, &trackp[track]);
-			txp = gettextptr(track, trackp);
-			txp->tc_isrc = savestr(p);
+	p = readtag("Trackstart=");
+	if (p && isdao) {
+		l = -1L;
+		astol(p, &l);
+		if (track == 1 && tr == 1 && l > 0) {
+			trackp[1].pregapsize = 150 + l;
+			printf("Track1 Start: '%s' (%ld)\n", p, l);
 		}
+	}
 
-		p = readtstr("Albumperformer=");
-		if (p && *p) {
-			txp = gettextptr(0, trackp); /* Album perf. in trk 0*/
-			txp->tc_performer = savestr(p);
-		}
-		p = readtstr("Performer=");
-		if (p && *p) {
-			txp = gettextptr(track, trackp);
-			txp->tc_performer = savestr(p);
-		}
-		p = readtstr("Albumtitle=");
-		if (p && *p) {
-			txp = gettextptr(0, trackp); /* Album title in trk 0*/
-			txp->tc_title = savestr(p);
-		}
-		p = readtstr("Tracktitle=");
-		if (p && *p) {
-			txp = gettextptr(track, trackp);
-			txp->tc_title = savestr(p);
-		}
-		p = readtstr("Songwriter=");
-		if (p && *p) {
-			txp = gettextptr(track, trackp);
-			txp->tc_songwriter = savestr(p);
-		}
-		p = readtstr("Composer=");
-		if (p && *p) {
-			txp = gettextptr(track, trackp);
-			txp->tc_composer = savestr(p);
-		}
-		p = readtstr("Arranger=");
-		if (p && *p) {
-			txp = gettextptr(track, trackp);
-			txp->tc_arranger = savestr(p);
-		}
-		p = readtstr("Message=");
-		if (p && *p) {
-			txp = gettextptr(track, trackp);
-			txp->tc_message = savestr(p);
-		}
-		p = readtstr("Diskid=");
-		if (p && *p) {
-			txp = gettextptr(0, trackp); /* Disk id is in trk 0*/
-			txp->tc_title = savestr(p);
-		}
-		p = readtstr("Closed_info=");
-		if (p && *p) {
-			txp = gettextptr(track, trackp);
-			txp->tc_closed_info = savestr(p);
-		}
+	p = readtag("Tracklength=");
 
-		p = readtag("Tracknumber=");
-		if (p && isdao)
-			astol(p, &tno);
+	p = readtag("Pre-emphasis=");
+	if (p && *p) {
+		if (strncmp(p, "yes", 3) == 0) {
+			tp->flags |= TI_PREEMP;
+			if ((tp->tracktype & TOC_MASK) == TOC_DA)
+				tp->sectype = SECT_AUDIO_PRE;
 
-		p = readtag("Trackstart=");
-		if (p && isdao) {
-			l = -1L;
-			astol(p, &l);
-			if (track == 1 && tno == 1 && l > 0) {
-				trackp[1].pregapsize = 150 + l;
-				printf("Track1 Start: '%s' (%ld)\n", p, l);
-			}
+		} else if (strncmp(p, "no", 2) == 0) {
+			tp->flags &= ~TI_PREEMP;
+			if ((tp->tracktype & TOC_MASK) == TOC_DA)
+				tp->sectype = SECT_AUDIO_NOPRE;
 		}
+	}
 
-		p = readtag("Tracklength=");
+	p = readtag("Channels=");
+	p = readtag("Copy_permitted=");
+	if (p && *p) {
+		/*
+		 * -useinfo always wins
+		 */
+		tp->flags &= ~(TI_COPY|TI_SCMS);
 
-		p = readtag("Pre-emphasis=");
-		if (p && *p) {
-			if (strncmp(p, "yes", 3) == 0) {
-				tp->flags |= TI_PREEMP;
-				if ((tp->tracktype & TOC_MASK) == TOC_DA)
-					tp->sectype = SECT_AUDIO_PRE;
-
-			} else if (strncmp(p, "no", 2) == 0) {
-				tp->flags &= ~TI_PREEMP;
-				if ((tp->tracktype & TOC_MASK) == TOC_DA)
-					tp->sectype = SECT_AUDIO_NOPRE;
-			}
-		}
-
-		p = readtag("Channels=");
-		p = readtag("Copy_permitted=");
-		if (p && *p) {
-			/*
-			 * -useinfo always wins
-			 */
+		if (strncmp(p, "yes", 3) == 0)
+			tp->flags |= TI_COPY;
+		else if (strncmp(p, "no", 2) == 0)
+			tp->flags |= TI_SCMS;
+		else if (strncmp(p, "once", 2) == 0)
 			tp->flags &= ~(TI_COPY|TI_SCMS);
+	}
+	p = readtag("Endianess=");
+	p = readtag("Index=");
+	if (p && *p && isdao)
+		setindex(p, &trackp[track]);
 
-			if (strncmp(p, "yes", 3) == 0)
-				tp->flags |= TI_COPY;
-			else if (strncmp(p, "no", 2) == 0)
-				tp->flags |= TI_SCMS;
-			else if (strncmp(p, "once", 2) == 0)
-				tp->flags &= ~(TI_COPY|TI_SCMS);
-		}
-		p = readtag("Endianess=");
-		p = readtag("Index=");
-		if (p && *p && isdao)
-			setindex(p, &trackp[track]);
+	p = readtag("Index0=");
+	if (p && isdao) {
+		Llong ts;
+		Llong ps;
 
-		p = readtag("Index0=");
-		if (p && isdao) {
-			Llong ts;
-			Llong ps;
-
-			l = -2L;
-			astol(p, &l);
-			if (l == -1) {
-				trackp[track+1].pregapsize = 0;
-			} else if (l > 0) {
-				ts = tp->itracksize / tp->isecsize;
-				ps = ts - l;
-				if (ps > 0)
-					trackp[track+1].pregapsize = ps;
-			}
+		l = -2L;
+		astol(p, &l);
+		if (l == -1) {
+			trackp[track+1].pregapsize = 0;
+		} else if (l > 0) {
+			ts = tp->itracksize / tp->isecsize;
+			ps = ts - l;
+			if (ps > 0)
+				trackp[track+1].pregapsize = ps;
 		}
 	}
-
 }
 
 EXPORT textptr_t *

@@ -1,7 +1,7 @@
-/* @(#)scsitransp.c	1.91 04/06/17 Copyright 1988,1995,2000-2004 J. Schilling */
+/* @(#)scsitransp.c	1.98 09/09/07 Copyright 1988,1995,2000-2009 J. Schilling */
 /*#ifndef lint*/
 static	char sccsid[] =
-	"@(#)scsitransp.c	1.91 04/06/17 Copyright 1988,1995,2000-2004 J. Schilling";
+	"@(#)scsitransp.c	1.98 09/09/07 Copyright 1988,1995,2000-2009 J. Schilling";
 /*#endif*/
 /*
  *	SCSI user level command transport routines (generic part).
@@ -12,33 +12,37 @@ static	char sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1988,1995,2000-2004 J. Schilling
+ *	Copyright (c) 1988,1995,2000-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <errno.h>
-#include <timedefs.h>
-#include <strdefs.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/errno.h>
+#include <schily/time.h>
+#include <schily/string.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsireg.h>
@@ -52,7 +56,7 @@ static	char sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_version[]		= "0.8";	/* The global libscg version	*/
+LOCAL	char	_scg_version[]		= "0.9";	/* The global libscg version	*/
 LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 #define	DEFTIMEOUT	20	/* Default timeout for SCSI command transport */
@@ -60,6 +64,7 @@ LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 EXPORT	char	*scg_version	__PR((SCSI *scgp, int what));
 EXPORT	int	scg__open	__PR((SCSI *scgp, char *device));
 EXPORT	int	scg__close	__PR((SCSI *scgp));
+EXPORT	int	scg_numbus	__PR((SCSI *scgp));
 EXPORT	BOOL	scg_havebus	__PR((SCSI *scgp, int));
 EXPORT	int	scg_initiator_id __PR((SCSI *scgp));
 EXPORT	int	scg_isatapi	__PR((SCSI *scgp));
@@ -258,6 +263,16 @@ scg_freebuf(scgp)
 }
 
 /*
+ * Return the max. number of SCSI busses.
+ */
+EXPORT BOOL
+scg_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (SCGO_NUMBUS(scgp));
+}
+
+/*
  * Check if 'busno' is a valid SCSI bus number.
  */
 EXPORT BOOL
@@ -404,8 +419,13 @@ scg_cmd(scgp)
 		 * Old /dev/scg versions will not allow to access targets > 7.
 		 * Include a workaround to make this non fatal.
 		 */
-		if (scg_target(scgp) < 8 || geterrno() != EINVAL)
-			comerr("Cannot send SCSI cmd via ioctl\n");
+		if (scg_target(scgp) < 8 || geterrno() != EINVAL) {
+			int	err = geterrno();
+
+			errmsgno(err, "Cannot send SCSI cmd via ioctl.\n");
+			if (scgp->flags & SCGF_PERM_EXIT)
+				comexit(err);
+		}
 		if (scmd->ux_errno == 0)
 			scmd->ux_errno = geterrno();
 		if (scmd->error == SCG_NO_ERROR)
@@ -1377,7 +1397,7 @@ scg_printdev(ip)
 	scg_fprintdev(stdout, ip);
 }
 
-#include <vadefs.h>
+#include <schily/varargs.h>
 
 /*
  * print into the SCSI error buffer, adjust the next write pointer.

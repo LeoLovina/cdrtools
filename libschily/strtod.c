@@ -1,3 +1,5 @@
+/* @(#)strtod.c	1.4 09/08/27 joerg */
+
 /*	$NetBSD: strtod.c,v 1.23 1996/10/13 00:07:55 christos Exp $	*/
 
 /****************************************************************
@@ -95,8 +97,8 @@
 static char *rcsid = "$NetBSD: strtod.c,v 1.23 1996/10/13 00:07:55 christos Exp $";
 #endif /* LIBC_SCCS and not lint */
 
-#include <mconfig.h>
-#include <btorder.h>
+#include <schily/mconfig.h>
+#include <schily/btorder.h>
 
 #ifdef	__OLD_NETBSD_DEFINES__
 
@@ -139,12 +141,12 @@ static char *rcsid = "$NetBSD: strtod.c,v 1.23 1996/10/13 00:07:55 christos Exp 
 #define VAX
 #endif
 
-#include <utypes.h>
+#include <schily/utypes.h>
 #define Long	Int32_t
 #define ULong	UInt32_t
 
 #ifdef DEBUG
-#include "stdio.h"
+#include <schily/stdio.h>
 #define Bug(x) {fprintf(stderr, "%s\n", x); exit(1);}
 #endif
 
@@ -172,11 +174,8 @@ extern void *MALLOC(size_t);
 #define MALLOC malloc
 #endif
 
-#include "ctype.h"
-#include "errno.h"
-#ifndef	HAVE_ERRNO_DEF
-extern	int	errno;
-#endif
+#include <schily/ctype.h>
+#include <schily/errno.h>
 
 #ifdef Bad_float_h
 #undef __STDC__
@@ -217,12 +216,13 @@ extern	int	errno;
 #ifndef LONG_MAX
 #define LONG_MAX 2147483647
 #endif
-#else
-#include "float.h"
-#endif
-#ifndef __MATH_H__
-#include "math.h"
-#endif
+
+#else	/* Bad_float_h */
+#include <schily/float.h>
+#endif	/* Bad_float_h */
+/*#ifndef __MATH_H__*/
+#include <schily/math.h>
+/*#endif*/
 
 #ifdef __cplusplus
 extern "C" {

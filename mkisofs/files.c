@@ -1,7 +1,7 @@
-/* @(#)files.c	1.12 04/03/04 joerg */
+/* @(#)files.c	1.18 09/11/25 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)files.c	1.12 04/03/04 joerg";
+	"@(#)files.c	1.18 09/11/25 joerg";
 
 #endif
 /*
@@ -28,18 +28,18 @@ static	char sccsid[] =
 
 /* ADD_FILES changes made by Ross Biro biro@yggdrasil.com 2/23/95 */
 
-#include <mconfig.h>
+#include <schily/mconfig.h>
 #include "mkisofs.h"
-#include <errno.h>
-#include <schily.h>
-#include <ctype.h>
+#include <schily/errno.h>
+#include <schily/schily.h>
+#include <schily/ctype.h>
 
 #ifdef ADD_FILES
 
 void	add_one_file	__PR((char *addpath, char *path));
 void	add_file_list	__PR((int argc, char **argv, int ind));
 void	add_file	__PR((char *filename));
-char *	look_up_addition __PR((char **newpath, char *path,
+char	*look_up_addition __PR((char **newpath, char *path,
 					struct dirent **de));
 void	nuke_duplicates	__PR((char *path, struct dirent **de));
 struct dirent  *readdir_add_files __PR((char **pathp, char *path, DIR *dir));
@@ -135,7 +135,7 @@ add_one_file(addpath, path)
 			/* add a new node. */
 			tmp->next = e_malloc(sizeof (*tmp->next));
 			f = tmp->next;
-			f->name = strdup(cp);
+			f->name = e_strdup(cp);
 			f->child = NULL;
 			f->next = NULL;
 			f->add_count = 0;
@@ -145,7 +145,7 @@ add_one_file(addpath, path)
 			/* no children. */
 			f->child = e_malloc(sizeof (*f->child));
 			f = f->child;
-			f->name = strdup(cp);
+			f->name = e_strdup(cp);
 			f->child = NULL;
 			f->next = NULL;
 			f->add_count = 0;
@@ -169,8 +169,8 @@ next:
 	/* Now f really points to where we should add this name. */
 	f->add_count++;
 	f->adds = realloc(f->adds, sizeof (*f->adds) * f->add_count);
-	f->adds[f->add_count - 1].path = strdup(path);
-	f->adds[f->add_count - 1].name = strdup(name);
+	f->adds[f->add_count - 1].path = e_strdup(path);
+	f->adds[f->add_count - 1].name = e_strdup(name);
 }
 
 /*
@@ -190,7 +190,7 @@ add_file_list(argc, argv, ind)
 	char	*dup_arg;
 
 	while (ind < argc) {
-		dup_arg = strdup(argv[ind]);
+		dup_arg = e_strdup(argv[ind]);
 		ptr = strchr(dup_arg, '=');
 		if (ptr == NULL) {
 			free(dup_arg);
@@ -219,12 +219,7 @@ add_file(filename)
 	} else {
 		f = fopen(filename, "r");
 		if (f == NULL) {
-#ifdef	USE_LIBSCHILY
 			comerr("Cannot open '%s'.\n", filename);
-#else
-			perror("fopen");
-			exit(1);
-#endif
 		}
 	}
 	while (fgets(buff, sizeof (buff), f)) {
@@ -241,14 +236,8 @@ add_file(filename)
 			ptr[strlen(ptr) - 1] = 0;
 		p2 = strchr(ptr, '=');
 		if (p2 == NULL) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD, "Error in file '%s' line %d: %s\n",
 						filename, count, buff);
-#else
-			fprintf(stderr, "Error in file '%s' line %d: %s\n",
-						filename, count, buff);
-			exit(1);
-#endif
 		}
 		*p2 = 0;
 		p2++;
@@ -275,7 +264,7 @@ look_up_addition(newpath, path, de)
 		return (NULL);
 
 	/* I don't trust strtok */
-	dup_path = strdup(path);
+	dup_path = e_strdup(path);
 
 	cp = strtok(dup_path, SPATH_SEPARATOR);
 	while (cp != NULL) {
@@ -325,7 +314,7 @@ nuke_duplicates(path, de)
 		return;
 
 	/* I don't trust strtok */
-	dup_path = strdup(path);
+	dup_path = e_strdup(path);
 
 	cp = strtok(dup_path, SPATH_SEPARATOR);
 	while (cp != NULL) {

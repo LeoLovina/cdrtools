@@ -4,10 +4,10 @@ This package contains the following software:
 	By Heiko Eißfeldt <heiko@hexco.de>
 
 -	cdrecord (a CD recording program)
-	By Jörg Schilling <schilling@fokus.fhg.de>
+	By Jörg Schilling <joerg.schilling@fokus.fraunhofer.de>
 
 -	mkisofs (an ISO-9660 filesystem image creator)
-	By Jörg Schilling schilling@fokus.fhg.de and
+	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de and
 	by James Pearson <jcpearso@ge.ucl.ac.uk>
 
 -	mkhybrid (an ISO-9660/HFS filesystem image creator)
@@ -24,14 +24,14 @@ This package contains the following software:
 	-	isovfy verify an ISO-9660 image
 
 -	readcd (a stripped down version of scgskeleton)
-	By Jörg Schilling schilling@fokus.fhg.de and
+	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de and
 	may be used to read data CD's, to write to DVD-RAM
 	and to copy Solaris boot CD's
 
 -	scgcheck (a program to validate the correct behavior
-	By Jörg Schilling schilling@fokus.fhg.de and
+	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de and
 	of the low level libscg code and the SCSI transport
 	code of the underlying OS).
 
 -	libscg (a highly portable SCSI transport library)
-	By Jörg Schilling schilling@fokus.fhg.de and
+	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de and

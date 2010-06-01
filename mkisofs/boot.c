@@ -1,19 +1,19 @@
-/* @(#)boot.c	1.13 04/02/22 Copyright 1999-2003 J. Schilling */
+/* @(#)boot.c	1.24 09/11/25 Copyright 1999-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)boot.c	1.13 04/02/22 Copyright 1999-2003 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)boot.c	1.24 09/11/25 Copyright 1999-2009 J. Schilling";
 #endif
 /*
  *	Support for generic boot (sector 0..16)
  *	and to boot Sun sparc and Sun x86 systems.
  *
- *	Copyright (c) 1999-2003 J. Schilling
+ *	Copyright (c) 1999-2009 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * it under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,12 +25,11 @@ static	char sccsid[] =
  * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <fctldefs.h>
-#include <utypes.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/fcntl.h>
+#include <schily/utypes.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 #include "sunlabel.h"
 
 extern	int	use_sunx86boot;
@@ -42,18 +41,18 @@ LOCAL char	*boot_files[NDKMAP];	/* Change this for > 8 x86 parts */
 
 LOCAL	void	init_sparc_label	__PR((void));
 LOCAL	void	init_sunx86_label	__PR((void));
-EXPORT	void	sparc_boot_label	__PR((char *label));
-EXPORT	void	sunx86_boot_label	__PR((char *label));
-EXPORT	void	scan_sparc_boot		__PR((char *files));
-EXPORT	void	scan_sunx86_boot	__PR((char *files));
+EXPORT	int	sparc_boot_label	__PR((char *label));
+EXPORT	int	sunx86_boot_label	__PR((char *label));
+EXPORT	int	scan_sparc_boot		__PR((char *files));
+EXPORT	int	scan_sunx86_boot	__PR((char *files));
 EXPORT	int	make_sun_label		__PR((void));
 EXPORT	int	make_sunx86_label	__PR((void));
 LOCAL	void	dup_sun_label		__PR((int part));
 LOCAL	int	sunboot_write		__PR((FILE *outfile));
-LOCAL	int	sunlabel_size		__PR((int starting_extent));
-LOCAL	int	sunlabel_write		__PR((FILE * outfile));
-LOCAL	int	genboot_size		__PR((int starting_extent));
-LOCAL	int	genboot_write		__PR((FILE * outfile));
+LOCAL	int	sunlabel_size		__PR((UInt32_t starting_extent));
+LOCAL	int	sunlabel_write		__PR((FILE *outfile));
+LOCAL	int	genboot_size		__PR((UInt32_t starting_extent));
+LOCAL	int	genboot_write		__PR((FILE *outfile));
 
 /*
  * Set the virtual geometry in the disk label.
@@ -109,26 +108,28 @@ init_sunx86_label()
 /*
  * For command line parser: set ASCII label.
  */
-EXPORT void
+EXPORT int
 sparc_boot_label(label)
 	char	*label;
 {
 	strncpy(cd_label.dkl_ascilabel, label, 127);
 	cd_label.dkl_ascilabel[127] = '\0';
+	return (1);
 }
 
-EXPORT void
+EXPORT int
 sunx86_boot_label(label)
 	char	*label;
 {
 	strncpy(sx86_label.dkl_vtoc.v_asciilabel, label, 127);
 	sx86_label.dkl_vtoc.v_asciilabel[127] = '\0';
+	return (1);
 }
 
 /*
  * Parse the command line argument for boot images.
  */
-EXPORT void
+EXPORT int
 scan_sparc_boot(files)
 	char	*files;
 {
@@ -136,6 +137,13 @@ scan_sparc_boot(files)
 	int		i = 1;
 	struct stat	statbuf;
 	int		status;
+extern	int		use_sparcboot;
+extern	int		use_sunx86boot;
+
+	if (use_sunx86boot)
+		comerrno(EX_BAD,
+		"-sparc-boot and -sunx86-boot are mutual exclusive.\n");
+	use_sparcboot++;
 
 	init_sparc_label();
 
@@ -167,9 +175,10 @@ scan_sparc_boot(files)
 		i_to_2_byte(cd_label.dkl_vtoc.v_part[i].p_tag,  V_ROOT);
 		i_to_2_byte(cd_label.dkl_vtoc.v_part[i].p_flag, V_RONLY);
 	}
+	return (1);
 }
 
-EXPORT void
+EXPORT int
 scan_sunx86_boot(files)
 	char	*files;
 {
@@ -177,6 +186,14 @@ scan_sunx86_boot(files)
 	int		i = 0;
 	struct stat	statbuf;
 	int		status;
+extern	int		use_sparcboot;
+extern	int		use_sunx86boot;
+
+	if (use_sparcboot)
+		comerrno(EX_BAD,
+		"-sparc-boot and -sunx86-boot are mutual exclusive.\n");
+	use_sunx86boot++;
+
 
 	init_sunx86_label();
 
@@ -216,6 +233,7 @@ scan_sunx86_boot(files)
 			li_to_2_byte(sx86_label.dkl_vtoc.v_part[i].p_flag, V_RONLY);
 		}
 	}
+	return (1);
 }
 
 /*
@@ -408,7 +426,7 @@ sunboot_write(outfile)
 		}
 		close(f);
 	}
-	fprintf(stderr, "Total extents including %s boot = %d\n",
+	fprintf(stderr, "Total extents including %s boot = %u\n",
 				use_sunx86boot ? "Solaris x86":"sparc",
 				last_extent_written - session_start);
 	return (0);
@@ -420,7 +438,7 @@ sunboot_write(outfile)
  */
 LOCAL int
 sunlabel_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	if (last_extent != session_start)
 		comerrno(EX_BAD, "Cannot create sparc boot on offset != 0.\n");
@@ -464,7 +482,7 @@ sunlabel_write(outfile)
 			sx86_label.dkl_cksum[0] ^= *p++;
 			sx86_label.dkl_cksum[1] ^= *p++;
 		}
-		memcpy(&buffer[0x1BE], &fdisk_part.part, 512-0x1BE);
+		memcpy(&buffer[0x1BE], fdisk_part.part, 512-0x1BE);
 		memcpy(&buffer[1024], &sx86_label, 512);
 	} else {
 		/*
@@ -494,7 +512,7 @@ sunlabel_write(outfile)
  */
 LOCAL int
 genboot_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	if (last_extent > (session_start + 1))
 		comerrno(EX_BAD, "Cannot create generic boot on offset != 0.\n");

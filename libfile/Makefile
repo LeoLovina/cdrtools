@@ -1,19 +1,12 @@
-#ident @(#)Makefile	1.1 00/03/06 
-###########################################################################
-# Sample makefile for non-shared libraries
+#ident @(#)Makefile	1.2 06/09/15 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
 include		$(SRCROOT)/$(RULESDIR)/rules.top
 ###########################################################################
 
-INSDIR=		lib
-TARGETLIB=	file
-#CPPOPTS +=	-DFOKUS
-CFILES=		file.c apprentice.c softmagic.c 
-LIBS=
-XMK_FILE=	Makefile.man
+MK_FILES= libfile.mk libfile_p.mk $(NO_SHL)shlfile.mk
 
 ###########################################################################
-include		$(SRCROOT)/$(RULESDIR)/rules.lib
+include		$(SRCROOT)/$(RULESDIR)/rules.mks
 ###########################################################################

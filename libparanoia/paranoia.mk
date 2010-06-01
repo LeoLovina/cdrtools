@@ -1,4 +1,4 @@
-#ident %W% %E% %Q%
+#ident @(#)paranoia.mk	1.2 07/06/13 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -13,6 +13,8 @@ TARGETLIB=	paranoia
 #CPPOPTS +=	-DUSE_PG
 include		Targets
 LIBS=		
+
+XMK_FILE=	Rinterface.mk Rparanoia.mk
 
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.lib

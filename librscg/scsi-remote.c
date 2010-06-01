@@ -1,8 +1,8 @@
 #define	USE_REMOTE
-/* @(#)scsi-remote.c	1.16 04/08/24 Copyright 1990,2000-2003 J. Schilling */
+/* @(#)scsi-remote.c	1.33 09/08/24 Copyright 1990,2000-2009 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-remote.c	1.16 04/08/24 Copyright 1990,2000-2003 J. Schilling";
+	"@(#)scsi-remote.c	1.33 09/08/24 Copyright 1990,2000-2009 J. Schilling";
 #endif
 /*
  *	Remote SCSI user level command transport routines
@@ -13,25 +13,29 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1990,2000-2003 J. Schilling
+ *	Copyright (c) 1990,2000-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
 #if !defined(HAVE_FORK) || !defined(HAVE_SOCKETPAIR) || !defined(HAVE_DUP2)
 #undef	USE_RCMD_RSH
@@ -48,25 +52,20 @@ static	char __sccsid[] =
 #endif
 
 #ifdef	USE_REMOTE
-#include <stdio.h>
-#include <sys/types.h>
-#include <fctldefs.h>
-#ifdef	HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#include <errno.h>
-#include <signal.h>
-#ifdef	HAVE_NETDB_H
-#include <netdb.h>
-#endif
-#ifdef	HAVE_PWD_H
-#include <pwd.h>
-#endif
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <strdefs.h>
-#include <schily.h>
+#include <schily/stdio.h>
+#include <schily/types.h>
+#include <schily/fcntl.h>
+#include <schily/socket.h>
+#include <schily/errno.h>
+#include <schily/signal.h>
+#include <schily/netdb.h>
+#include <schily/pwd.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/string.h>
+#include <schily/schily.h>
+#include <schily/priv.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsitransp.h>
@@ -79,22 +78,29 @@ static	char __sccsid[] =
  * On Cygwin, there are no privilleged ports.
  * On UNIX, rcmd() uses privilleged port that only work for root.
  */
-#ifdef	IS_CYGWIN
+#if	defined(IS_CYGWIN) || defined(__MINGW32__)
 #define	privport_ok()	(1)
 #else
+#ifdef	HAVE_SOLARIS_PPRIV
+#define	privport_ok()	ppriv_ok()
+#else
 #define	privport_ok()	(geteuid() == 0)
+#endif
 #endif
 
 #define	CMD_SIZE	80
 
-#define	MAX_SCG		16	/* Max # of SCSI controllers */
+/*
+ * On Linux we have a max bus number of 1000 + 13
+ */
+#define	MAX_SCG		1024	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
 #define	MAX_LUN		8
 
 /*extern	BOOL	debug;*/
 LOCAL	BOOL	debug = 1;
 
-LOCAL	char	_scg_trans_version[] = "remote-1.16";	/* The version for remote SCSI	*/
+LOCAL	char	_scg_trans_version[] = "remote-1.33";	/* The version for remote SCSI	*/
 LOCAL	char	_scg_auth_schily[]	= "schily";	/* The author for this module	*/
 
 LOCAL	int	scgo_rsend		__PR((SCSI *scgp));
@@ -105,6 +111,7 @@ LOCAL	int	scgo_rclose		__PR((SCSI *scgp));
 LOCAL	long	scgo_rmaxdma		__PR((SCSI *scgp, long amt));
 LOCAL	void *	scgo_rgetbuf		__PR((SCSI *scgp, long amt));
 LOCAL	void	scgo_rfreebuf		__PR((SCSI *scgp));
+LOCAL	int	scgo_rnumbus		__PR((SCSI *scgp));
 LOCAL	BOOL	scgo_rhavebus		__PR((SCSI *scgp, int busno));
 LOCAL	int	scgo_rfileno		__PR((SCSI *scgp, int busno, int tgt, int tlun));
 LOCAL	int	scgo_rinitiator_id	__PR((SCSI *scgp));
@@ -124,6 +131,7 @@ LOCAL	int	rscsiclose		__PR((SCSI *scgp, int fd));
 LOCAL	int	rscsimaxdma		__PR((SCSI *scgp, int fd, long amt));
 LOCAL	int	rscsigetbuf		__PR((SCSI *scgp, int fd, long amt));
 LOCAL	int	rscsifreebuf		__PR((SCSI *scgp, int fd));
+LOCAL	int	rscsinumbus		__PR((SCSI *scgp, int fd));
 LOCAL	int	rscsihavebus		__PR((SCSI *scgp, int fd, int bus));
 LOCAL	int	rscsifileno		__PR((SCSI *scgp, int fd, int busno, int tgt, int tlun));
 LOCAL	int	rscsiinitiator_id	__PR((SCSI *scgp, int fd));
@@ -146,6 +154,9 @@ LOCAL	int	_rcmdrsh		__PR((char **ahost, int inport,
 						const char *remuser,
 						const char *cmd,
 						const char *rsh));
+#ifdef	HAVE_SOLARIS_PPRIV
+LOCAL	BOOL	ppriv_ok		__PR((void));
+#endif
 #endif
 
 /*--------------------------------------------------------------------------*/
@@ -177,6 +188,7 @@ scg_ops_t remote_ops = {
 	scgo_rmaxdma,		/* "D" MA	*/
 	scgo_rgetbuf,		/* "M" alloc	*/
 	scgo_rfreebuf,		/* "F" free	*/
+	scgo_rnumbus,		/* "N" um Bus	*/
 	scgo_rhavebus,		/* "B" us	*/
 	scgo_rfileno,		/* "T" arget	*/
 	scgo_rinitiator_id,	/* "I" nitiator	*/
@@ -205,41 +217,40 @@ scgo_rversion(scgp, what)
 {
 	int	f;
 
-	if (scgp->local == NULL)
+	if (scgp == (SCSI *)0 || scgp->local == NULL)
 		return ((char *)0);
 
 	f = scglocal(scgp)->remfd;
-	if (scgp != (SCSI *)0) {
-		switch (what) {
 
-		case SCG_VERSION:
-			return (_scg_trans_version);
-		/*
-		 * If you changed this source, you are not allowed to
-		 * return "schily" for the SCG_AUTHOR request.
-		 */
-		case SCG_AUTHOR:
-			return (_scg_auth_schily);
-		case SCG_SCCS_ID:
-			return (__sccsid);
+	switch (what) {
 
-		case SCG_RVERSION:
-			if (scglocal(scgp)->v_version == NULL)
-				scglocal(scgp)->v_version = rscsiversion(scgp, f, SCG_VERSION);
-			return (scglocal(scgp)->v_version);
-		/*
-		 * If you changed this source, you are not allowed to
-		 * return "schily" for the SCG_AUTHOR request.
-		 */
-		case SCG_RAUTHOR:
-			if (scglocal(scgp)->v_author == NULL)
-				scglocal(scgp)->v_author = rscsiversion(scgp, f, SCG_AUTHOR);
-			return (scglocal(scgp)->v_author);
-		case SCG_RSCCS_ID:
-			if (scglocal(scgp)->v_sccs_id == NULL)
-				scglocal(scgp)->v_sccs_id = rscsiversion(scgp, f, SCG_SCCS_ID);
-			return (scglocal(scgp)->v_sccs_id);
-		}
+	case SCG_VERSION:
+		return (_scg_trans_version);
+	/*
+	 * If you changed this source, you are not allowed to
+	 * return "schily" for the SCG_AUTHOR request.
+	 */
+	case SCG_AUTHOR:
+		return (_scg_auth_schily);
+	case SCG_SCCS_ID:
+		return (__sccsid);
+
+	case SCG_RVERSION:
+		if (scglocal(scgp)->v_version == NULL)
+			scglocal(scgp)->v_version = rscsiversion(scgp, f, SCG_VERSION);
+		return (scglocal(scgp)->v_version);
+	/*
+	 * If you changed this source, you are not allowed to
+	 * return "schily" for the SCG_AUTHOR request.
+	 */
+	case SCG_RAUTHOR:
+		if (scglocal(scgp)->v_author == NULL)
+			scglocal(scgp)->v_author = rscsiversion(scgp, f, SCG_AUTHOR);
+		return (scglocal(scgp)->v_author);
+	case SCG_RSCCS_ID:
+		if (scglocal(scgp)->v_sccs_id == NULL)
+		scglocal(scgp)->v_sccs_id = rscsiversion(scgp, f, SCG_SCCS_ID);
+		return (scglocal(scgp)->v_sccs_id);
 	}
 	return ((char *)0);
 }
@@ -264,7 +275,7 @@ scgo_ropen(scgp, device)
 		int	tlun	= scg_lun(scgp);
 	register int	f;
 	register int	nopen = 0;
-	char		devname[128];
+	char		sdevname[128];
 	char		*p;
 
 	if (scgp->overbose)
@@ -305,12 +316,12 @@ scgo_ropen(scgp, device)
 	/*
 	 * Save non user@host:device
 	 */
-	js_snprintf(devname, sizeof (devname), "%s", device);
+	js_snprintf(sdevname, sizeof (sdevname), "%s", device);
 
-	if ((p = strchr(devname, ':')) != NULL)
+	if ((p = strchr(sdevname, ':')) != NULL)
 		*p++ = '\0';
 
-	f = rscsigetconn(scgp, devname);
+	f = rscsigetconn(scgp, sdevname);
 	if (f < 0) {
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -413,6 +424,13 @@ scgo_rfreebuf(scgp)
 	if (f < 0 || !scglocal(scgp)->isopen)
 		return;
 	rscsifreebuf(scgp, f);
+}
+
+LOCAL int
+scgo_rnumbus(scgp)
+	SCSI	*scgp;
+{
+	return (rscsinumbus(scgp, scglocal(scgp)->remfd));
 }
 
 LOCAL BOOL
@@ -583,6 +601,8 @@ rscsiversion(scgp, fd, what)
 
 	js_snprintf(cbuf, sizeof (cbuf), "V%d\n", what);
 	ret = rscsicmd(scgp, fd, "version", cbuf);
+	if (ret <= 0)
+		return (NULL);
 	p = malloc(ret);
 	if (p == NULL)
 		return (p);
@@ -687,6 +707,14 @@ rscsifreebuf(scgp, fd)
 	int	fd;
 {
 	return (rscsicmd(scgp, fd, "freebuf", "F\n"));
+}
+
+LOCAL int
+rscsinumbus(scgp, fd)
+	SCSI	*scgp;
+	int	fd;
+{
+	return (rscsicmd(scgp, fd, "numbus", "N\n"));
 }
 
 LOCAL int
@@ -969,7 +997,8 @@ rscsigetstatus(scgp, fd, name)
 				voidsize = count - SCSI_ERRSTR_SIZE;
 				count = SCSI_ERRSTR_SIZE;
 			}
-			rscsireadbuf(scgp, fd, scgp->errstr, count);
+			if (count > 0)
+				rscsireadbuf(scgp, fd, scgp->errstr, count);
 			rscsivoidarg(scgp, fd, voidsize);
 		}
 		if (scgp->debug > 0)
@@ -1012,7 +1041,7 @@ rscsiaborted(scgp, fd)
  *
  * and make sure that we use sigset() instead of signal() if possible.
  */
-#include <waitdefs.h>
+#include <schily/wait.h>
 LOCAL int
 _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 	char		**ahost;
@@ -1079,7 +1108,15 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 			/* NOTREACHED */
 		}
 		if (getuid() != geteuid() &&
+#ifdef	HAVE_SETREUID
+		    setreuid(-1, pw->pw_uid) == -1) {
+#else
+#ifdef	HAVE_SETEUID
 		    seteuid(pw->pw_uid) == -1) {
+#else
+		    setuid(pw->pw_uid) == -1) {
+#endif
+#endif
 			errmsg("seteuid(%lld) failed.\n",
 							(Llong)pw->pw_uid);
 			_exit(EX_BAD);
@@ -1152,6 +1189,32 @@ _rcmdrsh(ahost, inport, locuser, remuser, cmd, rsh)
 	}
 	return (-1);	/* keep gcc happy */
 }
+
+#ifdef	HAVE_SOLARIS_PPRIV
+
+LOCAL BOOL
+ppriv_ok()
+{
+	priv_set_t	*privset;
+	BOOL		net_privaddr = FALSE;
+
+
+	if ((privset = priv_allocset()) == NULL) {
+		return (FALSE);
+	}
+	if (getppriv(PRIV_EFFECTIVE, privset) == -1) {
+		priv_freeset(privset);
+		return (FALSE);
+	}
+	if (priv_ismember(privset, PRIV_NET_PRIVADDR)) {
+		net_privaddr = TRUE;
+	}
+	priv_freeset(privset);
+
+	return (net_privaddr);
+}
+#endif	/* HAVE_SOLARIS_PPRIV */
+
 #endif	/* USE_RCMD_RSH */
 
 #endif	/* USE_REMOTE */

@@ -1,4 +1,4 @@
-/* @(#)file.h	1.7 04/05/15 joerg */
+/* @(#)file.h	1.12 09/07/13 joerg */
 /*
  * file.h - definitions for file(1) program
  * @(#)$Id: file.h,v 1.25 1997/01/15 19:28:35 christos Exp $
@@ -6,34 +6,39 @@
  * Copyright (c) Ian F. Darwin, 1987.
  * Written by Ian F. Darwin.
  *
- * This software is not subject to any license of the American Telephone
- * and Telegraph Company or of the Regents of the University of California.
+ * This software is not subject to any export provision of the United States
+ * Department of Commerce, and may be exported to any country or planet.
  *
- * Permission is granted to anyone to use this software for any purpose on
- * any computer system, and to alter it and redistribute it freely, subject
- * to the following restrictions:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice immediately at the beginning of the file, without modification,
+ *    this list of conditions, and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * 1. The author is not responsible for the consequences of use of this
- *    software, no matter how awful, even if they arise from flaws in it.
- *
- * 2. The origin of this software must not be misrepresented, either by
- *    explicit claim or by omission.  Since few users ever read sources,
- *    credits must appear in the documentation.
- *
- * 3. Altered versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.  Since few users
- *    ever read sources, credits must appear in the documentation.
- *
- * 4. This notice may not be removed or altered.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #ifndef __file_h__
 #define __file_h__
 
-#ifndef	_MCONFIG_H
-#include <mconfig.h>
+#ifndef	_SCHILY_MCONFIG_H
+#include <schily/mconfig.h>
 #endif
-#include <utypes.h>
+#include <schily/utypes.h>
 
 #ifndef HOWMANY
 # define HOWMANY 8192		/* how much of the file to look at */
@@ -80,7 +85,7 @@ struct magic {
 	char desc[MAXDESC];	/* description */
 };
 
-#include <stdio.h>	/* Include that here, to make sure __P gets defined */
+#include <schily/stdio.h>
 
 extern int   init_magic		__PR((char *));
 extern int   ascmagic		__PR((unsigned char *, int));
@@ -116,9 +121,6 @@ extern int debug;		/* enable debugging?			*/
 extern int zflag;		/* process compressed files?		*/
 extern int lflag;		/* follow symbolic links?		*/
 
-extern int optind;		/* From getopt(3)			*/
-extern char *optarg;
-
 #if defined(sun) || defined(__sun__) || defined (__sun)
 # if defined(__svr4) || defined (__SVR4) || defined(__svr4__)
 #  define SOLARIS
@@ -128,11 +130,13 @@ extern char *optarg;
 #endif
 
 
-#if !defined(__STDC__) || defined(SUNOS) || defined(__convex__)
+#ifndef	HAVE_STRERROR
 extern int sys_nerr;
 extern char *sys_errlist[];
 #define strerror(e) \
 	(((e) >= 0 && (e) < sys_nerr) ? sys_errlist[(e)] : "Unknown error")
+#endif
+#ifndef	HAVE_STRTOUL
 #define strtoul(a, b, c)	strtol(a, b, c)
 #endif
 

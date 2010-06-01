@@ -1,7 +1,8 @@
-/* @(#)crc16.c	1.6 04/03/02 Copyright 1998-2004 J. Schilling */
+/* @(#)crc16.c	1.9 09/07/05 Copyright 1998-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)crc16.c	1.6 04/03/02 Copyright 1998-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)crc16.c	1.9 09/07/05 Copyright 1998-2009 J. Schilling";
 #endif
 /*
  *	Q-subchannel CRC subroutines
@@ -10,27 +11,23 @@ static	char sccsid[] =
  *	If computed over 12 bytes, the result must be zero.
  *	On the disk the CRC bits are inverted.
  *
- *	Copyright (c) 1998-2003 J. Schilling
+ *	Copyright (c) 1998-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <standard.h>
-#include <utypes.h>
+#include <schily/mconfig.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
 #include "crc16.h"
 
 LOCAL	UInt16_t	updcrc		__PR((Uint p_crc, UInt8_t *cp, Uint cnt));

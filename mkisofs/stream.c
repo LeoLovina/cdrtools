@@ -1,19 +1,19 @@
-/* @(#)stream.c	1.3 04/03/04 Copyright 2002-2003 J. Schilling */
+/* @(#)stream.c	1.15 09/11/25 Copyright 2002-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)stream.c	1.3 04/03/04 Copyright 2002-2003 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)stream.c	1.15 09/11/25 Copyright 2002-2009 J. Schilling";
 #endif
 /*
  *	ISO-9660 stream (pipe) file module for mkisofs
  *
- *	Copyright (c) 2002-2003 J. Schilling
+ *	Copyright (c) 2002-2009 J. Schilling
  *	Implemented after an idea from M.H. Voase
  */
 /*
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * it under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,13 +25,13 @@ static	char sccsid[] =
  * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include <mconfig.h>
 #include "mkisofs.h"
 #include "iso9660.h"
+#include <schily/schily.h>
 
-LOCAL int	size_str_file	__PR((int starting_extent));
-LOCAL int	size_str_dir	__PR((int starting_extent));
-LOCAL int	size_str_path	__PR((int starting_extent));
+LOCAL int	size_str_file	__PR((UInt32_t starting_extent));
+LOCAL int	size_str_dir	__PR((UInt32_t starting_extent));
+LOCAL int	size_str_path	__PR((UInt32_t starting_extent));
 
 LOCAL int	gen_str_path	__PR((void));
 
@@ -39,12 +39,9 @@ LOCAL int	write_str_file	__PR((FILE *outfile));
 LOCAL int	write_str_dir	__PR((FILE *outfile));
 LOCAL int	write_str_path	__PR((FILE *outfile));
 
-extern struct directory *root;
-extern unsigned int	session_start;
 extern int		stream_media_size;
 extern char		*stream_filename;
 extern time_t		begun;
-extern int		volume_sequence_number;
 
 LOCAL unsigned int	avail_extent;
 LOCAL unsigned int	stream_extent;
@@ -60,7 +57,7 @@ LOCAL int		stream_finished = 0;
  */
 LOCAL int
 size_str_file(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	int	n;
 extern	int	dopad;
@@ -77,6 +74,12 @@ extern	int	dopad;
 	}
 	if (dopad)
 		n += 150;		/* Room for final padding */
+
+	if (n >= avail_extent) {
+		comerrno(EX_BAD,
+			"-stream-media-size %d but must be at least %d\n",
+			avail_extent, n+2);
+	}
 	avail_extent -= n;
 
 	last_extent += avail_extent + stream_pad;
@@ -89,7 +92,7 @@ extern	int	dopad;
  */
 LOCAL int
 size_str_dir(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	root->extent = last_extent;
 	last_extent += 1;
@@ -101,7 +104,7 @@ size_str_dir(starting_extent)
  */
 LOCAL int
 size_str_path(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	path_table[0] = starting_extent;
 	path_table[1] = 0;
@@ -175,6 +178,7 @@ write_str_file(outfile)
 		xfwrite(buf, SECTOR_SIZE, 1, outfile, 0, FALSE);
 
 	last_extent_written += avail_extent + stream_pad;
+	free(buf);
 	return (0);
 }
 
@@ -186,6 +190,7 @@ write_str_dir(outfile)
 	FILE	*outfile;
 {
 	int	to_write;
+	int	reclen;
 	char	*buf;
 
 	buf = e_malloc(SECTOR_SIZE); memset(buf, 0, SECTOR_SIZE);
@@ -195,19 +200,24 @@ write_str_dir(outfile)
 	set_733((char *)s_dir.extent, root->extent);
 	set_733((char *)s_dir.size, SECTOR_SIZE);
 	iso9660_date(s_dir.date, begun);
-	s_dir.flags[0] = 2;
+	s_dir.flags[0] = ISO_DIRECTORY;
 	s_dir.file_unit_size[0] = 0;
 	s_dir.interleave[0] = 0;
 	set_723((char *)s_dir.volume_sequence_number, volume_sequence_number);
 	s_dir.name_len[0] = 1;
-	s_dir.name[0] = 0;
+	s_dir.name[0] = 0;	/* "." */
 	xfwrite(&s_dir, offsetof(struct iso_directory_record, name[0]) + 1, 1, outfile, 0, FALSE);
+	s_dir.name[0] = 1;	/* ".." */
 	xfwrite(&s_dir, offsetof(struct iso_directory_record, name[0]) + 1, 1, outfile, 0, FALSE);
 	memset(&s_dir, 0, sizeof (struct iso_directory_record));
-	s_dir.length[0] = 34 + strlen(stream_filename);
+	reclen = offsetof(struct iso_directory_record, name[0]) +
+				strlen(stream_filename);
+	if (reclen & 1)
+		reclen++;
+	s_dir.length[0] = reclen;
 	s_dir.ext_attr_length[0] = 0;
-	set_733((char *) s_dir.extent, stream_extent);
-	set_733((char *) s_dir.size, stream_size);
+	set_733((char *)s_dir.extent, stream_extent);
+	set_733((char *)s_dir.size, stream_size);
 	iso9660_date(s_dir.date, begun);
 	s_dir.flags[0] = 0;
 	s_dir.file_unit_size[0] = 0;

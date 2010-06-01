@@ -1,4 +1,4 @@
-/* @(#)format.c	1.38 03/10/18 Copyright 1985-2003 J. Schilling */
+/* @(#)format.c	1.49 10/05/24 Copyright 1985-2010 J. Schilling */
 /*
  *	format
  *	common code for printf fprintf & sprintf
@@ -6,47 +6,56 @@
  *	allows recursive printf with "%r", used in:
  *	error, comerr, comerrno, errmsg, errmsgno and the like
  *
- *	Copyright (c) 1985-2003 J. Schilling
+ *	Copyright (c) 1985-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <vadefs.h>
-#include <strdefs.h>
-#include <stdxlib.h>
+#include <schily/mconfig.h>
+#include <schily/varargs.h>
+#include <schily/string.h>
+#include <schily/stdlib.h>
 #ifdef	DEBUG
-#include <unixstd.h>
+#include <schily/unistd.h>
 #endif
 #if	!defined(HAVE_STDLIB_H) || !defined(HAVE_GCVT)
 extern	char	*gcvt __PR((double, int, char *));
 #endif
-#include <standard.h>
-#include <utypes.h>
-#include <schily.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
 
 /*
  * As Llong is currently a 'best effort' long long, we usually need to
  * include long long print formats.
  * This may go away, if we implement maxint_t formats.
  */
+#ifndef	USE_LONGLONG
 #define	USE_LONGLONG
+#endif
 
 #ifdef	NO_LONGLONG
 #undef	USE_LONGLONG
+#endif
+
+#ifdef	NO_USER_XCVT
+	/*
+	 * We cannot define our own gcvt() so we need to use a
+	 * local name instead.
+	 */
+#ifndef	HAVE_GCVT
+#	define	gcvt	js_gcvt
+EXPORT	char *gcvt	__PR((double value, int ndigit, char *buf));
+#endif
 #endif
 
 /*
@@ -312,10 +321,46 @@ format(fun, farg, fmt, args)
 		case 'j':
 			if (!type)
 				type = 'J';	/* convert to intmax_t type */
+			goto getmode;
+
+		case 'z':			/* size_t */
+#if	SIZEOF_SIZE_T == SIZEOF_INT
+			if (!type)
+				type = 'I';	/* convert to int type */
+#else
+#if	SIZEOF_SIZE_T == SIZEOF_LONG_INT
+			if (!type)
+				type = 'L';	/* convert to long type */
+#else
+#if	SIZEOF_SIZE_T == SIZEOF_LLONG
+			if (!type)
+				type = 'Q';	/* convert to long long type */
+#else
+error sizeof (size_t) is unknown
+#endif
+#endif
+#endif
+			goto getmode;
+
+		case 't':			/* ptrdiff_t */
+#if	SIZEOF_PTRDIFF_T == SIZEOF_INT
+			if (!type)
+				type = 'I';	/* convert to int type */
+#else
+#if	SIZEOF_PTRDIFF_T == SIZEOF_LONG_INT
+			if (!type)
+				type = 'L';	/* convert to long type */
+#else
+#if	SIZEOF_PTRDIFF_T == SIZEOF_LLONG
+			if (!type)
+				type = 'Q';	/* convert to long long type */
+#else
+error sizeof (ptrdiff_t) is unknown
+#endif
+#endif
+#endif
 		/*
 		 * XXX Future length modifiers:
-		 * XXX	'z' size_t
-		 * XXX	't' ptrdiff_t
 		 * XXX	'L' with double: long double
 		 */
 
@@ -356,10 +401,11 @@ format(fun, farg, fmt, args)
 		 * XXX Need to remove uppercase letters for 'long'
 		 * XXX in future for POSIX/C99 compliance.
 		 */
+			/* FALLTHRU */
 		case 'o': case 'O':
 		case 'd': case 'D':
 		case 'i': case 'I':
-		case 'z': case 'Z':
+		case 'Z':
 			mode = to_cap(*fmt);
 		havemode:
 			if (!type)
@@ -416,7 +462,7 @@ format(fun, farg, fmt, args)
 			if (fa.signific == 0)
 				fa.signific = 1;
 			dval = va_arg(args, double);
-			gcvt(dval, fa.signific, buf);
+			(void) gcvt(dval, fa.signific, buf);
 			count += prbuf(buf, &fa);
 			continue;
 #else
@@ -516,6 +562,7 @@ format(fun, farg, fmt, args)
 			break;
 #ifdef	USE_LONGLONG
 		case 'J':			/* For now Intmax_t is Llong */
+			type = 'Q';		/* use 'Q' for processing    */
 		case 'Q':
 			llval = va_arg(args, Llong);
 			val = llval != 0;
@@ -575,6 +622,7 @@ format(fun, farg, fmt, args)
 			}
 			if (val == 0)
 				goto printzero;
+			/* FALLTHRU */
 		case 'U':
 			/* output a long unsigned decimal number */
 #ifdef	USE_LONGLONG

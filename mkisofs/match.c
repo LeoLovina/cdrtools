@@ -1,7 +1,8 @@
-/* @(#)match.c	1.18 04/05/23 joerg */
+/* @(#)match.c	1.29 09/07/09 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)match.c	1.18 04/05/23 joerg";
+static	UConst char sccsid[] =
+	"@(#)match.c	1.29 09/07/09 joerg";
 #endif
 /*
  * 27-Mar-96: Jan-Piet Mens <jpm@mens.de>
@@ -10,16 +11,17 @@ static	char sccsid[] =
  *
  * Re-written 13-Apr-2000 James Pearson
  * now uses a generic set of routines
+ * Conversions to make the code more portable May 2000 .. March 2004
+ * Copyright (c) 2000-2009 J. Schilling
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <strdefs.h>
-#include <standard.h>
-#include <schily.h>
-#include <libport.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/string.h>
+#include <schily/standard.h>
+#include <schily/schily.h>
+#include <schily/libport.h>
 #include "match.h"
 
 struct match {
@@ -35,6 +37,7 @@ static char *mesg[MAX_MAT] = {
 	"excluded",
 	"excluded ISO-9660",
 	"excluded Joliet",
+	"excluded UDF",
 	"hidden attribute ISO-9660",
 #ifdef APPLE_HYB
 	"excluded HFS",
@@ -61,20 +64,13 @@ add_sort_match(fn, val)
 
 	s_mat = (sort_match *)malloc(sizeof (sort_match));
 	if (s_mat == NULL) {
-#ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for sort filename\n");
-#else
-		fprintf(stderr, "Can't allocate memory for sort filename\n");
-#endif
 		return (0);
 	}
 
 	if ((s_mat->name = strdup(fn)) == NULL) {
-#ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for sort filename\n");
-#else
-		fprintf(stderr, "Can't allocate memory for sort filename\n");
-#endif
+		free(s_mat);
 		return (0);
 	}
 
@@ -89,7 +85,7 @@ add_sort_match(fn, val)
 	return (1);
 }
 
-EXPORT void
+EXPORT int
 add_sort_list(file)
 	char	*file;
 {
@@ -97,14 +93,11 @@ add_sort_list(file)
 	char	name[4096];
 	char	*p;
 	int	val;
+extern	int	do_sort;
 
+	do_sort++;
 	if ((fp = fopen(file, "r")) == NULL) {
-#ifdef	USE_LIBSCHILY
 		comerr("Can't open sort file list %s\n", file);
-#else
-		fprintf(stderr, "Can't open hidden/exclude file list %s\n", file);
-		exit(1);
-#endif
 	}
 
 	while (fgets(name, sizeof (name), fp) != NULL) {
@@ -117,11 +110,10 @@ add_sort_list(file)
 			p = strrchr(p, '\t');
 
 		if (p == NULL) {
-#ifdef	USE_LIBSCHILY
+			/*
+			 * XXX old code did not abort here.
+			 */
 			comerrno(EX_BAD, "Incorrect sort file format\n\t%s", name);
-#else
-			fprintf(stderr, "Incorrect sort file format\n\t%s", name);
-#endif
 			continue;
 		} else {
 			*p = '\0';
@@ -129,11 +121,12 @@ add_sort_list(file)
 		}
 		if (!add_sort_match(name, val)) {
 			fclose(fp);
-			return;
+			return (-1);
 		}
 	}
 
 	fclose(fp);
+	return (1);
 }
 
 EXPORT int
@@ -144,7 +137,7 @@ sort_matches(fn, val)
 	register sort_match	*s_mat;
 
 	for (s_mat = s_mats; s_mat; s_mat = s_mat->next) {
-		if (fnmatch(s_mat->name, fn, FNM_FILE_NAME) != FNM_NOMATCH) {
+		if (fnmatch(s_mat->name, fn, FNM_PATHNAME) != FNM_NOMATCH) {
 			return (s_mat->val); /* found sort value */
 		}
 	}
@@ -179,31 +172,92 @@ gen_add_match(fn, n)
 {
 	match	*mat;
 
-	if (n >= MAX_MAT)
+	if (n >= MAX_MAT) {
+		errmsgno(EX_BAD, "Too many patterns.\n");
 		return (0);
+	}
 
 	mat = (match *)malloc(sizeof (match));
 	if (mat == NULL) {
-#ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for %s filename\n", mesg[n]);
-#else
-		fprintf(stderr, "Can't allocate memory for %s filename\n", mesg[n]);
-#endif
 		return (0);
 	}
 
 	if ((mat->name = strdup(fn)) == NULL) {
-#ifdef	USE_LIBSCHILY
 		errmsg("Can't allocate memory for %s filename\n", mesg[n]);
-#else
-		fprintf(stderr, "Can't allocate memory for %s filename\n", mesg[n]);
-#endif
+		free(mat);
 		return (0);
 	}
 
 	mat->next = mats[n];
 	mats[n] = mat;
 
+	return (1);
+}
+
+EXPORT int
+add_match(fn)
+	char	*fn;
+{
+	int	ret = gen_add_match(fn, EXCLUDE);
+
+	if (ret == 0)
+		return (-1);
+	return (1);
+}
+
+EXPORT int
+i_add_match(fn)
+	char	*fn;
+{
+	int	ret = gen_add_match(fn, I_HIDE);
+
+	if (ret == 0)
+		return (-1);
+	return (1);
+}
+
+EXPORT int
+h_add_match(fn)
+	char	*fn;
+{
+	int	ret = gen_add_match(fn, H_HIDE);
+
+	if (ret == 0)
+		return (-1);
+	return (1);
+}
+
+EXPORT int
+hfs_add_match(fn)
+	char	*fn;
+{
+	int	ret = gen_add_match(fn, HFS_HIDE);
+
+	if (ret == 0)
+		return (-1);
+	return (1);
+}
+
+EXPORT int
+j_add_match(fn)
+	char	*fn;
+{
+	int	ret = gen_add_match(fn, J_HIDE);
+
+	if (ret == 0)
+		return (-1);
+	return (1);
+}
+
+EXPORT int
+u_add_match(fn)
+	char	*fn;
+{
+	int	ret = gen_add_match(fn, U_HIDE);
+
+	if (ret == 0)
+		return (-1);
 	return (1);
 }
 
@@ -217,12 +271,7 @@ gen_add_list(file, n)
 	int	len;
 
 	if ((fp = fopen(file, "r")) == NULL) {
-#ifdef	USE_LIBSCHILY
 		comerr("Can't open %s file list %s\n", mesg[n], file);
-#else
-		fprintf(stderr, "Can't open %s file list %s\n", mesg[n], file);
-		exit(1);
-#endif
 	}
 
 	while (fgets(name, sizeof (name), fp) != NULL) {
@@ -243,6 +292,54 @@ gen_add_list(file, n)
 }
 
 EXPORT int
+add_list(fn)
+	char	*fn;
+{
+	gen_add_list(fn, EXCLUDE);
+	return (1);
+}
+
+EXPORT int
+i_add_list(fn)
+	char	*fn;
+{
+	gen_add_list(fn, I_HIDE);
+	return (1);
+}
+
+EXPORT int
+h_add_list(fn)
+	char	*fn;
+{
+	gen_add_list(fn, H_HIDE);
+	return (1);
+}
+
+EXPORT int
+j_add_list(fn)
+	char	*fn;
+{
+	gen_add_list(fn, J_HIDE);
+	return (1);
+}
+
+EXPORT int
+u_add_list(fn)
+	char	*fn;
+{
+	gen_add_list(fn, U_HIDE);
+	return (1);
+}
+
+EXPORT int
+hfs_add_list(fn)
+	char	*fn;
+{
+	gen_add_list(fn, HFS_HIDE);
+	return (1);
+}
+
+EXPORT int
 gen_matches(fn, n)
 	char	*fn;
 	int	n;
@@ -253,7 +350,7 @@ gen_matches(fn, n)
 		return (0);
 
 	for (mat = mats[n]; mat; mat = mat->next) {
-		if (fnmatch(mat->name, fn, FNM_FILE_NAME) != FNM_NOMATCH) {
+		if (fnmatch(mat->name, fn, FNM_PATHNAME) != FNM_NOMATCH) {
 			return (1);	/* found -> excluded filename */
 		}
 	}

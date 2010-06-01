@@ -1,37 +1,34 @@
-/* @(#)drv_philips.c	1.68 04/03/02 Copyright 1997-2004 J. Schilling */
+/* @(#)drv_philips.c	1.81 09/07/10 Copyright 1997-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)drv_philips.c	1.68 04/03/02 Copyright 1997-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)drv_philips.c	1.81 09/07/10 Copyright 1997-2009 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
  *	Philips/Yamaha/Ricoh/Plasmon
  *
- *	Copyright (c) 1997-2004 J. Schilling
+ *	Copyright (c) 1997-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#include <stdio.h>
-#include <unixstd.h>	/* Include sys/types.h to make off_t available */
-#include <standard.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/stdio.h>
+#include <schily/unistd.h>	/* Include sys/types.h to make off_t available */
+#include <schily/standard.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
@@ -128,8 +125,11 @@ struct cdd_52x_mode_data {
 
 
 cdr_t	cdr_philips_cdd521O = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_TRAYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 2,
 	"philips_cdd521_old",
 	"driver for Philips old CDD-521",
@@ -139,6 +139,7 @@ cdr_t	cdr_philips_cdd521O = {
 	philips_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	philips_load,
 	philips_unload,
 	buf_dummy,
@@ -168,8 +169,11 @@ cdr_t	cdr_philips_cdd521O = {
 };
 
 cdr_t	cdr_philips_dumb = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_TRAYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 2,
 	"philips_dumb",
 	"driver for Philips CDD-521 with pessimistic assumptions",
@@ -179,6 +183,7 @@ cdr_t	cdr_philips_dumb = {
 	philips_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	philips_dumbload,
 	philips_dumbunload,
 	buf_dummy,
@@ -208,8 +213,11 @@ cdr_t	cdr_philips_dumb = {
 };
 
 cdr_t	cdr_philips_cdd521 = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_TRAYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 2,
 	"philips_cdd521",
 	"driver for Philips CDD-521",
@@ -219,6 +227,7 @@ cdr_t	cdr_philips_cdd521 = {
 	philips_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	philips_load,
 	philips_unload,
 	buf_dummy,
@@ -248,9 +257,12 @@ cdr_t	cdr_philips_cdd521 = {
 };
 
 cdr_t	cdr_philips_cdd522 = {
-	0, 0,
+	0, 0, 0,
 /*	CDR_TAO|CDR_SAO|CDR_TRAYLOAD,*/
 	CDR_TAO|CDR_TRAYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 2,
 	"philips_cdd522",
 	"driver for Philips CDD-522",
@@ -260,6 +272,7 @@ cdr_t	cdr_philips_cdd522 = {
 	philips_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	philips_load,
 	philips_unload,
 	buf_dummy,
@@ -289,8 +302,11 @@ cdr_t	cdr_philips_cdd522 = {
 };
 
 cdr_t	cdr_tyuden_ew50 = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_TRAYLOAD|CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 2,
 	"tyuden_ew50",
 	"driver for Taiyo Yuden EW-50",
@@ -300,6 +316,7 @@ cdr_t	cdr_tyuden_ew50 = {
 	philips_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	philips_load,
 	philips_unload,
 	buf_dummy,
@@ -329,8 +346,11 @@ cdr_t	cdr_tyuden_ew50 = {
 };
 
 cdr_t	cdr_kodak_pcd600 = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_TRAYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	6, 6,
 	"kodak_pcd_600",
 	"driver for Kodak PCD-600",
@@ -340,6 +360,7 @@ cdr_t	cdr_kodak_pcd600 = {
 	philips_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	philips_load,
 	philips_unload,
 	buf_dummy,
@@ -369,8 +390,11 @@ cdr_t	cdr_kodak_pcd600 = {
 };
 
 cdr_t	cdr_plasmon_rf4100 = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_TRAYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 4,
 	"plasmon_rf4100",
 	"driver for Plasmon RF 4100",
@@ -380,6 +404,7 @@ cdr_t	cdr_plasmon_rf4100 = {
 	plasmon_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	philips_load,
 	philips_unload,
 	plasmon_buf,
@@ -409,8 +434,11 @@ cdr_t	cdr_plasmon_rf4100 = {
 };
 
 cdr_t	cdr_pioneer_dw_s114x = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_TRAYLOAD|CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 4,
 	"pioneer_dws114x",
 	"driver for Pioneer DW-S114X",
@@ -420,6 +448,7 @@ cdr_t	cdr_pioneer_dw_s114x = {
 	philips_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	scsi_load,
 	scsi_unload,
 	buf_dummy,
@@ -450,9 +479,12 @@ cdr_t	cdr_pioneer_dw_s114x = {
 };
 
 cdr_t	cdr_yamaha_cdr100 = {
-	0, 0,
+	0, 0, 0,
 /*	CDR_TAO|CDR_SAO|CDR_CADDYLOAD|CDR_SWABAUDIO,*/
 	CDR_TAO|CDR_CADDYLOAD|CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 4,
 	"yamaha_cdr100",
 	"driver for Yamaha CDR-100 / CDR-102",
@@ -462,6 +494,7 @@ cdr_t	cdr_yamaha_cdr100 = {
 	philips_attach,
 	philips_init,
 	drive_getdisktype,
+	no_diskstatus,
 	scsi_load,
 	philips_unload,
 	buf_dummy,
@@ -491,9 +524,12 @@ cdr_t	cdr_yamaha_cdr100 = {
 };
 
 cdr_t	cdr_ricoh_ro1060 = {
-	0, 0,
+	0, 0, 0,
 /*	CDR_TAO|CDR_SAO|CDR_CADDYLOAD,*/
 	CDR_TAO|CDR_CADDYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 2,
 	"ricoh_ro1060c",
 	"driver for Ricoh RO-1060C",
@@ -503,6 +539,7 @@ cdr_t	cdr_ricoh_ro1060 = {
 	ricoh_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	scsi_load,
 	scsi_unload,
 	buf_dummy,
@@ -532,9 +569,12 @@ cdr_t	cdr_ricoh_ro1060 = {
 };
 
 cdr_t	cdr_ricoh_ro1420 = {
-	0, 0,
+	0, 0, 0,
 /*	CDR_TAO|CDR_SAO|CDR_CADDYLOAD,*/
 	CDR_TAO|CDR_CADDYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_TAO,
 	2, 2,
 	"ricoh_ro1420c",
 	"driver for Ricoh RO-1420C",
@@ -544,6 +584,7 @@ cdr_t	cdr_ricoh_ro1420 = {
 	ricoh_attach,
 	philips_init,
 	philips_getdisktype,
+	no_diskstatus,
 	scsi_load,
 	scsi_unload,
 	buf_dummy,
@@ -1018,7 +1059,7 @@ reserve_track_philips(scgp, len)
 	scmd->sense_len = CCS_SENSE_LEN;
 	scmd->cdb.g1_cdb.cmd = 0xE4;
 	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
-	i_to_4_byte(&scmd->cdb.g1_cdb.addr[3], len);
+	i_to_4_byte(&scmd->cdb.cmd_cdb[5], len);
 
 	scgp->cmdname = "philips reserve_track";
 
@@ -1196,7 +1237,7 @@ static const char *sd_cdd_521_error_str[] = {
 	"\204\000tray out",				/* 0x84 */
 	"\205\000track at one not in PMA",		/* 0x85 */
 	"\240\000stopped on non data block",		/* 0xa0 */
-	"\241\000invalid start adress",			/* 0xa1 */
+	"\241\000invalid start address",		/* 0xa1 */
 	"\242\000attampt to cross track-boundary",	/* 0xa2 */
 	"\243\000illegal medium",			/* 0xa3 */
 	"\244\000disk write protected",			/* 0xa4 */

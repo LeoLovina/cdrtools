@@ -1,7 +1,8 @@
-/* @(#)write.c	1.85 04/08/24 joerg */
+/* @(#)write.c	1.129 10/06/01 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)write.c	1.85 04/08/24 joerg";
+static	UConst char sccsid[] =
+	"@(#)write.c	1.129 10/06/01 joerg";
 #endif
 /*
  * Program write.c - dump memory  structures to  file for iso9660 filesystem.
@@ -9,7 +10,7 @@ static	char sccsid[] =
  * Written by Eric Youngdale (1993).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999-2003 J. Schilling
+ * Copyright (c) 1999-2010 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,30 +29,34 @@ static	char sccsid[] =
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <timedefs.h>
-#include <fctldefs.h>
+#include <schily/time.h>
+#include <schily/fcntl.h>
 #ifdef SORTING
 #include "match.h"
 #endif /* SORTING */
-#include <errno.h>
-#include <schily.h>
+#include <schily/errno.h>
+#include <schily/schily.h>
+#include <schily/checkerr.h>
 #ifdef DVD_VIDEO
 #include "dvd_reader.h"
 #include "dvd_file.h"
 #include "ifo_read.h"
 #endif
 #ifdef APPLE_HYB
-#include <ctype.h>
+#include <schily/ctype.h>
 #endif
 
 #ifdef	VMS
 #include "vms.h"
 #endif
 
+#define	SIZEOF_UDF_EXT_ATTRIBUTE_COMMON	50
+
 /* Max number of sectors we will write at  one time */
 #define	NSECT 16
+
+#define	INSERTMACRESFORK 1
 
 /* Counters for statistics */
 
@@ -67,29 +72,28 @@ LOCAL int	is_rr_dir = 0;
 struct output_fragment *out_tail;
 struct output_fragment *out_list;
 
-struct iso_primary_descriptor vol_desc;
+EXPORT	struct iso_primary_descriptor	vol_desc;
+LOCAL	int				vol_desc_sum;
 
-EXPORT	void	set_721		__PR((char *pnt, unsigned int i));
-EXPORT	void	set_722		__PR((char *pnt, unsigned int i));
-EXPORT	void	set_723		__PR((char *pnt, unsigned int i));
-EXPORT	void	set_731		__PR((char *pnt, unsigned int i));
-EXPORT	void	set_732		__PR((char *pnt, unsigned int i));
-EXPORT	void	set_733		__PR((char *pnt, unsigned int i));
-EXPORT	int	get_731		__PR((char *p));
-EXPORT	int	get_732		__PR((char *p));
-EXPORT	int	get_733		__PR((char *p));
+#ifndef	APPLE_HFS_HYB
+	char	*hfs_error = "no error";
+#endif
+
 LOCAL	int	xawrite		__PR((void *buffer, int size, int count,
 					FILE *file, int submode, BOOL islast));
 EXPORT	void	xfwrite		__PR((void *buffer, int size, int count,
 					FILE *file, int submode, BOOL islast));
 LOCAL 	int	assign_directory_addresses __PR((struct directory *node));
-#ifdef APPLE_HYB
+#if defined(APPLE_HYB) || defined(USE_LARGEFILES)
 LOCAL 	void	write_one_file	__PR((char *filename, off_t size,
-					FILE *outfile, off_t off));
+					FILE *outfile, off_t off,
+					int isrfile, unsigned rba));
 #else
 LOCAL 	void	write_one_file	__PR((char *filename, off_t size,
 					FILE *outfile));
 #endif
+LOCAL	void	write_udf_symlink	__PR((char *filename, off_t size,
+					FILE *outfile));
 LOCAL 	void	write_files	__PR((FILE *outfile));
 #if 0
 LOCAL 	void	dump_filelist	__PR((void));
@@ -98,7 +102,7 @@ LOCAL 	int	compare_dirs	__PR((const void *rr, const void *ll));
 EXPORT	int	sort_directory	__PR((struct directory_entry **sort_dir,
 						int rr));
 LOCAL 	int	root_gen	__PR((void));
-LOCAL 	BOOL	assign_file_addresses __PR((struct directory *dpnt));
+LOCAL 	BOOL	assign_file_addresses __PR((struct directory *dpnt, BOOL isnest));
 LOCAL 	void	free_one_directory  __PR((struct directory *dpnt));
 LOCAL 	void	free_directories __PR((struct directory *dpnt));
 EXPORT	void	generate_one_directory __PR((struct directory *dpnt,
@@ -117,16 +121,16 @@ LOCAL 	int	graftcp		__PR((char *to, char *from, char *ep));
 LOCAL 	int	pathcp		__PR((char *to, char *from, char *ep));
 LOCAL 	int	pathtab_write	__PR((FILE *outfile));
 LOCAL 	int	exten_write	__PR((FILE *outfile));
-EXPORT	int	oneblock_size	__PR((int starting_extent));
-LOCAL 	int	pathtab_size	__PR((int starting_extent));
-LOCAL 	int	startpad_size	__PR((int starting_extent));
-LOCAL 	int	interpad_size	__PR((int starting_extent));
-LOCAL 	int	endpad_size	__PR((int starting_extent));
+EXPORT	int	oneblock_size	__PR((UInt32_t starting_extent));
+LOCAL 	int	pathtab_size	__PR((UInt32_t starting_extent));
+LOCAL 	int	startpad_size	__PR((UInt32_t starting_extent));
+LOCAL 	int	interpad_size	__PR((UInt32_t starting_extent));
+LOCAL 	int	endpad_size	__PR((UInt32_t starting_extent));
 LOCAL 	int	file_gen	__PR((void));
 LOCAL 	int	dirtree_dump	__PR((void));
-LOCAL 	int	dirtree_fixup	__PR((int starting_extent));
-LOCAL 	int	dirtree_size	__PR((int starting_extent));
-LOCAL 	int	ext_size	__PR((int starting_extent));
+LOCAL 	int	dirtree_fixup	__PR((UInt32_t starting_extent));
+LOCAL 	int	dirtree_size	__PR((UInt32_t starting_extent));
+LOCAL 	int	ext_size	__PR((UInt32_t starting_extent));
 LOCAL 	int	dirtree_write	__PR((FILE *outfile));
 LOCAL 	int	dirtree_cleanup	__PR((FILE *outfile));
 LOCAL 	int	startpad_write	__PR((FILE *outfile));
@@ -134,19 +138,19 @@ LOCAL 	int	interpad_write	__PR((FILE *outfile));
 LOCAL 	int	endpad_write	__PR((FILE *outfile));
 #ifdef APPLE_HYB
 LOCAL 	int	hfs_pad;
-LOCAL 	int	hfs_get_parms	__PR((char * key));
-LOCAL 	void	hfs_file_gen	__PR((int start_extent));
+LOCAL 	int	hfs_get_parms	__PR((char *key));
+LOCAL 	void	hfs_file_gen	__PR((UInt32_t start_extent));
 LOCAL 	void	gen_prepboot	__PR((void));
 EXPORT	Ulong	get_adj_size	__PR((int Csize));
-EXPORT	int	adj_size	__PR((int Csize, int start_extent, int extra));
+EXPORT	int	adj_size	__PR((int Csize, UInt32_t start_extent, int extra));
 EXPORT	void	adj_size_other	__PR((struct directory *dpnt));
-LOCAL 	int	hfs_hce_write	__PR((FILE * outfile));
+LOCAL 	int	hfs_hce_write	__PR((FILE *outfile));
 EXPORT	int	insert_padding_file __PR((int size));
 #endif	/* APPLE_HYB */
 
 #ifdef SORTING
-LOCAL 	int	compare_sort	__PR((const void * rr, const void * ll));
-LOCAL 	void	reassign_link_addresses	__PR((struct directory * dpnt));
+LOCAL 	int	compare_sort	__PR((const void *rr, const void *ll));
+LOCAL 	void	reassign_link_addresses	__PR((struct directory *dpnt));
 LOCAL 	int	sort_file_addresses __PR((void));
 #endif /* SORTING */
 
@@ -155,96 +159,6 @@ LOCAL 	int	sort_file_addresses __PR((void));
  * we could write a tape, or write the disc directly
  */
 #define	FILL_SPACE(X)	memset(vol_desc.X, ' ', sizeof (vol_desc.X))
-
-EXPORT void
-set_721(pnt, i)
-	char		*pnt;
-	unsigned int	i;
-{
-	pnt[0] = i & 0xff;
-	pnt[1] = (i >> 8) & 0xff;
-}
-
-EXPORT void
-set_722(pnt, i)
-	char		*pnt;
-	unsigned int	i;
-{
-	pnt[0] = (i >> 8) & 0xff;
-	pnt[1] = i & 0xff;
-}
-
-EXPORT void
-set_723(pnt, i)
-	char		*pnt;
-	unsigned int	i;
-{
-	pnt[3] = pnt[0] = i & 0xff;
-	pnt[2] = pnt[1] = (i >> 8) & 0xff;
-}
-
-EXPORT void
-set_731(pnt, i)
-	char		*pnt;
-	unsigned int	i;
-{
-	pnt[0] = i & 0xff;
-	pnt[1] = (i >> 8) & 0xff;
-	pnt[2] = (i >> 16) & 0xff;
-	pnt[3] = (i >> 24) & 0xff;
-}
-
-EXPORT void
-set_732(pnt, i)
-	char		*pnt;
-	unsigned int	i;
-{
-	pnt[3] = i & 0xff;
-	pnt[2] = (i >> 8) & 0xff;
-	pnt[1] = (i >> 16) & 0xff;
-	pnt[0] = (i >> 24) & 0xff;
-}
-
-EXPORT void
-set_733(pnt, i)
-	char		*pnt;
-	unsigned int	i;
-{
-	pnt[7] = pnt[0] = i & 0xff;
-	pnt[6] = pnt[1] = (i >> 8) & 0xff;
-	pnt[5] = pnt[2] = (i >> 16) & 0xff;
-	pnt[4] = pnt[3] = (i >> 24) & 0xff;
-}
-
-EXPORT int
-get_731(p)
-	char	*p;
-{
-	return ((p[0] & 0xff)
-		| ((p[1] & 0xff) << 8)
-		| ((p[2] & 0xff) << 16)
-		| ((p[3] & 0xff) << 24));
-}
-
-EXPORT int
-get_732(p)
-	char	*p;
-{
-	return ((p[3] & 0xff)
-		| ((p[2] & 0xff) << 8)
-		| ((p[1] & 0xff) << 16)
-		| ((p[0] & 0xff) << 24));
-}
-
-EXPORT int
-get_733(p)
-	char	*p;
-{
-	return ((p[0] & 0xff)
-		| ((p[1] & 0xff) << 8)
-		| ((p[2] & 0xff) << 16)
-		| ((p[3] & 0xff) << 24));
-}
 
 EXPORT void
 xfwrite(buffer, size, count, file, submode, islast)
@@ -270,6 +184,12 @@ xfwrite(buffer, size, count, file, submode, islast)
 	if (count != 1 || (size % 2048) != 0)
 		error("Count: %d, size: %d\n", count, size);
 #endif
+	if (count == 0 || size == 0) {
+		errmsgno(EX_BAD,
+		"Implementation botch, write 0 bytes (size %d count %d).\n",
+		size, count);
+		abort();
+	}
 
 	if (split_output != 0 &&
 		(idx == 0 || ftell(file) >= ((off_t)1024 * 1024 * 1024))) {
@@ -281,29 +201,20 @@ xfwrite(buffer, size, count, file, submode, islast)
 		sprintf(nbuf, "%s_%02d", outfile, idx++);
 		file = freopen(nbuf, "wb", file);
 		if (file == NULL) {
-#ifdef	USE_LIBSCHILY
 			comerr("Cannot open '%s'.\n", nbuf);
-#else
-			fprintf(stderr, "Cannot open '%s'.\n", nbuf);
-			exit(1);
-#endif
 		}
 	}
 	while (count) {
 		int	got;
 
+		seterrno(0);
 		if (osecsize != 0)
 			got = xawrite(buffer, size, count, file, submode, islast);
 		else
 			got = fwrite(buffer, size, count, file);
 
 		if (got <= 0) {
-#ifdef	USE_LIBSCHILY
 			comerr("cannot fwrite %d*%d\n", size, count);
-#else
-			fprintf(stderr, "cannot fwrite %d*%d\n", size, count);
-			exit(1);
-#endif
 		}
 		/*
 		 * This comment is in hope to prevent silly people from
@@ -361,7 +272,7 @@ xawrite(buffer, size, count, file, submode, islast)
 			subhdr[0].sub_mode = subhdr[1].sub_mode
 						|= (XA_SUBH_EOR|XA_SUBH_EOF);
 		}
-		n = fwrite(&subhdr, sizeof (subhdr), 1, file);
+		n = fwrite(subhdr, sizeof (subhdr), 1, file);
 		if (n <= 0)
 			return (n);
 
@@ -385,7 +296,7 @@ LOCAL struct deferred_write mac_boot;
 LOCAL struct deferred_write	*dw_head = NULL,
 				*dw_tail = NULL;
 
-unsigned int	last_extent_written = 0;
+UInt32_t	last_extent_written = 0;
 LOCAL	Uint	path_table_index;
 EXPORT	time_t	begun;
 
@@ -437,20 +348,22 @@ assign_directory_addresses(node)
 	return (0);
 }
 
-#ifdef APPLE_HYB
+#if defined(APPLE_HYB) || defined(USE_LARGEFILES)
 LOCAL void
-write_one_file(filename, size, outfile, off)
+write_one_file(filename, size, outfile, off, isrfile, rba)
 	char		*filename;
 	off_t		size;
 	FILE		*outfile;
 	off_t		off;
+	int		isrfile;
+	unsigned	rba;
 #else
 LOCAL void
 write_one_file(filename, size, outfile)
 	char		*filename;
 	off_t		size;
 	FILE		*outfile;
-#endif	/* APPLE_HYB */
+#endif	/* APPLE_HYB || USE_LARGEFILES */
 {
 	/*
 	 * It seems that there are still stone age C-compilers
@@ -464,42 +377,103 @@ static	char		buffer[SECTOR_SIZE * NSECT];
 	FILE		*infile;
 	off_t		remain;
 	int	use;
+	int	unroundeduse;
+	int	bytestowrite = 0;	/* Dummy init. to serve GCC bug */
+	int	correctedsize = 0;
 
 
 	if ((infile = fopen(filename, "rb")) == NULL) {
-#ifdef	USE_LIBSCHILY
-		comerr("cannot open '%s'\n", filename);
-#else
-#ifndef	HAVE_STRERROR
-		fprintf(stderr, "cannot open '%s': (%d)\n",
-				filename, errno);
-#else
-		fprintf(stderr, "cannot open '%s': %s\n",
-				filename, strerror(errno));
-#endif
-		exit(1);
-#endif
+		if (!errhidden(E_OPEN, filename)) {
+			if (!errwarnonly(E_OPEN, filename))
+				;
+			errmsg("Cannot open '%s'.\n", filename);
+			(void) errabort(E_OPEN, filename, TRUE);
+		}
 	}
-#ifdef APPLE_HYB
-	fseek(infile, off, SEEK_SET);
-#endif	/* APPLE_HYB */
+#if defined(APPLE_HYB) || defined(USE_LARGEFILES)
+	if (infile)
+		fseek(infile, off, SEEK_SET);
+#if defined(INSERTMACRESFORK) && defined(UDF)
+	if (isrfile && use_udf) {
+		memset(buffer, 0, sizeof (buffer));
+		udf_set_extattr_freespace((Uchar *)buffer, size, rba);
+		xfwrite(buffer, SECTOR_SIZE, 1, outfile, XA_SUBH_DATA, 1);
+		last_extent_written++;
+
+		memset(buffer, 0, sizeof (buffer));
+		udf_set_extattr_macresfork((Uchar *)buffer, size, rba);
+		xfwrite(buffer, SIZEOF_UDF_EXT_ATTRIBUTE_COMMON, 1, outfile, XA_SUBH_DATA, 1);
+		correctedsize = SIZEOF_UDF_EXT_ATTRIBUTE_COMMON;
+	}
+#endif
+#endif	/* APPLE_HYB || USE_LARGEFILES */
 	remain = size;
 
 	while (remain > 0) {
-		use = (remain > SECTOR_SIZE * NSECT - 1 ?
+		int	amt;
+
+		unroundeduse = use = (remain > SECTOR_SIZE * NSECT - 1 ?
 				NSECT * SECTOR_SIZE : remain);
 		use = ISO_ROUND_UP(use);	/* Round up to nearest sector */
 						/* boundary */
 		memset(buffer, 0, use);
-		if (fread(buffer, 1, use, infile) == 0) {
-#ifdef	USE_LIBSCHILY
-			comerr("cannot read from '%s'\n", filename);
-#else
-			fprintf(stderr, "cannot read from '%s'\n", filename);
-			exit(1);
-#endif
+		seterrno(0);
+		if (infile)
+			amt = fread(buffer, 1, use, infile);
+		else
+			amt = use;
+		if (amt < use && amt != remain) {
+			/*
+			 * Note that mkisofs is not star and no 100% archiver.
+			 * We only detect file growth if the new size does not
+			 * match 'use' at the last read.
+			 */
+			if (geterrno() == 0) {
+				if (!errhidden(amt > remain ? E_GROW:E_SHRINK, filename)) {
+					if (!errwarnonly(amt < remain ? E_SHRINK:E_GROW, filename))
+						errmsgno(EX_BAD, "Try to use the option -data-change-warn\n");
+					errmsgno(EX_BAD,
+					"File '%s' did %s.\n",
+						filename,
+						amt < remain ?
+						"shrink":"grow");
+					(void) errabort(amt < remain ?
+							E_SHRINK:E_GROW,
+							filename, TRUE);
+				}
+			} else if (!errhidden(E_READ, filename)) {
+				if (!errwarnonly(E_READ, filename))
+					;
+				errmsg("Cannot read from '%s'\n", filename);
+				(void) errabort(E_READ, filename, TRUE);
+			}
+			amt = remain;		/* Fake success */
+			if (infile) {
+				fclose(infile);	/* Prevent furthe failure */
+				infile = NULL;
+			}
 		}
-		xfwrite(buffer, use, 1, outfile,
+#if defined(APPLE_HYB) && defined(INSERTMACRESFORK) && defined(UDF)
+		if (unroundeduse == remain && isrfile && use_udf && correctedsize) {
+			/* adjust the last block to write according to correctedsize */
+			if (use - unroundeduse == correctedsize) {
+				bytestowrite = use;
+				correctedsize = 0;
+			} else if (use - unroundeduse > correctedsize) {
+				bytestowrite = use - correctedsize;
+				correctedsize = 0;
+			} else if (use - unroundeduse < correctedsize) {
+				bytestowrite = unroundeduse;
+				correctedsize -= use - unroundeduse;
+			}
+		} else {
+			bytestowrite = use;
+		}
+#else
+		bytestowrite = use;
+#endif
+
+		xfwrite(buffer, bytestowrite, 1, outfile,
 				XA_SUBH_DATA, remain <= (SECTOR_SIZE * NSECT));
 		last_extent_written += use / SECTOR_SIZE;
 #if 0
@@ -531,8 +505,48 @@ static	char		buffer[SECTOR_SIZE * NSECT];
 #endif
 		remain -= use;
 	}
-	fclose(infile);
-}/* write_one_file(... */
+#ifdef APPLE_HYB
+#if defined(INSERTMACRESFORK) && defined(UDF)
+	if (isrfile && use_udf && correctedsize) {
+		if (ISO_ROUND_UP(size) < ISO_ROUND_UP(size + SIZEOF_UDF_EXT_ATTRIBUTE_COMMON)) {
+			memset(buffer, 0, sizeof (buffer));
+			xfwrite(buffer, SECTOR_SIZE - correctedsize, 1, outfile, XA_SUBH_DATA, 1);
+			last_extent_written++;
+		}
+	}
+#endif
+#endif
+	if (infile)
+		fclose(infile);
+} /* write_one_file(... */
+
+LOCAL void
+write_udf_symlink(filename, size, outfile)
+	char		*filename;
+	off_t		size;
+	FILE		*outfile;
+{
+	static	char	buffer[SECTOR_SIZE * NSECT];
+	off_t		remain = sizeof (buffer);
+	int		use;
+
+	if (udf_get_symlinkcontents(filename, buffer, &remain) < 0) {
+		comerr("Cannot open smylink '%s'\n", filename);
+	}
+	if (remain != size) {
+		comerrno(EX_BAD, "Symlink '%s' did %s.\n",
+					filename,
+					size > remain ?
+					"shrink":"grow");
+	}
+	use = (remain > SECTOR_SIZE * NSECT - 1 ?
+			NSECT * SECTOR_SIZE : remain);
+	use = ISO_ROUND_UP(use);
+	xfwrite(buffer, use, 1, outfile,
+			XA_SUBH_DATA, remain <= (SECTOR_SIZE * NSECT));
+	last_extent_written += use / SECTOR_SIZE;
+
+} /* write_udf_symlink(... */
 
 LOCAL void
 write_files(outfile)
@@ -540,6 +554,7 @@ write_files(outfile)
 {
 	struct deferred_write	*dwpnt,
 				*dwnext;
+	unsigned		rba = 0;
 
 	dwpnt = dw_head;
 	while (dwpnt) {
@@ -564,13 +579,28 @@ write_files(outfile)
 #ifdef VMS
 			vms_write_one_file(dwpnt->name, dwpnt->size, outfile);
 #else
+#ifdef UDF
+			if ((dwpnt->dw_flags & IS_SYMLINK) && use_udf && create_udfsymlinks) {
+				write_udf_symlink(dwpnt->name, dwpnt->size, outfile);
+			} else {
+#endif	/* UDF */
 #ifdef APPLE_HYB
-			write_one_file(dwpnt->name, dwpnt->size, outfile,
-								dwpnt->off);
+#if defined(INSERTMACRESFORK) && defined(UDF)
+				if (file_is_resource(dwpnt->name, dwpnt->hfstype) && (dwpnt->size > 0) && use_udf) {
+					rba = dwpnt->extent;
+				} else {
+					rba = 0;
+				}
+#endif	/* INSERTMACRESFORK && UDF */
+				write_one_file(dwpnt->name, dwpnt->size, outfile, dwpnt->off,
+					file_is_resource(dwpnt->name, dwpnt->hfstype) && (dwpnt->size > 0), rba);
 #else
-			write_one_file(dwpnt->name, dwpnt->size, outfile);
+				write_one_file(dwpnt->name, dwpnt->size, outfile);
 #endif	/* APPLE_HYB */
+#ifdef UDF
+			}
 #endif
+#endif	/* VMS */
 			free(dwpnt->name);
 			dwpnt->name = NULL;
 		}
@@ -586,7 +616,7 @@ write_files(outfile)
 
 #if	defined(APPLE_HYB) || defined(DVD_VIDEO)
 
-		if (apple_hyb || dvd_video) {
+		if ((apple_hyb && !donotwrite_macpart) || dvd_video) {
 			/*
 			 * we may have to pad out ISO files to work with HFS
 			 * clump sizes
@@ -607,7 +637,7 @@ write_files(outfile)
 		free(dwnext);
 		dwnext = NULL;
 	}
-}/* write_files(... */
+} /* write_files(... */
 
 #if 0
 LOCAL void
@@ -635,8 +665,8 @@ compare_dirs(rr, ll)
 	struct directory_entry **r,
 			**l;
 
-	r = (struct directory_entry **) rr;
-	l = (struct directory_entry **) ll;
+	r = (struct directory_entry **)rr;
+	l = (struct directory_entry **)ll;
 	rpnt = (*r)->isorec.name;
 	lpnt = (*l)->isorec.name;
 
@@ -651,19 +681,22 @@ compare_dirs(rr, ll)
 		return (-1);
 #endif	/* APPLE_HYB */
 
-	/* If the entries are the same, this is an error. */
+	/*
+	 * If the names are the same, multiple extent sections of the same file
+	 * are sorted by part number.  If the part numbers do not differ, this
+	 * is an error.
+	 */
 	if (strcmp(rpnt, lpnt) == 0) {
-#ifdef	USE_LIBSCHILY
+#ifdef USE_LARGEFILES
+		if ((*r)->mxpart < (*l)->mxpart)
+			return (-1);
+		else if ((*r)->mxpart > (*l)->mxpart)
+			return (1);
+#endif
 		errmsgno(EX_BAD,
 			"Error: '%s' and '%s' have the same ISO9660 name '%s'.\n",
 			(*r)->whole_name, (*l)->whole_name,
 			rpnt);
-#else
-		fprintf(stderr,
-			"Error: '%s' and '%s' have the same ISO9660 name '%s'.\n",
-			(*r)->whole_name, (*l)->whole_name,
-			rpnt);
-#endif
 		sort_goof++;
 	}
 	/* Check we don't have the same RR name */
@@ -672,18 +705,11 @@ compare_dirs(rr, ll)
 		 * entries *can* have the same RR name in the "rr_moved"
 		 * directory so skip checks if we're in reloc_dir
 		 */
-		if (!(strcmp((*r)->name, (*l)->name))) {
-#ifdef	USE_LIBSCHILY
+		if (strcmp((*r)->name, (*l)->name) == 0) {
 			errmsgno(EX_BAD,
 			"Error: '%s' and '%s' have the same Rock Ridge name '%s'.\n",
 				(*r)->whole_name, (*l)->whole_name,
 				(*r)->name);
-#else
-			fprintf(stderr,
-			"Error: '%s' and '%s' have the same Rock Ridge name '%s'.\n",
-				(*r)->whole_name, (*l)->whole_name,
-				(*r)->name);
-#endif
 			sort_goof++;
 		}
 	}
@@ -789,13 +815,13 @@ sort_directory(sort_dir, rr)
 	sortlist = (struct directory_entry **)
 		e_malloc(sizeof (struct directory_entry *) * dcount);
 
-	j = dcount - 1;
+	j = dcount - xcount;
 	dcount = 0;
 	s_entry = *sort_dir;
 	while (s_entry) {
 		if (s_entry->de_flags & INHIBIT_ISO9660_ENTRY) {
 			/* put any hidden entries at the end of the vector */
-			sortlist[j--] = s_entry;
+			sortlist[j++] = s_entry;
 		} else {
 			sortlist[dcount] = s_entry;
 			dcount++;
@@ -807,13 +833,9 @@ sort_directory(sort_dir, rr)
 
 	/* Each directory is required to contain at least . and .. */
 	if (dcount < 2) {
-#ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD,
-			"Directory size too small (. or .. missing ???)\n");
-#else
-		fprintf(stderr,
-			"Directory size too small (. or .. missing ???)\n");
-#endif
+			"Directory size too small (. or .. missing ??%s)\n",
+			"?");	/* Try to avoid a GCC trigraph warning */
 		sort_goof = 1;
 
 	} else {
@@ -854,8 +876,8 @@ root_gen()
 	root_record.length[0] = 1 +
 			offsetof(struct iso_directory_record, name[0]);
 	root_record.ext_attr_length[0] = 0;
-	set_733((char *) root_record.extent, root->extent);
-	set_733((char *) root_record.size, ISO_ROUND_UP(root->size));
+	set_733((char *)root_record.extent, root->extent);
+	set_733((char *)root_record.size, ISO_ROUND_UP(root->size));
 	iso9660_date(root_record.date, root_statbuf.st_mtime);
 	root_record.flags[0] = ISO_DIRECTORY;
 	root_record.file_unit_size[0] = 0;
@@ -879,8 +901,8 @@ compare_sort(rr, ll)
 	int			r_sort;
 	int			l_sort;
 
-	r = (struct deferred_write **) rr;
-	l = (struct deferred_write **) ll;
+	r = (struct deferred_write **)rr;
+	l = (struct deferred_write **)ll;
 	r_sort = (*r)->s_entry->sort;
 	l_sort = (*l)->s_entry->sort;
 
@@ -911,7 +933,7 @@ reassign_link_addresses(dpnt)
 			/* update the start extent */
 			s_hash = find_hash(s_entry->dev, s_entry->inode);
 			if (s_hash) {
-				set_733((char *) s_entry->isorec.extent, s_hash->starting_block);
+				set_733((char *)s_entry->isorec.extent, s_hash->starting_block);
 				s_entry->starting_block = s_hash->starting_block;
 			}
 		}
@@ -932,7 +954,7 @@ sort_file_addresses()
 	struct deferred_write	*dwpnt;
 	struct deferred_write	**sortlist;
 	struct directory_entry	*s_entry;
-	int			start_extent;
+	UInt32_t		start_extent;
 	int			num = 0;
 	int			i;
 
@@ -983,7 +1005,7 @@ sort_file_addresses()
 	for (i = 0, dwpnt = dw_head; i < num; i++, dwpnt = dwpnt->next) {
 		s_entry = dwpnt->s_entry;
 		dwpnt->extent = s_entry->starting_block = start_extent;
-		set_733((char *) s_entry->isorec.extent, start_extent);
+		set_733((char *)s_entry->isorec.extent, start_extent);
 
 		start_extent += ISO_BLOCKS(s_entry->size);
 #ifdef DVD_VIDEO
@@ -1007,8 +1029,9 @@ sort_file_addresses()
 
 
 LOCAL BOOL
-assign_file_addresses(dpnt)
+assign_file_addresses(dpnt, isnest)
 	struct directory	*dpnt;
+	BOOL			isnest;
 {
 	struct directory *finddir;
 	struct directory_entry *s_entry;
@@ -1017,19 +1040,21 @@ assign_file_addresses(dpnt)
 	char		whole_path[PATH_MAX];
 #ifdef DVD_VIDEO
 	char		dvd_path[PATH_MAX];
-	title_set_info_t * title_set_info = NULL;
+	title_set_info_t *title_set_info = NULL;
+	char	*p;
 #endif
 	BOOL	ret = FALSE;
 
 	while (dpnt) {
 #ifdef DVD_VIDEO
-		if (dvd_video && (strstr(dpnt->whole_name, "VIDEO_TS") != 0)) {
-			int	maxlen = strlen(dpnt->whole_name)-8;
+		if (dvd_video && root == dpnt->parent &&
+		    ((p = strstr(dpnt->whole_name, "VIDEO_TS")) != 0)&&
+					strcmp(p, "VIDEO_TS") == 0) {
+			int	maxlen = strlen(dpnt->whole_name)-8+1;
 
-			if (maxlen > (sizeof (dvd_path)-1))
-				maxlen = sizeof (dvd_path)-1;
-			strncpy(dvd_path, dpnt->whole_name, maxlen);
-			dvd_path[maxlen] = '\0';
+			if (maxlen > sizeof (dvd_path))
+				maxlen = sizeof (dvd_path);
+			strlcpy(dvd_path, dpnt->whole_name, maxlen);
 #ifdef DEBUG
 			fprintf(stderr, "Found 'VIDEO_TS', the path is %s \n", dvd_path);
 #endif
@@ -1046,21 +1071,21 @@ assign_file_addresses(dpnt)
 		}
 #endif /* DVD_VIDEO */
 
-		s_entry = dpnt->contents;
 		for (s_entry = dpnt->contents; s_entry;
 						s_entry = s_entry->next) {
 			/*
-			 * If we already have an  extent for this entry, then
+			 * If we already have an extent for this entry, then
 			 * don't assign a new one.  It must have come from a
 			 * previous session on the disc.  Note that we don't
 			 * end up scheduling the thing for writing either.
 			 */
-			if (isonum_733((unsigned char *)
-						s_entry->isorec.extent) != 0) {
+			if (get_733(s_entry->isorec.extent) != 0) {
 				continue;
 			}
 			/*
-			 * This saves some space if there are symlinks present
+			 * This saves some space if there are symlinks present.
+			 * If this is a multi-extent file, we get mxpart == 1
+			 * from find_hash().
 			 */
 			s_hash = find_hash(s_entry->dev, s_entry->inode);
 			if (s_hash) {
@@ -1069,10 +1094,41 @@ assign_file_addresses(dpnt)
 						SPATH_SEPARATOR,
 						s_entry->name);
 				}
-				set_733((char *) s_entry->isorec.extent,
+				s_entry->starting_block = s_hash->starting_block;
+				set_733((char *)s_entry->isorec.extent,
 						s_hash->starting_block);
-				set_733((char *) s_entry->isorec.size,
+				set_733((char *)s_entry->isorec.size,
 						s_hash->size);
+#ifdef USE_LARGEFILES
+				if (s_entry->de_flags & MULTI_EXTENT) {
+					struct directory_entry *s_e;
+					unsigned int		ext = s_hash->starting_block;
+
+					/*
+					 * Skip the multi extent root entry.
+					 */
+					if (s_entry->mxpart == 0)
+						continue;
+					/*
+					 * The directory is sorted, so we should
+					 * see s_entry->mxpart == 1 first.
+					 */
+					if (s_entry->mxpart != 1) {
+						comerrno(EX_BAD,
+						"Panic: Multi extent parts for %s not sorted.\n",
+						s_entry->whole_name);
+					}
+					s_entry->mxroot->starting_block = ext;
+					for (s_e = s_entry;
+					    s_e && s_e->mxroot == s_entry->mxroot;
+								s_e = s_e->next) {
+						set_733((char *)s_e->isorec.extent,
+									ext);
+						ext += ISO_BLOCKS(s_e->size);
+					}
+				}
+#endif
+
 #ifdef SORTING
 				/* check for non-directory files */
 				if (do_sort && ((s_entry->isorec.flags[0] & ISO_DIRECTORY) == 0)) {
@@ -1100,7 +1156,6 @@ assign_file_addresses(dpnt)
 						break;
 					finddir = finddir->next;
 					if (!finddir) {
-#ifdef	USE_LIBSCHILY
 #ifdef	DVD_VIDEO
 						if (title_set_info != 0) {
 							DVDFreeFileSet(title_set_info);
@@ -1109,26 +1164,15 @@ assign_file_addresses(dpnt)
 						comerrno(EX_BAD,
 							"Fatal goof - could not find dir entry for '%s'\n",
 							s_entry->name);
-#else
-						fprintf(stderr,
-							"Fatal goof - could not find dir entry for '%s'\n",
-							s_entry->name);
-#ifdef DVD_VIDEO
-						if (title_set_info != 0) {
-							DVDFreeFileSet(title_set_info);
-						}
-#endif
-						exit(1);
-#endif
 					}
 				}
-				set_733((char *) s_entry->isorec.extent,
+				set_733((char *)s_entry->isorec.extent,
 						finddir->extent);
 				s_entry->starting_block = finddir->extent;
 				s_entry->size = ISO_ROUND_UP(finddir->size);
 				total_dir_size += s_entry->size;
 				add_hash(s_entry);
-				set_733((char *) s_entry->isorec.size,
+				set_733((char *)s_entry->isorec.size,
 						ISO_ROUND_UP(finddir->size));
 				continue;
 			}
@@ -1137,7 +1181,7 @@ assign_file_addresses(dpnt)
 			 * from the tables.
 			 */
 			if (strcmp(s_entry->name, ".") == 0) {
-				set_733((char *) s_entry->isorec.extent,
+				set_733((char *)s_entry->isorec.extent,
 								dpnt->extent);
 
 				/*
@@ -1149,7 +1193,7 @@ assign_file_addresses(dpnt)
 
 				add_hash(s_entry);
 				s_entry->starting_block = dpnt->extent;
-				set_733((char *) s_entry->isorec.size,
+				set_733((char *)s_entry->isorec.size,
 						ISO_ROUND_UP(dpnt->size));
 				continue;
 			}
@@ -1157,7 +1201,7 @@ assign_file_addresses(dpnt)
 				if (dpnt == root) {
 					total_dir_size += root->size;
 				}
-				set_733((char *) s_entry->isorec.extent,
+				set_733((char *)s_entry->isorec.extent,
 							dpnt->parent->extent);
 
 				/*
@@ -1170,7 +1214,7 @@ assign_file_addresses(dpnt)
 
 				add_hash(s_entry);
 				s_entry->starting_block = dpnt->parent->extent;
-				set_733((char *) s_entry->isorec.size,
+				set_733((char *)s_entry->isorec.size,
 					ISO_ROUND_UP(dpnt->parent->size));
 				continue;
 			}
@@ -1189,6 +1233,7 @@ assign_file_addresses(dpnt)
 				dwpnt->s_entry = s_entry;
 				/* set the initial padding to zero */
 				dwpnt->pad = 0;
+				dwpnt->dw_flags = 0;
 #ifdef DVD_VIDEO
 				if (dvd_video && (title_set_info != 0)) {
 					int pad;
@@ -1214,16 +1259,10 @@ assign_file_addresses(dpnt)
 				 * file/fork
 				 */
 				dwpnt->off = s_entry->hfs_off;
+				dwpnt->hfstype = s_entry->hfs_type;
 #else
 				dwpnt->off = (off_t)0;
 #endif	/* APPLE_HYB */
-				if (dw_tail) {
-					dw_tail->next = dwpnt;
-					dw_tail = dwpnt;
-				} else {
-					dw_head = dwpnt;
-					dw_tail = dwpnt;
-				}
 				if (s_entry->inode == TABLE_INODE) {
 					dwpnt->table = s_entry->table;
 					dwpnt->name = NULL;
@@ -1232,18 +1271,88 @@ assign_file_addresses(dpnt)
 						SPATH_SEPARATOR, trans_tbl);
 				} else {
 					dwpnt->table = NULL;
-					strcpy(whole_path,
-							s_entry->whole_name);
-					dwpnt->name = strdup(whole_path);
+					strlcpy(whole_path,
+						s_entry->whole_name,
+						sizeof (whole_path));
+					dwpnt->name = e_strdup(whole_path);
 				}
 				dwpnt->next = NULL;
 				dwpnt->size = s_entry->size;
 				dwpnt->extent = last_extent;
-				set_733((char *) s_entry->isorec.extent,
+				set_733((char *)s_entry->isorec.extent,
 								last_extent);
 				s_entry->starting_block = last_extent;
+#ifdef USE_LARGEFILES
+				/*
+				 * Update the entries for multi-section files
+				 * as we now know the starting extent numbers.
+				 */
+				if (s_entry->de_flags & MULTI_EXTENT) {
+					struct directory_entry *s_e;
+					unsigned int		ext = last_extent;
+
+					/*
+					 * Skip the multi extent root entry.
+					 */
+					if (s_entry->mxpart == 0) {
+						if (dwpnt->name)
+							free(dwpnt->name);
+						free(dwpnt);
+						continue;
+					}
+					/*
+					 * The directory is sorted, so we should
+					 * see s_entry->mxpart == 1 first.
+					 */
+					if (s_entry->mxpart != 1) {
+						comerrno(EX_BAD,
+						"Panic: Multi extent parts for %s not sorted.\n",
+						s_entry->whole_name);
+					}
+					dwpnt->size = s_entry->mxroot->size;
+					s_entry->mxroot->starting_block = ext;
+					/*
+					 * Set the mxroot (mxpart == 0) to allow
+					 * the UDF code to fetch the starting
+					 * extent number.
+					 */
+					set_733((char *)s_entry->mxroot->isorec.extent, ext);
+					for (s_e = s_entry;
+					    s_e && s_e->mxroot == s_entry->mxroot;
+								s_e = s_e->next) {
+						if (s_e->mxpart == 0)
+							continue;
+						set_733((char *)s_e->isorec.extent,
+									ext);
+						ext += ISO_BLOCKS(s_e->size);
+					}
+					add_hash(s_entry);
+				}
+#endif
+				if (dw_tail) {
+					dw_tail->next = dwpnt;
+					dw_tail = dwpnt;
+				} else {
+					dw_head = dwpnt;
+					dw_tail = dwpnt;
+				}
 				add_hash(s_entry);
-				last_extent += ISO_BLOCKS(s_entry->size);
+				/*
+				 * The cache holds the full size of the file
+				 */
+				last_extent += ISO_BLOCKS(dwpnt->size);
+				dwpnt->dw_flags = s_entry->de_flags;
+#ifdef APPLE_HYB
+#if defined(INSERTMACRESFORK) && defined(UDF)
+				if (file_is_resource(dwpnt->name, dwpnt->s_entry->hfs_type) && (dwpnt->size > 0) && use_udf) {
+					last_extent++;
+					if (ISO_ROUND_UP(dwpnt->size) <
+					    ISO_ROUND_UP(dwpnt->size + SIZEOF_UDF_EXT_ATTRIBUTE_COMMON)) {
+						last_extent++;
+					}
+				}
+#endif
+#endif	/* APPLE_HYB */
 #ifdef DVD_VIDEO
 				/* Shouldn't we always add the pad info? */
 				if (dvd_video) {
@@ -1251,7 +1360,7 @@ assign_file_addresses(dpnt)
 				}
 #endif /* DVD_VIDEO */
 				if (verbose > 2) {
-					fprintf(stderr, "%d %d %s\n",
+					fprintf(stderr, "%u %d %s\n",
 						s_entry->starting_block,
 						last_extent - 1, whole_path);
 				}
@@ -1294,10 +1403,10 @@ assign_file_addresses(dpnt)
 			 * Thus we leave the size 0, and just assign the
 			 * extent number.
 			 */
-			set_733((char *) s_entry->isorec.extent, last_extent);
+			set_733((char *)s_entry->isorec.extent, last_extent);
 		}
 		if (dpnt->subdir) {
-			if (assign_file_addresses(dpnt->subdir))
+			if (assign_file_addresses(dpnt->subdir, TRUE))
 				ret = TRUE;
 		}
 		dpnt = dpnt->next;
@@ -1306,9 +1415,13 @@ assign_file_addresses(dpnt)
 	if (title_set_info != NULL) {
 		DVDFreeFileSet(title_set_info);
 	}
+	if (dvd_video && !ret && !isnest) {
+		errmsgno(EX_BAD,
+			"Could not find correct 'VIDEO_TS' directory.\n");
+	}
 #endif /* DVD_VIDEO */
 	return (ret);
-}/* assign_file_addresses(... */
+} /* assign_file_addresses(... */
 
 LOCAL void
 free_one_directory(dpnt)
@@ -1335,15 +1448,17 @@ free_one_directory(dpnt)
 			s_entry_d->whole_name = NULL;
 		}
 #ifdef APPLE_HYB
-		if (apple_both && s_entry_d->hfs_ent && !s_entry_d->assoc)
+		if (apple_both && s_entry_d->hfs_ent && !s_entry_d->assoc &&
+		    (s_entry_d->isorec.flags[0] & ISO_MULTIEXTENT) == 0) {
 			free(s_entry_d->hfs_ent);
+		}
 #endif	/* APPLE_HYB */
 
 		free(s_entry_d);
 		s_entry_d = NULL;
 	}
 	dpnt->contents = NULL;
-}/* free_one_directory(... */
+} /* free_one_directory(... */
 
 LOCAL void
 free_directories(dpnt)
@@ -1374,7 +1489,7 @@ generate_one_directory(dpnt, outfile)
 	unsigned int	total_size;
 
 	total_size = ISO_ROUND_UP(dpnt->size);
-	directory_buffer = (char *) e_malloc(total_size);
+	directory_buffer = (char *)e_malloc(total_size);
 	memset(directory_buffer, 0, total_size);
 	dir_index = 0;
 
@@ -1382,7 +1497,7 @@ generate_one_directory(dpnt, outfile)
 	ce_buffer = NULL;
 
 	if (ce_size > 0) {
-		ce_buffer = (char *) e_malloc(ce_size);
+		ce_buffer = (char *)e_malloc(ce_size);
 		memset(ce_buffer, 0, ce_size);
 
 		ce_index = 0;
@@ -1458,15 +1573,15 @@ generate_one_directory(dpnt, outfile)
 #endif
 
 					if (pnt[0] == 'C' && pnt[1] == 'E') {
-						nbytes = get_733((char *) pnt + 20);
+						nbytes = get_733((char *)pnt + 20);
 
 						if ((ce_index & (SECTOR_SIZE - 1)) + nbytes >=
 							SECTOR_SIZE) {
 							ce_index = ISO_ROUND_UP(ce_index);
 						}
-						set_733((char *) pnt + 4,
+						set_733((char *)pnt + 4,
 							(ce_address + ce_index) >> 11);
-						set_733((char *) pnt + 12,
+						set_733((char *)pnt + 12,
 							(ce_address + ce_index) & (SECTOR_SIZE - 1));
 
 
@@ -1509,17 +1624,10 @@ generate_one_directory(dpnt, outfile)
 	}
 
 	if (dpnt->size != dir_index) {
-#ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD,
 			"Unexpected directory length %lld expected: %d '%s'\n",
 			(Llong)dpnt->size,
 			dir_index, dpnt->de_name);
-#else
-		fprintf(stderr,
-			"Unexpected directory length %lld expected: %d '%s'\n",
-			(Llong)dpnt->size,
-			dir_index, dpnt->de_name);
-#endif
 	}
 	xfwrite(directory_buffer, total_size, 1, outfile, 0, FALSE);
 	last_extent_written += total_size >> 11;
@@ -1528,22 +1636,16 @@ generate_one_directory(dpnt, outfile)
 
 	if (ce_size > 0) {
 		if (ce_index != dpnt->ce_bytes) {
-#ifdef	USE_LIBSCHILY
 			errmsgno(EX_BAD,
 			"Continuation entry record length mismatch %d expected: %d.\n",
 				ce_index, dpnt->ce_bytes);
-#else
-			fprintf(stderr,
-			"Continuation entry record length mismatch %d expected: %d.\n",
-				ce_index, dpnt->ce_bytes);
-#endif
 		}
 		xfwrite(ce_buffer, ce_size, 1, outfile, 0, FALSE);
 		last_extent_written += ce_size >> 11;
 		free(ce_buffer);
 		ce_buffer = NULL;
 	}
-}/* generate_one_directory(... */
+} /* generate_one_directory(... */
 
 LOCAL void
 build_pathlist(node)
@@ -1562,7 +1664,7 @@ build_pathlist(node)
 			build_pathlist(dpnt->subdir);
 		dpnt = dpnt->next;
 	}
-}/* build_pathlist(... */
+} /* build_pathlist(... */
 
 LOCAL int
 compare_paths(r, l)
@@ -1580,7 +1682,7 @@ compare_paths(r, l)
 	}
 	return (strcmp(rr->self->isorec.name, ll->self->isorec.name));
 
-}/* compare_paths(... */
+} /* compare_paths(... */
 
 LOCAL int
 generate_path_tables()
@@ -1597,8 +1699,8 @@ generate_path_tables()
 
 	/* First allocate memory for the tables and initialize the memory */
 	tablesize = path_blocks << 11;
-	path_table_m = (char *) e_malloc(tablesize);
-	path_table_l = (char *) e_malloc(tablesize);
+	path_table_m = (char *)e_malloc(tablesize);
+	path_table_l = (char *)e_malloc(tablesize);
 	memset(path_table_l, 0, tablesize);
 	memset(path_table_m, 0, tablesize);
 
@@ -1607,8 +1709,8 @@ generate_path_tables()
 	 */
 
 	path_table_index = 0;
-	pathlist = (struct directory **) e_malloc(sizeof (struct directory *)
-		* next_path_index);
+	pathlist = (struct directory **)e_malloc(sizeof (struct directory *)
+		*next_path_index);
 	memset(pathlist, 0, sizeof (struct directory *) * next_path_index);
 	build_pathlist(root);
 
@@ -1635,12 +1737,7 @@ generate_path_tables()
 	for (j = 1; j < next_path_index; j++) {
 		dpnt = pathlist[j];
 		if (!dpnt) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD, "Entry %d not in path tables\n", j);
-#else
-			fprintf(stderr, "Entry %d not in path tables\n", j);
-			exit(1);
-#endif
 		}
 		npnt = dpnt->de_name;
 
@@ -1654,14 +1751,8 @@ generate_path_tables()
 		}
 		de = dpnt->self;
 		if (!de) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			"Fatal ISO9660 goof - directory has amnesia\n");
-#else
-			fprintf(stderr,
-			"Fatal ISO9660 goof - directory has amnesia\n");
-			exit(1);
-#endif
 		}
 		namelen = de->isorec.name_len[0];
 
@@ -1673,23 +1764,32 @@ generate_path_tables()
 		set_732(path_table_m + path_table_index, dpnt->extent);
 		path_table_index += 4;
 
-		if (dpnt->parent->path_index > 0xffff) {
-#ifdef	USE_LIBSCHILY
-			comerrno(EX_BAD,
-			"Unable to generate sane path tables - too many directories (%d)\n",
-				dpnt->parent->path_index);
-#else
-			fprintf(stderr,
-			"Unable to generate sane path tables - too many directories (%d)\n",
-				dpnt->parent->path_index);
-			exit(1);
-#endif
-		}
-
 		set_721(path_table_l + path_table_index,
 			dpnt->parent->path_index);
 		set_722(path_table_m + path_table_index,
 			dpnt->parent->path_index);
+
+		if (dpnt->parent->path_index > 0xffff) {
+			static int warned = 0;
+
+			if (!warned) {
+				warned++;
+				errmsgno(EX_BAD,
+			"Unable to generate sane path tables - too many directories (%u)\n",
+					dpnt->parent->path_index);
+				if (!nolimitpathtables)
+					errmsgno(EX_BAD,
+					"Try to use the option -no-limit-pathtables\n");
+			}
+			if (!nolimitpathtables)
+				exit(EX_BAD);
+			/*
+			 * Let it point to the root directory instead.
+			 */
+			set_721(path_table_l + path_table_index, 1);
+			set_722(path_table_m + path_table_index, 1);
+		}
+
 		path_table_index += 2;
 
 		for (i = 0; i < namelen; i++) {
@@ -1705,20 +1805,13 @@ generate_path_tables()
 	free(pathlist);
 	pathlist = NULL;
 	if (path_table_index != path_table_size) {
-#ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD,
 			"Path table lengths do not match %d expected: %d\n",
 			path_table_index,
 			path_table_size);
-#else
-		fprintf(stderr,
-			"Path table lengths do not match %d expected: %d\n",
-			path_table_index,
-			path_table_size);
-#endif
 	}
 	return (0);
-}/* generate_path_tables(... */
+} /* generate_path_tables(... */
 
 EXPORT void
 memcpy_max(to, from, max)
@@ -1733,7 +1826,7 @@ memcpy_max(to, from, max)
 	}
 	memcpy(to, from, n);
 
-}/* memcpy_max(... */
+} /* memcpy_max(... */
 
 EXPORT void
 outputlist_insert(frag)
@@ -1764,7 +1857,7 @@ file_write(outfile)
 
 	memset(buffer, 0, sizeof (buffer));
 
-	if (apple_hyb) {
+	if (apple_hyb && !donotwrite_macpart) {
 
 		int	i;
 
@@ -1788,20 +1881,20 @@ file_write(outfile)
 	if (verbose > 2) {
 #ifdef DBG_ISO
 		fprintf(stderr,
-			"Total directory extents being written = %d\n",
+			"Total directory extents being written = %u\n",
 							last_extent);
 #endif
 
 #ifdef APPLE_HYB
-		if (apple_hyb)
+		if (apple_hyb && !donotwrite_macpart)
 			fprintf(stderr,
-			"Total extents scheduled to be written (inc HFS) = %d\n",
+			"Total extents scheduled to be written (inc HFS) = %u\n",
 				last_extent - session_start);
 		else
 #endif	/* APPLE_HYB */
 
 			fprintf(stderr,
-				"Total extents scheduled to be written = %d\n",
+				"Total extents scheduled to be written = %u\n",
 				last_extent - session_start);
 	}
 	/* Now write all of the files that we need. */
@@ -1809,7 +1902,7 @@ file_write(outfile)
 
 #ifdef APPLE_HYB
 	/* write out extents/catalog/dt file */
-	if (apple_hyb) {
+	if (apple_hyb && !donotwrite_macpart) {
 
 		xfwrite(hce->hfs_ce, HFS_BLOCKSZ, hce->hfs_tot_size, outfile, 0, FALSE);
 
@@ -1826,7 +1919,7 @@ file_write(outfile)
 		/* write out HFS boot block */
 		if (mac_boot.name)
 			write_one_file(mac_boot.name, mac_boot.size, outfile,
-								mac_boot.off);
+								mac_boot.off, 0, 0);
 	}
 #endif	/* APPLE_HYB */
 
@@ -1835,9 +1928,9 @@ file_write(outfile)
 		return (0);
 	}
 #ifdef APPLE_HYB
-	if (apple_hyb) {
+	if (apple_hyb && !donotwrite_macpart) {
 		fprintf(stderr,
-			"Total extents actually written (inc HFS) = %d\n",
+			"Total extents actually written (inc HFS) = %u\n",
 			last_extent_written - session_start);
 		fprintf(stderr, "(Size of ISO volume = %d, HFS extra = %d)\n",
 			last_extent_written - session_start - hfs_extra,
@@ -1869,7 +1962,7 @@ file_write(outfile)
 
 	return (0);
 
-}/* iso_write(... */
+} /* iso_write(... */
 
 /*
  * Function to write the PVD for the disc.
@@ -1882,6 +1975,9 @@ pvd_write(outfile)
 	int		should_write;
 	struct tm	local;
 	struct tm	gmt;
+	int		i;
+	int		s;
+	Uchar		*cp;
 
 
 	time(&begun);
@@ -1901,6 +1997,10 @@ pvd_write(outfile)
 	local.tm_min -= gmt.tm_min;
 	local.tm_hour -= gmt.tm_hour;
 	local.tm_yday -= gmt.tm_yday;
+	local.tm_year -= gmt.tm_year;
+	if (local.tm_year)		/* Hit new-year limit	*/
+		local.tm_yday = local.tm_year;	/* yday = +-1	*/
+
 	iso_time[16] = (local.tm_min + 60 *
 				(local.tm_hour + 24 * local.tm_yday)) / 15;
 
@@ -1917,7 +2017,7 @@ pvd_write(outfile)
 	memcpy_max(vol_desc.volume_id, volume_id, strlen(volume_id));
 
 	should_write = last_extent - session_start;
-	set_733((char *) vol_desc.volume_space_size, should_write);
+	set_733((char *)vol_desc.volume_space_size, should_write);
 	set_723(vol_desc.volume_set_size, volume_set_size);
 	set_723(vol_desc.volume_sequence_number, volume_sequence_number);
 	set_723(vol_desc.logical_block_size, SECTOR_SIZE);
@@ -1926,7 +2026,7 @@ pvd_write(outfile)
 	 * The path tables are used by DOS based machines to cache directory
 	 * locations
 	 */
-	set_733((char *) vol_desc.path_table_size, path_table_size);
+	set_733((char *)vol_desc.path_table_size, path_table_size);
 	set_731(vol_desc.type_l_path_table, path_table[0]);
 	set_731(vol_desc.opt_type_l_path_table, path_table[1]);
 	set_732(vol_desc.type_m_path_table, path_table[2]);
@@ -1992,6 +2092,15 @@ pvd_write(outfile)
 		memcpy(&xap[18], "\0\0\0\0\0\0\0\0", 8);	/* Reserved  */
 	}
 
+	/*
+	 * Compute a checksum to be used as a fingerprint in case we
+	 * include correct inode/link-count information in the current image.
+	 */
+	for (i = 0, s = 0, cp = (Uchar *)&vol_desc; i < SECTOR_SIZE; i++) {
+		s += cp[i] & 0xFF;
+	}
+	vol_desc_sum = s;
+
 	/* if not a bootable cd do it the old way */
 	xfwrite(&vol_desc, SECTOR_SIZE, 1, outfile, 0, FALSE);
 	last_extent_written++;
@@ -2039,6 +2148,9 @@ evd_write(outfile)
 
 /*
  * Function to write the version information for the disc.
+ * Warning: Do not disable or change this function. The data created by this
+ * function is used to tell the filesystem driver in the OS kernel that this
+ * mkisofs version includes correct inode information.
  */
 LOCAL int
 vers_write(outfile)
@@ -2056,14 +2168,14 @@ vers_write(outfile)
 
 	/* Now write the version descriptor. */
 	memset(vers, 0, sizeof (vers));
-	strcpy(vers, "MKI ");
+	strcpy(vers, "MKI ");			/* strcpy() OK here */
 
 	cp = vers;
 	X_ac = saved_ac();
 	X_av = saved_av();
-	strcpy(&cp[idx], ctime(&begun));
+	strlcpy(&cp[idx], ctime(&begun), 26);
 	idx += 25;
-	strcpy(&cp[idx], version_string);
+	strlcpy(&cp[idx], version_string, SECTOR_SIZE - idx);
 	idx += strlen(version_string);
 	for (i = 1; i < X_ac; i++) {
 		len = strlen(X_av[i]);
@@ -2074,17 +2186,32 @@ vers_write(outfile)
 		 * Do not give away secret information when not in debug mode.
 		 */
 		if (debug)
-			strcpy(&cp[idx], X_av[i]);
+			strlcpy(&cp[idx], X_av[i], SECTOR_SIZE - idx);
 		else if (i >= path_ind)
 			len = graftcp(&cp[idx], X_av[i], &vers[SECTOR_SIZE-1]);
 		else if (X_av[i][0] == '/')
 			len = pathcp(&cp[idx], X_av[i], &vers[SECTOR_SIZE-1]);
 		else
-			strcpy(&cp[idx], X_av[i]);
+			strlcpy(&cp[idx], X_av[i], SECTOR_SIZE - idx);
 		idx += len;
 	}
 
 	cp[SECTOR_SIZE - 1] = '\0';
+	len = 0;
+	if (correct_inodes) {
+		/*
+		 * Only add this fingerprint in case we include correct
+		 * inode/link-count information in the current image.
+		 */
+		len = vol_desc_sum;
+	}
+	cp = &vers[SECTOR_SIZE - 1];
+	*(Uchar *)cp = len % 256;
+	len /= 256;
+	*(Uchar *)--cp = len % 256;
+	len /= 256;
+	*(Uchar *)--cp = len % 256;
+
 	xfwrite(vers, SECTOR_SIZE, 1, outfile, 0, TRUE);
 	last_extent_written += 1;
 	return (0);
@@ -2184,7 +2311,7 @@ exten_write(outfile)
  */
 EXPORT int
 oneblock_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	last_extent++;
 	return (0);
@@ -2195,7 +2322,7 @@ oneblock_size(starting_extent)
  */
 LOCAL int
 pathtab_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	path_table[0] = starting_extent;
 
@@ -2211,7 +2338,7 @@ pathtab_size(starting_extent)
  */
 LOCAL int
 startpad_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	last_extent = session_start + 16;
 	return (0);
@@ -2222,7 +2349,7 @@ startpad_size(starting_extent)
  */
 LOCAL int
 interpad_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	int	emod = 0;
 
@@ -2241,7 +2368,7 @@ interpad_size(starting_extent)
  */
 LOCAL int
 endpad_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	starting_extent += 150;			/* 150 pad blocks (post gap) */
 	last_extent = starting_extent;
@@ -2252,17 +2379,18 @@ LOCAL int
 file_gen()
 {
 #ifdef APPLE_HYB
-	int	start_extent = last_extent;	/* orig ISO files start */
+	UInt32_t	start_extent = last_extent;	/* orig ISO files start */
 
 #endif	/* APPLE_HYB */
 
-	if (!assign_file_addresses(root)) {
+	if (!assign_file_addresses(root, FALSE)) {
 #ifdef DVD_VIDEO
 		if (dvd_video) {
 			comerrno(EX_BAD, "Unable to make a DVD-Video image.\n");
 		}
 #else
-		;	/* EMPTY */
+		;
+		/* EMPTY */
 #endif
 	}
 
@@ -2280,7 +2408,7 @@ file_gen()
 	 * use Eric's new system for creating/writing parts of the image it
 	 * may move to it's own routine
 	 */
-	if (apple_hyb)
+	if (apple_hyb && !donotwrite_macpart)
 		hfs_file_gen(start_extent);
 #ifdef PREP_BOOT
 	else if (use_prep_boot || use_chrp_boot)
@@ -2288,6 +2416,10 @@ file_gen()
 #endif	/* PREP_BOOT */
 #endif	/* APPLE_HYB */
 
+	/*
+	 * Do inode/hard link related stuff for non-directory type files.
+	 */
+	do_inode(root);
 	return (0);
 }
 
@@ -2302,19 +2434,22 @@ dirtree_dump()
 
 LOCAL int
 dirtree_fixup(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	if (use_RockRidge && reloc_dir)
 		finish_cl_pl_entries();
 
+	/*
+	 * Set the link count for directories to 2 + number of sub-directories.
+	 */
 	if (use_RockRidge)
-		update_nlink_field(root);
+		do_dir_nlink(root);
 	return (0);
 }
 
 LOCAL int
 dirtree_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	assign_directory_addresses(root);
 	return (0);
@@ -2322,16 +2457,16 @@ dirtree_size(starting_extent)
 
 LOCAL int
 ext_size(starting_extent)
-	int	starting_extent;
+	UInt32_t	starting_extent;
 {
 	extern int		extension_record_size;
 	struct directory_entry *s_entry;
 
 	extension_record_extent = starting_extent;
 	s_entry = root->contents;
-	set_733((char *) s_entry->rr_attributes + s_entry->rr_attr_size - 24,
+	set_733((char *)s_entry->rr_attributes + s_entry->rr_attr_size - 24,
 		extension_record_extent);
-	set_733((char *) s_entry->rr_attributes + s_entry->rr_attr_size - 8,
+	set_733((char *)s_entry->rr_attributes + s_entry->rr_attr_size - 8,
 		extension_record_size);
 	last_extent++;
 	return (0);
@@ -2443,17 +2578,17 @@ hfs_get_parms(key)
  */
 LOCAL void
 hfs_file_gen(start_extent)
-	int	start_extent;
+	UInt32_t	start_extent;
 {
 	int	Csize;	/* clump size for HFS vol */
 	int	loop;
-	int	last_extent_save = last_extent;
+	UInt32_t last_extent_save = last_extent;
 	char	*p;
 
 	/* allocate memory for the libhfs/mkisofs extra info */
 	hce = (hce_mem *) e_malloc(sizeof (hce_mem));
 
-	hce->error = (char *) e_malloc(1024);
+	hce->error = (char *)e_malloc(1024);
 
 	/* mark as unallocated for use later */
 	hce->hfs_ce = hce->hfs_hdr = hce->hfs_map = 0;
@@ -2472,7 +2607,7 @@ hfs_file_gen(start_extent)
 	/* set the HFS parameter string to upper case */
 	if (hfs_parms) {
 		for (p = hfs_parms; *p; p++)
-			*p = toupper(*p);
+			*p = toupper((*p & 0xFF));
 	}
 
 	/* set the initial factor to increase Catalog file size */
@@ -2501,7 +2636,11 @@ hfs_file_gen(start_extent)
 		hce->error[0] = '\0';
 
 		/* attempt to create the Mac volume */
+#ifdef APPLE_HFS_HYB
 		Csize = make_mac_volume(root, start_extent);
+#else
+		Csize = -1;
+#endif
 
 		/* if we have a problem ... */
 		if (Csize < 0) {
@@ -2644,7 +2783,7 @@ get_adj_size(Csize)
 EXPORT int
 adj_size(Csize, start_extent, extra)
 	int	Csize;
-	int	start_extent;
+	UInt32_t	start_extent;
 	int	extra;
 {
 	struct deferred_write *dw;
@@ -2673,7 +2812,7 @@ adj_size(Csize, start_extent, extra)
 	for (dw = dw_head; dw; dw = dw->next) {
 		s_entry = dw->s_entry;
 		s_entry->starting_block = dw->extent = start_extent;
-		set_733((char *) s_entry->isorec.extent, start_extent);
+		set_733((char *)s_entry->isorec.extent, start_extent);
 		size = ROUND_UP(dw->size, Csize) / SECTOR_SIZE;
 		dw->pad = size - ISO_ROUND_UP(dw->size) / SECTOR_SIZE;
 
@@ -2721,7 +2860,7 @@ adj_size_other(dpnt)
 			 */
 			s_hash = find_hash(s_entry->dev, s_entry->inode);
 			if (s_hash) {
-				set_733((char *) s_entry->isorec.extent,
+				set_733((char *)s_entry->isorec.extent,
 						s_hash->starting_block);
 				/* not vital - but tidy */
 				s_entry->starting_block =
@@ -2799,6 +2938,10 @@ insert_padding_file(size)
 	dwpnt->pad = 0;
 	/* set offset to zero */
 	dwpnt->off = (off_t)0;
+	dwpnt->dw_flags = 0;
+#ifdef	APPLE_HYB
+	dwpnt->hfstype = TYPE_NONE;
+#endif
 
 	/*
 	 * don't need to wory about the s_entry stuff as it won't be touched#

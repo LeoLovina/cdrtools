@@ -1,7 +1,7 @@
-/* @(#)scsi-linux-sg.c	1.83 04/05/20 Copyright 1997 J. Schilling */
+/* @(#)scsi-linux-sg.c	1.95 10/05/24 Copyright 1997-2010 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-linux-sg.c	1.83 04/05/20 Copyright 1997 J. Schilling";
+	"@(#)scsi-linux-sg.c	1.95 10/05/24 Copyright 1997-2010 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
@@ -39,22 +39,26 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #include <linux/version.h>
@@ -66,6 +70,19 @@ static	char __sccsid[] =
 #if LINUX_VERSION_CODE >= 0x01031a /* <linux/scsi.h> introduced in 1.3.26 */
 #if LINUX_VERSION_CODE >= 0x020000 /* <scsi/scsi.h> introduced somewhere. */
 /* Need to fine tune the ifdef so we get the transition point right. */
+
+#if	defined(HAVE_BROKEN_SCSI_SCSI_H) || \
+	defined(HAVE_BROKEN_SRC_SCSI_SCSI_H)
+/*
+ * Be very careful in case that the Linux Kernel maintainers
+ * unexpectedly fix the bugs in the Linux Lernel include files.
+ * Only introduce the attempt for a workaround in case the include
+ * files are broken anyway.
+ */
+#define	__KERNEL__
+#include <asm/types.h>
+#undef	__KERNEL__
+#endif
 #include <scsi/scsi.h>
 #else
 #include <linux/scsi.h>
@@ -77,14 +94,30 @@ static	char __sccsid[] =
 #include "block/blk.h"		/* From ancient versions, really needed? */
 #include "scsi/scsi.h"
 #endif
+#include <schily/stat.h>
+#include <schily/device.h>
 
+#if	defined(HAVE_BROKEN_SCSI_SG_H) || \
+	defined(HAVE_BROKEN_SRC_SCSI_SG_H)
+/*
+ * Be very careful in case that the Linux Kernel maintainers
+ * unexpectedly fix the bugs in the Linux Lernel include files.
+ * Only introduce the attempt for a workaround in case the include
+ * files are broken anyway.
+ */
+#define	__user
+#endif
 #include "scsi/sg.h"
+#if	defined(HAVE_BROKEN_SCSI_SG_H) || \
+	defined(HAVE_BROKEN_SRC_SCSI_SG_H)
+#undef	__user
+#endif
 
 #undef sense			/* conflict in struct cdrom_generic_command */
 #include <linux/cdrom.h>
 
 #if	defined(CDROM_PACKET_SIZE) && defined(CDROM_SEND_PACKET)
-#define	USE_ATA
+#define	USE_ATAPI
 #endif
 
 /*
@@ -94,7 +127,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.83";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.95";	/* The version for this transport*/
 
 #ifndef	SCSI_IOCTL_GET_BUS_NUMBER
 #define	SCSI_IOCTL_GET_BUS_NUMBER 0x5386
@@ -136,15 +169,20 @@ LOCAL	char	_scg_trans_version[] = "scsi-linux-sg.c-1.83";	/* The version for thi
  * XXX Should add extra space in buscookies and scgfiles for a "PP bus"
  * XXX and for two or more "ATAPI busses".
  */
-#define	MAX_SCG		256	/* Max # of SCSI controllers */
+#define	MAX_SCG		(512-MAX_ATA)	/* Max # of SCSI controllers */
+#define	MAX_ATA		13		/* Max # of ATA devices */
 #define	MAX_TGT		16
 #define	MAX_LUN		8
 
-#ifdef	USE_ATA
+#if	(MAX_SCG+MAX_ATA) >= 1000
+error too many SCSI busses
+#endif
+
+#ifdef	USE_ATAPI
 /*
  * # of virtual buses (schilly_host number)
  */
-#define	MAX_SCHILLY_HOSTS	MAX_SCG
+#define	MAX_ATAPI_HOSTS	MAX_SCG
 typedef struct {
 	Uchar   typ:4;
 	Uchar   bus:4;
@@ -154,8 +192,8 @@ typedef struct {
 
 struct scg_local {
 	int	scgfile;		/* Used for SG_GET_BUFSIZE ioctl()*/
-	short	scgfiles[MAX_SCG][MAX_TGT][MAX_LUN];
-	short	buscookies[MAX_SCG];
+	short	scgfiles[MAX_SCG + MAX_ATA][MAX_TGT][MAX_LUN];
+	short	buscookies[MAX_SCG + MAX_ATA];
 	int	pgbus;
 	int	pack_id;		/* Should be a random number	*/
 	int	drvers;
@@ -164,8 +202,8 @@ struct scg_local {
 	long	xbufsize;
 	char	*xbuf;
 	char	*SCSIbuf;
-#ifdef	USE_ATA
-	ata_buscookies	bc[MAX_SCHILLY_HOSTS];
+#ifdef	USE_ATAPI
+	ata_buscookies	bc[MAX_ATAPI_HOSTS];
 #endif
 };
 #define	scglocal(p)	((struct scg_local *)((p)->local))
@@ -194,10 +232,16 @@ struct scg_local {
 #if	defined(USE_PG) && !defined(USE_PG_ONLY)
 #include "scsi-linux-pg.c"
 #endif
-#ifdef	USE_ATA
+#ifdef	USE_ATAPI
 #include "scsi-linux-ata.c"
 #endif
 
+/*
+ * Work around some broken Linux distributions with defective include files.
+ */
+#if !defined(HZ) && !defined(USER_HZ)
+#define	USER_HZ	100
+#endif
 
 #ifdef	MISALIGN
 LOCAL	int	sg_getint	__PR((int *ip));
@@ -214,6 +258,7 @@ LOCAL	BOOL	sg_mapdev	__PR((SCSI *scgp, int f, int *busp, int *tgtp, int *lunp,
 							int *chanp, int *inop, int ataidx));
 #if defined(SG_SET_RESERVED_SIZE) && defined(SG_GET_RESERVED_SIZE)
 LOCAL	long	sg_raisedma	__PR((SCSI *scgp, long newmax));
+LOCAL	void	sg_checkdma	__PR((int f, int *valp));
 #endif
 LOCAL	void	sg_settimeout	__PR((int f, int timeout));
 
@@ -279,7 +324,7 @@ scgo_help(scgp, f)
 #ifdef	USE_PG
 	pg_help(scgp, f);
 #endif
-#ifdef	USE_ATA
+#ifdef	USE_ATAPI
 	scgo_ahelp(scgp, f);
 #endif
 	__scg_help(f, "ATA", "ATA Packet specific SCSI transport using sg interface",
@@ -301,10 +346,12 @@ scgo_open(scgp, device)
 	register int	t;
 	register int	l;
 	register int	nopen = 0;
+		int	xopen = 0;
 	char		devname[64];
 		BOOL	use_ata = FALSE;
 
-	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
+	if ((busno >= MAX_SCG && busno < 1000) || busno >= (1000+MAX_ATA) ||
+	    tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -312,10 +359,13 @@ scgo_open(scgp, device)
 				busno, tgt, tlun);
 		return (-1);
 	}
+	if (busno >= 1000)
+		busno = busno - 1000 + MAX_SCG;
+
 	if (device != NULL && *device != '\0') {
-#ifdef	USE_ATA
+#ifdef	USE_ATAPI
 		if (strncmp(device, "ATAPI", 5) == 0) {
-			scgp->ops = &ata_ops;
+			scgp->ops = &atapi_ops;
 			return (SCGO_OPEN(scgp, device));
 		}
 #endif
@@ -368,7 +418,7 @@ scgo_open(scgp, device)
 		scglocal(scgp)->xbufsize = 0L;
 		scglocal(scgp)->xbuf = NULL;
 
-		for (b = 0; b < MAX_SCG; b++) {
+		for (b = 0; b < MAX_SCG+MAX_ATA; b++) {
 			scglocal(scgp)->buscookies[b] = (short)-1;
 			for (t = 0; t < MAX_TGT; t++) {
 				for (l = 0; l < MAX_LUN; l++)
@@ -391,7 +441,10 @@ scanopen:
 	 * look silly but there may be users that did boot from a SCSI hdd
 	 * and connected 4 CD/DVD writers to both IDE cables in the PC.
 	 */
-	if (use_ata) for (i = 0; i <= 25; i++) {
+#if LINUX_VERSION_CODE <= 0x020600
+	if (use_ata)
+#endif
+	for (i = 0; i <= 25; i++) {
 		js_snprintf(devname, sizeof (devname), "/dev/hd%c", i+'a');
 					/* O_NONBLOCK is dangerous */
 		f = open(devname, O_RDWR | O_NONBLOCK);
@@ -403,6 +456,10 @@ scanopen:
 			if (scgp->errstr)
 				js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 							"Cannot open '/dev/hd*'");
+#ifdef	EROFS
+			if (errno == EROFS)	/* should we rather open RO? */
+				continue;
+#endif
 			if (errno != ENOENT && errno != ENXIO && errno != ENODEV) {
 				if (scgp->errstr)
 					js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -426,12 +483,11 @@ scanopen:
 				nopen++;
 		}
 	}
-	if (use_ata && nopen == 0)
-		return (0);
 	if (nopen > 0 && scgp->errstr)
 		scgp->errstr[0] = '\0';
 
-	if (nopen == 0) for (i = 0; i < 32; i++) {
+	xopen = nopen;
+	if (!use_ata) for (i = 0; i < 32; i++) {
 		js_snprintf(devname, sizeof (devname), "/dev/sg%d", i);
 					/* O_NONBLOCK is dangerous */
 		f = open(devname, O_RDWR | O_NONBLOCK);
@@ -460,7 +516,7 @@ scanopen:
 	if (nopen > 0 && scgp->errstr)
 		scgp->errstr[0] = '\0';
 
-	if (nopen == 0) for (i = 0; i <= 25; i++) {
+	if (!use_ata && nopen == xopen) for (i = 0; i <= 25; i++) {
 		js_snprintf(devname, sizeof (devname), "/dev/sg%c", i+'a');
 					/* O_NONBLOCK is dangerous */
 		f = open(devname, O_RDWR | O_NONBLOCK);
@@ -554,7 +610,7 @@ openpg:
 #ifdef	USE_PG
 	nopen += pg_open(scgp, device);
 #endif
-	if (scgp->debug > 0) for (b = 0; b < MAX_SCG; b++) {
+	if (scgp->debug > 0) for (b = 0; b < MAX_SCG+MAX_ATA; b++) {
 		js_fprintf((FILE *)scgp->errfile,
 			"Bus: %d cookie: %X\n",
 			b, scglocal(scgp)->buscookies[b]);
@@ -583,7 +639,7 @@ scgo_close(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (b = 0; b < MAX_SCG; b++) {
+	for (b = 0; b < MAX_SCG+MAX_ATA; b++) {
 		if (b == scglocal(scgp)->pgbus)
 			continue;
 		scglocal(scgp)->buscookies[b] = (short)-1;
@@ -674,7 +730,8 @@ sg_setup(scgp, f, busno, tgt, tlun, ataidx)
 		}
 	}
 
-	if (Bus < 0 || Bus >= MAX_SCG || Target < 0 || Target >= MAX_TGT ||
+	if (Bus < 0 || Bus >= (MAX_SCG+MAX_ATA) ||
+					Target < 0 || Target >= MAX_TGT ||
 						Lun < 0 || Lun >= MAX_LUN) {
 		return (FALSE);
 	}
@@ -768,7 +825,7 @@ sg_mapbus(scgp, busno, ino)
 {
 	register int	i;
 
-	if (busno >= 0 && busno < MAX_SCG) {
+	if (busno >= 0 && busno < (MAX_SCG+MAX_ATA)) {
 		/*
 		 * SCSI_IOCTL_GET_BUS_NUMBER worked.
 		 * Now we have the problem that Linux does not properly number
@@ -784,7 +841,7 @@ sg_mapbus(scgp, busno, ino)
 			errmsgno(EX_BAD, "Warning Linux Bus mapping botch.\n");
 		return (busno);
 
-	} else for (i = 0; i < MAX_SCG; i++) {
+	} else for (i = 0; i < (MAX_SCG+MAX_ATA); i++) {
 		if (scglocal(scgp)->buscookies[i] == (short)-1) {
 			scglocal(scgp)->buscookies[i] = ino;
 			return (i);
@@ -822,7 +879,7 @@ sg_mapdev(scgp, f, busp, tgtp, lunp, chanp, inop, ataidx)
 		 * The badly designed /dev/hd* interface maps everything
 		 * to 0,0,0 so we need to do the mapping ourselves.
 		 */
-		*busp = ataidx / 2;
+		*busp = (ataidx / 2) + MAX_SCG;
 		*tgtp = ataidx % 2;
 		*lunp = 0;
 		if (chanp)
@@ -891,7 +948,7 @@ sg_raisedma(scgp, newmax)
 	val = 126*1024;
 
 	if (val > MAX_DMA_LINUX) {
-		for (b = 0; b < MAX_SCG; b++) {
+		for (b = 0; b < (MAX_SCG+MAX_ATA); b++) {
 			for (t = 0; t < MAX_TGT; t++) {
 				for (l = 0; l < MAX_LUN; l++) {
 					if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
@@ -911,7 +968,7 @@ sg_raisedma(scgp, newmax)
 	 */
 	if (newmax > val) {
 		val = newmax;
-		for (b = 0; b < MAX_SCG; b++) {
+		for (b = 0; b < (MAX_SCG+MAX_ATA); b++) {
 			for (t = 0; t < MAX_TGT; t++) {
 				for (l = 0; l < MAX_LUN; l++) {
 					if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
@@ -930,13 +987,28 @@ sg_raisedma(scgp, newmax)
 	 * To make sure we did not fail (the ioctl does not report errors)
 	 * we need to check the DMA limits. We return the smallest value.
 	 */
-	for (b = 0; b < MAX_SCG; b++) {
+	for (b = 0; b < (MAX_SCG+MAX_ATA); b++) {
 		for (t = 0; t < MAX_TGT; t++) {
 			for (l = 0; l < MAX_LUN; l++) {
+/*
+ * XXX Remove the SG_GET_MAX_TRANSFER_LENGTH after the
+ * XXX SG_GET_RESERVED_SIZE call returns the real max DMA.
+ */
+#ifdef	SG_GET_MAX_TRANSFER_LENGTH
+				int	v2;
+#endif
 				if ((f = SCGO_FILENO(scgp, b, t, l)) < 0)
 					continue;
 				if (ioctl(f, SG_GET_RESERVED_SIZE, &val) < 0)
 					continue;
+#ifdef	SG_GET_MAX_TRANSFER_LENGTH
+				if (ioctl(f, SG_GET_MAX_TRANSFER_LENGTH, &v2) >= 0) {
+					if (v2 < val)
+						val = v2;
+				}
+#else
+				sg_checkdma(f, &val);	/* This does not work */
+#endif
 				if (scgp->debug > 0) {
 					js_fprintf((FILE *)scgp->errfile,
 						"Target (%d,%d,%d): DMA max %d old max: %ld\n",
@@ -948,6 +1020,50 @@ sg_raisedma(scgp, newmax)
 		}
 	}
 	return ((long)newmax);
+}
+
+/*
+ * This is extremely ugly code. It would be nice if Linux could
+ * provide an ioctl to retrieve the max DMA size...
+ * XXX Remove this function completely at the same time when
+ * XXX SG_GET_MAX_TRANSFER_LENGTHis removed.
+ */
+LOCAL void
+sg_checkdma(f, valp)
+	int	f;
+	int	*valp;
+{
+#ifdef	SG_GET_PACK_ID
+	struct stat	sb;
+	int		val;
+	char		nbuf[80];
+	int		fx;
+
+	if (ioctl(f, SG_GET_PACK_ID, &val) < 0)	/* Only works with /dev/sg* */
+		return;
+	val = -1;
+	if (fstat(f, &sb) >= 0)			/* Try to get instance # */
+		val = minor(sb.st_rdev);
+	if (val < 0)
+		return;
+
+	js_snprintf(nbuf, sizeof (nbuf),
+	    "/sys/class/scsi_generic/sg%d/device/block/queue/max_hw_sectors_kb",
+	    val);
+	fx = open(nbuf, O_RDONLY | O_NDELAY);
+	if (fx >= 0) {
+		if (read(fx, nbuf, sizeof (nbuf)) > 0) {
+			val = -1;
+			astoi(nbuf, &val);
+			if (val > 0) {
+				val *= 1024;
+				if (*valp > val)
+					*valp = val;
+			}
+		}
+		close(fx);
+	}
+#endif	/* SG_GET_PACK_ID */
 }
 #endif
 
@@ -1028,6 +1144,14 @@ scgo_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (1000+MAX_ATA);
+	return (MAX_SCG+MAX_ATA);
+}
+
 LOCAL BOOL
 scgo_havebus(scgp, busno)
 	SCSI	*scgp;
@@ -1036,7 +1160,11 @@ scgo_havebus(scgp, busno)
 	register int	t;
 	register int	l;
 
-	if (busno < 0 || busno >= MAX_SCG)
+	if (busno >= 1000) {
+		if (busno >= (1000+MAX_ATA))
+			return (FALSE);
+		busno = busno - 1000 + MAX_SCG;
+	} else if (busno < 0 || busno >= MAX_SCG)
 		return (FALSE);
 
 	if (scgp->local == NULL)
@@ -1057,7 +1185,10 @@ scgo_fileno(scgp, busno, tgt, tlun)
 	int	tgt;
 	int	tlun;
 {
-	if (busno < 0 || busno >= MAX_SCG ||
+	if (busno >= 1000)
+		busno = busno - 1000 + MAX_SCG;
+
+	if (busno < 0 || busno >= (MAX_SCG+MAX_ATA) ||
 	    tgt < 0 || tgt >= MAX_TGT ||
 	    tlun < 0 || tlun >= MAX_LUN)
 		return (-1);
@@ -1161,9 +1292,15 @@ sg_settimeout(f, tmo)
 	int	f;
 	int	tmo;
 {
+#ifdef	USER_HZ
+	tmo *= USER_HZ;
+	if (tmo)
+		tmo += USER_HZ/2;
+#else
 	tmo *= HZ;
 	if (tmo)
 		tmo += HZ/2;
+#endif
 
 	if (ioctl(f, SG_SET_TIMEOUT, &tmo) < 0)
 		comerr("Cannot set SG_SET_TIMEOUT.\n");
@@ -1204,6 +1341,7 @@ scgo_send(scgp)
 	int		ret;
 	sg_io_hdr_t	sg_io;
 	struct timeval	to;
+static	uid_t		cureuid = 0;	/* XXX Hack until we have uid management */
 
 	if (scgp->fd < 0) {
 		sp->error = SCG_FATAL;
@@ -1236,7 +1374,19 @@ scgo_send(scgp)
 	sg_io.timeout = sp->timeout*1000;
 	sg_io.flags |= SG_FLAG_DIRECT_IO;
 
+	if (cureuid != 0)
+		seteuid(0);
+again:
+	errno = 0;
 	ret = ioctl(scgp->fd, SG_IO, &sg_io);
+	if (ret < 0 && geterrno() == EPERM) {	/* XXX Hack until we have uid management */
+		cureuid = geteuid();
+		if (seteuid(0) >= 0)
+			goto again;
+	}
+	if (cureuid != 0)
+		seteuid(cureuid);
+
 	if (scgp->debug > 0) {
 		js_fprintf((FILE *)scgp->errfile,
 				"ioctl ret: %d\n", ret);
@@ -1255,7 +1405,7 @@ scgo_send(scgp)
 			scglocal(scgp)->isold = 1;
 			return (sg_rwsend(scgp));
 		}
-		if (sp->ux_errno == ENXIO ||
+		if (sp->ux_errno == ENXIO || sp->ux_errno == EPERM ||
 		    sp->ux_errno == EINVAL || sp->ux_errno == EACCES) {
 			return (-1);
 		}
@@ -1633,7 +1783,7 @@ sg_rwsend(scgp)
 	if (scgp->verbose > 0 && scgp->debug > 0) {
 #ifdef	SG_GET_BUFSIZE
 		js_fprintf((FILE *)scgp->errfile,
-				"status: 0x%08X pack_len: %d, reply_len: %d pack_id: %d result: %d wn: %d gn: %d cdb_len: %d sense_len: %d sense[0]: %02X\n",
+"status: 0x%08X pack_len: %d, reply_len: %d pack_id: %d result: %d wn: %d gn: %d cdb_len: %d sense_len: %d sense[0]: %02X\n",
 				GETINT(sgp->hd.sg_cmd_status),
 				GETINT(sgp->hd.pack_len),
 				GETINT(sgp->hd.reply_len),

@@ -1,16 +1,15 @@
-/* @(#)udf_fs.h	1.2 04/03/01 Copyright 2001-2004 J. Schilling */
+/* @(#)udf_fs.h	1.3 07/06/24 Copyright 2001-2007 J. Schilling */
 /*
  * udf_fs.h - UDF structure definitions for mkisofs
  *
  * Written by Ben Rudiak-Gould (2001).
  *
- * Copyright 2001-2004 J. Schilling.
+ * Copyright 2001-2007 J. Schilling.
  */
 /*
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * it under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -85,6 +84,7 @@ typedef struct udf_tag_ {			/* ECMA-167 3/7.2 */
 #define	UDF_TAGID_FILE_IDENT_DESC		257
 #define	UDF_TAGID_FILE_ENTRY			261
 #define	UDF_TAGID_EXT_ATTRIBUTE_HEADER_DESC	262
+#define	UDF_TAGID_EXT_FILE_ENTRY		266
 
 typedef struct udf_extent_ad_ {			/* ECMA-167 3/7.1 */
 /*0*/	udf_Uint32	extent_length;
@@ -348,6 +348,9 @@ typedef struct udf_icbtag_ {			/* TR/71 3.5.2 */
 
 #define	UDF_ICBTAG_FILETYPE_DIRECTORY	4	/* ECMA-167 4/14.6.6 */
 #define	UDF_ICBTAG_FILETYPE_BYTESEQ	5
+#define	UDF_ICBTAG_FILETYPE_EA	8
+#define	UDF_ICBTAG_FILETYPE_SYMLINK	12
+#define	UDF_ICBTAG_FILETYPE_STREAMDIR 13
 
 #define	UDF_ICBTAG_FLAG_MASK_AD_TYPE	7	/* TR/71 3.5.3 */
 #define	UDF_ICBTAG_FLAG_SHORT_AD	0
@@ -361,6 +364,7 @@ typedef struct udf_icbtag_ {			/* TR/71 3.5.2 */
 #define	UDF_ICBTAG_FLAG_SYSTEM		1024
 #define	UDF_ICBTAG_FLAG_TRANSFORMED	2048
 #define	UDF_ICBTAG_FLAG_MULTI_VERSIONS	4096
+#define	UDF_ICBTAG_FLAG_STREAM	8192
 
 typedef struct udf_ext_attribute_header_desc_ {	/* TR/71 3.6.1 */
 /* 0*/	udf_tag		desc_tag;
@@ -368,6 +372,17 @@ typedef struct udf_ext_attribute_header_desc_ {	/* TR/71 3.6.1 */
 /*20*/	udf_Uint32	application_attributes_location;
 /*24*/
 } udf_ext_attribute_header_desc;
+
+typedef struct udf_ext_attribute_common_ {	/* TR/71 3.6.{2,3} */
+/* 0*/	udf_Uint32	attribute_type;
+/* 4*/	udf_Uint8	attribute_subtype;
+/* 5*/	udf_zerobyte	reserved[3];
+/* 8*/	udf_Uint32	attribute_length;
+/*12*/	udf_Uint32	impl_use_length;
+/*16*/	udf_EntityID	impl_ident;
+/*48*/	udf_Uint16	header_checksum;
+/*50*/
+} udf_ext_attribute_common;
 
 typedef struct udf_ext_attribute_free_ea_space_ {	/* TR/71 3.6.{2,3} */
 /* 0*/	udf_Uint32	attribute_type;		/* = 2048 */
@@ -400,6 +415,151 @@ typedef struct udf_ext_attribute_dvd_cgms_info_ {	/* TR/71 3.6.{2,4} */
 #define	UDF_CGMSINFO_UNLIMITED_COPIES		0
 #define	UDF_CGMSINFO_FLAG_COPYRIGHTED_MATERIAL	128
 
+
+/* start mac finder info defs */
+typedef struct udf_point_ {
+	udf_Uint16	v;
+	udf_Uint16	h;
+} udf_point;
+
+typedef struct udf_rect_ {
+	udf_Uint16	top;
+	udf_Uint16	left;
+	udf_Uint16	bottom;
+	udf_Uint16	right;
+} udf_rect;
+
+typedef struct udf_dinfo_ {
+	udf_rect	frrect;
+	udf_Uint16	frflags;
+	udf_point	frlocation;
+	udf_Uint16	frview;
+} udf_dinfo;
+
+typedef struct udf_dxinfo_ {
+	udf_point	frscroll;
+	udf_Uint32	fropenchain;
+	udf_Uint8	frscript;
+	udf_Uint8	frxflags;
+	udf_Uint16	frcomment;
+	udf_Uint32	frputaway;
+} udf_dxinfo;
+
+typedef struct udf_finfo_ {
+	udf_Uint32	fdtype;
+	udf_Uint32	fdcreator;
+	udf_Uint16	fdflags;
+	udf_point	fdlocation;
+	udf_Uint16	fdfldr;
+} udf_finfo;
+
+typedef struct udf_fxinfo_ {
+	udf_Uint16	fdiconid;
+	udf_Uint8	unused[6];
+	udf_Uint8	fdscript;
+	udf_Uint8	fdxflags;
+	udf_Uint16	fdcomment;
+	udf_Uint32	fdputaway;
+} udf_fxinfo;
+
+typedef struct udf_mac_file_finderinfo_ {
+/* 0*/	udf_Uint16	headerchecksum;
+/* 2*/	udf_Uint16	reserved;
+/* 4*/	udf_Uint32	parentdirid;
+/* 8*/	udf_finfo	fileinfo;
+/*24*/	udf_fxinfo	fileextinfo;
+/*40*/	udf_Uint32	resourcedatalength;
+/*44*/	udf_Uint32	resourcealloclength;
+/*48*/
+} udf_mac_file_finderinfo;
+
+typedef struct udf_mac_dir_volumeinfo_ {
+/* 0*/	udf_Uint16	headerchecksum;
+/* 2*/	udf_timestamp	moddate;
+/* 14*/	udf_timestamp	budate;
+/* 26*/	udf_Uint32	volfinderinfo[8];	/* ?? */
+/* 58*/ udf_Uint8	unknown[2];	/* ?? */
+/* 60 */
+} udf_mac_dir_volumeinfo;
+
+
+typedef struct udf_mac_dir_finderinfo_ {
+/* 0*/	udf_Uint16	headerchecksum;
+/* 2*/	udf_Uint16	reserved;
+/* 4*/	udf_Uint32	parentdirid;
+/* 8*/	udf_dinfo	dirinfo;
+/*24*/	udf_dxinfo	dirextinfo;
+/*40*/
+} udf_mac_dir_finderinfo;
+
+typedef struct udf_ext_attribute_file_macfinderinfo_ {
+/* 0*/	udf_Uint32	attribute_type;		/* = 2048 */
+/* 4*/	udf_Uint8	attribute_subtype;	/* = 1 */
+/* 5*/	udf_zerobyte	reserved[3];
+/* 8*/	udf_Uint32	attribute_length;	/* = 48 + 48 */
+/*12*/	udf_Uint32	impl_use_length;	/* = 48 */
+/*16*/	udf_EntityID	impl_ident;		/* "*UDF Mac FinderInfo" */
+/*48*/	udf_mac_file_finderinfo	finderinfo;
+/*96*/
+} udf_ext_attribute_file_macfinderinfo;
+
+typedef struct udf_ext_attribute_dir_macvolinfo_ {
+/* 0*/	udf_Uint32	attribute_type;		/* = 2048 */
+/* 4*/	udf_Uint8	attribute_subtype;	/* = 1 */
+/* 5*/	udf_zerobyte	reserved[3];
+/* 8*/	udf_Uint32	attribute_length;	/* = 48 + 60 */
+/*12*/	udf_Uint32	impl_use_length;	/* = 60 */
+/*16*/	udf_EntityID	impl_ident;		/* "*UDF Mac VolumeInfo" */
+
+/*48*/	udf_mac_dir_volumeinfo	volumeinfo;
+/*96*/
+} udf_ext_attribute_dir_macvolinfo;
+
+typedef struct udf_ext_attribute_dir_macfinderinfo_ {
+/* 0*/	udf_Uint32	attribute_type;		/* = 2048 */
+/* 4*/	udf_Uint8	attribute_subtype;	/* = 1 */
+/* 5*/	udf_zerobyte	reserved[3];
+/* 8*/	udf_Uint32	attribute_length;	/* = 48 + 40 */
+/*12*/	udf_Uint32	impl_use_length;	/* = 40 */
+/*16*/	udf_EntityID	impl_ident;		/* "*UDF Mac FinderInfo" */
+/*48*/	udf_mac_dir_finderinfo	finderinfo;
+/*96*/
+} udf_ext_attribute_dir_macfinderinfo;
+
+#define	EXTATTR_IMP_USE 2048
+/* end mac finder info defs */
+
+
+typedef struct udf_macvolume_filed_entry_ {		/* TR/71 3.5.1 */
+/* 0*/	udf_tag		desc_tag;
+/*16*/	udf_icbtag	icb_tag;
+/*36*/	udf_Uint32	uid;
+/*40*/	udf_Uint32	gid;
+/*44*/	udf_Uint32	permissions;
+/*48*/	udf_Uint16	file_link_count;
+/*50*/	udf_Uint8	record_format;
+/*51*/	udf_Uint8	record_display_attributes;
+/*52*/	udf_Uint32	record_length;
+/*56*/	udf_Uint64	info_length;
+/*64*/	udf_Uint64	logical_blocks_recorded;
+/*72*/	udf_timestamp	access_time;
+/*84*/	udf_timestamp	modification_time;
+/*96*/	udf_timestamp	attribute_time;
+/*108*/	udf_Uint32	checkpoint;
+/*112*/	udf_long_ad	ext_attribute_icb;
+/*128*/	udf_EntityID	impl_ident;
+/*160*/	udf_Uint64	unique_id;
+/*168*/	udf_Uint32	length_of_ext_attributes;
+/*172*/	udf_Uint32	length_of_allocation_descs;
+udf_ext_attribute_header_desc			ext_attribute_header;
+udf_ext_attribute_free_ea_space			ext_attribute_free_ea_space;
+udf_ext_attribute_dvd_cgms_info			ext_attribute_dvd_cgms_info;
+udf_ext_attribute_dir_macvolinfo		ext_attribute_macvolumeinfo;
+udf_ext_attribute_dir_macfinderinfo		ext_attribute_macfinderinfo;
+udf_short_ad							allocation_desc;
+} udf_macvolume_filed_entry;
+
+
 typedef struct udf_file_entry_ {		/* TR/71 3.5.1 */
 /* 0*/	udf_tag		desc_tag;
 /*16*/	udf_icbtag	icb_tag;
@@ -428,10 +588,111 @@ typedef struct udf_file_entry_ {		/* TR/71 3.5.1 */
 /*308*/	udf_short_ad	allocation_desc;
 /*316*/
 #else
-/*176*/	udf_short_ad	allocation_desc;
-/*184*/
+	udf_ext_attribute_header_desc	ext_attribute_header;
+	udf_ext_attribute_free_ea_space	ext_attribute_free_ea_space;
+	udf_ext_attribute_dvd_cgms_info	ext_attribute_dvd_cgms_info;
+	udf_ext_attribute_file_macfinderinfo	ext_attribute_macfinderinfo;
+	udf_short_ad	allocation_desc;
 #endif
 } udf_file_entry;
+
+typedef struct udf_attr_file_entry_ {		/* TR/71 3.5.1 */
+/* 0*/	udf_tag		desc_tag;
+/*16*/	udf_icbtag	icb_tag;
+/*36*/	udf_Uint32	uid;
+/*40*/	udf_Uint32	gid;
+/*44*/	udf_Uint32	permissions;
+/*48*/	udf_Uint16	file_link_count;
+/*50*/	udf_Uint8	record_format;
+/*51*/	udf_Uint8	record_display_attributes;
+/*52*/	udf_Uint32	record_length;
+/*56*/	udf_Uint64	info_length;
+/*64*/	udf_Uint64	logical_blocks_recorded;
+/*72*/	udf_timestamp	access_time;
+/*84*/	udf_timestamp	modification_time;
+/*96*/	udf_timestamp	attribute_time;
+/*108*/	udf_Uint32	checkpoint;
+/*112*/	udf_long_ad	ext_attribute_icb;
+/*128*/	udf_EntityID	impl_ident;
+/*160*/	udf_Uint64	unique_id;
+/*168*/	udf_Uint32	length_of_ext_attributes;
+/*172*/	udf_Uint32	length_of_allocation_descs;
+#if 0
+/*176*/	udf_ext_attribute_header_desc	ext_attribute_header;
+/*200*/	udf_ext_attribute_free_ea_space	ext_attribute_free_ea_space;
+/*252*/	udf_ext_attribute_dvd_cgms_info	ext_attribute_dvd_cgms_info;
+/*308*/	udf_short_ad	allocation_desc;
+/*316*/
+#else
+	udf_short_ad	allocation_desc;
+#endif
+} udf_attr_file_entry;
+
+typedef struct udf_filed_entry_ {		/* TR/71 3.5.1 */
+/* 0*/	udf_tag		desc_tag;
+/*16*/	udf_icbtag	icb_tag;
+/*36*/	udf_Uint32	uid;
+/*40*/	udf_Uint32	gid;
+/*44*/	udf_Uint32	permissions;
+/*48*/	udf_Uint16	file_link_count;
+/*50*/	udf_Uint8	record_format;
+/*51*/	udf_Uint8	record_display_attributes;
+/*52*/	udf_Uint32	record_length;
+/*56*/	udf_Uint64	info_length;
+/*64*/	udf_Uint64	logical_blocks_recorded;
+/*72*/	udf_timestamp	access_time;
+/*84*/	udf_timestamp	modification_time;
+/*96*/	udf_timestamp	attribute_time;
+/*108*/	udf_Uint32	checkpoint;
+/*112*/	udf_long_ad	ext_attribute_icb;
+/*128*/	udf_EntityID	impl_ident;
+/*160*/	udf_Uint64	unique_id;
+/*168*/	udf_Uint32	length_of_ext_attributes;
+/*172*/	udf_Uint32	length_of_allocation_descs;
+#if 0
+/*176*/	udf_ext_attribute_header_desc	ext_attribute_header;
+/*200*/	udf_ext_attribute_free_ea_space	ext_attribute_free_ea_space;
+/*252*/	udf_ext_attribute_dvd_cgms_info	ext_attribute_dvd_cgms_info;
+/*308*/	udf_short_ad	allocation_desc;
+/*316*/
+#else
+udf_ext_attribute_header_desc			ext_attribute_header;
+udf_ext_attribute_free_ea_space			ext_attribute_free_ea_space;
+udf_ext_attribute_dvd_cgms_info			ext_attribute_dvd_cgms_info;
+udf_ext_attribute_dir_macfinderinfo		ext_attribute_macfinderinfo;
+udf_short_ad							allocation_desc;
+#endif
+} udf_filed_entry;
+
+
+typedef struct udf_ext_file_entry_ {		/* ECMA 167/3 4/50 */
+/* 0*/	udf_tag		desc_tag;	/* 266 */
+/*16*/	udf_icbtag	icb_tag;
+/*36*/	udf_Uint32	uid;
+/*40*/	udf_Uint32	gid;
+/*44*/	udf_Uint32	permissions;
+/*48*/	udf_Uint16	file_link_count;
+/*50*/	udf_Uint8	record_format;
+/*51*/	udf_Uint8	record_display_attributes;
+/*52*/	udf_Uint32	record_length;
+/*56*/	udf_Uint64	info_length;
+/* */		udf_Uint64		object_size;
+/*64+8*/	udf_Uint64		logical_blocks_recorded;
+/*72*/		udf_timestamp	access_time;
+/*84*/		udf_timestamp	modification_time;
+/* */		udf_timestamp	creation_time;
+/*96+12*/	udf_timestamp	attribute_time;
+/*108*/		udf_Uint32		checkpoint;
+/* */		udf_Uint32		reserved;
+/*112+4*/	udf_long_ad		ext_attribute_icb;
+/* */		udf_long_ad		stream_dir_icb;
+/*128+16*/	udf_EntityID	impl_ident;
+/*160*/		udf_Uint64		unique_id;
+/*168*/		udf_Uint32		length_of_ext_attributes;
+/*172*/		udf_Uint32		length_of_allocation_descs;
+			udf_short_ad	allocation_desc;
+} udf_ext_file_entry;
+
 
 /*
  * (U,G,O) = (owner, group, other)
@@ -441,10 +702,13 @@ typedef struct udf_file_entry_ {		/* TR/71 3.5.1 */
  * but it is not permitted to set them on DVD Read-Only media.
  */
 #define	UDF_FILEENTRY_PERMISSION_OX	1	/* TR/71 3.5.4 */
+#define	UDF_FILEENTRY_PERMISSION_OW	2
 #define	UDF_FILEENTRY_PERMISSION_OR	4
 #define	UDF_FILEENTRY_PERMISSION_GX	32
+#define	UDF_FILEENTRY_PERMISSION_GW	64
 #define	UDF_FILEENTRY_PERMISSION_GR	128
 #define	UDF_FILEENTRY_PERMISSION_UX	1024
+#define	UDF_FILEENTRY_PERMISSION_UW	2048
 #define	UDF_FILEENTRY_PERMISSION_UR	4096
 
 

@@ -1,9 +1,20 @@
-/* @(#)cdda2wav.h	1.4 00/02/13 Copyright 1998,1999,2000 Heiko Eissfeldt */
-/***
- * CopyPolicy: GNU Public License 2 applies
+/* @(#)cdda2wav.h	1.8 06/05/13 Copyright 1998,1999,2000 Heiko Eissfeldt, Copyright 2004-2006 J. Schilling */
+/*
  * Copyright (C) by Heiko Eissfeldt
+ * Copyright (c) 2004-2006 J. Schilling
  *
  * prototypes from cdda2wav.c
+ */
+/*
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * See the file CDDL.Schily.txt in this distribution for details.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 #ifdef max
 #undef max
@@ -11,34 +22,34 @@
 #ifdef min
 #undef min
 #endif
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#define min(a,b) ((a) < (b) ? (a) : (b))
+#define	max(a, b)	((a) > (b) ? (a) : (b))
+#define	min(a, b)	((a) < (b) ? (a) : (b))
 
 
 /* verbose levels */
-#define SHOW_TOC	1
-#define SHOW_SUMMARY	2
-#define SHOW_INDICES	4
-#define SHOW_MCN	8
-#define SHOW_ISRC	16
-#define SHOW_STARTPOSITIONS	32
-#define SHOW_TITLES	64
-#define SHOW_JUSTAUDIOTRACKS	128
-#define SHOW_MAX	255
+#define	SHOW_TOC		1
+#define	SHOW_SUMMARY		2
+#define	SHOW_INDICES		4
+#define	SHOW_MCN		8
+#define	SHOW_ISRC		16
+#define	SHOW_STARTPOSITIONS	32
+#define	SHOW_TITLES		64
+#define	SHOW_JUSTAUDIOTRACKS	128
+#define	SHOW_MAX		255
 
 /* Endianess */
-#define GUESS (-2)
-#define NONE (-1)
-#define LITTLE 0
-#define BIG 1
+#define	GUESS			(-2)
+#define	NONE			(-1)
+#define	LITTLE			0
+#define	BIG			1
 
-void FatalError __PR((const char *szMessage, ...));
-void AnalyzeQchannel __PR(( unsigned frame ));
-long SamplesNeeded __PR(( long amount, long undersampling));
-unsigned int get_current_track __PR(( void ));
+extern	void		FatalError	__PR((int err, const char *szMessage, ...));
+extern	void		AnalyzeQchannel	__PR((unsigned frame));
+extern	long		SamplesNeeded	__PR((long amount, long undersampling));
+extern	unsigned int	get_current_track __PR((void));
 
-#if defined (sun) && !defined(SVR4)
-#define  atexit(f) on_exit(f, 0)
+#if defined(sun) && !defined(SVR4)
+#define	atexit(f)	on_exit(f, 0)
 #endif
 
 #ifndef	_LINUX_CDROM_H
@@ -47,37 +58,37 @@ unsigned int get_current_track __PR(( void ));
 /*
  * some fix numbers
  */
-#define CD_MINS             74 /* max. minutes per CD, not really a limit */
-#define CD_SECS             60 /* seconds per minute */
-#define CD_FRAMES           75 /* frames per second */
+#define	CD_MINS		74	/* max. minutes per CD, not really a limit */
+#define	CD_SECS		60	/* seconds per minute */
+#define	CD_FRAMES	75	/* frames per second */
 
-#define CD_SYNC_SIZE        12 /* 12 sync bytes per raw data frame, not transfered by the drive */
-#define CD_HEAD_SIZE         4 /* header (address) bytes per raw data frame */
-#define CD_SUBHEAD_SIZE      8 /* subheader bytes per raw XA data frame */
-#define CD_XA_HEAD        (CD_HEAD_SIZE+CD_SUBHEAD_SIZE) /* "before data" part of raw XA frame */
-#define CD_XA_SYNC_HEAD   (CD_SYNC_SIZE+CD_XA_HEAD)/* sync bytes + header of XA frame */
+#define	CD_SYNC_SIZE	12	/* 12 sync bytes per raw data frame, not transfered by the drive */
+#define	CD_HEAD_SIZE	4	/* header (address) bytes per raw data frame */
+#define	CD_SUBHEAD_SIZE	8	/* subheader bytes per raw XA data frame */
+#define	CD_XA_HEAD	(CD_HEAD_SIZE+CD_SUBHEAD_SIZE) /* "before data" part of raw XA frame */
+#define	CD_XA_SYNC_HEAD	(CD_SYNC_SIZE+CD_XA_HEAD) /* sync bytes + header of XA frame */
 
-#define CD_FRAMESIZE      2048 /* bytes per frame, "cooked" mode */
-#define CD_FRAMESIZE_RAW  2352 /* bytes per frame, "raw" mode */
+#define	CD_FRAMESIZE	2048	/* bytes per frame, "cooked" mode */
+#define	CD_FRAMESIZE_RAW 2352	/* bytes per frame, "raw" mode */
 /* most drives don't deliver everything: */
-#define CD_FRAMESIZE_RAW1 (CD_FRAMESIZE_RAW-CD_SYNC_SIZE) /* 2340 */
-#define CD_FRAMESIZE_RAW0 (CD_FRAMESIZE_RAW-CD_SYNC_SIZE-CD_HEAD_SIZE) /* 2336 */
+#define	CD_FRAMESIZE_RAW1 (CD_FRAMESIZE_RAW-CD_SYNC_SIZE) /* 2340 */
+#define	CD_FRAMESIZE_RAW0 (CD_FRAMESIZE_RAW-CD_SYNC_SIZE-CD_HEAD_SIZE) /* 2336 */
 /* Optics drive also has a 'read all' mode: */
-#define CD_FRAMESIZE_RAWER 2646 /* bytes per frame */
+#define	CD_FRAMESIZE_RAWER 2646 /* bytes per frame */
 
-#define CD_EDC_SIZE         4 /* bytes EDC per most raw data frame types */
-#define CD_ZERO_SIZE        8 /* bytes zero per yellow book mode 1 frame */
-#define CD_ECC_SIZE       276 /* bytes ECC per most raw data frame types */
-#define CD_XA_TAIL        (CD_EDC_SIZE+CD_ECC_SIZE) /* "after data" part of raw XA frame */
+#define	CD_EDC_SIZE	4	/* bytes EDC per most raw data frame types */
+#define	CD_ZERO_SIZE	8	/* bytes zero per yellow book mode 1 frame */
+#define	CD_ECC_SIZE	276	/* bytes ECC per most raw data frame types */
+#define	CD_XA_TAIL	(CD_EDC_SIZE+CD_ECC_SIZE) /* "after data" part of raw XA frame */
 
-#define CD_FRAMESIZE_SUB    96 /* subchannel data "frame" size */
-#define CD_MSF_OFFSET      150 /* MSF numbering offset of first frame */
+#define	CD_FRAMESIZE_SUB 96	/* subchannel data "frame" size */
+#define	CD_MSF_OFFSET	150	/* MSF numbering offset of first frame */
 
-#define CD_CHUNK_SIZE       24 /* lowest-level "data bytes piece" */
-#define CD_NUM_OF_CHUNKS    98 /* chunks per frame */
+#define	CD_CHUNK_SIZE	24	/* lowest-level "data bytes piece" */
+#define	CD_NUM_OF_CHUNKS 98 	/* chunks per frame */
 
-#define CD_FRAMESIZE_XA CD_FRAMESIZE_RAW1 /* obsolete name */
-#define CD_BLOCK_OFFSET    CD_MSF_OFFSET /* obsolete name */
+#define	CD_FRAMESIZE_XA CD_FRAMESIZE_RAW1 /* obsolete name */
+#define	CD_BLOCK_OFFSET    CD_MSF_OFFSET /* obsolete name */
 
 /*
  * the raw frame layout:
@@ -130,8 +141,8 @@ unsigned int get_current_track __PR(( void ));
 #define	CDROM_MODE1_SIZE	512
 #else
 #define	CDROM_MODE1_SIZE	2048
-#endif /*FIVETWELVE*/
-#define	CDROM_MODE2_SIZE	2336
-
 #endif
 
+#define	CDROM_MODE2_SIZE	2336
+
+#endif	/* _LINUX_CDROM_H */

@@ -1,12 +1,12 @@
-/* @(#)ifo_read.c	1.5 04/03/04 joerg */
+/* @(#)ifo_read.c	1.14 09/11/25 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)ifo_read.c	1.5 04/03/04 joerg";
+static	UConst char sccsid[] =
+	"@(#)ifo_read.c	1.14 09/11/25 joerg";
 #endif
 /*
  * Copyright (C) 2002 Olaf Beck <olaf_sc@yahoo.com>
- *		     Jörg Schilling <schilling@fokus.gmd.de>
- *		     (making the code portable)
+ * Copyright (C) 2002-2009 Jörg Schilling <schilling@fokus.gmd.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,31 +35,30 @@ static	char sccsid[] =
  */
 #ifdef DVD_VIDEO
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <fctldefs.h>
-#include <utypes.h>
-#include <schily.h>
+#include <schily/fcntl.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
 
 #include "ifo_read.h"
 #include "bswap.h"
 
-LOCAL	ifo_handle_t *	ifoReadVTSI	__PR((int file, ifo_handle_t * ifofile));
-LOCAL	ifo_handle_t *	ifoReadVGMI	__PR((int file, ifo_handle_t * ifofile));
-EXPORT	ifo_handle_t *	ifoOpen		__PR((dvd_reader_t *dvd, int title));
+LOCAL	ifo_handle_t	*ifoReadVTSI	__PR((int file, ifo_handle_t *ifofile));
+LOCAL	ifo_handle_t	*ifoReadVGMI	__PR((int file, ifo_handle_t *ifofile));
+EXPORT	ifo_handle_t	*ifoOpen		__PR((dvd_reader_t *dvd, int title));
 LOCAL	void		ifoFree_TT_SRPT	__PR((ifo_handle_t *ifofile));
-EXPORT	void		ifoClose	__PR((ifo_handle_t * ifofile));
+EXPORT	void		ifoClose	__PR((ifo_handle_t *ifofile));
 
 
 LOCAL ifo_handle_t *
 ifoReadVTSI(file, ifofile)
 	int file;
-	ifo_handle_t * ifofile;
+	ifo_handle_t	*ifofile;
 {
 	off_t offset;
 	UInt32_t sector;
 
-	vtsi_mat_t * vtsi_mat;
+	vtsi_mat_t	*vtsi_mat;
 
 	/* Make the VMG part NULL */
 	ifofile->vmgi_mat = NULL;
@@ -79,21 +78,13 @@ ifoReadVTSI(file, ifofile)
 	offset = 12;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -107,21 +98,13 @@ ifoReadVTSI(file, ifofile)
 	offset = 28;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -136,22 +119,14 @@ ifoReadVTSI(file, ifofile)
 	offset = 192;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -166,22 +141,14 @@ ifoReadVTSI(file, ifofile)
 	offset = 196;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -197,7 +164,7 @@ ifoReadVTSI(file, ifofile)
 LOCAL ifo_handle_t *
 ifoReadVGMI(file, ifofile)
 	int file;
-	ifo_handle_t * ifofile;
+	ifo_handle_t	*ifofile;
 {
 	off_t	offset;
 	Uint	counter;
@@ -224,21 +191,13 @@ ifoReadVGMI(file, ifofile)
 	offset = 12;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -252,22 +211,14 @@ ifoReadVGMI(file, ifofile)
 	offset = 28;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -282,22 +233,14 @@ ifoReadVGMI(file, ifofile)
 	offset = 62;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 
 	if (read(file, &titles, sizeof (titles)) != sizeof (titles)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -312,22 +255,14 @@ ifoReadVGMI(file, ifofile)
 	offset = 192;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -342,22 +277,14 @@ ifoReadVGMI(file, ifofile)
 	offset = 196;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
 
 
 	if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		ifoClose(ifofile);
 		return (0);
 	}
@@ -381,20 +308,12 @@ ifoReadVGMI(file, ifofile)
 	offset = 2048 * vmgi_mat->tt_srpt;
 
 	if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to seek VIDEO_TS.IFO.\n");
 		return (0);
 	}
 
 	if (read(file, &titles, sizeof (titles)) != sizeof (titles)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
 		return (0);
 	}
 
@@ -414,21 +333,13 @@ ifoReadVGMI(file, ifofile)
 	for (counter = 0; counter < tt_srpt->nr_of_srpts; counter++) {
 		offset = (2048 * vmgi_mat->tt_srpt) + 8 + (counter * 12) + 8;
 		if (lseek(file, offset, SEEK_SET) != offset) {
-#ifdef	USE_LIBSCHILY
-			errmsg("Faild to seek VIDEO_TS.IFO\n");
-#else
-			fprintf(stderr, "Faild to seek VIDEO_TS.IFO\n");
-#endif
+			errmsg("Failed to seek VIDEO_TS.IFO.\n");
 			ifoClose(ifofile);
 			return (0);
 		}
 
 		if (read(file, &sector, sizeof (sector)) != sizeof (sector)) {
-#ifdef	USE_LIBSCHILY
-			errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-			fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+			errmsg("Failed to read VIDEO_TS.IFO.\n");
 			ifoClose(ifofile);
 			return (0);
 		}
@@ -472,11 +383,7 @@ ifoOpen(dvd, title)
 	}
 
 	if ((file = open(full_path, O_RDONLY | O_BINARY)) == -1) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to open %s\n", full_path);
-#else
-		fprintf(stderr, "Faild to open %s\n", full_path);
-#endif
+		errmsg("Failed to open '%s'.\n", full_path);
 		free(ifofile);
 		return (0);
 	}
@@ -486,11 +393,8 @@ ifoOpen(dvd, title)
 	/* Determine if we have a VMGI or VTSI */
 
 	if (read(file, identifier, sizeof (identifier)) != sizeof (identifier)) {
-#ifdef	USE_LIBSCHILY
-		errmsg("Faild to read VIDEO_TS.IFO\n");
-#else
-		fprintf(stderr, "Faild to read VIDEO_TS.IFO\n");
-#endif
+		errmsg("Failed to read VIDEO_TS.IFO.\n");
+		free(ifofile);
 		return (0);
 	}
 
@@ -503,11 +407,7 @@ ifoOpen(dvd, title)
 		close(file);
 		return (ifofile);
 	} else {
-#ifdef	USE_LIBSCHILY
-		errmsgno(EX_BAD, "Giving up this is not a valid IFO file\n");
-#else
-		fprintf(stderr, "Giving up this is not a valid IFO file\n");
-#endif
+		errmsgno(EX_BAD, "Giving up this is not a valid IFO file.\n");
 		close(file);
 		free(ifofile);
 		ifofile = 0;
@@ -533,7 +433,7 @@ ifoFree_TT_SRPT(ifofile)
 
 EXPORT void
 ifoClose(ifofile)
-	ifo_handle_t * ifofile;
+	ifo_handle_t	*ifofile;
 {
 
 	if (!ifofile)
@@ -542,7 +442,7 @@ ifoClose(ifofile)
 	ifoFree_TT_SRPT(ifofile);
 
 	if (ifofile->vmgi_mat) {
-		free(ifofile->vtsi_mat);
+		free(ifofile->vmgi_mat);
 	}
 
 	if (ifofile->vtsi_mat) {

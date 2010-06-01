@@ -1,7 +1,8 @@
-/* @(#)apprentice.c	1.5 03/03/06 joerg */
+/* @(#)apprentice.c	1.13 09/07/11 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)apprentice.c	1.5 03/03/06 joerg";
+static	UConst char sccsid[] =
+	"@(#)apprentice.c	1.13 09/07/11 joerg";
 #endif
 /*
 **	find file types by using a modified "magic" file
@@ -17,41 +18,54 @@ static	char sccsid[] =
  * Copyright (c) Ian F. Darwin, 1987.
  * Written by Ian F. Darwin.
  *
- * This software is not subject to any license of the American Telephone
- * and Telegraph Company or of the Regents of the University of California.
+ * This software is not subject to any export provision of the United States
+ * Department of Commerce, and may be exported to any country or planet.
  *
- * Permission is granted to anyone to use this software for any purpose on
- * any computer system, and to alter it and redistribute it freely, subject
- * to the following restrictions:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice immediately at the beginning of the file, without modification,
+ *    this list of conditions, and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * 1. The author is not responsible for the consequences of use of this
- *    software, no matter how awful, even if they arise from flaws in it.
- *
- * 2. The origin of this software must not be misrepresented, either by
- *    explicit claim or by omission.  Since few users ever read sources,
- *    credits must appear in the documentation.
- *
- * 3. Altered versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.  Since few users
- *    ever read sources, credits must appear in the documentation.
- *
- * 4. This notice may not be removed or altered.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <ctype.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/ctype.h>
 #include "file.h"
+#include <schily/schily.h>
 
 #ifndef	lint
-static char *moduleid = 
+static UConst char moduleid[] = 
 	"@(#)$Id: apprentice.c,v 1.25 1997/01/15 17:23:24 christos Exp $";
 #endif	/* lint */
 
 int	__f_nmagic = 0;		/* number of valid magic[]s 		*/
+#if	defined(IS_MACOS_X)
+/*
+ * The MAC OS X linker does not grok "common" varaibles.
+ * Make __f_magic a "data" variable.
+ */
+struct  magic *__f_magic = 0;	/* array of magic entries		*/
+#else
 struct  magic *__f_magic;	/* array of magic entries		*/
+#endif
 
 #define	EATAB {while (isascii((unsigned char) *l) && \
 		      isspace((unsigned char) *l))  ++l;}
@@ -61,7 +75,7 @@ struct  magic *__f_magic;	/* array of magic entries		*/
 
 static int getvalue	__PR((struct magic *, char **));
 static int hextoint	__PR((int));
-static char *getstr	__PR((char *, char *, int, int *));
+static char *apgetstr	__PR((char *, char *, int, int *));
 static int parse	__PR((char *, int *, int));
 static void eatsize	__PR((char **));
 
@@ -395,7 +409,7 @@ char **p;
 	int slen;
 
 	if (m->type == STRING) {
-		*p = getstr(*p, m->value.s, sizeof(m->value.s), &slen);
+		*p = apgetstr(*p, m->value.s, sizeof(m->value.s), &slen);
 		m->vallen = slen;
 	} else
 		if (m->reln != 'x') {
@@ -412,7 +426,7 @@ char **p;
  * Return updated scan pointer as function result.
  */
 static char *
-getstr(s, p, plen, slen)
+apgetstr(s, p, plen, slen)
 register char	*s;
 register char	*p;
 int	plen, *slen;

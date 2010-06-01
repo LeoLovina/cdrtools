@@ -1,4 +1,4 @@
-# @(#)local.cnf.in       1.6 03/09/04 Copyright 1998-2002 Heiko Eissfeldt
+# @(#)local.cnf.in       1.10 09/12/28 Copyright 1998-2002 Heiko Eissfeldt. Copyright 2007-2009 J. Schilling
 #
 # Makefile for cdda2wav, a sampling utility.
 #
@@ -93,11 +93,11 @@ DEF_SPEED=0			# default reading speed
 _DEF_TYPE=	$(_UNIQ)$(HAVE_SUN_OS)
 __DEF_TYPE=	$(_DEF_TYPE:$(_UNIQ)='"wav"')
 DEF_TYPE=	$(__DEF_TYPE:$(_UNIQ)$(HAVE_SUN_OS)='"au"')
-#DEF_TYPE=	"wav"
-#DEF_TYPE=	"au"
-#DEF_TYPE=	"cdr"
-#DEF_TYPE=	"aiff"
-#DEF_TYPE=	"aifc"
+DEF_TYPE=	'"wav"'
+#DEF_TYPE=	'"au"'
+#DEF_TYPE=	'"cdr"'
+#DEF_TYPE=	'"aiff"'
+#DEF_TYPE=	'"aifc"'
 
 # default file name for sound file
 DEF_FILE='"audio"'
@@ -112,7 +112,7 @@ WANT_INFOFILES=-DINFOFILES
 ############## enable/disable MD5 signatures in info files ##################
 # Comment out if you don't want this.
 WANT_MD5=-DMD5_SIGNATURES
-MD5OBJECTS=md5c.o
+MD5OBJECTS=md5.o
 
 # CDINDEX server support
 # Comment out if you don't want a disk description file for the cdindex server
@@ -127,7 +127,7 @@ CDDB_SERVERPORT=8880
 # end of tunable parameters
 #
 CDDA2WAVDEFS=-DCD_DEVICE=$(DEF_DEVICE) -DFILENAME=$(DEF_FILE) \
--DUNDERSAMPLING=$(DEF_UNDERSAMPLING) -DVERSION=$(CUR_VERSION) \
+-DUNDERSAMPLING=$(DEF_UNDERSAMPLING) -DVERSION_OS=$(CUR_VERSION) \
 -DBITS_P_S=$(DEF_BITS) -DCHANNELS=$(DEF_CHANNELS) -DAUDIOTYPE=$(DEF_TYPE) \
 -DDURATION=$(DEF_TIME) -DDEF_INTERFACE=$(INTERFACE) -DUSE_PARANOIA=1 \
 -DDEFAULT_SPEED=$(DEF_SPEED) $(WANT_CDINDEX_SUPPORT) $(WANT_CDDB_SUPPORT) \
@@ -137,5 +137,6 @@ $(WANT_INFOFILES) $(WANT_MD5) -DAUX_DEVICE=$(AUX_DEVICE)
 
 LIBS +=	@LIBS@
 
-VERSION_OS=@CDRTOOLS_VERSION@_$(O_ARCH)_$(OSREL)_$(K_ARCH)_$(P_ARCH)
+#VERSION_OS=@CDRTOOLS_VERSION@_$(O_ARCH)_$(OSREL)_$(K_ARCH)_$(P_ARCH)
+VERSION_OS=_$(O_ARCH)_$(OSREL)_$(K_ARCH)_$(P_ARCH)
 CUR_VERSION='"$(VERSION_OS)"'

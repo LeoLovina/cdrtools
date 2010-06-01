@@ -1,7 +1,8 @@
-/* @(#)node.c	1.2 02/02/10 joerg */
+/* @(#)node.c	1.6 09/07/11 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)node.c	1.2 02/02/10 joerg";
+static	UConst char sccsid[] =
+	"@(#)node.c	1.6 09/07/11 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -22,10 +23,9 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <errno.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/errno.h>
 
 #include "internal.h"
 #include "data.h"

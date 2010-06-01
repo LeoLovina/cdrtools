@@ -1,21 +1,17 @@
-/* @(#)handlecond.c	1.22 04/05/09 Copyright 1985-2004 J. Schilling */
+/* @(#)handlecond.c	1.25 07/05/23 Copyright 1985-2004 J. Schilling */
 /*
  *	setup/clear a condition handler for a software signal
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 /*
  *	A procedure frame is marked to have handlers if the
@@ -39,14 +35,14 @@
  *
  *	Copyright (c) 1985-2004 J. Schilling
  */
-#include <mconfig.h>
-#include <sigblk.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <avoffset.h>
-#include <utypes.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/sigblk.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/avoffset.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
 
 #if	!defined(AV_OFFSET) || !defined(FP_INDIR)
 #	ifdef	HAVE_SCANSTACK
@@ -55,14 +51,14 @@
 #endif
 
 #ifdef	HAVE_SCANSTACK
-#include <stkframe.h>
+#include <schily/stkframe.h>
 #else
 extern	SIGBLK	*__roothandle;
 #endif	/* HAVE_SCANSTACK */
 
 #define	is_even(p)	((((long)(p)) & 1) == 0)
 #define	even(p)		(((long)(p)) & ~1L)
-#if defined(__sun) && defined(__i386)
+#if defined(__sun) && (defined(__i386) || defined(__amd64))
 /*
  * Solaris x86 has a broken frame.h which defines the frame ptr to int.
  */
@@ -257,7 +253,7 @@ unhandlecond(sp)
 	if (!is_even(fp->fr_savfp)) {			/* if handlers	    */
 		sps = (SIGBLK *)even(fp->fr_savfp);	/* point to SIGBLK  */
 							/* real framepointer */
-#if defined(__sun) && defined(__i386)
+#if defined(__sun) && (defined(__i386) || defined(__amd64))
 		fp->fr_savfp = (intptr_t)sps->sb_savfp;
 #else
 		fp->fr_savfp = (struct frame *)sps->sb_savfp;

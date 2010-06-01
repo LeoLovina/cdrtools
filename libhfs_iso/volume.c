@@ -1,7 +1,8 @@
-/* @(#)volume.c	1.4 04/06/17 joerg */
+/* @(#)volume.c	1.9 09/07/11 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)volume.c	1.4 04/06/17 joerg";
+static	UConst char sccsid[] =
+	"@(#)volume.c	1.9 09/07/11 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -22,10 +23,9 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <errno.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/errno.h>
 
 #include "internal.h"
 #include "data.h"
@@ -105,12 +105,12 @@ int v_extsearch(file, fabn, data, np)
 
   /* in case bt_search() clobbers these */
 
-  memcpy(&extsave, &file->ext, sizeof(ExtDataRec));
+  memcpy(extsave, &file->ext, sizeof(ExtDataRec));
   fabnsave = file->fabn;
 
   found = bt_search(&file->vol->ext, pkey, np);
 
-  memcpy(&file->ext, &extsave, sizeof(ExtDataRec));
+  memcpy(file->ext, extsave, sizeof(ExtDataRec));
   file->fabn = fabnsave;
 
   if (found <= 0)

@@ -1,27 +1,32 @@
-/* @(#)scsiopen.c	1.95 04/01/14 Copyright 1995,2000 J. Schilling */
+/* @(#)scsiopen.c	1.101 09/07/11 Copyright 1995-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)scsiopen.c	1.95 04/01/14 Copyright 1995,2000 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)scsiopen.c	1.101 09/07/11 Copyright 1995-2009 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
  *
- *	Copyright (c) 1995,2000 J. Schilling
+ *	Copyright (c) 1995-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 /*
@@ -36,20 +41,19 @@ static	char sccsid[] =
  *		values to scg_scsibus() scg_target() and scg_lun()
  *		is scg_settarget().
  */
-#include <mconfig.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <fctldefs.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <timedefs.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/fcntl.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/time.h>
 
-#include <utypes.h>
-#include <btorder.h>
-#include <schily.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
@@ -99,7 +103,7 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 	int	debug;
 	int	be_verbose;
 {
-	char	devname[256];
+	char	sdevname[256];
 	char	*devp = NULL;
 	char	*sdev = NULL;
 	int	x1;
@@ -120,7 +124,7 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 	scgp->debug = debug;
 	scgp->overbose = be_verbose;
 
-	devname[0] = '\0';
+	sdevname[0] = '\0';
 	if (scsidev != NULL && scsidev[0] != '\0') {
 		sdev = scsidev;
 		if ((strncmp(scsidev, "HELP", 4) == 0) ||
@@ -137,8 +141,8 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 			 * We must send the complete device spec to the remote
 			 * site to allow parsing on both sites.
 			 */
-			strncpy(devname, scsidev, sizeof (devname)-1);
-			devname[sizeof (devname)-1] = '\0';
+			strncpy(sdevname, scsidev, sizeof (sdevname)-1);
+			sdevname[sizeof (sdevname)-1] = '\0';
 			if (sdev[6] == '(' || sdev[6] == ':')
 				sdev = strchr(sdev, ':');
 			else
@@ -150,7 +154,7 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 				 * Give it a chance with a standard parsing.
 				 */
 				sdev = scsidev;
-				devname[0] = '\0';
+				sdevname[0] = '\0';
 			} else {
 				/*
 				 * Now try to go past user@host spec.
@@ -171,10 +175,10 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 				/* We may come here too with 'USCSI'	    */
 				n = -1;
 				lun  = -2;	/* Lun must be known	    */
-				if (devname[0] == '\0') {
-					strncpy(devname, scsidev,
-							sizeof (devname)-1);
-					devname[sizeof (devname)-1] = '\0';
+				if (sdevname[0] == '\0') {
+					strncpy(sdevname, scsidev,
+							sizeof (sdevname)-1);
+					sdevname[sizeof (sdevname)-1] = '\0';
 				}
 			} else {
 				/* Basic notation form: 'bus,tgt,lun'	    */
@@ -183,15 +187,15 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 		} else {
 			/* Notation form: 'devname:bus,tgt,lun'/'devname:@' */
 			/* We may come here too with 'USCSI:'		    */
-			if (devname[0] == '\0') {
+			if (sdevname[0] == '\0') {
 				/*
 				 * Copy over the part before the ':'
 				 */
 				x1 = devp - scsidev;
-				if (x1 >= (int)sizeof (devname))
-					x1 = sizeof (devname)-1;
-				strncpy(devname, scsidev, x1);
-				devname[x1] = '\0';
+				if (x1 >= (int)sizeof (sdevname))
+					x1 = sizeof (sdevname)-1;
+				strncpy(sdevname, scsidev, x1);
+				sdevname[x1] = '\0';
 			}
 			devp++;
 			/* Check for a notation in the form 'devname:@'	    */
@@ -222,9 +226,9 @@ scg_open(scsidev, errs, slen, debug, be_verbose)
 				devp = NULL;
 			} else if (strchr(sdev, ',') == NULL) {
 				/* We may come here with 'ATAPI:/dev/hdc'   */
-				strncpy(devname, scsidev,
-						sizeof (devname)-1);
-				devname[sizeof (devname)-1] = '\0';
+				strncpy(sdevname, scsidev,
+						sizeof (sdevname)-1);
+				sdevname[sizeof (sdevname)-1] = '\0';
 				n = -1;
 				lun  = -2;	/* Lun must be known	    */
 				/*
@@ -258,17 +262,17 @@ nulldevice:
 	}
 	if (be_verbose && scsidev != NULL) {
 		js_fprintf(stderr, "scsidev: '%s'\n", scsidev);
-		if (devname[0] != '\0')
-			js_fprintf(stderr, "devname: '%s'\n", devname);
+		if (sdevname[0] != '\0')
+			js_fprintf(stderr, "devname: '%s'\n", sdevname);
 		js_fprintf(stderr, "scsibus: %d target: %d lun: %d\n",
 					scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 	}
 	if (debug > 0) {
 		js_fprintf(stderr, "scg__open(%s) %d,%d,%d\n",
-			devname,
+			sdevname,
 			scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
 	}
-	if (scg__open(scgp, devname) <= 0) {
+	if (scg__open(scgp, sdevname) <= 0) {
 		if (errs && scgp->errstr)
 			js_snprintf(errs, slen, "%s", scgp->errstr);
 		scg_sfree(scgp);

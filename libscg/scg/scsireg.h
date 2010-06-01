@@ -1,30 +1,34 @@
-/* @(#)scsireg.h	1.31 04/09/04 Copyright 1987 J. Schilling */
+/* @(#)scsireg.h	1.34 10/05/16 Copyright 1987-2010 J. Schilling */
 /*
  *	usefull definitions for dealing with CCS SCSI - devices
  *
- *	Copyright (c) 1987 J. Schilling
+ *	Copyright (c) 1987-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef	_SCG_SCSIREG_H
 #define	_SCG_SCSIREG_H
 
-#include <utypes.h>
-#include <btorder.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -1154,7 +1158,7 @@ struct scsi_format_cap_header {
 struct scsi_format_cap_desc {
 	Uchar	nblock[4];		/* Number of blocks		*/
 	Ucbit	desc_type	: 2;	/* Descriptor type		*/
-	Ucbit	fmt_type	: 6;	/* Format Taype			*/
+	Ucbit	fmt_type	: 6;	/* Format Type			*/
 	Uchar	blen[3];		/* Logical block length		*/
 };
 
@@ -1162,7 +1166,7 @@ struct scsi_format_cap_desc {
 
 struct scsi_format_cap_desc {
 	Uchar	nblock[4];		/* Number of blocks		*/
-	Ucbit	fmt_type	: 6;	/* Format Taype			*/
+	Ucbit	fmt_type	: 6;	/* Format Type			*/
 	Ucbit	desc_type	: 2;	/* Descriptor type		*/
 	Uchar	blen[3];		/* Logical block length		*/
 };
@@ -1171,7 +1175,23 @@ struct scsi_format_cap_desc {
 /*
  * Defines for 'fmt_type'.
  */
+#define	FCAP_TYPE_FULL		0x00	/* Full Format			*/
+#define	FCAP_TYPE_EXPAND_SPARE	0x01	/* Spare area expansion		*/
+#define	FCAP_TYPE_ZONE_REFORMAT	0x04	/* DVD-RAM Zone Reformat	*/
+#define	FCAP_TYPE_ZONE_FORMAT	0x05	/* DVD-RAM Zone Format		*/
+#define	FCAP_TYPE_CDRW_FULL	0x10	/* CD-RW/DVD-RW Full Format	*/
+#define	FACP_TYPE_CDRW_GROW_SES	0x11	/* CD-RW/DVD-RW grow session	*/
+#define	FACP_TYPE_CDRW_ADD_SES	0x12	/* CD-RW/DVD-RW add session	*/
+#define	FACP_TYPE_DVDRW_QGROW	0x13	/* DVD-RW quick grow last border*/
+#define	FACP_TYPE_DVDRW_QADD_SES 0x14	/* DVD-RW quick add session	*/
+#define	FACP_TYPE_DVDRW_QUICK	0x15	/* DVD-RW quick interm. session	*/
+#define	FCAP_TYPE_FULL_SPARE	0x20	/* Full Format with sparing	*/
+#define	FCAP_TYPE_MRW_FULL	0x24	/* CD-RW/DVD+RW Full Format	*/
+#define	FCAP_TYPE_DVDPLUS_BASIC	0x26	/* DVD+RW Basic Format		*/
 #define	FCAP_TYPE_DVDPLUS_FULL	0x26	/* DVD+RW Full Format		*/
+#define	FCAP_TYPE_BDRE_SPARE	0x30	/* BD-RE Full Format with spare	*/
+#define	FCAP_TYPE_BDRE		0x31	/* BD-RE Full Format without spare*/
+#define	FCAP_TYPE_BDR_SPARE	0x32	/* BD-R Full Format with spare	*/
 
 /*
  * Defines for 'desc_type'.

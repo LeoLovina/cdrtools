@@ -1,4 +1,4 @@
-#ident @(#)libedc.mk	1.4 04/01/06 
+#ident @(#)libedc.mk	1.6 08/12/22 
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -19,7 +19,10 @@ CPPOPTS +=	-Iold
 # be reported to the GCC people. As a workaround, you may remove the next
 # lines to fall back to the standard optimisation level.
 #
-SUNPROCOPTOPT=	-fast -xarch=generic
+_XARCH_OPT=	$(OARCH:%cc64=$(SUNPROCOPT64))
+XARCH_OPT=	$(_XARCH_OPT:%cc=-xarch=generic)
+
+SUNPROCOPTOPT=	-fast $(XARCH_OPT)
 GCCOPTOPT=	-O3  -fexpensive-optimizations
 #
 CFILES=		edc_ecc.c

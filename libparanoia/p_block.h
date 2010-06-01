@@ -1,14 +1,12 @@
-/* @(#)p_block.h	1.16 04/02/20 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)p_block.h	1.18 07/02/09 J. Schilling from cdparanoia-III-alpha9.8 */
 /*
- *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
- */
-/*
- * CopyPolicy: GNU Public License 2 applies
- * Copyright (C) by Monty (xiphmont@mit.edu)
+ * CopyPolicy: GNU Lesser General Public License v2.1 applies
+ * Copyright (C) 1997-2001 by Monty (xiphmont@mit.edu)
+ * Copyright (C) 2002-2006 by J. Schilling
  */
 
-#ifndef	_p_block_h_
-#define	_p_block_h_
+#ifndef	_P_BLOCK_H
+#define	_P_BLOCK_H
 
 #define	MIN_WORDS_OVERLAP	  64	/* 16 bit words */
 #define	MIN_WORDS_SEARCH	  64	/* 16 bit words */
@@ -138,7 +136,18 @@ typedef struct offsets {
 } offsets;
 
 typedef struct cdrom_paranoia {
-	void		*d;		/* A pointer to the driver interface */
+	void	*d;		/* A pointer to the driver interface */
+
+	long	(*d_read) __PR((void *d, void *buffer,		/* -> long sectors */
+			long beginsector, long sectors));
+	long	(*d_disc_firstsector) __PR((void *d));		/* -> long sector */
+	long	(*d_disc_lastsector) __PR((void *d));		/* -> long sector */
+	int	(*d_tracks)	__PR((void *d));		/* -> int tracks */
+	long	(*d_track_firstsector) __PR((void *d, int track)); /* -> long sector */
+	long	(*d_track_lastsector) __PR((void *d, int track)); /* -> long sector */
+	int	(*d_sector_gettrack) __PR((void *d, long sector)); /* -> int trackno */
+	int	(*d_track_audiop) __PR((void *d, int track));	/* -> int Is audiotrack */
+
 	int		nsectors;	/* # of sectors that fit into DMA buf */
 
 	root_block	root;		/* verified/reconstructed cached data */
@@ -201,4 +210,4 @@ extern void	i_paranoia_firstlast	__PR((cdrom_paranoia * p));
 #define	fv(f)	(v_buffer(f))
 
 #define	CDP_COMPILE
-#endif
+#endif	/* _P_BLOCK_H */

@@ -1,14 +1,15 @@
-/* @(#)multi.c	1.66 04/05/15 joerg */
+/* @(#)multi.c	1.95 09/11/25 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)multi.c	1.66 04/05/15 joerg";
+static	UConst char sccsid[] =
+	"@(#)multi.c	1.95 09/11/25 joerg";
 #endif
 /*
  * File multi.c - scan existing iso9660 image and merge into
  * iso9660 filesystem.  Used for multisession support.
  *
  * Written by Eric Youngdale (1996).
- * Copyright (c) 1999-2003 J. Schilling
+ * Copyright (c) 1999-2009 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,13 +26,13 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <timedefs.h>
-#include <errno.h>
-#include <utypes.h>
-#include <schily.h>
-#include <ctype.h>			/* Needed for printasc()	*/
+#include "rock.h"
+#include <schily/time.h>
+#include <schily/errno.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
+#include <schily/ctype.h>		/* Needed for printasc()	*/
 
 #ifdef VMS
 
@@ -57,11 +58,6 @@ static	char sccsid[] =
 #define	TF_ACCESS 4
 #define	TF_ATTRIBUTES 8
 
-LOCAL	int	isonum_711	__PR((unsigned char *p));
-LOCAL	int	isonum_721	__PR((unsigned char *p));
-LOCAL	int	isonum_723	__PR((unsigned char *p));
-LOCAL	int	isonum_731	__PR((unsigned char *p));
-
 LOCAL	void	printasc	__PR((char *txt, unsigned char *p, int len));
 LOCAL	void	prbytes		__PR((char *txt, unsigned char *p, int len));
 unsigned char	*parse_xa	__PR((unsigned char *pnt, int *lenp,
@@ -78,88 +74,22 @@ LOCAL	int	check_rr_dates	__PR((struct directory_entry *dpnt,
 LOCAL	struct directory_entry **
 		read_merging_directory __PR((struct iso_directory_record *, int *));
 LOCAL	int	free_mdinfo	__PR((struct directory_entry **, int len));
-LOCAL	void	free_directory_entry __PR((struct directory_entry * dirp));
+LOCAL	void	free_directory_entry __PR((struct directory_entry *dirp));
+LOCAL	int	iso_dir_ents	__PR((struct directory_entry *de));
+LOCAL	void	copy_mult_extent __PR((struct directory_entry *se1,
+					struct directory_entry *se2));
 LOCAL	void	merge_remaining_entries __PR((struct directory *,
 					struct directory_entry **, int));
 
 LOCAL	int	merge_old_directory_into_tree __PR((struct directory_entry *,
 							struct directory *));
-LOCAL	void	check_rr_relocation __PR((struct directory_entry * de));
-
-#ifdef	PROTOTYPES
-LOCAL int
-isonum_711(unsigned char *p)
-#else
-LOCAL int
-isonum_711(p)
-	unsigned char	*p;
-#endif
-{
-	return (*p & 0xff);
-}
-
-#ifdef	PROTOTYPES
-LOCAL int
-isonum_721(unsigned char *p)
-#else
-LOCAL int
-isonum_721(p)
-	unsigned char	*p;
-#endif
-{
-	return ((p[0] & 0xff) | ((p[1] & 0xff) << 8));
-}
-
-#ifdef	PROTOTYPES
-LOCAL int
-isonum_723(unsigned char *p)
-#else
-LOCAL int
-isonum_723(p)
-	unsigned char	*p;
-#endif
-{
-#if 0
-	if (p[0] != p[3] || p[1] != p[2]) {
-#ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD, "invalid format 7.2.3 number\n");
-#else
-		fprintf(stderr, "invalid format 7.2.3 number\n");
-		exit(1);
-#endif
-	}
-#endif
-	return (isonum_721(p));
-}
-
-#ifdef	PROTOTYPES
-LOCAL int
-isonum_731(unsigned char *p)
-#else
-LOCAL int
-isonum_731(p)
-	unsigned char	*p;
-#endif
-{
-	return ((p[0] & 0xff)
-		| ((p[1] & 0xff) << 8)
-		| ((p[2] & 0xff) << 16)
-		| ((p[3] & 0xff) << 24));
-}
-
-#ifdef	PROTOTYPES
-int
-isonum_733(unsigned char *p)
-#else
-int
-isonum_733(p)
-	unsigned char	*p;
-#endif
-{
-	return (isonum_731(p));
-}
+LOCAL	void	check_rr_relocation __PR((struct directory_entry *de));
 
 FILE	*in_image = NULL;
+int	su_version = -1;
+int	rr_version = -1;
+int	aa_version = -1;
+char	er_id[256];
 
 #ifndef	USE_SCG
 /*
@@ -177,34 +107,24 @@ FILE	*in_image = NULL;
  * Solaris.
  */
 #ifdef	PROTOTYPES
-LOCAL int
-readsecs(int startsecno, void *buffer, int sectorcount)
+EXPORT int
+readsecs(UInt32_t startsecno, void *buffer, int sectorcount)
 #else
-LOCAL int
+EXPORT int
 readsecs(startsecno, buffer, sectorcount)
-	int		startsecno;
+	UInt32_t	startsecno;
 	void		*buffer;
 	int		sectorcount;
 #endif
 {
 	int		f = fileno(in_image);
 
-	if (lseek(f, (off_t) startsecno * SECTOR_SIZE, SEEK_SET) == (off_t) - 1) {
-#ifdef	USE_LIBSCHILY
+	if (lseek(f, (off_t)startsecno * SECTOR_SIZE, SEEK_SET) == (off_t)-1) {
 		comerr(" Seek error on old image\n");
-#else
-		fprintf(stderr, " Seek error on old image\n");
-		exit(10);
-#endif
 	}
 	if (read(f, buffer, (sectorcount * SECTOR_SIZE))
 		!= (sectorcount * SECTOR_SIZE)) {
-#ifdef	USE_LIBSCHILY
 		comerr(" Read error on old image\n");
-#else
-		fprintf(stderr, " Read error on old image\n");
-		exit(10);
-#endif
 	}
 	return (sectorcount * SECTOR_SIZE);
 }
@@ -342,73 +262,79 @@ parse_rrflags(pnt, len, cont_flag)
 	int	len;
 	int	cont_flag;
 {
-	int	ncount;
-	int	cont_extent;
-	int	cont_offset;
-	int	cont_size;
-	int	flag1;
-	int	flag2;
+	int		ncount;
+	UInt32_t	cont_extent;
+	UInt32_t	cont_offset;
+	UInt32_t	cont_size;
+	int		flag1;
+	int		flag2;
 
 	cont_extent = cont_offset = cont_size = 0;
 
 	ncount = 0;
-	flag1 = flag2 = 0;
+	flag1 = -1;
+	flag2 = 0;
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
-#ifdef USE_LIBSCHILY
 			errmsgno(EX_BAD,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#else
-			fprintf(stderr,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#endif
+				"**BAD RRVERSION (%d) in '%c%c' field (%2.2X %2.2X).\n",
+				pnt[3], pnt[0], pnt[1], pnt[0], pnt[1]);
 			return (0);	/* JS ??? Is this right ??? */
 		}
 		ncount++;
 		if (pnt[0] == 'R' && pnt[1] == 'R')
 			flag1 = pnt[4] & 0xff;
 
-		if (strncmp((char *) pnt, "PX", 2) == 0)	/* POSIX attributes */
-			flag2 |= 1;
-		if (strncmp((char *) pnt, "PN", 2) == 0)	/* POSIX device number */
-			flag2 |= 2;
-		if (strncmp((char *) pnt, "SL", 2) == 0)	/* Symlink */
-			flag2 |= 4;
-		if (strncmp((char *) pnt, "NM", 2) == 0)	/* Alternate Name */
-			flag2 |= 8;
-		if (strncmp((char *) pnt, "CL", 2) == 0)	/* Child link */
-			flag2 |= 16;
-		if (strncmp((char *) pnt, "PL", 2) == 0)	/* Parent link */
-			flag2 |= 32;
-		if (strncmp((char *) pnt, "RE", 2) == 0)	/* Relocated Direcotry */
-			flag2 |= 64;
-		if (strncmp((char *) pnt, "TF", 2) == 0)	/* Time stamp */
-			flag2 |= 128;
-		if (strncmp((char *) pnt, "SP", 2) == 0) {	/* SUSP record */
-			flag2 |= 1024;
-/*			su_version = pnt[3] & 0xff;*/
+		if (strncmp((char *)pnt, "PX", 2) == 0)		/* POSIX attributes */
+			flag2 |= RR_FLAG_PX;
+		if (strncmp((char *)pnt, "PN", 2) == 0)		/* POSIX device number */
+			flag2 |= RR_FLAG_PN;
+		if (strncmp((char *)pnt, "SL", 2) == 0)		/* Symlink */
+			flag2 |= RR_FLAG_SL;
+		if (strncmp((char *)pnt, "NM", 2) == 0)		/* Alternate Name */
+			flag2 |= RR_FLAG_NM;
+		if (strncmp((char *)pnt, "CL", 2) == 0)		/* Child link */
+			flag2 |= RR_FLAG_CL;
+		if (strncmp((char *)pnt, "PL", 2) == 0)		/* Parent link */
+			flag2 |= RR_FLAG_PL;
+		if (strncmp((char *)pnt, "RE", 2) == 0)		/* Relocated Direcotry */
+			flag2 |= RR_FLAG_RE;
+		if (strncmp((char *)pnt, "TF", 2) == 0)		/* Time stamp */
+			flag2 |= RR_FLAG_TF;
+		if (strncmp((char *)pnt, "SP", 2) == 0) {	/* SUSP record */
+			flag2 |= RR_FLAG_SP;
+			if (su_version < 0)
+				su_version = pnt[3] & 0xff;
 		}
-		if (strncmp((char *) pnt, "AA", 2) == 0) {	/* Apple Signature record */
-			flag2 |= 2048;
-/*			aa_version = pnt[3] & 0xff;*/
+		if (strncmp((char *)pnt, "AA", 2) == 0) {	/* Apple Signature record */
+			flag2 |= RR_FLAG_AA;
+			if (aa_version < 0)
+				aa_version = pnt[3] & 0xff;
+		}
+		if (strncmp((char *)pnt, "ER", 2) == 0) {
+			flag2 |= RR_FLAG_ER;				/* ER record */
+			if (rr_version < 0)
+				rr_version = pnt[7] & 0xff;		/* Ext Version */
+			strlcpy(er_id, (char *)&pnt[8], (pnt[4] & 0xFF) + 1);
 		}
 
 		if (strncmp((char *)pnt, "CE", 2) == 0) {	/* Continuation Area */
-			cont_extent = isonum_733(pnt+4);
-			cont_offset = isonum_733(pnt+12);
-			cont_size = isonum_733(pnt+20);
+			cont_extent = get_733(pnt+4);
+			cont_offset = get_733(pnt+12);
+			cont_size = get_733(pnt+20);
+		}
+		if (strncmp((char *)pnt, "ST", 2) == 0) {		/* Terminate SUSP */
+			break;
 		}
 
 		len -= pnt[2];
 		pnt += pnt[2];
-		if (len <= 3 && cont_extent) {
-			unsigned char   sector[SECTOR_SIZE];
+	}
+	if (cont_extent) {
+		unsigned char   sector[SECTOR_SIZE];
 
-			readsecs(cont_extent, sector, 1);
-			flag2 |= parse_rrflags(&sector[cont_offset], cont_size, 1);
-		}
+		readsecs(cont_extent, sector, 1);
+		flag2 |= parse_rrflags(&sector[cont_offset], cont_size, 1);
 	}
 	return (flag2);
 }
@@ -422,7 +348,7 @@ rr_flags(idr)
 	int		ret = 0;
 
 	if (find_rr(idr, &pnt, &len))
-		ret |= 4096;
+		ret |= RR_FLAG_XA;
 	ret |= parse_rrflags(pnt, len, 0);
 	return (ret);
 }
@@ -436,9 +362,9 @@ parse_rr(pnt, len, dpnt)
 	int		len;
 	struct directory_entry *dpnt;
 {
-	int		cont_extent;
-	int		cont_offset;
-	int		cont_size;
+	UInt32_t	cont_extent;
+	UInt32_t	cont_offset;
+	UInt32_t	cont_size;
 	char		name_buf[256];
 
 	cont_extent = cont_offset = cont_size = 0;
@@ -447,19 +373,13 @@ parse_rr(pnt, len, dpnt)
 
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
-#ifdef	USE_LIBSCHILY
 			errmsgno(EX_BAD,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#else
-			fprintf(stderr,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#endif
+				"**BAD RRVERSION (%d) in '%c%c' field (%2.2X %2.2X).\n",
+				pnt[3], pnt[0], pnt[1], pnt[0], pnt[1]);
 			return (-1);
 		}
-		if (strncmp((char *) pnt, "NM", 2) == 0) {
-			strncpy(name_buf, (char *) pnt + 5, pnt[2] - 5);
+		if (strncmp((char *)pnt, "NM", 2) == 0) {
+			strncpy(name_buf, (char *)pnt + 5, pnt[2] - 5);
 			name_buf[pnt[2] - 5] = 0;
 			if (dpnt->name) {
 				size_t nlen = strlen(dpnt->name);
@@ -471,41 +391,42 @@ parse_rr(pnt, len, dpnt)
 							strlen(name_buf) + 1);
 				strcpy(dpnt->name + nlen, name_buf);
 			} else {
-				dpnt->name = strdup(name_buf);
+				dpnt->name = e_strdup(name_buf);
 				dpnt->got_rr_name = 1;
 			}
 			/* continue searching for more NM records */
-		} else if (strncmp((char *) pnt, "CE", 2) == 0) {
-			cont_extent = isonum_733(pnt + 4);
-			cont_offset = isonum_733(pnt + 12);
-			cont_size = isonum_733(pnt + 20);
+		} else if (strncmp((char *)pnt, "CE", 2) == 0) {
+			cont_extent = get_733(pnt + 4);
+			cont_offset = get_733(pnt + 12);
+			cont_size = get_733(pnt + 20);
+		} else if (strncmp((char *)pnt, "ST", 2) == 0) {
+			break;
 		}
 
 		len -= pnt[2];
 		pnt += pnt[2];
-		if (len <= 3 && cont_extent) {
-			unsigned char   sector[SECTOR_SIZE];
+	}
+	if (cont_extent) {
+		unsigned char   sector[SECTOR_SIZE];
 
-			readsecs(cont_extent, sector, 1);
-			if (parse_rr(&sector[cont_offset],
-							cont_size, dpnt) == -1)
-				return (-1);
-		}
+		readsecs(cont_extent, sector, 1);
+		if (parse_rr(&sector[cont_offset], cont_size, dpnt) == -1)
+			return (-1);
 	}
 
 	/* Fall back to the iso name if no RR name found */
 	if (dpnt->name == NULL) {
 		char	*cp;
 
-		strcpy(name_buf, dpnt->isorec.name);
+		strlcpy(name_buf, dpnt->isorec.name, sizeof (name_buf));
 		cp = strchr(name_buf, ';');
 		if (cp != NULL) {
 			*cp = '\0';
 		}
-		dpnt->name = strdup(name_buf);
+		dpnt->name = e_strdup(name_buf);
 	}
 	return (0);
-}/* parse_rr */
+} /* parse_rr */
 
 
 /*
@@ -519,10 +440,10 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 	struct stat	*statbuf;
 	struct stat	*lstatbuf;
 {
-	int		cont_extent;
-	int		cont_offset;
-	int		cont_size;
-	int		offset;
+	UInt32_t	cont_extent;
+	UInt32_t	cont_offset;
+	UInt32_t	cont_size;
+	UInt32_t	offset;
 	unsigned char	*pnt;
 	int		len;
 	int		same_file;
@@ -544,15 +465,9 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 	pnt = parse_xa(pnt, &len, /* dpnt */ 0);
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
-#ifdef	USE_LIBSCHILY
 			errmsgno(EX_BAD,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#else
-			fprintf(stderr,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#endif
+				"**BAD RRVERSION (%d) in '%c%c' field (%2.2X %2.2X).\n",
+				pnt[3], pnt[0], pnt[1], pnt[0], pnt[1]);
 			return (-1);
 		}
 
@@ -561,51 +476,59 @@ check_rr_dates(dpnt, current, statbuf, lstatbuf)
 		 * the same.  If it isn't, then we must always write the new
 		 * file.
 		 */
-		if (strncmp((char *) pnt, "PX", 2) == 0) {
-			mode = isonum_733(pnt + 4);
+		if (strncmp((char *)pnt, "PX", 2) == 0) {
+			mode = get_733(pnt + 4);
 			if ((lstatbuf->st_mode & S_IFMT) != (mode & S_IFMT)) {
 				same_file_type = 0;
 				same_file = 0;
 			}
 		}
-		if (strncmp((char *) pnt, "TF", 2) == 0) {
+		if (strncmp((char *)pnt, "TF", 2) == 0) {
 			offset = 5;
 			if (pnt[4] & TF_CREATE) {
-				iso9660_date((char *) time_buf,
+				iso9660_date((char *)time_buf,
 							lstatbuf->st_ctime);
 				if (memcmp(time_buf, pnt + offset, 7) != 0)
 					same_file = 0;
 				offset += 7;
 			}
 			if (pnt[4] & TF_MODIFY) {
-				iso9660_date((char *) time_buf,
+				iso9660_date((char *)time_buf,
 							lstatbuf->st_mtime);
 				if (memcmp(time_buf, pnt + offset, 7) != 0)
 					same_file = 0;
 				offset += 7;
 			}
 		}
-		if (strncmp((char *) pnt, "CE", 2) == 0) {
-			cont_extent = isonum_733(pnt + 4);
-			cont_offset = isonum_733(pnt + 12);
-			cont_size = isonum_733(pnt + 20);
+		if (strncmp((char *)pnt, "CE", 2) == 0) {
+			cont_extent = get_733(pnt + 4);
+			cont_offset = get_733(pnt + 12);
+			cont_size = get_733(pnt + 20);
+		}
+		if (strncmp((char *)pnt, "ST", 2) == 0) {		/* Terminate SUSP */
+			break;
 		}
 
 		len -= pnt[2];
 		pnt += pnt[2];
-		if (len <= 3 && cont_extent) {
-			unsigned char   sector[SECTOR_SIZE];
+	}
+	if (cont_extent) {
+		unsigned char   sector[SECTOR_SIZE];
 
-			readsecs(cont_extent, sector, 1);
-			/*
-			 * Continue to scan the extension record.
-			 * Note that this has not been tested yet, but it is
-			 * definitely more correct that calling parse_rr()
-			 * as done in Eric's old code.
-			 */
-			pnt = &sector[cont_offset];
-			len = cont_size;
-		}
+		readsecs(cont_extent, sector, 1);
+		/*
+		 * Continue to scan the extension record.
+		 * Note that this has not been tested yet, but it is
+		 * definitely more correct that calling parse_rr()
+		 * as done in Eric's old code.
+		 */
+		pnt = &sector[cont_offset];
+		len = cont_size;
+		/*
+		 * Clear the "pending extension record" state as
+		 * we did already read it now.
+		 */
+		cont_extent = cont_offset = cont_size = 0;
 	}
 
 	/*
@@ -629,16 +552,18 @@ read_merging_directory(mrootp, nentp)
 	char		*dirbuff;
 	int		i;
 	struct iso_directory_record *idr;
-	int		len;
-	int		nbytes;
+	UInt32_t	len;
+	UInt32_t	nbytes;
 	int		nent;
+	int		nmult;		/* # of multi extent root entries */
+	int		mx;
 	struct directory_entry **pnt;
-	int		rlen;
+	UInt32_t	rlen;
 	struct directory_entry **rtn;
 	int		seen_rockridge;
 	unsigned char	*tt_buf;
-	int		tt_extent;
-	int		tt_size;
+	UInt32_t	tt_extent;
+	UInt32_t		tt_size;
 
 	static int	warning_given = 0;
 
@@ -647,40 +572,46 @@ read_merging_directory(mrootp, nentp)
 	 * round up to get the last fractional sector - we are asking for the
 	 * data in terms of a number of sectors.
 	 */
-	nbytes = roundup(isonum_733((unsigned char *) mrootp->size),
-								SECTOR_SIZE);
+	nbytes = roundup(get_733(mrootp->size), SECTOR_SIZE);
 
 	/*
 	 * First, allocate a buffer large enough to read in the entire
 	 * directory.
 	 */
-	dirbuff = (char *) e_malloc(nbytes);
+	dirbuff = (char *)e_malloc(nbytes);
 
-	readsecs(isonum_733((unsigned char *) mrootp->extent), dirbuff,
-		nbytes / SECTOR_SIZE);
+	readsecs(get_733(mrootp->extent), dirbuff, nbytes / SECTOR_SIZE);
 
 	/*
 	 * Next look over the directory, and count up how many entries we have.
 	 */
-	len = isonum_733((unsigned char *) mrootp->size);
+	len = get_733(mrootp->size);
 	i = 0;
 	*nentp = 0;
 	nent = 0;
+	nmult = 0;
+	mx = 0;
 	while (i < len) {
-		idr = (struct iso_directory_record *) & dirbuff[i];
+		idr = (struct iso_directory_record *)&dirbuff[i];
 		if (idr->length[0] == 0) {
 			i = ISO_ROUND_UP(i);
 			continue;
 		}
 		nent++;
+		if ((mx & ISO_MULTIEXTENT) == 0 &&
+		    (idr->flags[0] & ISO_MULTIEXTENT) != 0) {
+			nmult++;	/* Need a multi extent root entry */
+		}
+		mx = idr->flags[0];
 		i += idr->length[0];
 	}
 
 	/*
 	 * Now allocate the buffer which will hold the array we are about to
-	 * return.
+	 * return. We need one entry per real directory entry and in addition
+	 * one multi-extent root entry per multi-extent file.
 	 */
-	rtn = (struct directory_entry **) e_malloc(nent * sizeof (*rtn));
+	rtn = (struct directory_entry **)e_malloc((nent+nmult) * sizeof (*rtn));
 
 	/*
 	 * Finally, scan the directory one last time, and pick out the relevant
@@ -692,22 +623,36 @@ read_merging_directory(mrootp, nentp)
 	tt_extent = 0;
 	seen_rockridge = 0;
 	tt_size = 0;
+	mx = 0;
 	while (i < len) {
-		idr = (struct iso_directory_record *) & dirbuff[i];
+		idr = (struct iso_directory_record *)&dirbuff[i];
+		if ((i + (idr->length[0] & 0xFF)) > len) {
+			comerrno(EX_BAD, "Bad directory length for '%.*s'.\n",
+					idr->name_len[0] & 0xFF, idr->name);
+		}
 		if (idr->length[0] == 0) {
 			i = ISO_ROUND_UP(i);
 			continue;
 		}
-		*pnt = (struct directory_entry *) e_malloc(sizeof (**rtn));
+		*pnt = (struct directory_entry *)e_malloc(sizeof (**rtn));
 		(*pnt)->next = NULL;
 #ifdef	DEBUG
 		error("IDR name: '%s' ist: %d soll: %d\n",
 			idr->name, strlen(idr->name), idr->name_len[0]);
 #endif
-		(*pnt)->isorec = *idr;
+		movebytes(idr, &(*pnt)->isorec, idr->length[0] & 0xFF);
 		(*pnt)->starting_block =
-				isonum_733((unsigned char *) idr->extent);
-		(*pnt)->size = isonum_733((unsigned char *) idr->size);
+				get_733(idr->extent);
+		(*pnt)->size = get_733(idr->size);
+		if ((*pnt)->size == 0) {
+			/*
+			 * Find lowest used inode number for zero sized files
+			 */
+			if (((UInt32_t)(*pnt)->starting_block) <= null_inodes) {
+				null_inodes = (UInt32_t)(*pnt)->starting_block;
+				null_inodes--;
+			}
+		}
 		(*pnt)->priority = 0;
 		(*pnt)->name = NULL;
 		(*pnt)->got_rr_name = 0;
@@ -791,16 +736,9 @@ read_merging_directory(mrootp, nentp)
 		}
 
 		if (parse_rr((*pnt)->rr_attributes, rlen, *pnt) == -1) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			    "Cannot parse Rock Ridge attributes for '%s'.\n",
 								idr->name);
-#else
-			fprintf(stderr,
-			    "Cannot parse Rock Ridge attributes for '%s'.\n",
-								idr->name);
-			exit(1);
-#endif
 		}
 		if (((*pnt)->isorec.name_len[0] == 1) &&
 		    (((*pnt)->isorec.name[0] == 0) ||	/* "."  entry */
@@ -813,9 +751,9 @@ read_merging_directory(mrootp, nentp)
 				free((*pnt)->whole_name);
 			}
 			if ((*pnt)->isorec.name[0] == 0) {
-				(*pnt)->name = strdup(".");
+				(*pnt)->name = e_strdup(".");
 			} else {
-				(*pnt)->name = strdup("..");
+				(*pnt)->name = e_strdup("..");
 			}
 		}
 #ifdef DEBUG
@@ -829,14 +767,63 @@ read_merging_directory(mrootp, nentp)
 			if ((*pnt)->whole_name != NULL) {
 				free((*pnt)->whole_name);
 			}
-/*			(*pnt)->name = strdup("<translation table>");*/
-			(*pnt)->name = strdup(trans_tbl);
-			tt_extent = isonum_733((unsigned char *) idr->extent);
-			tt_size = isonum_733((unsigned char *) idr->size);
+/*			(*pnt)->name = e_strdup("<translation table>");*/
+			(*pnt)->name = e_strdup(trans_tbl);
+			tt_extent = get_733(idr->extent);
+			tt_size = get_733(idr->size);
 			if (tt_extent == 0)
 				tt_size = 0;
 		}
+		/*
+		 * The beginning of a new multi extent directory chain is when
+		 * the last directory had no ISO_MULTIEXTENT flag set and the
+		 * current entry did set ISO_MULTIEXTENT.
+		 */
+		if ((mx & ISO_MULTIEXTENT) == 0 &&
+		    (idr->flags[0] & ISO_MULTIEXTENT) != 0) {
+			struct directory_entry		*s_entry;
+			struct iso_directory_record	*idr2 = idr;
+			int				i2 = i;
+			off_t				tsize = 0;
+
+			/*
+			 * Sum up the total file size for the multi extent file
+			 */
+			while (i2 < len) {
+				idr2 = (struct iso_directory_record *)&dirbuff[i2];
+				if (idr2->length[0] == 0) {
+					i2 = ISO_ROUND_UP(i2);
+					continue;
+				}
+
+				tsize += get_733(idr2->size);
+				if ((idr2->flags[0] & ISO_MULTIEXTENT) == 0)
+					break;
+				i2 += idr2->length[0];
+			}
+
+			s_entry = dup_directory_entry(*pnt);	/* dup first for mxroot */
+			s_entry->de_flags |= MULTI_EXTENT;
+			s_entry->de_flags |= INHIBIT_ISO9660_ENTRY|INHIBIT_JOLIET_ENTRY;
+			s_entry->size = tsize;
+			s_entry->starting_block = (*pnt)->starting_block;
+			s_entry->mxroot = s_entry;
+			s_entry->mxpart = 0;
+			s_entry->next = *pnt;	/* Next in list		*/
+			pnt[1] = pnt[0];	/* Move to next slot	*/
+			*pnt = s_entry;		/* First slot is mxroot	*/
+			pnt++;			/* Point again to cur.	*/
+		}
+		if ((mx & ISO_MULTIEXTENT) != 0 ||
+		    (idr->flags[0] & ISO_MULTIEXTENT) != 0) {
+			(*pnt)->de_flags |= MULTI_EXTENT;
+			(*pnt)->de_flags |= INHIBIT_UDF_ENTRY;
+			(pnt[-1])->next = *pnt;
+			(*pnt)->mxroot = (pnt[-1])->mxroot;
+			(*pnt)->mxpart = (pnt[-1])->mxpart + 1;
+		}
 		pnt++;
+		mx = idr->flags[0];
 		i += idr->length[0];
 	}
 #ifdef APPLE_HYB
@@ -847,7 +834,7 @@ read_merging_directory(mrootp, nentp)
 	for (pnt = rtn, i = 0; i < nent; i++, pnt++) {
 		int	j;
 
-		rlen = isonum_711((*pnt)->isorec.name_len);
+		rlen = get_711((*pnt)->isorec.name_len);
 		if ((*pnt)->isorec.flags[0] & ISO_ASSOCIATED) {
 			for (j = 0; j < nent; j++) {
 				if (strncmp(rtn[j]->isorec.name,
@@ -860,6 +847,10 @@ read_merging_directory(mrootp, nentp)
 					 * in the Joliet tree
 					 */
 					(*pnt)->de_flags |= INHIBIT_JOLIET_ENTRY;
+					/*
+					 * XXX Is it correct to exclude UDF too?
+					 */
+					(*pnt)->de_flags |= INHIBIT_UDF_ENTRY;
 
 					/*
 					 * as we have associated files, then
@@ -911,7 +902,7 @@ read_merging_directory(mrootp, nentp)
 			 * find the attachment for this particular filename.
 			 */
 			for (pnt = rtn, i = 0; i < nent; i++, pnt++) {
-				rlen = isonum_711((*pnt)->isorec.name_len);
+				rlen = get_711((*pnt)->isorec.name_len);
 
 				/*
 				 * If this filename is so long that it would
@@ -925,7 +916,7 @@ read_merging_directory(mrootp, nentp)
 				 * Now actually compare the name, and make sure
 				 * that the character at the end is a ' '.
 				 */
-				if (strncmp((char *) cpnt + 2,
+				if (strncmp((char *)cpnt + 2,
 					(*pnt)->isorec.name, rlen) == 0 &&
 					cpnt[2 + rlen] == ' ' &&
 					(p = strchr((char *)&cpnt[2 + rlen], '\t'))) {
@@ -946,7 +937,7 @@ read_merging_directory(mrootp, nentp)
 						if ((*pnt)->name != NULL) {
 							free((*pnt)->name);
 						}
-						(*pnt)->name = strdup(p);
+						(*pnt)->name = e_strdup(p);
 					}
 					break;
 				}
@@ -958,7 +949,7 @@ read_merging_directory(mrootp, nentp)
 		free(tt_buf);
 	} else if (!seen_rockridge && !warning_given) {
 		/*
-		 * Warn the user that iso (8.3) names were used because neither
+		 * Warn the user that iso-9660 names were used because neither
 		 * Rock Ridge (-R) nor TRANS.TBL (-T) name translations were
 		 * found.
 		 */
@@ -967,15 +958,15 @@ read_merging_directory(mrootp, nentp)
 		fprintf(stderr,
 		    "name translations were found on previous session.\n");
 		fprintf(stderr,
-		    "ISO (8.3) file names have been used instead.\n");
+		    "ISO-9660 file names have been used instead.\n");
 		warning_given = 1;
 	}
 	if (dirbuff != NULL) {
 		free(dirbuff);
 	}
-	*nentp = nent;
+	*nentp = nent + nmult;
 	return (rtn);
-}/* read_merging_directory */
+} /* read_merging_directory */
 
 /*
  * Free any associated data related to the structures.
@@ -1040,7 +1031,7 @@ check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
 {
 	int		i;
 	int		rr;
-	int		retcode = 0;	/* Default not found */
+	int		retcode = -2;	/* Default not found */
 
 	for (i = 0; i < len; i++) {
 		if (ptr[i] == NULL) {	/* Used or empty entry skip */
@@ -1075,7 +1066,7 @@ check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
 		 * in tree.c for an explaination of why this must be the case.
 		 */
 		if ((curr_entry->isorec.flags[0] & ISO_DIRECTORY) != 0) {
-			retcode = 2;	/* Flag directory case */
+			retcode = i;
 			goto found_it;
 		}
 		/*
@@ -1088,7 +1079,7 @@ check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
 		 * we probably have a different file, and we need to write it
 		 * out again.
 		 */
-		retcode = 1;	/* We found a non directory */
+		retcode = i;
 
 		if (ptr[i]->rr_attributes != NULL) {
 			if ((rr = check_rr_dates(ptr[i], curr_entry, statbuf,
@@ -1115,12 +1106,26 @@ check_prev_session(ptr, len, curr_entry, statbuf, lstatbuf, odpnt)
 		}
 		/* We found it and we can reuse the extent */
 		memcpy(curr_entry->isorec.extent, ptr[i]->isorec.extent, 8);
+		curr_entry->starting_block = get_733(ptr[i]->isorec.extent);
 		curr_entry->de_flags |= SAFE_TO_REUSE_TABLE_ENTRY;
+
+		if ((curr_entry->isorec.flags[0] & ISO_MULTIEXTENT) ||
+		    (ptr[i]->isorec.flags[0] & ISO_MULTIEXTENT)) {
+			copy_mult_extent(curr_entry, ptr[i]);
+		}
 		goto found_it;
 	}
 	return (retcode);
 
 found_it:
+	if (ptr[i]->mxroot == ptr[i]) {	/* Remove all multi ext. entries   */
+		int	j = i + 1;	/* First one will be removed below */
+
+		while (j < len && ptr[j] && ptr[j]->mxroot == ptr[i]) {
+			free(ptr[j]);
+			ptr[j++] = NULL;
+		}
+	}
 	if (odpnt != NULL) {
 		*odpnt = ptr[i];
 	} else {
@@ -1128,6 +1133,106 @@ found_it:
 	}
 	ptr[i] = NULL;
 	return (retcode);
+}
+
+/*
+ * Return the number of directory entries for a file. This is usually 1
+ * but may be 3 or more in case of multi extent files.
+ */
+LOCAL int
+iso_dir_ents(de)
+	struct directory_entry	*de;
+{
+	struct directory_entry	*de2;
+	int	ret = 0;
+
+	if (de->mxroot == NULL)
+		return (1);
+	de2 = de;
+	while (de2 != NULL && de2->mxroot == de->mxroot) {
+		ret++;
+		de2 = de2->next;
+	}
+	return (ret);
+}
+
+/*
+ * Copy old multi-extent directory information from the previous session.
+ * If both the old session and the current session are created by mkisofs
+ * then this code could be extremely simple as the information is only copied
+ * in case that the file did not change since the last session was made.
+ * As we don't know the other ISO formatter program, any combination of
+ * multi-extent files and even a single extent file could be possible.
+ * We need to handle all files the same way ad the old session was created as
+ * we reuse the data extents from the file in the old session.
+ */
+LOCAL void
+copy_mult_extent(se1, se2)
+	struct directory_entry	*se1;
+	struct directory_entry	*se2;
+{
+	struct directory_entry	*curr_entry = se1;
+	int			len1;
+	int			len2;
+	int			mxpart = 0;
+
+	len1 = iso_dir_ents(se1);
+	len2 = iso_dir_ents(se2);
+
+	if (len1 == 1) {
+		/*
+		 * Convert single-extent to multi-extent.
+		 * If *se1 is not multi-extent, *se2 definitely is
+		 * and we need to set up a MULTI_EXTENT directory header.
+		 */
+		se1->de_flags |= MULTI_EXTENT;
+		se1->isorec.flags[0] |= ISO_MULTIEXTENT;
+		se1->mxroot = curr_entry;
+		se1->mxpart = 0;
+		se1 = dup_directory_entry(se1);
+		curr_entry->de_flags |= INHIBIT_ISO9660_ENTRY|INHIBIT_JOLIET_ENTRY;
+		se1->de_flags |= INHIBIT_UDF_ENTRY;
+		se1->next = curr_entry->next;
+		curr_entry->next = se1;
+		se1 = curr_entry;
+		len1 = 2;
+	}
+
+	while (se2->isorec.flags[0] & ISO_MULTIEXTENT) {
+		len1--;
+		len2--;
+		if (len1 <= 0) {
+			struct directory_entry *sex = dup_directory_entry(se1);
+
+			sex->mxroot = curr_entry;
+			sex->next = se1->next;
+			se1->next = sex;
+			len1++;
+		}
+		memcpy(se1->isorec.extent, se2->isorec.extent, 8);
+		se1->starting_block = get_733(se2->isorec.extent);
+		se1->de_flags |= SAFE_TO_REUSE_TABLE_ENTRY;
+		se1->de_flags |= MULTI_EXTENT;
+		se1->isorec.flags[0] |= ISO_MULTIEXTENT;
+		se1->mxroot = curr_entry;
+		se1->mxpart = mxpart++;
+
+		se1 = se1->next;
+		se2 = se2->next;
+	}
+	memcpy(se1->isorec.extent, se2->isorec.extent, 8);
+	se1->starting_block = get_733(se2->isorec.extent);
+	se1->de_flags |= SAFE_TO_REUSE_TABLE_ENTRY;
+	se1->isorec.flags[0] &= ~ISO_MULTIEXTENT;	/* Last entry */
+	se1->mxpart = mxpart;
+	while (len1 > 1) {				/* Drop other entries */
+		struct directory_entry	*sex;
+
+		sex = se1->next;
+		se1->next = sex->next;
+		free(sex);
+		len1--;
+	}
 }
 
 /*
@@ -1176,6 +1281,8 @@ merge_isofs(path)
 	char		buffer[SECTOR_SIZE];
 	int		file_addr;
 	int		i;
+	int		sum = 0;
+	char		*p = buffer;
 	struct iso_primary_descriptor *pri = NULL;
 	struct iso_directory_record *rootp;
 	struct iso_volume_descriptor *vdp;
@@ -1190,17 +1297,12 @@ merge_isofs(path)
 	for (i = 0; i < 100; i++) {
 		if (readsecs(file_addr, buffer,
 				sizeof (buffer) / SECTOR_SIZE) != sizeof (buffer)) {
-#ifdef	USE_LIBSCHILY
 			comerr(" Read error on old image %s\n", path);
-#else
-			fprintf(stderr, " Read error on old image %s\n", path);
-			exit(10);
-#endif
 		}
-		vdp = (struct iso_volume_descriptor *) buffer;
+		vdp = (struct iso_volume_descriptor *)buffer;
 
 		if ((strncmp(vdp->id, ISO_STANDARD_ID, sizeof (vdp->id)) == 0) &&
-		    (isonum_711((unsigned char *) vdp->type) == ISO_VD_PRIMARY)) {
+		    (get_711(vdp->type) == ISO_VD_PRIMARY)) {
 			break;
 		}
 		file_addr += 1;
@@ -1209,19 +1311,22 @@ merge_isofs(path)
 	if (i == 100) {
 		return (NULL);
 	}
-	pri = (struct iso_primary_descriptor *) vdp;
+	for (i = 0; i < 2048-3; i++) {
+		sum += p[i] & 0xFF;
+	}
+	pri = (struct iso_primary_descriptor *)vdp;
 
 	/* Check the blocksize of the image to make sure it is compatible. */
-	if (isonum_723((unsigned char *) pri->logical_block_size) != SECTOR_SIZE) {
+	if (get_723(pri->logical_block_size) != SECTOR_SIZE) {
 		errmsgno(EX_BAD,
-			"Previous session has incompatible sector size %d.\n",
-			isonum_723((unsigned char *) pri->logical_block_size));
+			"Previous session has incompatible sector size %u.\n",
+			get_723(pri->logical_block_size));
 		return (NULL);
 	}
-	if (isonum_723((unsigned char *) pri->volume_set_size) != 1) {
+	if (get_723(pri->volume_set_size) != 1) {
 		errmsgno(EX_BAD,
-			"Previous session has volume set size %d (must be 1).\n",
-			isonum_723((unsigned char *) pri->volume_set_size));
+			"Previous session has volume set size %u (must be 1).\n",
+			get_723(pri->volume_set_size));
 		return (NULL);
 	}
 	/* Get the location and size of the root directory. */
@@ -1229,6 +1334,30 @@ merge_isofs(path)
 		e_malloc(sizeof (struct iso_directory_record));
 
 	memcpy(rootp, pri->root_directory_record, sizeof (*rootp));
+
+	for (i = 0; i < 100; i++) {
+		if (readsecs(file_addr, buffer,
+				sizeof (buffer) / SECTOR_SIZE) != sizeof (buffer)) {
+			comerr(" Read error on old image %s\n", path);
+		}
+		if (strncmp(buffer, "MKI ", 4) == 0) {
+			int	sum2;
+
+			sum2  = p[2045] & 0xFF;
+			sum2 *= 256;
+			sum2 += p[2046] & 0xFF;
+			sum2 *= 256;
+			sum2 += p[2047] & 0xFF;
+			if (sum == sum2) {
+				error("ISO-9660 image includes checksum signature for correct inode numbers.\n");
+			} else {
+				correct_inodes = FALSE;
+				rrip112 = FALSE;
+			}
+			break;
+		}
+		file_addr += 1;
+	}
 
 	return (rootp);
 }
@@ -1241,7 +1370,7 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 {
 	int		i;
 	struct directory_entry *s_entry;
-	unsigned int	ttbl_extent = 0;
+	UInt32_t	ttbl_extent = 0;
 	unsigned int	ttbl_index = 0;
 	char		whole_path[PATH_MAX];
 
@@ -1255,17 +1384,18 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 		}
 		if (pnt[i]->name != NULL && pnt[i]->whole_name == NULL) {
 			/* Set the name for this directory. */
-			strcpy(whole_path, this_dir->de_name);
+			strlcpy(whole_path, this_dir->de_name,
+							sizeof (whole_path));
 			strcat(whole_path, SPATH_SEPARATOR);
 			strcat(whole_path, pnt[i]->name);
 
-			pnt[i]->whole_name = strdup(whole_path);
+			pnt[i]->whole_name = e_strdup(whole_path);
 		}
 		if (pnt[i]->name != NULL &&
 /*			strcmp(pnt[i]->name, "<translation table>") == 0 )*/
 			strcmp(pnt[i]->name, trans_tbl) == 0) {
 			ttbl_extent =
-			    isonum_733((unsigned char *)pnt[i]->isorec.extent);
+			    get_733(pnt[i]->isorec.extent);
 			ttbl_index = i;
 			continue;
 		}
@@ -1323,8 +1453,10 @@ merge_remaining_entries(this_dir, pnt, n_orig)
 		if (s_entry->name != NULL && strcmp(s_entry->name, "..") == 0) {
 			continue;
 		}
-/*		if (strcmp(s_entry->name, "<translation table>") == 0)*/
-		if (strcmp(s_entry->name, trans_tbl) == 0) {
+/*		if (s_entry->name != NULL &&*/
+/*		    strcmp(s_entry->name, "<translation table>") == 0)*/
+		if (s_entry->name != NULL &&
+		    strcmp(s_entry->name, trans_tbl) == 0) {
 			continue;
 		}
 		if ((s_entry->de_flags & SAFE_TO_REUSE_TABLE_ENTRY) == 0) {
@@ -1374,7 +1506,7 @@ merge_old_directory_into_tree(dpnt, parent)
 			*next_brother;
 	char		whole_path[PATH_MAX];
 
-	this_dir = (struct directory *) e_malloc(sizeof (struct directory));
+	this_dir = (struct directory *)e_malloc(sizeof (struct directory));
 	memset(this_dir, 0, sizeof (struct directory));
 	this_dir->next = NULL;
 	this_dir->subdir = NULL;
@@ -1394,11 +1526,11 @@ merge_old_directory_into_tree(dpnt, parent)
 	}
 
 	/* Set the name for this directory. */
-	strcpy(whole_path, parent->de_name);
+	strlcpy(whole_path, parent->de_name, sizeof (whole_path));
 	strcat(whole_path, SPATH_SEPARATOR);
 	strcat(whole_path, dpnt->name);
-	this_dir->de_name = strdup(whole_path);
-	this_dir->whole_name = strdup(whole_path);
+	this_dir->de_name = e_strdup(whole_path);
+	this_dir->whole_name = e_strdup(whole_path);
 
 	/*
 	 * Now fill this directory using information from the previous session.
@@ -1438,11 +1570,11 @@ merge_old_directory_into_tree(dpnt, parent)
 		/*
 		 * Set the whole name for this file.
 		 */
-		strcpy(whole_path, this_dir->whole_name);
+		strlcpy(whole_path, this_dir->whole_name, sizeof (whole_path));
 		strcat(whole_path, SPATH_SEPARATOR);
 		strcat(whole_path, contents[i]->name);
 
-		contents[i]->whole_name = strdup(whole_path);
+		contents[i]->whole_name = e_strdup(whole_path);
 
 		contents[i]->next = this_dir->contents;
 		contents[i]->filedir = this_dir;
@@ -1510,26 +1642,15 @@ get_session_start(file_addr)
 		return (0);
 
 	if (cdrecord_data == NULL) {
-#ifdef	USE_LIBSCHILY
 		comerrno(EX_BAD,
 		    "Special parameters for cdrecord not specified with -C\n");
-#else
-		fprintf(stderr,
-		    "Special parameters for cdrecord not specified with -C\n");
-		exit(1);
-#endif
 	}
 	/*
 	 * Next try and find the ',' in there which delimits the two numbers.
 	 */
 	pnt = strchr(cdrecord_data, ',');
 	if (pnt == NULL) {
-#ifdef	USE_LIBSCHILY
 		comerrno(EX_BAD, "Malformed cdrecord parameters\n");
-#else
-		fprintf(stderr, "Malformed cdrecord parameters\n");
-		exit(1);
-#endif
 	}
 
 	*pnt = '\0';
@@ -1584,14 +1705,8 @@ merge_previous_session(this_dir, mrootp, reloc_root, reloc_old_root)
 	orig_contents = read_merging_directory(mrootp, &n_orig);
 	if (orig_contents == NULL) {
 		if (reloc_old_root) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			"Reading old session failed, cannot execute -old-root.\n");
-#else
-			fprintf(stderr,
-			"Reading old session failed, cannot execute -old-root.\n");
-			exit(1);
-#endif
 		}
 		return (0);
 	}
@@ -1637,32 +1752,18 @@ merge_previous_session(this_dir, mrootp, reloc_root, reloc_old_root)
 				new_orig_contents = read_merging_directory(&subroot, &new_n_orig);
 
 				if (!new_orig_contents) {
-#ifdef	USE_LIBSCHILY
 					comerrno(EX_BAD,
 					"Reading directory %s in old session failed, cannot execute -old-root.\n",
 							reloc_old_root);
-#else
-					fprintf(stderr,
-					"Reading directory %s in old session failed, cannot execute -old-root.\n",
-							reloc_old_root);
-					exit(1);
-#endif
 				}
 				i = -1;
 				break;
 			}
 
 			if (i == new_n_orig) {
-#ifdef	USE_LIBSCHILY
 				comerrno(EX_BAD,
 				"-old-root (sub)directory %s not found in old session.\n",
 						reloc_old_root);
-#else
-				fprintf(stderr,
-				"-old-root (sub)directory %s not found in old session.\n",
-						reloc_old_root);
-				exit(1);
-#endif
 			}
 
 			/* restore string, proceed to next sub directory */
@@ -1688,6 +1789,19 @@ merge_previous_session(this_dir, mrootp, reloc_root, reloc_old_root)
 			    &statbuf, &lstatbuf, NULL);
 			if (retcode == -1)
 				return (-1);
+			/*
+			 * Skip other directory entries for multi-extent files
+			 */
+			if (s_entry->de_flags & MULTI_EXTENT) {
+				struct directory_entry	*s_e;
+
+				for (s_e = s_entry->mxroot;
+					s_e && s_e->mxroot == s_entry->mxroot;
+						s_e = s_e->next) {
+					s_entry = s_e;
+					;
+				}
+			}
 		}
 		merge_remaining_entries(this_dir, orig_contents, n_orig);
 
@@ -1739,14 +1853,14 @@ merge_previous_session(this_dir, mrootp, reloc_root, reloc_old_root)
 		 * The check_prev_session function looks for an identical
 		 * entry in the previous session.  If we see it, then we copy
 		 * the extent number to s_entry, and cross it off the list.
-		 * It returns 2 if it's a directory
 		 */
 		retcode = check_prev_session(orig_contents, n_orig, s_entry,
 			&statbuf, &lstatbuf, &odpnt);
 		if (retcode == -1)
 			return (-1);
 
-		if (retcode == 2 && odpnt != NULL) {
+		if (odpnt != NULL &&
+		    (s_entry->isorec.flags[0] & ISO_DIRECTORY) != 0) {
 			int	dflag;
 
 			if (strcmp(s_entry->name, ".") != 0 &&
@@ -1773,6 +1887,23 @@ merge_previous_session(this_dir, mrootp, reloc_root, reloc_old_root)
 				}
 				free(odpnt);
 				odpnt = NULL;
+			}
+		}
+		if (odpnt) {
+			free(odpnt);
+			odpnt = NULL;
+		}
+		/*
+		 * Skip other directory entries for multi-extent files
+		 */
+		if (s_entry->de_flags & MULTI_EXTENT) {
+			struct directory_entry	*s_e;
+
+			for (s_e = s_entry->mxroot;
+				s_e && s_e->mxroot == s_entry->mxroot;
+					s_e = s_e->next) {
+				s_entry = s_e;
+				;
 			}
 		}
 	}
@@ -1808,28 +1939,26 @@ check_rr_relocation(de)
 	unsigned char	sector[SECTOR_SIZE];
 	unsigned char	*pnt = de->rr_attributes;
 		int	len = de->rr_attr_size;
-		int	cont_extent = 0,
+		UInt32_t cont_extent = 0,
 			cont_offset = 0,
 			cont_size = 0;
 
 	pnt = parse_xa(pnt, &len, /* dpnt */ 0);
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
-#ifdef USE_LIBSCHILY
-			errmsgno(EX_BAD, "**BAD RRVERSION (%d) for %c%c\n", pnt[3], pnt[0], pnt[1]);
-#else
-			fprintf(stderr, "**BAD RRVERSION (%d) for %c%c\n", pnt[3], pnt[0], pnt[1]);
-#endif
+			errmsgno(EX_BAD,
+				"**BAD RRVERSION (%d) in '%c%c' field (%2.2X %2.2X).\n",
+				pnt[3], pnt[0], pnt[1], pnt[0], pnt[1]);
 		}
-		if (strncmp((char *) pnt, "CL", 2) == 0) {
+		if (strncmp((char *)pnt, "CL", 2) == 0) {
 			struct dir_extent_link *dlink = e_malloc(sizeof (*dlink));
 
-			dlink->extent = isonum_733(pnt + 4);
+			dlink->extent = get_733(pnt + 4);
 			dlink->de = de;
 			dlink->next = cl_dirs;
 			cl_dirs = dlink;
 
-		} else if (strncmp((char *) pnt, "RE", 2) == 0) {
+		} else if (strncmp((char *)pnt, "RE", 2) == 0) {
 			struct dir_extent_link *dlink = e_malloc(sizeof (*dlink));
 
 			dlink->extent = de->starting_block;
@@ -1837,12 +1966,12 @@ check_rr_relocation(de)
 			dlink->next = re_dirs;
 			re_dirs = dlink;
 
-		} else if (strncmp((char *) pnt, "CE", 2) == 0) {
-			cont_extent = isonum_733(pnt + 4);
-			cont_offset = isonum_733(pnt + 12);
-			cont_size = isonum_733(pnt + 20);
+		} else if (strncmp((char *)pnt, "CE", 2) == 0) {
+			cont_extent = get_733(pnt + 4);
+			cont_offset = get_733(pnt + 12);
+			cont_size = get_733(pnt + 20);
 
-		} else if (strncmp((char *) pnt, "ST", 2) == 0) {
+		} else if (strncmp((char *)pnt, "ST", 2) == 0) {
 			len = pnt[2];
 		}
 		len -= pnt[2];
@@ -1921,12 +2050,7 @@ finish_cl_pl_for_prev_session()
 				d_entry = d_entry->next;
 			}
 			if (!d_entry) {
-#ifdef USE_LIBSCHILY
 				comerrno(EX_BAD, "Unable to locate directory parent\n");
-#else
-				fprintf(stderr, "Unable to locate directory parent\n");
-				exit(1);
-#endif
 			}
 
 			if (s_entry->filedir != NULL && s_entry->parent_rec != NULL) {

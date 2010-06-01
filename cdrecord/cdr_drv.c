@@ -1,35 +1,32 @@
-/* @(#)cdr_drv.c	1.36 04/03/02 Copyright 1997-2004 J. Schilling */
+/* @(#)cdr_drv.c	1.48 09/07/10 Copyright 1997-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)cdr_drv.c	1.36 04/03/02 Copyright 1997-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)cdr_drv.c	1.48 09/07/10 Copyright 1997-2009 J. Schilling";
 #endif
 /*
  *	CDR device abstraction layer
  *
- *	Copyright (c) 1997-2004 J. Schilling
+ *	Copyright (c) 1997-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>	/* Include sys/types.h to make off_t available */
-#include <standard.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>	/* Include sys/types.h to make off_t available */
+#include <schily/standard.h>
+#include <schily/schily.h>
 
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
@@ -43,6 +40,14 @@ extern	cdr_t	cdr_oldcd;
 extern	cdr_t	cdr_cd;
 extern	cdr_t	cdr_mmc;
 extern	cdr_t	cdr_mmc_sony;
+extern	cdr_t	cdr_dvd;
+extern	cdr_t	cdr_dvdplus;
+extern	cdr_t	cdr_dvdplusr;
+extern	cdr_t	cdr_dvdplusrw;
+extern	cdr_t	cdr_bd;
+extern	cdr_t	cdr_bdrom;
+extern	cdr_t	cdr_bdr;
+extern	cdr_t	cdr_bdre;
 extern	cdr_t	cdr_cd_dvd;
 extern	cdr_t	cdr_philips_cdd521O;
 extern	cdr_t	cdr_philips_dumb;
@@ -60,16 +65,19 @@ extern	cdr_t	cdr_teac_cdr50;
 extern	cdr_t	cdr_cw7501;
 extern	cdr_t	cdr_cdr_simul;
 extern	cdr_t	cdr_dvd_simul;
+extern	cdr_t	cdr_bd_simul;
 
 EXPORT	cdr_t 	*drive_identify		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *ip));
 EXPORT	int	drive_attach		__PR((SCSI *scgp, cdr_t *));
 EXPORT	int	attach_unknown		__PR((void));
 EXPORT	int	blank_dummy		__PR((SCSI *scgp, cdr_t *, long addr, int blanktype));
+EXPORT	int	blank_simul		__PR((SCSI *scgp, cdr_t *, long addr, int blanktype));
 EXPORT	int	format_dummy		__PR((SCSI *scgp, cdr_t *, int fmtflags));
 EXPORT	int	drive_getdisktype	__PR((SCSI *scgp, cdr_t *dp));
 EXPORT	int	cmd_ill			__PR((SCSI *scgp));
 EXPORT	int	cmd_dummy		__PR((SCSI *scgp, cdr_t *));
 EXPORT	int	no_sendcue		__PR((SCSI *scgp, cdr_t *, track_t *trackp));
+EXPORT	int	no_diskstatus		__PR((SCSI *scgp, cdr_t *));
 EXPORT	int	buf_dummy		__PR((SCSI *scgp, long *sp, long *fp));
 EXPORT	BOOL	set_cdrcmds		__PR((char *name, cdr_t **dpp));
 EXPORT	cdr_t	*get_cdrcmds		__PR((SCSI *scgp));
@@ -79,6 +87,14 @@ EXPORT	cdr_t	*get_cdrcmds		__PR((SCSI *scgp));
  */
 cdr_t	*drivers[] = {
 	&cdr_cd_dvd,
+	&cdr_bd,
+	&cdr_bdrom,
+	&cdr_bdr,
+	&cdr_bdre,
+	&cdr_dvdplus,
+	&cdr_dvdplusr,
+	&cdr_dvdplusrw,
+	&cdr_dvd,
 	&cdr_mmc,
 	&cdr_mmc_sony,
 	&cdr_cd,
@@ -99,6 +115,7 @@ cdr_t	*drivers[] = {
 	&cdr_cw7501,
 	&cdr_cdr_simul,
 	&cdr_dvd_simul,
+	&cdr_bd_simul,
 	(cdr_t *)NULL,
 };
 
@@ -135,6 +152,49 @@ blank_dummy(scgp, dp, addr, blanktype)
 {
 	printf("This drive or media does not support the 'BLANK media' command\n");
 	return (-1);
+}
+
+EXPORT int
+blank_simul(scgp, dp, addr, blanktype)
+	SCSI	*scgp;
+	cdr_t	*dp;
+	long	addr;
+	int	blanktype;
+{
+	track_t	*trackp = dp->cdr_dstat->ds_trackp;
+	int	secsize = trackp->secsize;
+	Llong	padbytes = 0;			/* Make stupid GCC happy */
+	int	ret = -1;
+
+	switch (blanktype) {
+
+	case BLANK_MINIMAL:
+			padbytes = 1000 * secsize;
+			break;
+	case BLANK_DISC:
+			if (dp->cdr_dstat->ds_maxblocks > 0)
+				padbytes = dp->cdr_dstat->ds_maxblocks * (Llong)secsize;
+			break;
+	default:
+			printf("Unsupported blank type for simulation mode.\n");
+			printf("Try blank=all or blank=fast\n");
+			padbytes = 0;
+	}
+	if (padbytes > 0) {
+		printf("Running pad based emulation to blank the medium.\n");
+		printf("secsize %d padbytes %lld padblocks %lld maxblocks %d\n",
+			secsize, padbytes, padbytes/secsize, dp->cdr_dstat->ds_maxblocks);
+
+		ret = pad_track(scgp, dp, trackp, 0, padbytes, TRUE, NULL);
+		printf("\n");
+		flush();
+	}
+	if (0) {
+		printf("This drive or media does not support the 'BLANK media' command\n");
+		return (-1);
+	}
+	return (ret);
+
 }
 
 EXPORT int
@@ -179,6 +239,15 @@ no_sendcue(scgp, dp, trackp)
 	track_t	*trackp;
 {
 	errmsgno(EX_BAD, "SAO writing not available or not implemented for this drive.\n");
+	return (-1);
+}
+
+EXPORT int
+no_diskstatus(scgp, dp)
+	SCSI	*scgp;
+	cdr_t	*dp;
+{
+	errmsgno(EX_BAD, "Printing of disk status not implemented for this drive.\n");
 	return (-1);
 }
 
@@ -281,6 +350,9 @@ get_cdrcmds(scgp)
 		if (is_cdwr && is_dvdwr)
 			dp = &cdr_cd_dvd;
 		else
+		if (is_dvdwr)
+			dp = &cdr_dvd;
+		else
 			dp = &cdr_mmc;
 
 	} else switch (scgp->dev) {
@@ -309,6 +381,7 @@ get_cdrcmds(scgp)
 	case DEV_TEAC_CD_R50S:	dp = &cdr_teac_cdr50;		break;
 
 	case DEV_PIONEER_DW_S114X: dp = &cdr_pioneer_dw_s114x;	break;
+	case DEV_PIONEER_DVDR_S101:dp = &cdr_dvd;		break;
 
 	default:		dp = &cdr_mmc;
 	}

@@ -1,7 +1,8 @@
-/* @(#)tree.c	1.82 04/06/12 joerg */
+/* @(#)tree.c	1.123 10/05/24 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)tree.c	1.82 04/06/12 joerg";
+static	UConst char sccsid[] =
+	"@(#)tree.c	1.123 10/05/24 joerg";
 #endif
 /*
  * File tree.c - scan directory  tree and build memory structures for iso9660
@@ -10,7 +11,7 @@ static	char sccsid[] =
  * Written by Eric Youngdale (1993).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999,2000-2004 J. Schilling
+ * Copyright (c) 1999,2000-2010 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,15 +31,14 @@ static	char sccsid[] =
 
 /* APPLE_HYB James Pearson j.pearson@ge.ucl.ac.uk 23/2/2000 */
 
-#include <mconfig.h>
 #include "mkisofs.h"
+#include "rock.h"
 #include "match.h"
-#include "exclude.h"
-#include <timedefs.h>
-#include <errno.h>
-#include <fctldefs.h>
-#include <device.h>
-#include <schily.h>
+#include <schily/time.h>
+#include <schily/errno.h>
+#include <schily/fcntl.h>
+#include <schily/device.h>
+#include <schily/schily.h>
 
 #ifdef UDF
 #include "udf.h"
@@ -50,56 +50,53 @@ static	char sccsid[] =
 #include "vms.h"
 #endif
 
-/*
- * Autoconf should be able to figure this one out for us and let us know
- * whether the system has memmove or not.
- */
-#ifndef HAVE_MEMMOVE
-#define	memmove(d, s, n)	bcopy((s), (d), (n))
-#endif
-
 LOCAL	Uchar	symlink_buff[PATH_MAX+1];
 
 LOCAL	char	*filetype		__PR((int t));
 LOCAL	char	*rstr			__PR((char *s1, char *s2));
-LOCAL	void	stat_fix		__PR((struct stat * st));
+LOCAL	void	stat_fix		__PR((struct stat *st));
 EXPORT	int	stat_filter		__PR((char *path, struct stat *st));
 EXPORT	int	lstat_filter		__PR((char *path, struct stat *st));
 LOCAL	int	sort_n_finish		__PR((struct directory *this_dir));
 LOCAL	void	generate_reloc_directory __PR((void));
-LOCAL	void	attach_dot_entries	__PR((struct directory * dirnode,
-						struct stat * parent_stat));
-LOCAL	void	update_nlink		__PR((struct directory_entry *s_entry,
-						int value));
-LOCAL	void	increment_nlink		__PR((struct directory_entry *s_entry));
+EXPORT	void	attach_dot_entries	__PR((struct directory *dirnode,
+						struct stat *this_stat,
+						struct stat *parent_stat));
 EXPORT	char	*find_rr_attribute	__PR((unsigned char *pnt, int len,
 						char *attr_type));
 EXPORT	void	finish_cl_pl_entries	__PR((void));
+LOCAL	void	dir_nesting_warn	__PR((struct directory *this_dir,
+						char *path, int contflag));
 EXPORT	int	scan_directory_tree	__PR((struct directory *this_dir,
 						char *path,
 						struct directory_entry *de));
-#ifdef APPLE_HYB
+LOCAL	struct directory_entry *
+		dup_relocated_dir	__PR((struct directory *this_dir,
+					    struct directory_entry *s_entry,
+					    char *whole_path,
+					    char *short_name,
+					    struct stat *statp));
 EXPORT	int	insert_file_entry	__PR((struct directory *this_dir,
 						char *whole_path,
 						char *short_name,
-						int have_rsrc));
-#else
-EXPORT	int	insert_file_entry	__PR((struct directory *this_dir,
-						char *whole_path,
-						char *short_name));
-#endif
+						struct stat *statp, int have_rsrc));
+EXPORT	struct directory_entry *
+		dup_directory_entry	__PR((struct directory_entry *s_entry));
 EXPORT	void	generate_iso9660_directories __PR((struct directory *node,
 						FILE *outfile));
+
+LOCAL	void	set_de_path		__PR((struct directory *parent,
+						struct directory *this));
+
 EXPORT	struct directory *
 		find_or_create_directory __PR((struct directory *parent,
-						const char *path,
+						char *path,
 						struct directory_entry *de,
 						int flag));
-LOCAL	void	delete_directory	__PR((struct directory * parent,
-						struct directory * child));
+LOCAL	void	delete_directory	__PR((struct directory *parent,
+						struct directory *child));
 EXPORT	int	sort_tree		__PR((struct directory *node));
 EXPORT	void	dump_tree		__PR((struct directory *node));
-EXPORT	void	update_nlink_field	__PR((struct directory *node));
 EXPORT	struct directory_entry *
 		search_tree_file	__PR((struct directory *node,
 						char *filename));
@@ -173,11 +170,11 @@ rstr(s1, s2)
 	l1 = strlen(s1);
 	l2 = strlen(s2);
 	if (l2 > l1)
-		return ((char *) NULL);
+		return ((char *)NULL);
 
 	if (strcmp(&s1[l1 - l2], s2) == 0)
 		return (&s1[l1 - l2]);
-	return ((char *) NULL);
+	return ((char *)NULL);
 }
 
 LOCAL void
@@ -291,17 +288,30 @@ sort_n_finish(this_dir)
 	 */
 	if ((this_dir->dir_flags & (DIR_HAS_DOT | DIR_HAS_DOTDOT)) !=
 		(DIR_HAS_DOT | DIR_HAS_DOTDOT)) {
-		attach_dot_entries(this_dir, &fstatbuf);
+		attach_dot_entries(this_dir, NULL, NULL);
 	}
 	flush_file_hash();
 	s_entry = this_dir->contents;
 	while (s_entry) {
+#ifdef	USE_LARGEFILES
+		/*
+		 * Skip all but the last extent from a multi extent file,
+		 * we like them all have the same name.
+		 */
+		if ((s_entry->de_flags & MULTI_EXTENT) &&
+		    (s_entry->isorec.flags[0] & ISO_MULTIEXTENT)) {
+			s_entry = s_entry->next;
+			continue;
+		}
+#endif
 		/* ignore if it's hidden */
 		if (s_entry->de_flags & INHIBIT_ISO9660_ENTRY) {
 			s_entry = s_entry->next;
 			continue;
 		}
-		/* First assume no conflict, and handle this case */
+		/*
+		 * First assume no conflict, and handle this case
+		 */
 		if (!(s_entry1 = find_file_hash(s_entry->isorec.name))) {
 			add_file_hash(s_entry);
 			s_entry = s_entry->next;
@@ -320,22 +330,15 @@ sort_n_finish(this_dir)
 #endif	/* APPLE_HYB */
 
 		if (s_entry1 == s_entry) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			"Fatal goof, file '%s' already in hash table.\n",
 			s_entry->isorec.name);
-#else
-			fprintf(stderr,
-			"Fatal goof, file '%s' already in hash table.\n",
-			s_entry->isorec.name);
-			exit(1);
-#endif
 		}
 		/*
 		 * OK, handle the conflicts.  Try substitute names until we
 		 * come up with a winner
 		 */
-		strcpy(rootname, s_entry->isorec.name);
+		strlcpy(rootname, s_entry->isorec.name, sizeof (rootname));
 		/*
 		 * Strip off the non-significant part of the name so that we
 		 * are left with a sensible root filename.  If we don't find
@@ -352,7 +355,7 @@ sort_n_finish(this_dir)
 		}
 		extname[0] = '\0';		/* In case we have no ext.  */
 		if (c) {
-			strcpy(extname, c);
+			strlcpy(extname, c, sizeof (extname));
 			*c = 0;			/* Cut off complete ext.    */
 		} else {
 			/*
@@ -418,17 +421,12 @@ sort_n_finish(this_dir)
 			}
 		}
 
-		/* If we fell off the bottom here, we were in real trouble. */
-#ifdef	USE_LIBSCHILY
+		/*
+		 * If we fell off the bottom here, we were in real trouble.
+		 */
 		comerrno(EX_BAD,
 			"Unable to generate unique name for file %s\n",
 			s_entry->name);
-#else
-		fprintf(stderr,
-			"Unable to generate unique name for file %s\n",
-			s_entry->name);
-		exit(1);
-#endif
 
 got_valid_name:
 		/*
@@ -442,6 +440,7 @@ got_valid_name:
 					this_dir->whole_name, SPATH_SEPARATOR,
 					s_entry->name, s_entry1->name);
 			}
+
 			s_entry->isorec.name_len[0] = strlen(newname);
 			new_reclen = offsetof(struct iso_directory_record,
 				name[0]) +
@@ -455,8 +454,26 @@ got_valid_name:
 				new_reclen++;	/* Pad to an even byte */
 			s_entry->isorec.length[0] = new_reclen;
 			strcpy(s_entry->isorec.name, newname);
+#ifdef	USE_LARGEFILES
+			if (s_entry->de_flags & MULTI_EXTENT) {
+				struct directory_entry	*s_e;
+
+				/*
+				 * Copy over the new name to all other entries
+				 */
+				for (s_e = s_entry->mxroot;
+				    s_e && s_e->mxroot == s_entry->mxroot;
+							s_e = s_e->next) {
+					s_e->isorec.length[0] = new_reclen;
+					s_e->isorec.name_len[0] = s_entry->isorec.name_len[0];
+					strcpy(s_e->isorec.name, newname);
+				}
+			}
+#endif
 #ifdef APPLE_HYB
-			/* has resource fork - needs new name */
+			/*
+			 * Has resource fork - needs new name
+			 */
 			if (apple_both && s_entry->assoc) {
 				struct directory_entry *s_entry2 =
 								s_entry->assoc;
@@ -493,9 +510,27 @@ got_valid_name:
 				new_reclen++;	/* Pad to an even byte */
 			s_entry1->isorec.length[0] = new_reclen;
 			strcpy(s_entry1->isorec.name, newname);
+#ifdef	USE_LARGEFILES
+			if (s_entry1->de_flags & MULTI_EXTENT) {
+				struct directory_entry	*s_e;
+
+				/*
+				 * Copy over the new name to all other entries
+				 */
+				for (s_e = s_entry1->mxroot;
+				    s_e && s_e->mxroot == s_entry1->mxroot;
+							s_e = s_e->next) {
+					s_e->isorec.length[0] = new_reclen;
+					s_e->isorec.name_len[0] = s_entry1->isorec.name_len[0];
+					strcpy(s_e->isorec.name, newname);
+				}
+			}
+#endif
 			add_file_hash(s_entry1);
 #ifdef APPLE_HYB
-			/* has resource fork - needs new name */
+			/*
+			 * Has resource fork - needs new name
+			 */
 			if (apple_both && s_entry1->assoc) {
 				struct directory_entry *s_entry2 =
 							s_entry1->assoc;
@@ -520,14 +555,18 @@ got_valid_name:
 	    !find_file_hash(trans_tbl) &&
 	    (reloc_dir != this_dir) &&
 	    (this_dir->extent == 0)) {
-		/* First we need to figure out how big this table is */
+		/*
+		 * First we need to figure out how big this table is
+		 */
 		for (s_entry = this_dir->contents; s_entry;
 						s_entry = s_entry->next) {
 			if (strcmp(s_entry->name, ".") == 0 ||
 				strcmp(s_entry->name, "..") == 0)
 				continue;
 #ifdef APPLE_HYB
-			/* skip table entry for the resource fork */
+			/*
+			 * Skip table entry for the resource fork
+			 */
 			if (apple_both &&
 			    (s_entry->isorec.flags[0] & ISO_ASSOCIATED))
 				continue;
@@ -557,22 +596,26 @@ got_valid_name:
 		table->priority = 32768;
 		iso9660_date(table->isorec.date, fstatbuf.st_mtime);
 		table->inode = TABLE_INODE;
-		table->dev = (dev_t) UNCACHED_DEVICE;
+		table->dev = UNCACHED_DEVICE;
 		set_723(table->isorec.volume_sequence_number,
 						volume_sequence_number);
-		set_733((char *) table->isorec.size, tablesize);
+		set_733((char *)table->isorec.size, tablesize);
 		table->size = tablesize;
 		table->filedir = this_dir;
 		if (jhide_trans_tbl)
 			table->de_flags |= INHIBIT_JOLIET_ENTRY;
-/*		table->name = strdup("<translation table>");*/
-		table->name = strdup(trans_tbl);
+		/*
+		 * Always hide transtable from UDF tree.
+		 */
+		table->de_flags |= INHIBIT_UDF_ENTRY;
+/*		table->name = e_strdup("<translation table>");*/
+		table->name = e_strdup(trans_tbl);
 		/*
 		 * We use sprintf() to create the strings, for this reason
 		 * we need to add one byte for the null character at the
 		 * end of the string even though we don't use it.
 		 */
-		table->table = (char *) e_malloc(ISO_ROUND_UP(tablesize)+1);
+		table->table = (char *)e_malloc(ISO_ROUND_UP(tablesize)+1);
 		memset(table->table, 0, ISO_ROUND_UP(tablesize)+1);
 		iso9660_file_length(trans_tbl, table, 0);
 
@@ -595,7 +638,9 @@ got_valid_name:
 		}
 		new_reclen = strlen(s_entry->isorec.name);
 
-		/* First update the path table sizes for directories. */
+		/*
+		 * First update the path table sizes for directories.
+		 */
 		if (s_entry->isorec.flags[0] & ISO_DIRECTORY) {
 			if (strcmp(s_entry->name, ".") != 0 &&
 					strcmp(s_entry->name, "..") != 0) {
@@ -629,32 +674,22 @@ got_valid_name:
 			new_reclen++;
 
 		if (new_reclen > 0xff) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 				"Fatal error - RR overflow (reclen %d) for file %s\n",
 				new_reclen,
 				s_entry->name);
-#else
-			fprintf(stderr,
-				"Fatal error - RR overflow (reclen %d) for file %s\n",
-				new_reclen,
-				s_entry->name);
-			exit(1);
-#endif
 		}
 		s_entry->isorec.length[0] = new_reclen;
 	}
 
 	status = sort_directory(&this_dir->contents, (reloc_dir == this_dir));
 	if (status > 0) {
-#ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD, "Unable to sort directory %s\n",
+		errmsgno(EX_BAD, "Unable to sort directory %s\n",
 			this_dir->whole_name);
-#else
-		fprintf(stderr, "Unable to sort directory %s\n",
-			this_dir->whole_name);
-		exit(1);
-#endif
+		errmsgno(EX_BAD,
+		"If there was more than one directory type argument to mkisofs\n");
+		comerrno(EX_BAD,
+		"use -graft-points to create different target directory names.\n");
 	}
 	/*
 	 * If we are filling out a TRANS.TBL, generate the entries that will
@@ -672,7 +707,9 @@ got_valid_name:
 				strcmp(s_entry->name, "..") == 0)
 				continue;
 #ifdef APPLE_HYB
-			/* skip table entry for the resource fork */
+			/*
+			 * Skip table entry for the resource fork
+			 */
 			if (apple_both &&
 			    (s_entry->isorec.flags[0] & ISO_ASSOCIATED))
 				continue;
@@ -707,16 +744,9 @@ got_valid_name:
 		}
 
 		if (count != tablesize) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 				"Translation table size mismatch %d %d\n",
 				count, tablesize);
-#else
-			fprintf(stderr,
-				"Translation table size mismatch %d %d\n",
-				count, tablesize);
-			exit(1);
-#endif
 		}
 	}
 	/*
@@ -739,7 +769,9 @@ got_valid_name:
 				~(SECTOR_SIZE - 1);
 		this_dir->size += new_reclen;
 
-		/* See if continuation entries were used on disc */
+		/*
+		 * See if continuation entries were used on disc
+		 */
 		if (use_RockRidge &&
 			s_entry->rr_attr_size != s_entry->total_rr_attr_size) {
 			unsigned char	*pnt;
@@ -759,7 +791,7 @@ got_valid_name:
 			 */
 			while (len > 3) {
 				if (pnt[0] == 'C' && pnt[1] == 'E') {
-					nbytes = get_733((char *) pnt + 20);
+					nbytes = get_733((char *)pnt + 20);
 
 					if ((this_dir->ce_bytes & (SECTOR_SIZE - 1)) + nbytes >=
 						SECTOR_SIZE)
@@ -788,7 +820,9 @@ generate_reloc_directory()
 	time_t		current_time;
 	struct directory_entry *s_entry;
 
-	/* Create an  entry for our internal tree */
+	/*
+	 * Create an  entry for our internal tree
+	 */
 	time(&current_time);
 	reloc_dir = (struct directory *)
 		e_malloc(sizeof (struct directory));
@@ -798,40 +832,42 @@ generate_reloc_directory()
 	root->subdir = reloc_dir;
 	reloc_dir->depth = 1;
 	if (hide_rr_moved) {
-		reloc_dir->whole_name = strdup("./.rr_moved");
-		reloc_dir->de_name = strdup(".rr_moved");
+		reloc_dir->whole_name = e_strdup("./.rr_moved");
+		reloc_dir->de_name = e_strdup(".rr_moved");
 	} else {
-		reloc_dir->whole_name = strdup("./rr_moved");
-		reloc_dir->de_name = strdup("rr_moved");
+		reloc_dir->whole_name = e_strdup("./rr_moved");
+		reloc_dir->de_name = e_strdup("rr_moved");
 	}
+	reloc_dir->de_path = reloc_dir->de_name;
 	reloc_dir->extent = 0;
 
 
-	/* Now create an actual directory  entry */
+	/*
+	 * Now create an actual directory entry
+	 */
 	s_entry = (struct directory_entry *)
 		e_malloc(sizeof (struct directory_entry));
 	memset(s_entry, 0, sizeof (struct directory_entry));
 	s_entry->next = root->contents;
 	reloc_dir->self = s_entry;
 
-	/* The rr_moved entry will not appear in the Joliet tree. */
+	/*
+	 * The rr_moved entry will not appear in the Joliet nor the UDF tree.
+	 */
 	reloc_dir->dir_flags |= INHIBIT_JOLIET_ENTRY;
 	s_entry->de_flags |= INHIBIT_JOLIET_ENTRY;
 
-	/* Hiding RR_MOVED seems not to be possible..... */
-#ifdef	HIDE_RR
-	reloc_dir->dir_flags |= INHIBIT_ISO9660_ENTRY;
-	s_entry->de_flags |= INHIBIT_ISO9660_ENTRY;
-#endif
+	reloc_dir->dir_flags |= INHIBIT_UDF_ENTRY;
+	s_entry->de_flags |= INHIBIT_UDF_ENTRY;
 
 	root->contents = s_entry;
-	root->contents->name = strdup(reloc_dir->de_name);
+	root->contents->name = e_strdup(reloc_dir->de_name);
 	root->contents->filedir = root;
 	root->contents->isorec.flags[0] = ISO_DIRECTORY;
 	root->contents->priority = 32768;
 	iso9660_date(root->contents->isorec.date, current_time);
 	root->contents->inode = UNCACHED_INODE;
-	root->contents->dev = (dev_t) UNCACHED_DEVICE;
+	root->contents->dev = UNCACHED_DEVICE;
 	set_723(root->contents->isorec.volume_sequence_number,
 						volume_sequence_number);
 	iso9660_file_length(reloc_dir->de_name, root->contents, 1);
@@ -843,12 +879,16 @@ generate_reloc_directory()
 		fstatbuf.st_nlink = 2;
 		generate_xa_rr_attributes("",
 			hide_rr_moved ? ".rr_moved" : "rr_moved",
-			s_entry, &fstatbuf, &fstatbuf, 0);
+			s_entry, &fstatbuf, &fstatbuf, NEED_RE);
 	};
 
-	/* Now create the . and .. entries in rr_moved */
-	/* Now create an actual directory  entry */
-	attach_dot_entries(reloc_dir, &root_statbuf);
+	/*
+	 * Now create the . and .. entries in rr_moved
+	 * Now create an actual directory entry
+	 */
+	if (root_statbuf.st_nlink == 0)
+		root_statbuf = fstatbuf;
+	attach_dot_entries(reloc_dir, NULL, &root_statbuf);
 }
 
 /*
@@ -859,9 +899,10 @@ generate_reloc_directory()
  * Notes:		Only used for artificial directories that
  *			we are creating.
  */
-LOCAL void
-attach_dot_entries(dirnode, parent_stat)
+EXPORT void
+attach_dot_entries(dirnode, this_stat, parent_stat)
 	struct directory	*dirnode;
+	struct stat		*this_stat;
 	struct stat		*parent_stat;
 {
 	struct directory_entry *s_entry;
@@ -869,10 +910,20 @@ attach_dot_entries(dirnode, parent_stat)
 	int		deep_flag = 0;
 
 	init_fstatbuf();
+	fstatbuf.st_mode = new_dir_mode | S_IFDIR;
+	fstatbuf.st_nlink = 2;
+	if (parent_stat == NULL)
+		parent_stat = &fstatbuf;
+	if (this_stat == NULL)
+		this_stat = &fstatbuf;
 
 	orig_contents = dirnode->contents;
 
 	if ((dirnode->dir_flags & DIR_HAS_DOTDOT) == 0) {
+		if (dirnode->parent &&
+		    dirnode->parent == reloc_dir) {
+			deep_flag = NEED_PL;
+		}
 		s_entry = (struct directory_entry *)
 			e_malloc(sizeof (struct directory_entry));
 		memcpy(s_entry, dirnode->self,
@@ -885,12 +936,12 @@ attach_dot_entries(dirnode, parent_stat)
 				sizeof (hfsdirent));
 		}
 #endif
-		s_entry->name = strdup("..");
+		s_entry->name = e_strdup("..");
 		s_entry->whole_name = NULL;
 		s_entry->isorec.name_len[0] = 1;
 		s_entry->isorec.flags[0] = ISO_DIRECTORY;
 		iso9660_file_length("..", s_entry, 1);
-		iso9660_date(s_entry->isorec.date, fstatbuf.st_mtime);
+		iso9660_date(s_entry->isorec.date, parent_stat->st_mtime);
 		set_723(s_entry->isorec.volume_sequence_number,
 						volume_sequence_number);
 		set_733(s_entry->isorec.size, SECTOR_SIZE);
@@ -902,16 +953,14 @@ attach_dot_entries(dirnode, parent_stat)
 		orig_contents = s_entry;
 
 		if (use_XA || use_RockRidge) {
-			if (parent_stat == NULL) {
-				parent_stat = &fstatbuf;
-			}
 			generate_xa_rr_attributes("",
 				"..", s_entry,
 				parent_stat,
-				parent_stat, 0);
+				parent_stat, deep_flag);
 		}
 		dirnode->dir_flags |= DIR_HAS_DOTDOT;
 	}
+	deep_flag = 0;
 	if ((dirnode->dir_flags & DIR_HAS_DOT) == 0) {
 		s_entry = (struct directory_entry *)
 			e_malloc(sizeof (struct directory_entry));
@@ -925,12 +974,12 @@ attach_dot_entries(dirnode, parent_stat)
 				sizeof (hfsdirent));
 		}
 #endif
-		s_entry->name = strdup(".");
+		s_entry->name = e_strdup(".");
 		s_entry->whole_name = NULL;
 		s_entry->isorec.name_len[0] = 1;
 		s_entry->isorec.flags[0] = ISO_DIRECTORY;
 		iso9660_file_length(".", s_entry, 1);
-		iso9660_date(s_entry->isorec.date, fstatbuf.st_mtime);
+		iso9660_date(s_entry->isorec.date, this_stat->st_mtime);
 		set_723(s_entry->isorec.volume_sequence_number,
 						volume_sequence_number);
 		set_733(s_entry->isorec.size, SECTOR_SIZE);
@@ -941,82 +990,14 @@ attach_dot_entries(dirnode, parent_stat)
 		dirnode->contents->next = orig_contents;
 
 		if (use_XA || use_RockRidge) {
-			fstatbuf.st_mode = new_dir_mode | S_IFDIR;
-			fstatbuf.st_nlink = 2;
-
 			if (dirnode == root) {
 				deep_flag |= NEED_CE | NEED_SP;	/* For extension record */
 			}
 			generate_xa_rr_attributes("",
 				".", s_entry,
-				&fstatbuf, &fstatbuf, deep_flag);
+				this_stat, this_stat, deep_flag);
 		}
 		dirnode->dir_flags |= DIR_HAS_DOT;
-	}
-}
-
-LOCAL void
-update_nlink(s_entry, value)
-	struct directory_entry	*s_entry;
-	int			value;
-{
-	unsigned char	*pnt;
-	int		len;
-
-	pnt = s_entry->rr_attributes;
-	len = s_entry->total_rr_attr_size;
-	pnt = parse_xa(pnt, &len, 0);
-	while (len >= 4) {
-		if (pnt[3] != 1 && pnt[3] != 2) {
-#ifdef USE_LIBSCHILY
-			errmsgno(EX_BAD,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#else
-			fprintf(stderr,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#endif
-		}
-		if (pnt[0] == 'P' && pnt[1] == 'X') {
-			set_733((char *) pnt + 12, value);
-			break;
-		}
-		len -= pnt[2];
-		pnt += pnt[2];
-	}
-}
-
-LOCAL void
-increment_nlink(s_entry)
-	struct directory_entry	*s_entry;
-{
-	unsigned char	*pnt;
-	int		len,
-			nlink;
-
-	pnt = s_entry->rr_attributes;
-	len = s_entry->total_rr_attr_size;
-	pnt = parse_xa(pnt, &len, 0);
-	while (len >= 4) {
-		if (pnt[3] != 1 && pnt[3] != 2) {
-#ifdef USE_LIBSCHILY
-			errmsgno(EX_BAD,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#else
-			fprintf(stderr,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#endif
-		}
-		if (pnt[0] == 'P' && pnt[1] == 'X') {
-			nlink = get_733((char *) pnt + 12);
-			set_733((char *) pnt + 12, nlink + 1);
-			break;
-		}
-		len -= pnt[2];
-		pnt += pnt[2];
 	}
 }
 
@@ -1029,19 +1010,13 @@ find_rr_attribute(pnt, len, attr_type)
 	pnt = parse_xa(pnt, &len, 0);
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
-#ifdef USE_LIBSCHILY
 			errmsgno(EX_BAD,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#else
-			fprintf(stderr,
-				"**BAD RRVERSION (%d) for %c%c\n",
-				pnt[3], pnt[0], pnt[1]);
-#endif
+				"**BAD RRVERSION (%d) in '%c%c' field (%2.2X %2.2X).\n",
+				pnt[3], pnt[0], pnt[1], pnt[0], pnt[1]);
 		}
-		if (strncmp((char *) pnt, attr_type, 2) == 0)
-			return ((char *) pnt);
-		else if (strncmp((char *) pnt, "ST", 2) == 0)
+		if (strncmp((char *)pnt, attr_type, 2) == 0)
+			return ((char *)pnt);
+		else if (strncmp((char *)pnt, "ST", 2) == 0)
 			return (NULL);
 		len -= pnt[2];
 		pnt += pnt[2];
@@ -1056,7 +1031,9 @@ finish_cl_pl_entries()
 	struct directory_entry	*s_entry1;
 	struct directory	*d_entry;
 
-	/* if the reloc_dir is hidden (empty), then return */
+	/*
+	 * If the reloc_dir is hidden (empty), then return
+	 */
 	if (reloc_dir->dir_flags & INHIBIT_ISO9660_ENTRY)
 		return;
 
@@ -1074,13 +1051,8 @@ finish_cl_pl_entries()
 			d_entry = d_entry->next;
 		};
 		if (!d_entry) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 					"Unable to locate directory parent\n");
-#else
-			fprintf(stderr, "Unable to locate directory parent\n");
-			exit(1);
-#endif
 		};
 
 		if (s_entry->filedir != NULL && s_entry->parent_rec != NULL) {
@@ -1109,7 +1081,9 @@ finish_cl_pl_entries()
 				set_733(rr_attr + 4, s_entry->filedir->extent);
 
 
-			/* Now fix the CL pointer */
+			/*
+			 * Now fix the CL pointer
+			 */
 			s_entry1 = s_entry->parent_rec;
 
 /*			set_733((char *) s_entry1->rr_attributes +*/
@@ -1122,19 +1096,34 @@ finish_cl_pl_entries()
 		s_entry->filedir = reloc_dir;	/* Now we can fix this */
 	}
 	/*
-	 * Next we need to modify the NLINK terms in the assorted root
+	 * We would need to modify the NLINK terms in the assorted root
 	 * directory records to account for the presence of the RR_MOVED
-	 * directory
+	 * directory. We do not do this here because we do it later when
+	 * we correct the link count for all direstories in the tree.
 	 */
-	increment_nlink(root->self);
-	increment_nlink(root->self->next);
-	d_entry = root->subdir;
-	while (d_entry) {
-		increment_nlink(d_entry->contents->next);
-		d_entry = d_entry->next;
-	};
+
 
 	finish_cl_pl_for_prev_session();
+}
+
+LOCAL void
+dir_nesting_warn(this_dir, path, contflag)
+	struct directory	*this_dir;
+	char			*path;
+	int			contflag;
+{
+	static	BOOL	did_hint = FALSE;
+
+	errmsgno(EX_BAD,
+		"Directories too deep for '%s' (%d) max is %d%s.\n",
+		path, this_dir->depth, RR_relocation_depth,
+		contflag?"; ignored - continuing":"");
+	if (!did_hint) {
+		did_hint = TRUE;
+		errmsgno(EX_BAD, "To include the complete directory tree,\n");
+		errmsgno(EX_BAD, "use Rock Ridge extensions via -R or -r,\n");
+		errmsgno(EX_BAD, "or allow deep ISO9660 directory nesting via -D.\n");
+	}
 }
 
 /*
@@ -1158,6 +1147,10 @@ scan_directory_tree(this_dir, path, de)
 	struct directory *parent;
 	int		dflag;
 	char		*old_path;
+extern	BOOL		nodesc;
+
+	if (nodesc)
+		return (1);
 
 	if (verbose > 1) {
 		fprintf(stderr, "Scanning %s\n", path);
@@ -1191,16 +1184,15 @@ scan_directory_tree(this_dir, path, de)
 		d_entry = readdir(current_dir);
 	}
 
-	if (!current_dir || !d_entry) {
+	if (!current_dir || (!d_entry && errno != 0)) {
 		int	ret = 1;
 
-#ifdef	USE_LIBSCHILY
 		errmsg("Unable to open directory %s\n", path);
-#else
-		fprintf(stderr, "Unable to open directory %s\n", path);
-#endif
+
 		if (errno == ENOTDIR) {
-			/* Mark as not a directory */
+			/*
+			 * Mark as not a directory
+			 */
 			de->isorec.flags[0] &= ~ISO_DIRECTORY;
 			ret = 0;
 		}
@@ -1208,23 +1200,6 @@ scan_directory_tree(this_dir, path, de)
 			closedir(current_dir);
 		return (ret);
 	}
-#ifdef	ABORT_DEEP_ISO_ONLY
-	if ((this_dir->depth > RR_relocation_depth) && !use_RockRidge) {
-		static	BOOL	did_hint = FALSE;
-
-		errmsgno(EX_BAD,
-			"Directories too deep for '%s' (%d) max is %d; ignored - continuing.\n",
-			path, this_dir->depth, RR_relocation_depth);
-		if (!did_hint) {
-			did_hint = TRUE;
-			errmsgno(EX_BAD, "To incude the complete directory tree,\n");
-			errmsgno(EX_BAD, "use Rock Ridge extensions via -R or -r,\n");
-			errmsgno(EX_BAD, "or allow deep ISO9660 directory nesting via -D.\n");
-		}
-		closedir(current_dir);
-		return (1);
-	}
-#endif
 
 	parent = de->filedir;
 	/*
@@ -1256,31 +1231,52 @@ scan_directory_tree(this_dir, path, de)
 	/*
 	 * Now we scan the directory itself, and look at what is inside of it.
 	 */
-	dflag = 0;
+	whole_path[0] = '\0';
+	dflag = -2;
 	while (1 == 1) {
+		char	*d_name;
+
+		if (dflag < 0) {
+			/*
+			 * Some filesystems do not deliver "." and ".." at all,
+			 * others (on Linux) deliver them in the wrong order.
+			 * Make sure we add "." and ".." before all other
+			 * entries.
+			 */
+			if (dflag < -1)
+				d_name = ".";
+			else
+				d_name = "..";
+			dflag++;
+		} else {
+			/*
+			 * The first time through, skip this, since we already
+			 * asked for the first entry when we opened the
+			 * directory.
+			 */
+			if (dflag > 0) {
+				d_entry = readdir(current_dir);
+			} else {
+				dflag++;
+			}
+			if (!d_entry)
+				break;
+			d_name = d_entry->d_name;
+		}
 
 		/*
-		 * The first time through, skip this, since we already asked
-		 * for the first entry when we opened the directory.
+		 * OK, got a valid entry
+		 *
+		 * If we do not want all files, then pitch the backups.
 		 */
-		if (dflag)
-			d_entry = readdir(current_dir);
-		dflag++;
-
-		if (!d_entry)
-			break;
-
-		/* OK, got a valid entry */
-
-		/* If we do not want all files, then pitch the backups. */
 		if (!all_files) {
-			if (strchr(d_entry->d_name, '~') ||
-			    strchr(d_entry->d_name, '#') ||
-			    rstr(d_entry->d_name, ".bak")) {
+			if (strchr(d_name, '~') ||
+			    strchr(d_name, '#') ||
+			    rstr(d_name, ".bak")) {
 				if (verbose > 0) {
 					fprintf(stderr,
 						"Ignoring file %s\n",
-						d_entry->d_name);
+						d_name);
 				}
 				continue;
 			}
@@ -1291,35 +1287,34 @@ scan_directory_tree(this_dir, path, de)
 			 * exclude certain HFS type files/directories for the
 			 * time being
 			 */
-			if (hfs_exclude(d_entry->d_name))
+			if (hfs_exclude(d_name))
 				continue;
 		}
 #endif	/* APPLE_HYB */
 
-		if (strlen(path) + strlen(d_entry->d_name) + 2 >
-							sizeof (whole_path)) {
-#ifdef	USE_LIBSCHILY
+		if (strlen(path) + strlen(d_name) + 2 > sizeof (whole_path)) {
 			errmsgno(EX_BAD, "Path name %s/%s too long.\n",
-					path, d_entry->d_name);
+					path, d_name);
 			comerrno(EX_BAD, "Overflow of stat buffer\n");
-#else
-			fprintf(stderr, "Path name %s/%s too long.\n",
-					path, d_entry->d_name);
-			fprintf(stderr, "Overflow of stat buffer\n");
-			exit(1);
-#endif
 		};
 
-		/* Generate the complete ASCII path for this file */
-		strcpy(whole_path, path);
+		/*
+		 * Generate the complete ASCII path for this file
+		 */
+		strlcpy(whole_path, path, sizeof (whole_path));
 #ifndef VMS
 		if (whole_path[strlen(whole_path) - 1] != '/')
 			strcat(whole_path, "/");
 #endif
-		strcat(whole_path, d_entry->d_name);
+		strcat(whole_path, d_name);
 
-		/** Should we exclude this file ? */
-		if (matches(d_entry->d_name) || matches(whole_path)) {
+		/*
+		 * Should we exclude this file ?
+		 * Do no check "." and ".."
+		 */
+		if (!(d_name[0] == '.' && (d_name[1] == '\0' ||
+		    (d_name[1] == '.' && d_name[2] == '\0'))) &&
+		    (matches(d_name) || matches(whole_path))) {
 			if (verbose > 1) {
 				fprintf(stderr,
 					"Excluded by match: %s\n", whole_path);
@@ -1327,7 +1322,7 @@ scan_directory_tree(this_dir, path, de)
 			continue;
 		}
 		if (generate_tables &&
-		    strcmp(d_entry->d_name, trans_tbl) == 0) {
+		    strcmp(d_name, trans_tbl) == 0) {
 			/*
 			 * Ignore this entry.  We are going to be generating
 			 * new versions of these files, and we need to ignore
@@ -1342,11 +1337,11 @@ scan_directory_tree(this_dir, path, de)
 		 * If we already have a '.' or a '..' entry, then don't insert
 		 * new ones.
 		 */
-		if (strcmp(d_entry->d_name, ".") == 0 &&
+		if (strcmp(d_name, ".") == 0 &&
 		    this_dir->dir_flags & DIR_HAS_DOT) {
 			continue;
 		}
-		if (strcmp(d_entry->d_name, "..") == 0 &&
+		if (strcmp(d_name, "..") == 0 &&
 		    this_dir->dir_flags & DIR_HAS_DOTDOT) {
 			continue;
 		}
@@ -1354,12 +1349,10 @@ scan_directory_tree(this_dir, path, de)
 		if (verbose > 1)
 			fprintf(stderr, "%s\n", whole_path);
 #endif
-		/* This actually adds the entry to the directory in question.*/
-#ifdef APPLE_HYB
-		insert_file_entry(this_dir, whole_path, d_entry->d_name, 0);
-#else
-		insert_file_entry(this_dir, whole_path, d_entry->d_name);
-#endif	/* APPLE_HYB */
+		/*
+		 * This actually adds the entry to the directory in question.
+		 */
+		insert_file_entry(this_dir, whole_path, d_name, NULL, 0);
 	}
 	closedir(current_dir);
 
@@ -1374,6 +1367,59 @@ scan_directory_tree(this_dir, path, de)
 #endif	/* APPLE_HYB */
 
 	return (1);
+}
+
+LOCAL struct directory_entry *
+dup_relocated_dir(this_dir, s_entry, whole_path, short_name, statp)
+	struct directory	*this_dir;
+	struct directory_entry	*s_entry;
+	char			*whole_path;
+	char			*short_name;
+	struct stat		*statp;
+{
+	struct directory_entry *s_entry1;
+
+	if (!reloc_dir)
+		generate_reloc_directory();
+	init_fstatbuf();
+
+	/*
+	 * Replicate the entry for this directory.  The old one will
+	 * stay where it is, and it will be neutered so that it no
+	 * longer looks like a directory. The new one will look like
+	 * a directory, and it will be put in the reloc_dir.
+	 */
+	s_entry1 = (struct directory_entry *)
+		e_malloc(sizeof (struct directory_entry));
+	memcpy(s_entry1, s_entry, sizeof (struct directory_entry));
+	s_entry1->table = NULL;
+	s_entry1->name = e_strdup(short_name);
+	s_entry1->whole_name = e_strdup(whole_path);
+	s_entry1->next = reloc_dir->contents;
+	reloc_dir->contents = s_entry1;
+	s_entry1->priority = 32768;
+	s_entry1->parent_rec = this_dir->contents;
+	set_723(s_entry1->isorec.volume_sequence_number,
+						volume_sequence_number);
+	s_entry1->filedir = this_dir;
+	iso9660_date(s_entry1->isorec.date, fstatbuf.st_mtime);
+
+	if (use_XA || use_RockRidge) {
+		generate_xa_rr_attributes(whole_path,
+			short_name, s_entry1,
+			statp, statp, NEED_RE);
+	}
+
+	statp->st_size = (off_t)0;
+	statp->st_mode &= 0777;
+	set_733((char *)s_entry->isorec.size, 0);
+	s_entry->size = 0;
+	s_entry->isorec.flags[0] = ISO_FILE;
+	s_entry->inode = UNCACHED_INODE;
+	s_entry->dev = UNCACHED_DEVICE;
+	s_entry->de_flags |= RELOCATED_DIRECTORY;
+
+	return (s_entry1);
 }
 
 
@@ -1391,20 +1437,13 @@ scan_directory_tree(this_dir, path, de)
  * and the thing it points to is a dir), then we will scan those
  * trees before we return.
  */
-#ifdef APPLE_HYB
 EXPORT int
-insert_file_entry(this_dir, whole_path, short_name, have_rsrc)
+insert_file_entry(this_dir, whole_path, short_name, statp, have_rsrc)
 	struct directory	*this_dir;
 	char			*whole_path;
 	char			*short_name;
+	struct stat		*statp;
 	int			have_rsrc;
-#else
-EXPORT int
-insert_file_entry(this_dir, whole_path, short_name)
-	struct directory	*this_dir;
-	char			*whole_path;
-	char			*short_name;
-#endif	/* APPLE_HYB */
 {
 	struct stat	statbuf,
 			lstatbuf;
@@ -1413,7 +1452,9 @@ insert_file_entry(this_dir, whole_path, short_name)
 	int		lstatus;
 	int		status;
 	int		deep_flag;
+#ifdef	USE_NO_SCANDIR
 	int		no_scandir = 0;
+#endif
 
 #ifdef APPLE_HYB
 	int		x_hfs = 0;
@@ -1421,33 +1462,45 @@ insert_file_entry(this_dir, whole_path, short_name)
 
 #endif	/* APPLE_HYB */
 
-	status = stat_filter(whole_path, &statbuf);
+	if (statp) {
+		status = lstatus = 0;
+		lstatbuf = *statp;
+		if (S_ISLNK(lstatbuf.st_mode)) {
+			status = stat_filter(short_name, &statbuf);
+		} else {
+			statbuf = *statp;
+		}
+	} else {
+		status = stat_filter(whole_path, &statbuf);
 
-	lstatus = lstat_filter(whole_path, &lstatbuf);
+		lstatus = lstat_filter(whole_path, &lstatbuf);
+	}
 
 	if ((status == -1) && (lstatus == -1)) {
 		/*
 		 * This means that the file doesn't exist, or isn't accessible.
 		 * Sometimes this is because of NFS permissions problems.
 		 */
-#ifdef	USE_LIBSCHILY
 		errmsg("Non-existent or inaccessible: %s\n", whole_path);
-#else
-		fprintf(stderr, "Non-existent or inaccessible: %s\n",
-								whole_path);
-#endif
+		return (0);
+	}
+	if (S_ISDIR(statbuf.st_mode) &&
+	    (this_dir->depth > RR_relocation_depth) && !use_RockRidge &&
+	    strcmp(short_name, ".") != 0 && strcmp(short_name, "..") != 0) {
+		dir_nesting_warn(this_dir, whole_path, TRUE);
 		return (0);
 	}
 	if (this_dir == root && strcmp(short_name, ".") == 0)
 		root_statbuf = statbuf;	/* Save this for later on */
 
-	/* We do this to make sure that the root entries are consistent */
+	/*
+	 * We do this to make sure that the root entries are consistent
+	 */
 	if (this_dir == root && strcmp(short_name, "..") == 0) {
 		statbuf = root_statbuf;
 		lstatbuf = root_statbuf;
 	}
 	if (S_ISLNK(lstatbuf.st_mode)) {
-
 		/*
 		 * Here we decide how to handle the symbolic links.  Here we
 		 * handle the general case - if we are not following links or
@@ -1456,34 +1509,41 @@ insert_file_entry(this_dir, whole_path, short_name)
 		 * not, then we punt the file.
 		 */
 		if ((status || !follow_links)) {
+#ifdef UDF
+			if (use_RockRidge || use_udf) {
+#else
 			if (use_RockRidge) {
+#endif
 				status = 0;
-				statbuf.st_size = (off_t)0;
 				STAT_INODE(statbuf) = UNCACHED_INODE;
-				statbuf.st_dev = (dev_t) UNCACHED_DEVICE;
-				statbuf.st_mode =
-					(statbuf.st_mode & ~S_IFMT) | S_IFREG;
+				statbuf.st_dev = UNCACHED_DEVICE;
+				if (create_udfsymlinks) {
+					char symlinkcontents[2048];
+					off_t size = sizeof (symlinkcontents);
+
+					if (udf_get_symlinkcontents(whole_path,
+					    symlinkcontents, &size) == -1) {
+						statbuf.st_size = (off_t)0;
+						statbuf.st_mode =
+							(statbuf.st_mode & ~S_IFMT) | S_IFREG;
+					} else {
+						statbuf.st_size = size;
+						statbuf.st_mode = lstatbuf.st_mode;
+					}
+				} else {
+					statbuf.st_size = (off_t)0;
+					statbuf.st_mode =
+						(statbuf.st_mode & ~S_IFMT) | S_IFREG;
+				}
 			} else {
 				if (follow_links) {
-#ifdef	USE_LIBSCHILY
 					/* XXX errno may be wrong! */
 					errmsg("Unable to stat file %s - ignoring and continuing.\n",
 						whole_path);
-#else
-					fprintf(stderr,
-						"Unable to stat file %s - ignoring and continuing.\n",
-						whole_path);
-#endif
 				} else {
-#ifdef	USE_LIBSCHILY
 					errmsgno(EX_BAD,
 						"Symlink %s ignored - continuing.\n",
 						whole_path);
-#else
-					fprintf(stderr,
-						"Symlink %s ignored - continuing.\n",
-						whole_path);
-#endif
 					return (0); /* Non Rock Ridge discs */
 						    /* - ignore all symlinks */
 				}
@@ -1499,8 +1559,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 		 */
 		if (follow_links &&
 		    S_ISDIR(statbuf.st_mode)) {
-			if (strcmp(short_name, ".") &&
-			    strcmp(short_name, "..")) {
+			if (strcmp(short_name, ".") != 0 &&
+			    strcmp(short_name, "..") != 0) {
 				if (find_directory_hash(statbuf.st_dev,
 							STAT_INODE(statbuf))) {
 					if (!use_RockRidge) {
@@ -1542,8 +1602,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 	 * we are supposed to be following symlinks.
 	 */
 	if (follow_links &&
-	    strcmp(short_name, ".") &&
-	    strcmp(short_name, "..") &&
+	    strcmp(short_name, ".") != 0 &&
+	    strcmp(short_name, "..") != 0 &&
 	    S_ISDIR(statbuf.st_mode)) {
 		add_directory_hash(statbuf.st_dev, STAT_INODE(statbuf));
 	}
@@ -1557,22 +1617,16 @@ insert_file_entry(this_dir, whole_path, short_name)
 	}
 #endif
 
-	if (S_ISREG(lstatbuf.st_mode) && (status = access(whole_path, R_OK))) {
-#ifdef	USE_LIBSCHILY
+	if (S_ISREG(lstatbuf.st_mode) &&
+	    ((statp != NULL && (status = access(short_name, R_OK))) ||
+	    (statp == NULL && (status = access(whole_path, R_OK))))) {
 		errmsg("File %s is not readable - ignoring\n",
 			whole_path);
-#else
-		fprintf(stderr,
-			"File %s is not readable (errno = %d) - ignoring\n",
-			whole_path, errno);
-#endif
 		return (0);
 	}
-#ifdef	HAVE_LARGEFILES
-	/*
-	 * XXX What happens with Apple HFS? Does it allow files >= 2 GB?
-	 */
-	if (S_ISREG(lstatbuf.st_mode) && (lstatbuf.st_size >= (off_t)0xFFFFFFFF)) {
+#ifdef	USE_LARGEFILES
+	if (S_ISREG(lstatbuf.st_mode) && (lstatbuf.st_size >= maxnonlarge) &&
+	    !do_largefiles) {
 #else
 	/*
 	 * >= is required by the large file summit standard.
@@ -1584,14 +1638,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 #else
 		errno = EFBIG;
 #endif
-#ifdef	USE_LIBSCHILY
-		errmsg("File %s is too large - ignoring\n",
+		errmsg("File %s is too large for current mkisofs settings - ignoring\n",
 			whole_path);
-#else
-		fprintf(stderr,
-			"File %s is too large (errno = %d) - ignoring\n",
-			whole_path, errno);
-#endif
 		return (0);
 	}
 	/*
@@ -1600,24 +1648,15 @@ insert_file_entry(this_dir, whole_path, short_name)
 	 */
 	if (!follow_links &&
 	    S_ISDIR(lstatbuf.st_mode) &&
-	    strcmp(short_name, ".") &&
-	    strcmp(short_name, "..")) {
+	    strcmp(short_name, ".") != 0 &&
+	    strcmp(short_name, "..") != 0) {
 		if (find_directory_hash(statbuf.st_dev, STAT_INODE(statbuf))) {
-#ifdef	USE_LIBSCHILY
 /*			comerrno(EX_BAD,*/
 /*			"Directory loop - fatal goof (%s %lx %lu).\n",*/
 			errmsgno(EX_BAD,
 			"Warning: Directory loop (%s dev: %lx ino: %lu).\n",
 				whole_path, (unsigned long) statbuf.st_dev,
 				(unsigned long) STAT_INODE(statbuf));
-#else
-/*			fprintf(stderr,*/
-/*			"Directory loop - fatal goof (%s %lx %lu).\n",*/
-			fprintf(stderr,
-			"Warning: Directory loop (%s dev: %lx ino: %lu).\n",
-				whole_path, (unsigned long) statbuf.st_dev,
-				(unsigned long) STAT_INODE(statbuf));
-#endif
 		}
 		add_directory_hash(statbuf.st_dev, STAT_INODE(statbuf));
 	}
@@ -1627,22 +1666,25 @@ insert_file_entry(this_dir, whole_path, short_name)
 		!S_ISDIR(lstatbuf.st_mode)) {
 		fprintf(stderr,
 		"Unknown file type (%s) %s - ignoring and continuing.\n",
-			filetype((int) lstatbuf.st_mode), whole_path);
+			filetype((int)lstatbuf.st_mode), whole_path);
 		return (0);
 	}
-	/* Who knows what trash this is - ignore and continue */
-
+	/*
+	 * Who knows what trash this is - ignore and continue
+	 */
 	if (status) {
-#ifdef	USE_LIBSCHILY
 		errmsg("Unable to stat file %s - ignoring and continuing.\n",
 			whole_path);
-#else
-		fprintf(stderr,
-			"Unable to stat file %s - ignoring and continuing.\n",
-			whole_path);
-#endif
 		return (0);
 	}
+
+#define	is_archive(st)	((st).st_dev == archive_dev && (st).st_ino == archive_ino)
+	if (archive_isreg && is_archive(statbuf)) {
+		errmsgno(EX_BAD,
+			"'%s' is the archive. Not dumped.\n", whole_path);
+		return (0);
+	}
+
 	/*
 	 * Check to see if we have already seen this directory node. If so,
 	 * then we don't create a new entry for it, but we do want to recurse
@@ -1658,10 +1700,13 @@ insert_file_entry(this_dir, whole_path, short_name)
 			}
 		}
 		if (s_entry != NULL &&
-		    strcmp(short_name, ".") &&
-		    strcmp(short_name, "..")) {
+		    strcmp(short_name, ".") != 0 &&
+		    strcmp(short_name, "..") != 0) {
 			struct directory *child;
 
+			/*
+			 * This should not create a new directory
+			 */
 			if ((s_entry->de_flags & RELOCATED_DIRECTORY) != 0) {
 				for (s_entry = reloc_dir->contents; s_entry;
 						s_entry = s_entry->next) {
@@ -1696,9 +1741,11 @@ insert_file_entry(this_dir, whole_path, short_name)
 		}
 	}
 #ifdef APPLE_HYB
-	/* Should we exclude this HFS file ? - only works with -hfs */
-	if (!have_rsrc && apple_hyb && strcmp(short_name, ".") &&
-						strcmp(short_name, "..")) {
+	/*
+	 * Should we exclude this HFS file ? - only works with -hfs
+	 */
+	if (!have_rsrc && apple_hyb && strcmp(short_name, ".") != 0 &&
+					strcmp(short_name, "..") != 0) {
 		if ((x_hfs = (hfs_matches(short_name) ||
 					hfs_matches(whole_path))) == 1) {
 			if (verbose > 1) {
@@ -1714,14 +1761,20 @@ insert_file_entry(this_dir, whole_path, short_name)
 	if (S_ISREG(lstatbuf.st_mode) && !have_rsrc && apple_both && !x_hfs) {
 		char	rsrc_path[PATH_MAX];	/* rsrc fork filename */
 
-		/* construct the resource full path */
+		/*
+		 * Construct the resource full path
+		 */
 		htype = get_hfs_rname(whole_path, short_name, rsrc_path);
-		/* check we can read the resouce fork */
+		/*
+		 * Check we can read the resouce fork
+		 */
 		if (htype) {
 			struct stat	rstatbuf,
 					rlstatbuf;
 
-			/* some further checks on the file */
+			/*
+			 * Some further checks on the file
+			 */
 			status = stat_filter(rsrc_path, &rstatbuf);
 
 			lstatus = lstat_filter(rsrc_path, &rlstatbuf);
@@ -1737,7 +1790,7 @@ insert_file_entry(this_dir, whole_path, short_name)
 				 * resource fork
 				 */
 				insert_file_entry(this_dir, rsrc_path,
-							short_name, htype);
+							short_name, NULL, htype);
 			}
 		}
 	}
@@ -1753,10 +1806,12 @@ insert_file_entry(this_dir, whole_path, short_name)
 	deep_flag = 0;
 	s_entry->table = NULL;
 
-	s_entry->name = strdup(short_name);
-	s_entry->whole_name = strdup(whole_path);
+	s_entry->name = e_strdup(short_name);
+	s_entry->whole_name = e_strdup(whole_path);
 
 	s_entry->de_flags = 0;
+	if (S_ISLNK(lstatbuf.st_mode))
+		s_entry->de_flags |= IS_SYMLINK;
 
 	/*
 	 * If the current directory is hidden, then hide all it's members
@@ -1764,8 +1819,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 	 */
 	if (this_dir->dir_flags & INHIBIT_ISO9660_ENTRY) {
 		s_entry->de_flags |= INHIBIT_ISO9660_ENTRY;
-	} else if (strcmp(short_name, ".") != 0 && strcmp(short_name, "..")
-									!= 0) {
+	} else if (strcmp(short_name, ".") != 0 &&
+		    strcmp(short_name, "..") != 0) {
 		if (i_matches(short_name) || i_matches(whole_path)) {
 			if (verbose > 1) {
 				fprintf(stderr,
@@ -1786,8 +1841,8 @@ insert_file_entry(this_dir, whole_path, short_name)
 	if (this_dir != reloc_dir &&
 				this_dir->dir_flags & INHIBIT_JOLIET_ENTRY) {
 		s_entry->de_flags |= INHIBIT_JOLIET_ENTRY;
-	} else if (strcmp(short_name, ".") != 0 && strcmp(short_name, "..")
-									!= 0) {
+	} else if (strcmp(short_name, ".") != 0 &&
+		    strcmp(short_name, "..") != 0) {
 		if (j_matches(short_name) || j_matches(whole_path)) {
 			if (verbose > 1) {
 				fprintf(stderr,
@@ -1797,9 +1852,25 @@ insert_file_entry(this_dir, whole_path, short_name)
 			s_entry->de_flags |= INHIBIT_JOLIET_ENTRY;
 		}
 	}
+	if (this_dir != reloc_dir &&
+				this_dir->dir_flags & INHIBIT_UDF_ENTRY) {
+		s_entry->de_flags |= INHIBIT_UDF_ENTRY;
+	} else if (strcmp(short_name, ".") != 0 &&
+		    strcmp(short_name, "..") != 0) {
+		if (u_matches(short_name) || u_matches(whole_path)) {
+			if (verbose > 1) {
+				fprintf(stderr,
+					"Hidden from UDF tree: %s\n",
+					whole_path);
+			}
+			s_entry->de_flags |= INHIBIT_UDF_ENTRY;
+		}
+	}
 
 #ifdef SORTING
-	/* inherit any sort weight from parent directory */
+	/*
+	 * Inherit any sort weight from parent directory
+	 */
 	s_entry->sort = this_dir->sort;
 
 #ifdef  DVD_VIDEO
@@ -1818,13 +1889,17 @@ insert_file_entry(this_dir, whole_path, short_name)
 
 	if (dvd_video) {
 		s_entry->sort = assign_dvd_weights(s_entry->name, this_dir, s_entry->sort);
-		/* turn on sorting if necessary, regardless of cmd-line options */
+		/*
+		 * Turn on sorting if necessary, regardless of cmd-line options
+		 */
 		if ((s_entry->sort != this_dir->sort) && do_sort == 0)
 			do_sort++;
 	}
 #endif
 
-	/* see if this entry should have a new weighting */
+	/*
+	 * See if this entry should have a new weighting
+	 */
 	if (do_sort && strcmp(short_name, ".") != 0 &&
 			strcmp(short_name, "..") != 0) {
 		s_entry->sort = sort_matches(whole_path, s_entry->sort);
@@ -1853,9 +1928,10 @@ insert_file_entry(this_dir, whole_path, short_name)
 			s_entry->hfs_type = have_rsrc;
 			/*
 			 * don't want the rsrc file to be included in any
-			 * Joliet tree
+			 * Joliet/UDF tree
 			 */
 			s_entry->de_flags |= INHIBIT_JOLIET_ENTRY;
+			s_entry->de_flags |= INHIBIT_UDF_ENTRY;
 		} else if (s_entry->next) {
 			/*
 			 * if previous entry is an associated file,
@@ -1864,21 +1940,27 @@ insert_file_entry(this_dir, whole_path, short_name)
 			 */
 			if (s_entry->next->isorec.flags[0] & ISO_ASSOCIATED) {
 				s_entry->assoc = s_entry->next;
-				/* share the same HFS parameters */
+				/*
+				 * share the same HFS parameters
+				 */
 				s_entry->hfs_ent = s_entry->next->hfs_ent;
 				s_entry->hfs_type = s_entry->next->hfs_type;
 			}
 		}
-		/* allocate HFS entry if required */
-		if (apple_both && strcmp(short_name, ".") &&
-						strcmp(short_name, "..")) {
+		/*
+		 * Allocate HFS entry if required
+		 */
+		if (apple_both && strcmp(short_name, ".") != 0 &&
+					strcmp(short_name, "..") != 0) {
 			if (!s_entry->hfs_ent) {
 				hfsdirent	*hfs_ent;
 
 				hfs_ent =
 				(hfsdirent *) e_malloc(sizeof (hfsdirent));
 
-				/* fill in the defaults */
+				/*
+				 * Sill in the defaults
+				 */
 				memset(hfs_ent, 0, sizeof (hfsdirent));
 
 				s_entry->hfs_ent = hfs_ent;
@@ -1890,16 +1972,20 @@ insert_file_entry(this_dir, whole_path, short_name)
 			 * initially, then it is set from the data fork
 			 */
 			if (have_rsrc) {
-				/* set rsrc size */
+				/*
+				 * Set rsrc size
+				 */
 				s_entry->hfs_ent->u.file.rsize = lstatbuf.st_size;
 				/*
-				 * this will be overwritten - but might as
+				 * This will be overwritten - but might as
 				 * well set it here ...
 				 */
 				s_entry->hfs_ent->crdate = lstatbuf.st_ctime;
 				s_entry->hfs_ent->mddate = lstatbuf.st_mtime;
 			} else {
-				/* set data size */
+				/*
+				 * Set data size
+				 */
 				s_entry->hfs_ent->u.file.dsize = lstatbuf.st_size;
 				s_entry->hfs_ent->crdate = lstatbuf.st_ctime;
 				s_entry->hfs_ent->mddate = lstatbuf.st_mtime;
@@ -1918,14 +2004,17 @@ insert_file_entry(this_dir, whole_path, short_name)
 	    this_dir->parent == reloc_dir &&
 	    strcmp(short_name, "..") == 0) {
 		s_entry->inode = UNCACHED_INODE;
-		s_entry->dev = (dev_t) UNCACHED_DEVICE;
+		s_entry->dev = UNCACHED_DEVICE;
 		deep_flag = NEED_PL;
 	} else
 #ifdef APPLE_HYB
 	if (have_rsrc) {
-		/* don't want rsrc files to be cached */
+		/*
+		 * don't want rsrc files to be cached
+		 */
+		s_entry->de_flags |= RESOURCE_FORK;
 		s_entry->inode = UNCACHED_INODE;
-		s_entry->dev = (dev_t) UNCACHED_DEVICE;
+		s_entry->dev = UNCACHED_DEVICE;
 	} else
 #endif	/* APPLE_HYB */
 	{
@@ -1939,30 +2028,38 @@ insert_file_entry(this_dir, whole_path, short_name)
 	s_entry->total_rr_attr_size = 0;
 	s_entry->rr_attributes = NULL;
 
-	/* Directories are assigned sizes later on */
+	/*
+	 * Directories are assigned sizes later on
+	 */
 	if (!S_ISDIR(statbuf.st_mode)) {
 		if (S_ISCHR(lstatbuf.st_mode) || S_ISBLK(lstatbuf.st_mode) ||
 			S_ISFIFO(lstatbuf.st_mode) ||
 				S_ISSOCK(lstatbuf.st_mode) ||
-				S_ISLNK(lstatbuf.st_mode)) {
+				(S_ISLNK(lstatbuf.st_mode) && !create_udfsymlinks)) {
 			s_entry->size = (off_t)0;
 			statbuf.st_size = (off_t)0;
 		} else {
 			s_entry->size = statbuf.st_size;
 		}
 
-		set_733((char *) s_entry->isorec.size, statbuf.st_size);
+		set_733((char *)s_entry->isorec.size, statbuf.st_size);
 	} else {
 		s_entry->isorec.flags[0] |= ISO_DIRECTORY;
 	}
 #ifdef APPLE_HYB
-	/* if the directory is HFS excluded, then we don't have an hfs_ent */
+	/*
+	 * If the directory is HFS excluded, then we don't have an hfs_ent
+	 */
 	if (apple_both && s_entry->hfs_ent &&
 				(s_entry->isorec.flags[0] & ISO_DIRECTORY)) {
-		/* get the Mac directory name */
+		/*
+		 * Get the Mac directory name
+		 */
 		get_hfs_dir(whole_path, short_name, s_entry);
 
-		/* if required, set ISO directory name from HFS name */
+		/*
+		 * If required, set ISO directory name from HFS name
+		 */
 		if (use_mac_name)
 			iso9660_file_length(s_entry->hfs_ent->name, s_entry, 1);
 	}
@@ -1973,36 +2070,14 @@ insert_file_entry(this_dir, whole_path, short_name)
 				this_dir->depth > RR_relocation_depth) {
 		struct directory *child;
 
-		if (!reloc_dir)
-			generate_reloc_directory();
-
 		/*
 		 * Replicate the entry for this directory.  The old one will
 		 * stay where it is, and it will be neutered so that it no
 		 * longer looks like a directory. The new one will look like
 		 * a directory, and it will be put in the reloc_dir.
 		 */
-		s_entry1 = (struct directory_entry *)
-			e_malloc(sizeof (struct directory_entry));
-		memcpy(s_entry1, s_entry, sizeof (struct directory_entry));
-		s_entry1->table = NULL;
-		s_entry1->name = strdup(this_dir->contents->name);
-		s_entry1->whole_name = strdup(this_dir->contents->whole_name);
-		s_entry1->next = reloc_dir->contents;
-		reloc_dir->contents = s_entry1;
-		s_entry1->priority = 32768;
-		s_entry1->parent_rec = this_dir->contents;
-		set_723(s_entry1->isorec.volume_sequence_number,
-						volume_sequence_number);
-
-		deep_flag = NEED_RE;
-
-		if (use_XA || use_RockRidge) {
-			generate_xa_rr_attributes(whole_path,
-				short_name, s_entry1,
-				&statbuf, &lstatbuf, deep_flag);
-		}
-		deep_flag = 0;
+		s_entry1 = dup_relocated_dir(this_dir, s_entry,
+					whole_path, short_name, &statbuf);
 
 		/*
 		 * We need to set this temporarily so that the parent to this
@@ -2011,18 +2086,14 @@ insert_file_entry(this_dir, whole_path, short_name)
 		s_entry1->filedir = reloc_dir;
 		child = find_or_create_directory(reloc_dir, whole_path,
 			s_entry1, 0);
+		free(child->de_path);		/* allocated in this case */
+		set_de_path(this_dir, child);
+
+
 /*		if (!no_scandir)*/
 		if (!0)
 			scan_directory_tree(child, whole_path, s_entry1);
 		s_entry1->filedir = this_dir;
-
-		statbuf.st_size = (off_t)0;
-		statbuf.st_mode &= 0777;
-		set_733((char *) s_entry->isorec.size, 0);
-		s_entry->size = 0;
-		s_entry->isorec.flags[0] = ISO_FILE;
-		s_entry->inode = UNCACHED_INODE;
-		s_entry->de_flags |= RELOCATED_DIRECTORY;
 		deep_flag = NEED_CL;
 	}
 	if (generate_tables &&
@@ -2045,7 +2116,7 @@ insert_file_entry(this_dir, whole_path, short_name)
  */
 #if 0
 /*
- * Use the device handling code from <device.h>
+ * Use the device handling code from <schily/device.h>
  */
 #ifndef major
 #define	major(dev) (sizeof (dev_t) <= 2 ? ((dev) >> 8) : \
@@ -2082,9 +2153,13 @@ insert_file_entry(this_dir, whole_path, short_name)
 #ifdef S_IFLNK
 		case S_IFLNK:
 #ifdef	HAVE_READLINK
-			nchar = readlink(whole_path,
-				(char *) symlink_buff,
+			nchar = readlink(statp?short_name:whole_path,
+				(char *)symlink_buff,
 				sizeof (symlink_buff)-1);
+			if (nchar < 0) {
+				errmsg("Cannot read link '%s'.\n",
+					statp?short_name:whole_path);
+			}
 #else
 			nchar = -1;
 #endif
@@ -2105,20 +2180,22 @@ insert_file_entry(this_dir, whole_path, short_name)
 				s_entry->name);
 			break;
 		};
-		s_entry->table = strdup(buffer);
+		s_entry->table = e_strdup(buffer);
 	}
 	if (S_ISDIR(statbuf.st_mode)) {
 		int	dflag;
 
-		if (strcmp(short_name, ".") != 0 && strcmp(short_name, "..")
-									!= 0) {
+		if (strcmp(short_name, ".") != 0 &&
+		    strcmp(short_name, "..") != 0) {
 			struct directory *child;
 
 			child = find_or_create_directory(this_dir, whole_path,
 				s_entry, 1);
+#ifdef	USE_NO_SCANDIR
 			if (no_scandir)
 				dflag = 1;
 			else
+#endif
 				dflag = scan_directory_tree(child, whole_path,
 								s_entry);
 
@@ -2132,26 +2209,36 @@ insert_file_entry(this_dir, whole_path, short_name)
 		}
 		/* If unable to scan directory, mark this as a non-directory */
 	}
-	if (use_RockRidge && this_dir == root && strcmp(s_entry->name, ".")
-									== 0) {
+	if (use_RockRidge && this_dir == root &&
+	    strcmp(s_entry->name, ".") == 0) {
 		deep_flag |= NEED_CE | NEED_SP;	/* For extension record */
 	}
-	/* Now figure out how much room this file will take in the directory */
+	/*
+	 * Now figure out how much room this file will take in the directory
+	 */
 
 #ifdef APPLE_HYB
-	/* if the file is HFS excluded, then we don't have an hfs_ent */
+	/*
+	 * Ff the file is HFS excluded, then we don't have an hfs_ent
+	 */
 	if (apple_both && !have_rsrc && s_entry->hfs_ent) {
 		if (S_ISREG(lstatbuf.st_mode)) { /* it's a regular file */
 
-			/* fill in the rest of the HFS entry */
+			/*
+			 * Fill in the rest of the HFS entry
+			 */
 			get_hfs_info(whole_path, short_name, s_entry);
 
-			/* if required, set ISO directory name from HFS name */
+			/*
+			 * If required, set ISO directory name from HFS name
+			 */
 			if (use_mac_name)
 				iso9660_file_length(s_entry->hfs_ent->name,
 								s_entry, 0);
 
-			/* print details about the HFS file */
+			/*
+			 * Print details about the HFS file
+			 */
 			if (verbose > 2)
 				print_hfs_info(s_entry);
 
@@ -2170,9 +2257,10 @@ insert_file_entry(this_dir, whole_path, short_name)
 			 * more than once (we've already done this for rsrc
 			 * files)
 			 */
-			if (apple_hyb) {
+			if (apple_hyb && have_rsrc) {
+				s_entry->de_flags |= RESOURCE_FORK;
 				s_entry->inode = UNCACHED_INODE;
-				s_entry->dev = (dev_t) UNCACHED_DEVICE;
+				s_entry->dev = UNCACHED_DEVICE;
 			}
 		} else if (!(s_entry->isorec.flags[0] & ISO_DIRECTORY)) {
 			/* not a directory .. */
@@ -2183,8 +2271,10 @@ insert_file_entry(this_dir, whole_path, short_name)
 			 * directory
 			 */
 			if (s_entry->hfs_ent &&
-				!(s_entry->de_flags & RELOCATED_DIRECTORY))
+			    !(s_entry->de_flags & RELOCATED_DIRECTORY) &&
+			    (s_entry->isorec.flags[0] & ISO_MULTIEXTENT) == 0) {
 				free(s_entry->hfs_ent);
+			}
 			s_entry->hfs_ent = NULL;
 		}
 		/*
@@ -2196,10 +2286,12 @@ insert_file_entry(this_dir, whole_path, short_name)
 			delete_rsrc_ent(s_entry);
 	}
 	if (apple_ext && s_entry->assoc) {
-		/* need Apple extensions for the resource fork as well */
+		/*
+		 * Need Apple extensions for the resource fork as well
+		 */
 		generate_xa_rr_attributes(whole_path,
 			short_name, s_entry->assoc,
-			&statbuf, &lstatbuf, deep_flag);
+			&statbuf, &lstatbuf, deep_flag | (statp?DID_CHDIR:0));
 	}
 	/* leave out resource fork for the time being */
 	/*
@@ -2213,12 +2305,124 @@ insert_file_entry(this_dir, whole_path, short_name)
 #endif	/* APPLE_HYB */
 		generate_xa_rr_attributes(whole_path,
 			short_name, s_entry,
-			&statbuf, &lstatbuf, deep_flag);
+			&statbuf, &lstatbuf, deep_flag | (statp?DID_CHDIR:0));
 
 	}
+#ifdef UDF
+	/* set some info used for udf */
+	s_entry->mode = statbuf.st_mode;
+	s_entry->uid = statbuf.st_uid;
+	s_entry->gid = statbuf.st_gid;
+#endif
+
+#ifdef	USE_LARGEFILES
+#ifdef	PROTOTYPES
+#define	LARGE_EXTENT	((off_t)0xFFFFF800UL)
+#define	MAX_EXTENT	((off_t)0xFFFFFFFEUL)
+#else
+#define	LARGE_EXTENT	((off_t)0xFFFFF800L)
+#define	MAX_EXTENT	((off_t)0xFFFFFFFEL)
+#endif
+	/*
+	 * Break up files greater than (4GB -2) into multiple extents.
+	 * The original entry, with ->size untouched, remains for UDF.
+	 * Each of the new file sections will get its own entry.
+	 * The file sections are the only entries actually written out to the
+	 * disk. The UDF entry will use "mxroot" to get the same start
+	 * block as the first file section, and all the sections will end up
+	 * in the ISO9660 directory in the correct order by "mxpart",
+	 * which the directory sorting routine knows about.
+	 *
+	 * If we ever need to be able to find mxpart == 1 after sorting,
+	 * we need to add another pointer to s_entry or to be very careful
+	 * with the loops above where the ISO-9660 name is copied back to
+	 * all multi-extent parts.
+	 */
+	if (s_entry->size > MAX_EXTENT) {
+		off_t	size;
+
+		s_entry->de_flags |= MULTI_EXTENT;
+		s_entry->isorec.flags[0] |= ISO_MULTIEXTENT;
+		s_entry->mxroot = s_entry;
+		s_entry->mxpart = 0;
+		set_733((char *)s_entry->isorec.size, LARGE_EXTENT);
+		s_entry1 = dup_directory_entry(s_entry);
+		s_entry->next = s_entry1;
+
+		/*
+		 * full size UDF version
+		 */
+		s_entry->de_flags |= INHIBIT_ISO9660_ENTRY|INHIBIT_JOLIET_ENTRY;
+		if (s_entry->size > (((off_t)190)*0x3FFFF800)) {
+#ifndef	EOVERFLOW
+#define	EOVERFLOW	EFBIG
+#endif
+			errmsgno(EOVERFLOW,
+			"File %s is too large - hiding from UDF tree.\n",
+							whole_path);
+			s_entry->de_flags |= INHIBIT_UDF_ENTRY;
+		}
+
+		/*
+		 * Prepare the first file multi-extent section of the file.
+		 */
+		s_entry = s_entry1;
+		s_entry->de_flags |= INHIBIT_UDF_ENTRY;
+		size = s_entry->size;
+		s_entry->size = LARGE_EXTENT;
+		s_entry->mxpart++;
+
+		/*
+		 * Additional extents, as needed
+		 */
+		while (size > MAX_EXTENT) {
+			s_entry1 = dup_directory_entry(s_entry);
+			s_entry->next = s_entry1;
+
+			s_entry = s_entry1;
+			s_entry->mxpart++;
+			size -= LARGE_EXTENT;
+		}
+		/*
+		 * That was the last one.
+		 */
+		s_entry->isorec.flags[0] &= ~ISO_MULTIEXTENT;
+		s_entry->size = size;
+		set_733((char *)s_entry->isorec.size, (UInt32_t)s_entry->size);
+	}
+#endif /* USE_LARGEFILES */
+
 	return (1);
 }
 
+EXPORT struct directory_entry *
+dup_directory_entry(s_entry)
+	struct directory_entry	*s_entry;
+{
+	struct directory_entry	*s_entry1;
+
+	s_entry1 = (struct directory_entry *)
+		e_malloc(sizeof (struct directory_entry));
+	memcpy(s_entry1, s_entry, sizeof (struct directory_entry));
+
+	if (s_entry->rr_attributes) {
+		s_entry1->rr_attributes =
+				e_malloc(s_entry->total_rr_attr_size);
+		memcpy(s_entry1->rr_attributes, s_entry->rr_attributes,
+					s_entry->total_rr_attr_size);
+	}
+	if (s_entry->name)
+		s_entry1->name = e_strdup(s_entry->name);
+	if (s_entry->whole_name)
+		s_entry1->whole_name = e_strdup(s_entry->whole_name);
+#ifdef	APPLE_HYB
+	/*
+	 * If we also duplicate s_entry->hfs_ent, we would need to change
+	 * free_one_directory() and other calls to free(s_entry->hfs_ent) too.
+	 */
+#endif
+	return (s_entry1);
+}
 
 EXPORT void
 generate_iso9660_directories(node, outfile)
@@ -2240,6 +2444,30 @@ generate_iso9660_directories(node, outfile)
 }
 
 /*
+ * XXX This may need some work for the MVS port.
+ */
+LOCAL void
+set_de_path(parent, this)
+	struct directory	*parent;
+	struct directory	*this;
+{
+	char	*p;
+	size_t	len;
+
+	if (parent == NULL) {			/* We are just creating root */
+		this->de_path = this->whole_name;
+		return;
+	} else if (parent == root) {		/* full path == component    */
+		this->de_path = this->de_name;
+		return;
+	}
+	len = strlen(parent->de_path)+1+strlen(this->de_name)+1;
+	p = e_malloc(len);
+	js_snprintf(p, len, "%s/%s", parent->de_path, this->de_name);
+	this->de_path = p;
+}
+
+/*
  * Function:	find_or_create_directory
  *
  * Purpose:	Locate a directory entry in the tree, create if needed.
@@ -2249,15 +2477,17 @@ generate_iso9660_directories(node, outfile)
 EXPORT struct directory *
 find_or_create_directory(parent, path, de, flag)
 	struct directory	*parent;
-	const char		*path;
+	char			*path;
 	struct directory_entry	*de;
 	int			flag;
 {
+	struct directory *child = 0;
 	struct directory *dpnt;
 	struct directory_entry *orig_de;
 	struct directory *next_brother;
 	const char	*cpnt;
 	const char	*pnt;
+	int		deep_flag = 0;
 
 	orig_de = de;
 
@@ -2271,6 +2501,8 @@ find_or_create_directory(parent, path, de, flag)
 	if (path == NULL) {
 		error("Warning: missing whole name for: '%s'\n", de->name);
 		path = de->name;
+		if (path == NULL)
+			comerrno(EX_BAD, "Panic no node name.\n");
 	}
 	pnt = strrchr(path, PATH_SEPARATOR);
 	if (pnt == NULL) {
@@ -2280,7 +2512,21 @@ find_or_create_directory(parent, path, de, flag)
 	}
 
 	if (parent != NULL) {
+
 		dpnt = parent->subdir;
+		if (dpnt == NULL) {
+			struct directory_entry *s_entry;
+
+			for (s_entry = parent->contents; s_entry;
+						s_entry = s_entry->next) {
+				if ((strcmp(s_entry->name, pnt) == 0) &&
+				    (s_entry->de_flags & RELOCATED_DIRECTORY)) {
+					return (find_or_create_directory(
+							reloc_dir, path, de,
+									flag));
+				}
+			}
+		}
 
 		while (dpnt) {
 			/*
@@ -2290,7 +2536,18 @@ find_or_create_directory(parent, path, de, flag)
 			 * matches completely.
 			 */
 			if (flag && strcmp(dpnt->de_name, pnt) == 0) {
-				return (dpnt);
+
+				/*
+				 * XXX Remove test?
+				 * XXX dpnt->de_path should always be != NULL
+				 */
+				if (dpnt->de_path != NULL &&
+				    strcmp(dpnt->de_path, path) == 0)
+					return (dpnt);
+
+				if (parent != reloc_dir &&
+				    strcmp(dpnt->de_name, pnt) == 0)
+					return (dpnt);
 			}
 			dpnt = dpnt->next;
 		}
@@ -2305,47 +2562,40 @@ find_or_create_directory(parent, path, de, flag)
 		memset(de, 0, sizeof (struct directory_entry));
 		de->next = parent->contents;
 		parent->contents = de;
-		de->name = strdup(pnt);
-		de->whole_name = strdup(path);
+		de->name = e_strdup(pnt);
+		de->whole_name = e_strdup(path);
 		de->filedir = parent;
 		de->isorec.flags[0] = ISO_DIRECTORY;
 		de->priority = 32768;
 		de->inode = UNCACHED_INODE;
-		de->dev = (dev_t) UNCACHED_DEVICE;
+		de->dev = UNCACHED_DEVICE;
 		set_723(de->isorec.volume_sequence_number,
 						volume_sequence_number);
 		iso9660_file_length(pnt, de, 1);
 
 		init_fstatbuf();
-		/*
-		 * It doesn't exist for real, so we cannot add any
-		 * XA or Rock Ridge attributes.
-		 */
-		if (use_XA || use_RockRidge) {
-			fstatbuf.st_mode = new_dir_mode | S_IFDIR;
-			fstatbuf.st_nlink = 2;
-			generate_xa_rr_attributes("",
-				(char *) pnt, de,
-				&fstatbuf,
-				&fstatbuf, 0);
-		}
-		iso9660_date(de->isorec.date, fstatbuf.st_mtime);
 #ifdef APPLE_HYB
 		if (apple_both) {
-			/* give the directory an HFS entry */
+			/*
+			 * Give the directory an HFS entry
+			 */
 			hfsdirent	*hfs_ent;
 
 			hfs_ent = (hfsdirent *) e_malloc(sizeof (hfsdirent));
 
-			/* fill in the defaults */
+			/*
+			 * Fill in the defaults
+			 */
 			memset(hfs_ent, 0, sizeof (hfsdirent));
 			hfs_ent->crdate = fstatbuf.st_ctime;
 			hfs_ent->mddate = fstatbuf.st_mtime;
 
 			de->hfs_ent = hfs_ent;
 
-			/* get the Mac directory name */
-			get_hfs_dir((char *) path, (char *) pnt, de);
+			/*
+			 * Get the Mac directory name
+			 */
+			get_hfs_dir((char *)path, (char *)pnt, de);
 		}
 #endif	/* APPLE_HYB */
 	}
@@ -2353,19 +2603,21 @@ find_or_create_directory(parent, path, de, flag)
 	 * If we don't have a directory for this one yet, then allocate it now,
 	 * and patch it into the tree in the appropriate place.
 	 */
-	dpnt = (struct directory *) e_malloc(sizeof (struct directory));
+	dpnt = (struct directory *)e_malloc(sizeof (struct directory));
 	memset(dpnt, 0, sizeof (struct directory));
 	dpnt->next = NULL;
 	dpnt->subdir = NULL;
 	dpnt->self = de;
 	dpnt->contents = NULL;
-	dpnt->whole_name = strdup(path);
+	dpnt->whole_name = e_strdup(path);
 	cpnt = strrchr(path, PATH_SEPARATOR);
 	if (cpnt)
 		cpnt++;
 	else
 		cpnt = path;
-	dpnt->de_name = strdup(cpnt);
+	dpnt->de_name = e_strdup(cpnt);
+	dpnt->de_path = NULL;
+	set_de_path(parent, dpnt);
 	dpnt->size = 0;
 	dpnt->extent = 0;
 	dpnt->jextent = 0;
@@ -2393,9 +2645,9 @@ find_or_create_directory(parent, path, de, flag)
 				parent->whole_name, sts);
 		}
 		if (sts == 0) {
-			attach_dot_entries(dpnt, &xstatbuf);
+			attach_dot_entries(dpnt, NULL, &xstatbuf);
 		} else {
-			attach_dot_entries(dpnt, &fstatbuf);
+			attach_dot_entries(dpnt, NULL, NULL);
 		}
 	}
 	if (!parent || parent == root) {
@@ -2417,39 +2669,87 @@ find_or_create_directory(parent, path, de, flag)
 			dpnt->parent = parent;
 		}
 	} else {
-		/* Come through here for  normal traversal of  tree */
+		struct directory_entry *s_entry1;
+
+		/*
+		 * Come through here for  normal traversal of  tree
+		 */
 #ifdef DEBUG
 		fprintf(stderr, "%s(%d) ", path, dpnt->depth);
 #endif
-		if (parent->depth > RR_relocation_depth) {
+
+		if (parent->depth > RR_relocation_depth && use_RockRidge) {
 			/*
-			 * XXX to prevent this, we would need to add
-			 * XXX support for RR directory relocation
-			 * XXX to find_or_create_directory()
+			 * We come here in case that a graft-point needs to
+			 * create a new relocated (deep) directory.
+			 *
+			 * Replicate the entry for this directory.  The old one
+			 * will stay where it is, and it will be neutered so
+			 * that it no longer looks like a directory. The new
+			 * one will look like a directory, and it will be put
+			 * in the reloc_dir.
 			 */
-#ifdef	USE_LIBSCHILY
-			comerrno(EX_BAD,
-			"Directories too deep for '%s' (%d) max is %d.\n",
-				path, parent->depth, RR_relocation_depth);
-#else
-			fprintf(stderr,
-			"Directories too deep for '%s' (%d) max is %d.\n",
-				path, parent->depth, RR_relocation_depth);
-			exit(1);
-#endif
+			s_entry1 = dup_relocated_dir(parent, de, path,
+						dpnt->de_name, &fstatbuf);
+			child = find_or_create_directory(reloc_dir, path,
+								s_entry1, 0);
+			free(child->de_path);	/* allocated in this case */
+			set_de_path(parent, child);
+
+			deep_flag |= NEED_CL;
+		}
+		if (parent->depth > RR_relocation_depth && !use_RockRidge) {
+			dir_nesting_warn(parent, path, FALSE);
+			exit(EX_BAD);
 		}
 		dpnt->parent = parent;
 		dpnt->depth = parent->depth + 1;
 
-		if (!parent->subdir) {
-			parent->subdir = dpnt;
-		} else {
-			next_brother = parent->subdir;
-			while (next_brother->next)
-				next_brother = next_brother->next;
-			next_brother->next = dpnt;
+		if ((deep_flag & NEED_CL) == 0) {
+			/*
+			 * Do not add this directory to the list of subdirs if
+			 * this is a relocated directory.
+			 */
+			if (!parent->subdir) {
+				parent->subdir = dpnt;
+			} else {
+				next_brother = parent->subdir;
+				while (next_brother->next)
+					next_brother = next_brother->next;
+				next_brother->next = dpnt;
+			}
 		}
 	}
+	/*
+	 * It doesn't exist for real, so we cannot add any
+	 * XA or Rock Ridge attributes.
+	 */
+	if (orig_de == NULL || (parent == NULL && path[0] == '\0')) {
+		init_fstatbuf();
+		fstatbuf.st_mode = new_dir_mode | S_IFDIR;
+		fstatbuf.st_nlink = 2;
+		if ((use_XA || use_RockRidge) &&
+		    !(parent == NULL && path[0] == '\0')) {
+			/*
+			 * We cannot set up RR attrubutes for the real
+			 * ISO-9660 root directory. This is why we
+			 * check for parent == NULL && path[0] == '\0'.
+			 */
+			generate_xa_rr_attributes("",
+				(char *)pnt, de,
+				&fstatbuf,
+				&fstatbuf, deep_flag);
+		}
+#ifdef UDF
+		/* set some info used for udf */
+		de->mode = fstatbuf.st_mode;
+		de->uid =  fstatbuf.st_uid;
+		de->gid =  fstatbuf.st_gid;
+#endif
+		iso9660_date(de->isorec.date, fstatbuf.st_mtime);
+	}
+	if (child)
+		return (child);	/* Return reloaction target */
 
 	return (dpnt);
 }
@@ -2468,13 +2768,10 @@ delete_directory(parent, child)
 {
 	struct directory *tdir;
 
+	if (child == NULL)
+		return;
 	if (child->contents != NULL) {
-#ifdef	USE_LIBSCHILY
 		comerrno(EX_BAD, "Unable to delete non-empty directory\n");
-#else
-		fprintf(stderr, "Unable to delete non-empty directory\n");
-		exit(1);
-#endif
 	}
 	free(child->whole_name);
 	child->whole_name = NULL;
@@ -2490,22 +2787,16 @@ delete_directory(parent, child)
 	if (parent->subdir == child) {
 		parent->subdir = child->next;
 	} else {
-		for (tdir = parent->subdir; tdir->next != NULL;
+		for (tdir = parent->subdir; tdir != NULL && tdir->next != NULL;
 							tdir = tdir->next) {
 			if (tdir->next == child) {
 				tdir->next = child->next;
 				break;
 			}
 		}
-		if (tdir == NULL) {
-#ifdef	USE_LIBSCHILY
+		if (tdir == NULL || tdir->next != child->next) {
 			comerrno(EX_BAD,
 			"Unable to locate child directory in parent list\n");
-#else
-			fprintf(stderr,
-			"Unable to locate child directory in parent list\n");
-			exit(1);
-#endif
 		}
 	}
 	free(child);
@@ -2549,59 +2840,6 @@ dump_tree(node)
 	}
 }
 
-EXPORT void
-update_nlink_field(node)
-	struct directory *node;
-{
-	struct directory *dpnt;
-	struct directory *xpnt;
-	struct directory_entry *s_entry;
-	int		i;
-
-	dpnt = node;
-
-	while (dpnt) {
-		if (dpnt->dir_flags & INHIBIT_ISO9660_ENTRY) {
-			dpnt = dpnt->next;
-			continue;
-		}
-		/*
-		 * First, count up the number of subdirectories this guy has.
-		 */
-		for (i = 0, xpnt = dpnt->subdir; xpnt; xpnt = xpnt->next)
-			if ((xpnt->dir_flags & INHIBIT_ISO9660_ENTRY) == 0)
-				i++;
-		/*
-		 * Next check to see if we have any relocated directories in
-		 * this directory. The nlink field will include these as
-		 * real directories when they are properly relocated.
-		 * In the non-rockridge disk, the relocated entries appear as
-		 * zero length files.
-		 */
-		for (s_entry = dpnt->contents; s_entry;
-						s_entry = s_entry->next) {
-			if ((s_entry->de_flags & RELOCATED_DIRECTORY) != 0 &&
-				(s_entry->de_flags & INHIBIT_ISO9660_ENTRY) ==
-									0) {
-				i++;
-			}
-		}
-		/* Now update the field in the Rock Ridge entry. */
-		update_nlink(dpnt->self, i + 2);
-
-		/* Update the '.' entry for this directory. */
-		update_nlink(dpnt->contents, i + 2);
-
-		/* Update all of the '..' entries that point to this guy. */
-		for (xpnt = dpnt->subdir; xpnt; xpnt = xpnt->next)
-			update_nlink(xpnt->contents->next, i + 2);
-
-		if (dpnt->subdir)
-			update_nlink_field(dpnt->subdir);
-		dpnt = dpnt->next;
-	}
-}
-
 /*
  * something quick and dirty to locate a file given a path
  * recursively walks down path in filename until it finds the
@@ -2618,8 +2856,10 @@ search_tree_file(node, filename)
 	char		*rest;
 	char		*subdir;
 
-	/* strip off next directory name from filename */
-	subdir = strdup(filename);
+	/*
+	 * Strip off next directory name from filename:
+	 */
+	subdir = e_strdup(filename);
 
 	if ((p1 = strchr(subdir, '/')) == subdir) {
 		fprintf(stderr,
@@ -2629,7 +2869,9 @@ search_tree_file(node, filename)
 		memmove(subdir, subdir + 1, strlen(subdir) - 1);
 		p1 = strchr(subdir, '/');
 	}
-	/* do we need to find a subdirectory */
+	/*
+	 * Do we need to find a subdirectory?
+	 */
 	if (p1) {
 		*p1 = '\0';
 
@@ -2660,10 +2902,14 @@ search_tree_file(node, filename)
 			dpnt = dpnt->next;
 		}
 
-		/* if we got here means we couldnt find the subdir */
+		/*
+		 * If we got here means we couldn't find the subdir.
+		 */
 		return (NULL);
 	} else {
-		/* look for a normal file now */
+		/*
+		 * Look for a normal file now
+		 */
 		depnt = node->contents;
 		while (depnt) {
 #ifdef DEBUG_TORITO
@@ -2678,7 +2924,9 @@ search_tree_file(node, filename)
 			}
 			depnt = depnt->next;
 		}
-		/* if we got here means we couldnt find the subdir */
+		/*
+		 * If we got here means we couldn't find the subdir.
+		 */
 		return (NULL);
 	}
 #ifdef	ERIC_FUN

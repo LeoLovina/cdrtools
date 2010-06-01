@@ -1,32 +1,30 @@
-/* @(#)schilyio.h	2.22 04/09/04 Copyright 1986, 1995-2003 J. Schilling */
+/* @(#)schilyio.h	2.27 09/06/30 Copyright 1986, 1995-2009 J. Schilling */
 /*
- *	Copyright (c) 1986, 1995-2003 J. Schilling
+ *	Copyright (c) 1986, 1995-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef	_STDIO_SCHILYIO_H
 #define	_STDIO_SCHILYIO_H
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <standard.h>
-#include <unixstd.h>
-#include <fctldefs.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/types.h>
+#include <schily/unistd.h>
+#include <schily/fcntl.h>
+#include <schily/schily.h>
+#include <schily/errno.h>
 
 #ifdef	NO_USG_STDIO
 #	ifdef	HAVE_USG_STDIO
@@ -73,7 +71,7 @@
 #ifdef	_openfd
 #undef	_openfd
 #endif
-#define	_openfd(name, omode)	(open(name, omode, 0666))
+#define	_openfd(name, omode)	(open(name, omode, (mode_t)0666))
 #endif
 
 #define	DO_MYFLAG		/* use local flags */
@@ -94,10 +92,12 @@
 #define	FI_CLOSE	0x1000	/* close file on error */
 
 /*
- * local flags
+ * Additional Schily FILE * flags that are not present with the
+ * standard stdio implementation.
  */
-#define	_IONORAISE	01	/* do no raisecond() on errors */
-#define	_IOUNBUF	02	/* do unbuffered i/o */
+#define	_JS_IONORAISE	01	/* do no raisecond() on errors */
+#define	_JS_IOUNBUF	02	/* do unbuffered i/o */
+
 
 #ifdef	DO_MYFLAG
 
@@ -145,7 +145,7 @@ extern	void	_io_add_my_flag __PR((FILE *, int));
 
 #else	/* DO_MYFLAG */
 
-#define	my_flag(p)		_IONORAISE	/* Always noraise */
+#define	my_flag(p)		_JS_IONORAISE	/* Always noraise */
 #define	set_my_flag(p, v)			/* Ignore */
 #define	add_my_flag(p, v)			/* Ignore */
 

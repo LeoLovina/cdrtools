@@ -1,12 +1,13 @@
-/* @(#)drv_7501.c	1.15 04/03/02 Copyright 2003-2004 J. Schilling */
+/* @(#)drv_7501.c	1.29 10/02/03 Copyright 2003-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)drv_7501.c	1.15 04/03/02 Copyright 2003-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)drv_7501.c	1.29 10/02/03 Copyright 2003-2010 J. Schilling";
 #endif
 /*
  *	Device driver for the Masushita CW-7501
  *
- *	Copyright (c) 2003-2004 J. Schilling
+ *	Copyright (c) 2003-2010 J. Schilling
  *
  * Mode Pages:
  *	0x01	error recovery		Seite 100
@@ -20,45 +21,41 @@ static	char sccsid[] =
  *	0x24	CD-R disk information	Seite 127
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef	DEBUG
 #define	DEBUG
 #endif
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <timedefs.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/time.h>
 
-#include <utypes.h>
-#include <btorder.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
 
-#include <libport.h>
+#include <schily/libport.h>
 
 #include "cdrecord.h"
 
@@ -239,11 +236,14 @@ LOCAL	int	cw7501_finalize		__PR((SCSI *scgp, int pad, int fixed));
 
 
 cdr_t	cdr_cw7501 = {
-	0, 0,
+	0, 0, 0,
 	/*
 	 * Prinzipiell geht auch: CDR_PACKET & CDR_SRAW96R
 	 */
 	CDR_TAO|CDR_SAO|CDR_TRAYLOAD,
+	0,
+	CDR_CDRW_NONE,
+	WM_SAO,
 	2, 2,
 	"cw_7501",
 	"driver for Matsushita/Panasonic CW-7501",
@@ -253,6 +253,7 @@ cdr_t	cdr_cw7501 = {
 	cw7501_attach,
 	cw7501_init,
 	cw7501_getdisktype,
+	no_diskstatus,
 	scsi_load,
 	scsi_unload,
 	buf_dummy,				/* RD buffer cap not supp. */
@@ -495,7 +496,7 @@ cw7501_next_wr_addr(scgp, trackp, ap)
 	if (scgp->verbose)
 		scg_prbytes("track info:", buf,
 				12-scg_getresid(scgp));
-	next_addr = a_to_4_byte(&nwa->nwa_nwa);
+	next_addr = a_to_4_byte(nwa->nwa_nwa);
 	/*
 	 * XXX Für TAO definitiv notwendig.
 	 * XXX ABhängig von Auto-Pregap?
@@ -595,13 +596,22 @@ cw7501_open_track(scgp, dp, trackp)
 					(int)trackp->trackno,
 					trackp->trackstart-trackp->pregapsize);
 			}
-			/*
-			 * XXX Do we need to check isecsize too?
-			 */
-			pad_track(scgp, dp, trackp,
-				trackp->trackstart-trackp->pregapsize,
-				(Llong)trackp->pregapsize*trackp->secsize,
+			if (trackp->track == 1 && is_hidden(trackp)) {
+				pad_track(scgp, dp, trackp,
+					trackp->trackstart-trackp->pregapsize,
+					(Llong)(trackp->pregapsize-trackp->trackstart)*trackp->secsize,
 					FALSE, 0);
+				if (write_track_data(scgp, dp, track_base(trackp)) < 0)
+					return (-1);
+			} else {
+				/*
+				 * XXX Do we need to check isecsize too?
+				 */
+				pad_track(scgp, dp, trackp,
+					trackp->trackstart-trackp->pregapsize,
+					(Llong)trackp->pregapsize*trackp->secsize,
+					FALSE, 0);
+			}
 		}
 		return (0);
 	}
@@ -703,7 +713,7 @@ cw7501_open_session(scgp, dp, trackp)
 	md.pagex.page24.p_code = 0x24;
 	md.pagex.page24.p_len =  0x0A;
 	md.pagex.page24.disktype = toc2sess[track_base(trackp)->tracktype & TOC_MASK];
-	i_to_4_byte(&md.pagex.page24.disk_id, 0x12345);
+	i_to_4_byte(md.pagex.page24.disk_id, 0x12345);
 
 	return (mode_select(scgp, (Uchar *)&md, count, 0, scgp->inq->data_format >= 2));
 }

@@ -1,10 +1,12 @@
-/* @(#)volume.c	1.14 04/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)volume.c	1.24 09/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson, Copyright 2004-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)volume.c	1.14 04/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+static	UConst char sccsid[] =
+	"@(#)volume.c	1.24 09/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson, Copyright 2004-2009 J. Schilling";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
+ *	Copyright (c) 2004-2009 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,11 +36,11 @@ static	char sccsid[] =
  *	flag for finding the real directory location JCP 8/1/97
  */
 
-#ifdef APPLE_HYB
+#ifdef APPLE_HFS_HYB
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <errno.h>
+#include <schily/errno.h>
+#include <schily/schily.h>
 
 #define	HFS_MIN_SIZE	1600	/* 800k == 1600 HFS blocks */
 
@@ -48,7 +50,7 @@ LOCAL	int	AlcSiz		__PR((Ulong));
 LOCAL	int	XClpSiz		__PR((Ulong));
 LOCAL	int	get_vol_size	__PR((int));
 EXPORT	int	write_fork	__PR((hfsfile * hfp, long tot));
-EXPORT	int	make_mac_volume	__PR((struct directory *, int));
+EXPORT	int	make_mac_volume	__PR((struct directory *, UInt32_t));
 LOCAL	int	copy_to_mac_vol	__PR((hfsvol *, struct directory *));
 LOCAL void	set_dir_info	__PR((hfsvol *, struct directory *));
 
@@ -203,7 +205,7 @@ write_fork(hfp, tot)
 EXPORT int
 make_mac_volume(dpnt, start_extent)
 	struct directory	*dpnt;
-	int			start_extent;
+	UInt32_t		start_extent;
 {
 	char	vol_name[HFS_MAX_VLEN + 1];	/* Mac volume name */
 	hfsvol	*vol;			/* Mac volume */
@@ -410,8 +412,8 @@ copy_to_mac_vol(vol, node)
 					 * HFS_MAX_FLEN chars
 					 */
 					sprintf(hce->error,
-						"can't HFS create file %s",
-						s_entry->whole_name);
+						"can't HFS create file %s %s",
+						s_entry->whole_name, ent->name);
 					return (-1);
 				} else if (i == 0) {
 					/*
@@ -538,8 +540,8 @@ copy_to_mac_vol(vol, node)
 
 		/* now have the correct entry - now find the actual directory */
 		if ((s_entry1->isorec.flags[0] & ISO_DIRECTORY) &&
-				strcmp(s_entry1->name, ".") &&
-				strcmp(s_entry1->name, "..")) {
+				strcmp(s_entry1->name, ".") != 0 &&
+				strcmp(s_entry1->name, "..") != 0) {
 			if ((s_entry->de_flags & RELOCATED_DIRECTORY) != 0)
 				dpnt = reloc_dir->subdir;
 			else
@@ -627,8 +629,8 @@ copy_to_mac_vol(vol, node)
 							s_entry->whole_name);
 			}
 			/* see if we need to "bless" this folder */
-			if (hfs_bless && strcmp(s_entry->whole_name, hfs_bless)
-					== 0) {
+			if (hfs_bless &&
+			    strcmp(s_entry->whole_name, hfs_bless) == 0) {
 				hfs_stat(vol, ent->name, ent);
 				hfs_vsetbless(vol, ent->cnid);
 				if (verbose > 0) {
@@ -728,4 +730,4 @@ set_dir_info(vol, de)
 	}
 }
 
-#endif	/* APPLE_HYB */
+#endif	/* APPLE_HFS_HYB */

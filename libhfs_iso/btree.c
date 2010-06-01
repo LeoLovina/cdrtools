@@ -1,7 +1,8 @@
-/* @(#)btree.c	1.3 04/06/17 joerg */
+/* @(#)btree.c	1.7 09/07/11 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)btree.c	1.3 04/06/17 joerg";
+static	UConst char sccsid[] =
+	"@(#)btree.c	1.7 09/07/11 joerg";
 #endif
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
@@ -22,10 +23,9 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <errno.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/errno.h>
 
 #include "internal.h"
 #include "data.h"

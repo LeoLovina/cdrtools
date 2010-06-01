@@ -1,38 +1,35 @@
-/* @(#)wm_packet.c	1.25 04/03/01 Copyright 1995, 1997, 2001-2004 J. Schilling */
+/* @(#)wm_packet.c	1.30 09/07/10 Copyright 1995, 1997, 2001-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)wm_packet.c	1.25 04/03/01 Copyright 1995, 1997, 2001-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)wm_packet.c	1.30 09/07/10 Copyright 1995, 1997, 2001-2009 J. Schilling";
 #endif
 /*
  *	CDR write method abtraction layer
  *	packet writing intercace routines
  *
- *	Copyright (c) 1995, 1997, 2001-2004 J. Schilling
+ *	Copyright (c) 1995, 1997, 2001-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <timedefs.h>
-#include <standard.h>
-#include <utypes.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/time.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
 
 #include <scg/scsitransp.h>
 #include "cdrecord.h"
@@ -64,11 +61,11 @@ write_packet_data(scgp, dp, trackp)
 	int	secsize;
 	int	secspt;
 	int	bytespt;
+	int	bytes_to_read;
 	long	amount;
 	int	pad;
 	int	retried;
 	long	nextblock;
-	int	bytes_to_read;
 	BOOL	neednl	= FALSE;
 	BOOL	islast	= FALSE;
 	char	*bp	= buf;
@@ -79,7 +76,7 @@ long bsize;
 long bfree;
 #define	BCAP
 #ifdef	BCAP
-int per;
+int per = 0;
 #ifdef	XBCAP
 int oper = -1;
 #endif
@@ -87,6 +84,8 @@ int oper = -1;
 
 	if (dp->cdr_dstat->ds_flags & DSF_DVD)
 		secsps = 676.27;
+	if (dp->cdr_dstat->ds_flags & DSF_BD)
+		secsps = 2195.07;
 
 	scgp->silent++;
 	if ((*dp->cdr_buffer_cap)(scgp, &bsize, &bfree) < 0)
@@ -196,7 +195,7 @@ int oper = -1;
 			}
 		}
 
-		amount =  write_secs(scgp, dp, bp, startsec, bytespt, secspt, islast);
+		amount = write_secs(scgp, dp, bp, startsec, bytespt, secspt, islast);
 		if (amount < 0) {
 			if (is_packet(trackp) && trackp->pktsize == 0 && !retried) {
 				printf("%swrite track data: error after %lld bytes, retry with new packet\n",
@@ -288,7 +287,7 @@ int oper = -1;
 			neednl = TRUE;
 		} else if (lverbose) {
 			printf("Track %02d: writing %3lld KB of pad data.\n",
-						track, (Llong)(padbytes >> 10));
+					track, (Llong)(padbytes >> 10));
 			neednl = FALSE;
 		}
 		pad_track(scgp, dp, trackp, startsec, padbytes,

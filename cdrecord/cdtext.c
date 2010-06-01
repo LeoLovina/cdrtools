@@ -1,37 +1,34 @@
-/* @(#)cdtext.c	1.10 04/03/01 Copyright 1999-2004 J. Schilling */
+/* @(#)cdtext.c	1.16 09/07/10 Copyright 1999-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)cdtext.c	1.10 04/03/01 Copyright 1999-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)cdtext.c	1.16 09/07/10 Copyright 1999-2009 J. Schilling";
 #endif
 /*
  *	Generic CD-Text support functions
  *
- *	Copyright (c) 1999-2004 J. Schilling
+ *	Copyright (c) 1999-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>	/* Include sys/types.h to make off_t available */
-#include <standard.h>
-#include <utypes.h>
-#include <strdefs.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>	/* Include sys/types.h to make off_t available */
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/string.h>
+#include <schily/schily.h>
 
 #include <scg/scsitransp.h>	/* For write_leadin() */
 
@@ -118,7 +115,9 @@ LOCAL	void	fillup_pack	__PR((txtarg_t *ap));
 LOCAL	void	fillpacks	__PR((txtarg_t *ap, char *from, int len, int track_no, int pack_type));
 EXPORT	int	write_cdtext	__PR((SCSI *scgp, cdr_t *dp, long startsec));
 LOCAL	void	eight2six	__PR((Uchar *in, Uchar *out));
+#ifdef	__needed__
 LOCAL	void	six2eight	__PR((Uchar *in, Uchar *out));
+#endif
 
 
 EXPORT BOOL
@@ -140,6 +139,11 @@ checktextfile(fname)
 		return (FALSE);
 	}
 	fs = filesize(f);
+	if (fs == (off_t)0) {
+		errmsgno(EX_BAD, "Empty CD-Text file.\n");
+		fclose(f);
+		return (FALSE);
+	}
 	j = fs % sizeof (struct textpack);
 	if (j == 4) {
 		n = fileread(f, hbuf, 4);
@@ -148,6 +152,7 @@ checktextfile(fname)
 				errmsg("Cannot read '%s'.\n", fname);
 			else
 				errmsgno(EX_BAD, "File '%s' is too small for CD-Text.\n", fname);
+			fclose(f);
 			return (FALSE);
 		}
 		len = hbuf[0] * 256 + hbuf[1];
@@ -156,11 +161,13 @@ checktextfile(fname)
 		if (n != len) {
 			errmsgno(EX_BAD, "Inconsistent CD-Text file '%s' length should be %d but is %lld\n",
 				fname, len+4, (Llong)fs);
+			fclose(f);
 			return (FALSE);
 		}
 	} else if (j != 0) {
 		errmsgno(EX_BAD, "Inconsistent CD-Text file '%s' not a multiple of pack length\n",
 			fname);
+		fclose(f);
 		return (FALSE);
 	} else {
 		len = fs;
@@ -169,6 +176,7 @@ checktextfile(fname)
 	bp = malloc(len);
 	if (bp == NULL) {
 		errmsg("Cannot malloc CD-Text read buffer.\n");
+		fclose(f);
 		return (FALSE);
 	}
 	n = fileread(f, bp, len);
@@ -178,6 +186,7 @@ checktextfile(fname)
 		if (tp->pack_type < 0x80 || tp->pack_type > 0x8F) {
 			errmsgno(EX_BAD, "Illegal pack type 0x%02X pack #%ld in CD-Text file '%s'.\n",
 				tp->pack_type, (long)(n/sizeof (struct textpack)), fname);
+			fclose(f);
 			return (FALSE);
 		}
 		crc = (tp->crc[0] & 0xFF) << 8 | (tp->crc[1] & 0xFF);
@@ -194,13 +203,17 @@ checktextfile(fname)
 				(long)(n/sizeof (struct textpack)),
 				n+j, (long)(n+j+sizeof (struct textpack)),
 				fname);
+			fclose(f);
 			return (FALSE);
 			}
 		}
 	}
 	setuptextdata(bp, len);
 	free(bp);
+	fclose(f);
 
+	if (textlen == 0 || textsub == NULL)
+		return (FALSE);
 	return (TRUE);
 }
 
@@ -219,6 +232,10 @@ setuptextdata(bp, len)
 			(long)(len/sizeof (struct textpack)),
 			(long)(len/sizeof (struct textpack)) % 4);
 	}
+	if (len == 0) {
+		errmsgno(EX_BAD, "No CD-Text data found.\n");
+		return;
+	}
 	i = (len/sizeof (struct textpack)) % 4;
 	if (i == 0) {
 		n = len;
@@ -231,6 +248,7 @@ setuptextdata(bp, len)
 	p = malloc(n);
 	if (p == NULL) {
 		errmsg("Cannot malloc CD-Text write buffer.\n");
+		return;
 	}
 	for (i = 0, j = 0; j < n; ) {
 		eight2six(&bp[i%len], &p[j]);
@@ -469,6 +487,9 @@ write_cdtext(scgp, dp, startsec)
 	int	secs;
 	int	nbytes;
 
+	if (textlen <= 0)
+		return (-1);
+
 /*maxdma = 4320;*/
 	if (maxdma >= (2*textlen)) {
 		/*
@@ -544,6 +565,7 @@ eight2six(in, out)
 	out[3]  = c & 0x3F;
 }
 
+#ifdef	__needed__
 /*
  * 4 input bytes (6 bit based) are converted into 3 output bytes (8 bit based).
  */
@@ -568,3 +590,4 @@ six2eight(in, out)
 	c = in[3] & 0x3F;
 	out[2] |= c;
 }
+#endif

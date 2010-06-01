@@ -1,7 +1,7 @@
-/* @(#)scsi-wnt.c	1.45 04/07/19 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key */
+/* @(#)scsi-wnt.c	1.46 06/11/26 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-wnt.c	1.45 04/07/19 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key";
+	"@(#)scsi-wnt.c	1.46 06/11/26 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key";
 #endif
 /*
  *	Interface for the Win32 ASPI library.
@@ -23,19 +23,23 @@ static	char __sccsid[] =
  *	-	SCSI reset support
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 
@@ -65,8 +69,8 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.45";	/* The version for this transport*/
-LOCAL	char	_scg_itrans_version[] = "SPTI-scsi-wnt.c-1.45";	/* The version for SPTI */
+LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.46";	/* The version for this transport*/
+LOCAL	char	_scg_itrans_version[] = "SPTI-scsi-wnt.c-1.46";	/* The version for SPTI */
 
 /*
  * Local defines and constants
@@ -945,6 +949,13 @@ scgo_freebuf(scgp)
 	if (scgp->bufbase)
 		free(scgp->bufbase);
 	scgp->bufbase = NULL;
+}
+
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (busses);
 }
 
 LOCAL __SBOOL

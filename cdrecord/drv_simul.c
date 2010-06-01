@@ -1,51 +1,48 @@
-/* @(#)drv_simul.c	1.47 04/03/02 Copyright 1998-2004 J. Schilling */
+/* @(#)drv_simul.c	1.60 09/07/10 Copyright 1998-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)drv_simul.c	1.47 04/03/02 Copyright 1998-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)drv_simul.c	1.60 09/07/10 Copyright 1998-2009 J. Schilling";
 #endif
 /*
  *	Simulation device driver
  *
- *	Copyright (c) 1998-2004 J. Schilling
+ *	Copyright (c) 1998-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef	DEBUG
 #define	DEBUG
 #endif
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <timedefs.h>
-#include <utypes.h>
-#include <btorder.h>
-#include <schily.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/time.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+#include <schily/schily.h>
 
 /*#include <scgio.h>*/
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
 
-#include <libport.h>
+#include <schily/libport.h>
 
 #include "cdrecord.h"
 
@@ -84,8 +81,11 @@ simul_unload(scgp, dp)
 }
 
 cdr_t	cdr_cdr_simul = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_SAO|CDR_PACKET|CDR_RAW|CDR_RAW16|CDR_RAW96P|CDR_RAW96R|CDR_SRAW96P|CDR_SRAW96R|CDR_TRAYLOAD|CDR_SIMUL,
+	0,
+	CDR_CDRW_ALL,
+	WM_SAO,
 	40, 372,
 	"cdr_simul",
 	"simulation CD-R driver for timing/speed tests",
@@ -95,6 +95,7 @@ cdr_t	cdr_cdr_simul = {
 	drive_attach,
 	init_simul,
 	getdisktype_simul,
+	no_diskstatus,
 	simul_load,
 	simul_unload,
 	buf_dummy,
@@ -124,8 +125,11 @@ cdr_t	cdr_cdr_simul = {
 };
 
 cdr_t	cdr_dvd_simul = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_SAO|CDR_PACKET|CDR_RAW|CDR_RAW16|CDR_RAW96P|CDR_RAW96R|CDR_SRAW96P|CDR_SRAW96R|CDR_DVD|CDR_TRAYLOAD|CDR_SIMUL,
+	CDR2_NOCD,
+	CDR_CDRW_ALL,
+	WM_SAO,
 	2, 1000,
 	"dvd_simul",
 	"simulation DVD-R driver for timing/speed tests",
@@ -135,6 +139,51 @@ cdr_t	cdr_dvd_simul = {
 	drive_attach,
 	init_simul,
 	getdisktype_simul,
+	no_diskstatus,
+	simul_load,
+	simul_unload,
+	buf_dummy,
+	cmd_dummy,					/* recovery_needed */
+	(int(*)__PR((SCSI *, cdr_t *, int)))cmd_dummy,	/* recover	*/
+	speed_select_simul,
+	select_secsize,
+	next_wr_addr_simul,
+	(int(*)__PR((SCSI *, Ulong)))cmd_ill,	/* reserve_track	*/
+	cdr_write_simul,
+	(int(*)__PR((track_t *, void *, BOOL)))cmd_dummy,	/* gen_cue */
+	(int(*)__PR((SCSI *scgp, cdr_t *, track_t *)))cmd_dummy, /* send_cue */
+	(int(*)__PR((SCSI *, cdr_t *, track_t *)))cmd_dummy, /* leadin */
+	open_track_simul,
+	close_track_simul,
+	open_session_simul,
+	cmd_dummy,
+	cmd_dummy,					/* abort	*/
+	read_session_offset,
+	fixate_simul,
+	cmd_dummy,					/* stats	*/
+	blank_dummy,
+	format_dummy,
+	(int(*)__PR((SCSI *, caddr_t, int, int)))NULL,	/* no OPC	*/
+	cmd_dummy,					/* opt1		*/
+	cmd_dummy,					/* opt2		*/
+};
+
+cdr_t	cdr_bd_simul = {
+	0, 0, 0,
+	CDR_TAO|CDR_SAO|CDR_PACKET|CDR_TRAYLOAD|CDR_SIMUL,
+	CDR2_NOCD|CDR2_BD,
+	CDR_CDRW_ALL,
+	WM_SAO,
+	2, 1000,
+	"bd_simul",
+	"simulation BD-R driver for timing/speed tests",
+	0,
+	(dstat_t *)0,
+	identify_simul,
+	drive_attach,
+	init_simul,
+	getdisktype_simul,
+	no_diskstatus,
 	simul_load,
 	simul_unload,
 	buf_dummy,
@@ -176,6 +225,7 @@ LOCAL	long	simul_nwa;
 LOCAL	int	simul_speed = 1;
 LOCAL	int	simul_dummy;
 LOCAL	int	simul_isdvd;
+LOCAL	int	simul_isbd;
 LOCAL	int	simul_bufsize = 1024;
 LOCAL	Uint	sleep_rest;
 LOCAL	Uint	sleep_max;
@@ -199,11 +249,15 @@ getdisktype_simul(scgp, dp)
 	if (strcmp(dp->cdr_drname, cdr_cdr_simul.cdr_drname) == 0) {
 		dsp->ds_maxblocks = 333000;
 		simul_isdvd = FALSE;
-	} else {
+	} else if (strcmp(dp->cdr_drname, cdr_dvd_simul.cdr_drname) == 0) {
 		dsp->ds_maxblocks = 2464153;	/* 4.7 GB  */
 /*		dsp->ds_maxblocks = 1927896;*/	/* 3.95 GB */
-		dsp->ds_flags |= DSF_DVD;
+		dsp->ds_flags |= DSF_NOCD|DSF_DVD;
 		simul_isdvd = TRUE;
+	} else {
+		dsp->ds_maxblocks = 12219392;	/* 25 GB  */
+		dsp->ds_flags |= DSF_NOCD|DSF_BD;
+		simul_isbd = TRUE;
 	}
 	return (drive_getdisktype(scgp, dp));
 }
@@ -243,6 +297,12 @@ speed_select_simul(scgp, dp, speedp)
 	 */
 	if ((dp->cdr_flags & CDR_DVD) != 0)
 		sleep_max = 739 * simul_bufsize / simul_speed;
+
+	/*
+	 * BD single speed is 4495.5 * 1000 Bytes/s (2195.07 sectors/s)
+	 */
+	if ((dp->cdr_flags2 & CDR2_BD) != 0)
+		sleep_max = 228 * simul_bufsize / simul_speed;
 
 	if (lverbose) {
 		printf("Simulation drive buffer size: %d KB\n", simul_bufsize);
@@ -320,11 +380,14 @@ static	struct timeval	tv2;
 	}
 	/*
 	 * Speed 1 ist 150 Sektoren/s
-	 * Bei DVD 767.27 Sektoren/s
+	 * Bei DVD 676.27 Sektoren/s
+	 * Bei BD 2195.07 Sektoren/s
 	 */
 	sleep_time = 1000000 * blocks / 75 / simul_speed;
 	if (simul_isdvd)
 		sleep_time = 1000000 * blocks / 676 / simul_speed;
+	if (simul_isbd)
+		sleep_time = 1000000 * blocks / 2195 / simul_speed;
 
 	sleep_time += sleep_rest;
 

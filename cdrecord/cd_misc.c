@@ -1,34 +1,31 @@
-/* @(#)cd_misc.c	1.10 01/10/29 Copyright 1997 J. Schilling */
+/* @(#)cd_misc.c	1.17 09/07/10 Copyright 1997-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)cd_misc.c	1.10 01/10/29 Copyright 1997 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)cd_misc.c	1.17 09/07/10 Copyright 1997-2009 J. Schilling";
 #endif
 /*
  *	Misc CD support routines
  *
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <standard.h>
-#include <utypes.h>	/* Includes <sys/types.h> for caddr_t */
-#include <stdio.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>	/* Includes <sys/types.h> for caddr_t */
+#include <schily/stdio.h>
+#include <schily/schily.h>
 
 #include "cdrecord.h"
 
@@ -38,6 +35,7 @@ EXPORT	long	msf_to_lba		__PR((int m, int s, int f, BOOL force_positive));
 EXPORT	BOOL	lba_to_msf		__PR((long lba, msf_t *mp));
 EXPORT	void	sec_to_msf		__PR((long sec, msf_t *mp));
 EXPORT	void	print_min_atip		__PR((long li, long lo));
+EXPORT	BOOL	is_cdspeed		__PR((int speed));
 
 EXPORT int
 from_bcd(b)
@@ -146,4 +144,47 @@ print_min_atip(li, lo)
 		printf("  ATIP start of lead out: %ld (%02d:%02d/%02d)\n",
 			lo, msf.msf_min, msf.msf_sec, msf.msf_frame);
 	}
+}
+
+/*
+ * Make a probability guess whether the speed is related to CD or DVD speed.
+ */
+EXPORT BOOL
+is_cdspeed(speed)
+	int	speed;
+{
+	int	cdspeed;
+	long	cdrest;
+	int	dvdspeed;
+	long	dvdrest;
+
+	cdspeed = speed / 176;
+	cdrest = cdspeed * 1764;
+	cdrest = speed * 10 - cdrest;
+	if (cdrest < 0)
+		cdrest *= -1;
+	if (cdrest > 1764/2)
+		cdrest = 1764 - cdrest;
+
+	/*
+	 * 3324 = 1382 * 2.4
+	 * speed > 0.9 * 3324 && speed < 1.1 * 3324
+	 */
+	if (speed >= 2990 && speed <= 3656) {
+		dvdrest = 33240;
+		dvdrest = speed * 10 - dvdrest;
+	} else {
+		dvdspeed = speed / 1385;
+		dvdrest = dvdspeed * 13850;
+		dvdrest = speed * 10 - dvdrest;
+	}
+	if (dvdrest < 0)
+		dvdrest *= -1;
+	if (dvdrest > 13850/2)
+		dvdrest = 13850 - dvdrest;
+
+	/*
+	 * 1385 / 176.4 = 7.85, so we need to multiply the CD rest by 7.85
+	 */
+	return (dvdrest > (cdrest*8 - cdrest/6));
 }

@@ -1,4 +1,4 @@
-/* @(#)scgcmd.h	2.22 04/09/04 Copyright 1986 J. Schilling */
+/* @(#)scgcmd.h	2.26 07/11/22 Copyright 1986 J. Schilling */
 /*
  *	Definitions for the SCSI 'scg_cmd' structure that has been created
  *	for the SCSI general driver 'scg' for SunOS and Solaris but
@@ -7,26 +7,36 @@
  *	Copyright (c) 1986 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef	_SCG_SCGCMD_H
 #define	_SCG_SCGCMD_H
 
-#include <utypes.h>
-#include <btorder.h>
+#ifdef	_KERNEL
+#define	scsi_status	scg_status
+#define	scsi_sense	scg_sense
+#define	scsi_ext_sense	scg_ext_sense
+#endif
+
+#include <schily/utypes.h>
+#include <schily/btorder.h>
 
 #if	defined(_BIT_FIELDS_LTOH)	/* Intel byteorder */
 #else
@@ -43,7 +53,7 @@ error  One of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL must be defined
 
 #include <scg/scsisense.h>
 #include <scg/scsicdb.h>
-#include <intcvt.h>
+#include <schily/intcvt.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -129,17 +139,12 @@ struct	scg_cmd {
 	int	resid;			/* Bytes not transfered */
 	int	error;			/* Error code from scgintr() */
 	int	ux_errno;		/* UNIX error code */
-#ifdef	comment
-XXX	struct	scsi_status scb; ???	/* Status returnd by command */
-#endif
 	union {
 		struct	scsi_status Scb; /* Status returnd by command */
 		Uchar	cmd_scb[SCG_MAX_STATUS];
 	} u_scb;
 #define	scb	u_scb.Scb
-#ifdef	comment
-XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
-#endif
+
 	union {
 		struct	scsi_sense Sense; /* Sense bytes from command */
 		Uchar	cmd_sense[SCG_MAX_SENSE];
@@ -160,6 +165,44 @@ XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
 		Uchar	cmd_cdb[SCG_MAX_CMD];
 	} cdb;				/* 24 bytes max. size is supported */
 };
+
+#if	defined(_KERNEL) && defined(_MULTI_DATAMODEL)
+struct	scg_cmd32 {
+	caddr32_t	addr;			/* Address of data in user space */
+	int	size;			/* DMA count for data transfer */
+	int	flags;			/* see below for definition */
+	int	cdb_len;		/* Size of SCSI command in bytes */
+					/* NOTE: rel 4 uses this field only */
+					/* with commands not in group 1 or 2*/
+	int	sense_len;		/* for intr() if -1 don't get sense */
+	int	timeout;		/* timeout in seconds */
+					/* NOTE: actual resolution depends */
+					/* on driver implementation */
+	int	kdebug;			/* driver kernel debug level */
+	int	resid;			/* Bytes not transfered */
+	int	error;			/* Error code from scgintr() */
+	int	ux_errno;		/* UNIX error code */
+	union {
+		struct	scsi_status Scb; /* Status returnd by command */
+		Uchar	cmd_scb[SCG_MAX_STATUS];
+	} u_scb;
+#define	scb	u_scb.Scb
+
+	union {
+		struct	scsi_sense Sense; /* Sense bytes from command */
+		Uchar	cmd_sense[SCG_MAX_SENSE];
+	} u_sense;
+#define	sense	u_sense.Sense
+	int	sense_count;		/* Number of bytes valid in sense */
+	int	target;			/* SCSI target id */
+	union {				/* SCSI command descriptor block */
+		struct	scsi_g0cdb g0_cdb;
+		struct	scsi_g1cdb g1_cdb;
+		struct	scsi_g5cdb g5_cdb;
+		Uchar	cmd_cdb[SCG_MAX_CMD];
+	} cdb;				/* 24 bytes max. size is supported */
+};
+#endif	/* defined(_KERNEL) && defined(_MULTI_DATAMODEL) */
 
 #define	dma_read	flags		/* 1 if DMA to Sun, 0 otherwise */
 
@@ -195,6 +238,12 @@ XXX	struct	scsi_sense sense; ???	/* Sense bytes from command */
 
 #ifdef	__cplusplus
 }
+#endif
+
+#ifdef	_KERNEL
+#undef	scsi_status
+#undef	scsi_sense
+#undef	scsi_ext_sense
 #endif
 
 #endif	/* _SCG_SCGCMD_H */

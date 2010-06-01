@@ -1,65 +1,55 @@
-/* @(#)rscsi.c	1.28 03/11/26 Copyright 1994,2000-2002 J. Schilling*/
+/* @(#)rscsi.c	1.38 10/05/24 Copyright 1994,2000-2010 J. Schilling*/
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)rscsi.c	1.28 03/11/26 Copyright 1994,2000-2002 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)rscsi.c	1.38 10/05/24 Copyright 1994,2000-2010 J. Schilling";
 #endif
 /*
  *	Remote SCSI server
  *
- *	Copyright (c) 1994,2000-2002 J. Schilling
+ *	Copyright (c) 1994,2000-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 /*#define	FORCE_DEBUG*/
 
-#include <mconfig.h>
-
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>	/* includes <sys/types.h> */
-#include <utypes.h>
-#include <fctldefs.h>
-#include <statdefs.h>
-#include <strdefs.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>	/* includes <sys/types.h> */
+#include <schily/utypes.h>
+#include <schily/fcntl.h>
+#include <schily/stat.h>
+#include <schily/string.h>
 #ifdef	HAVE_SYS_SOCKET_H
 #define	USE_REMOTE
-#include <sys/socket.h>
+#include <schily/socket.h>
 #endif
-#ifdef	 HAVE_SYS_PARAM_H
-#include <sys/param.h>	/* BSD-4.2 & Linux need this for MAXHOSTNAMELEN */
-#endif
-#include <errno.h>
-#include <pwd.h>
+#include <schily/param.h>	/* BSD-4.2 & Linux need this for MAXHOSTNAMELEN */
+#include <schily/errno.h>
+#include <schily/pwd.h>
 
-#include <standard.h>
-#include <deflts.h>
-#include <patmatch.h>
-#include <schily.h>
+#include <schily/standard.h>
+#include <schily/deflts.h>
+#include <schily/patmatch.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsitransp.h>
 
-#include <netinet/in.h>
-#ifdef	HAVE_ARPA_INET_H
-#include <arpa/inet.h>		/* BeOS does not have <arpa/inet.h> */
-#endif				/* but inet_ntaoa() is in <netdb.h> */
-#ifdef	HAVE_NETDB_H
-#include <netdb.h>
-#endif
+#include <schily/in.h>
+#include <schily/inet.h>	/* BeOS does not have <arpa/inet.h> */
+				/* but inet_ntaoa() is in <netdb.h> */
+#include <schily/netdb.h>
 
 EXPORT	int	main		__PR((int argc, char **argv));
 #ifdef	USE_REMOTE
@@ -74,6 +64,7 @@ LOCAL	void	closescsi	__PR((void));
 LOCAL	void	maxdma		__PR((void));
 LOCAL	void	getbuf		__PR((void));
 LOCAL	void	freebuf		__PR((void));
+LOCAL	void	numbus		__PR((void));
 LOCAL	void	havebus		__PR((void));
 LOCAL	void	scsifileno	__PR((void));
 LOCAL	void	initiator_id	__PR((void));
@@ -105,13 +96,13 @@ LOCAL	char	*peername;
 LOCAL	char	*debug_name;
 LOCAL	FILE	*debug_file;
 
-#define	DEBUG(fmt)		if (debug_file) js_fprintf(debug_file, fmt)
-#define	DEBUG1(fmt,a)		if (debug_file) js_fprintf(debug_file, fmt, a)
-#define	DEBUG2(fmt,a1,a2)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2)
-#define	DEBUG3(fmt,a1,a2,a3)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3)
-#define	DEBUG4(fmt,a1,a2,a3,a4)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4)
-#define	DEBUG5(fmt,a1,a2,a3,a4,a5)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4, a5)
-#define	DEBUG6(fmt,a1,a2,a3,a4,a5,a6)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4, a5, a6)
+#define	DEBUG(fmt)				if (debug_file) js_fprintf(debug_file, fmt)
+#define	DEBUG1(fmt, a)				if (debug_file) js_fprintf(debug_file, fmt, a)
+#define	DEBUG2(fmt, a1, a2)			if (debug_file) js_fprintf(debug_file, fmt, a1, a2)
+#define	DEBUG3(fmt, a1, a2, a3)			if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3)
+#define	DEBUG4(fmt, a1, a2, a3, a4)		if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4)
+#define	DEBUG5(fmt, a1, a2, a3, a4, a5)		if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4, a5)
+#define	DEBUG6(fmt, a1, a2, a3, a4, a5, a6)	if (debug_file) js_fprintf(debug_file, fmt, a1, a2, a3, a4, a5, a6)
 #endif	/* USE_REMOTE */
 
 EXPORT int
@@ -149,7 +140,7 @@ main(argc, argv)
 /*		rscsirespond(-1, geterrno());*/
 		exit(EX_BAD);
 	}
-	debug_name=defltread("DEBUG=");
+	debug_name = defltread("DEBUG=");
 #ifdef	FORCE_DEBUG
 	if (debug_name == NULL && argc <= 0)
 		debug_name = "/tmp/RSCSI";
@@ -163,9 +154,16 @@ main(argc, argv)
 		debug_name = *argv;
 #endif
 
+	/*
+	 * XXX If someone sets up debugging and allows the debug file to be
+	 * XXX replaced by a symlink to e.g. /etc/passwd this would be a
+	 * XXX security risk. But /etc/default/rscsi is only writable by root
+	 * XXX and for this reason a possible security risk would have been
+	 * XXX introduced by the administrator.
+	 */
 	if (debug_name != NULL)
 		debug_file = fopen(debug_name, "w");
-		
+
 	if (argc > 0) {
 		if (debug_file == 0) {
 			rscsirespond(-1, geterrno());
@@ -273,7 +271,7 @@ static	char		buffer[NI_MAXHOST];
 							s->sin_family);
 			return ("NOT_IP");
 		}
-               
+
 #ifdef	HAVE_GETNAMEINFO
 		buffer[0] = '\0';
 		if (debug_file &&
@@ -290,13 +288,13 @@ static	char		buffer[NI_MAXHOST];
 		return ("CANNOT_MAP_ADDRESS");
 #else	/* HAVE_GETNAMEINFO */
 #ifdef	HAVE_INET_NTOA
-		(void) js_snprintf(buffer, sizeof(buffer), "%s", inet_ntoa(s->sin_addr));
+		(void) js_snprintf(buffer, sizeof (buffer), "%s", inet_ntoa(s->sin_addr));
 #else
-		(void) js_snprintf(buffer, sizeof(buffer), "%x", s->sin_addr.s_addr);
+		(void) js_snprintf(buffer, sizeof (buffer), "%x", s->sin_addr.s_addr);
 #endif
 		DEBUG1("rscsid: peername %s\n", buffer);
 		he = gethostbyaddr((char *)&s->sin_addr.s_addr, 4, AF_INET);
-		DEBUG1("rscsid: peername %s\n", he!=NULL?he->h_name:buffer);
+		DEBUG1("rscsid: peername %s\n", he != NULL ? he->h_name:buffer);
 		if (he != NULL)
 			return (he->h_name);
 		return (buffer);
@@ -352,7 +350,7 @@ checktarget()
 			continue;
 		p = astoi(p, &lun);
 
-		if (*p != '\t' && *p != '\n' && *p != '\r' && *p != '\0') 
+		if (*p != '\t' && *p != '\n' && *p != '\r' && *p != '\0')
 			continue;
 		DEBUG6("ACCESS %s %s %d.%d,%d,%d\n", user, host, bus, chan, tgt, lun);
 
@@ -379,8 +377,8 @@ strmatch(str, pat)
 	char	*p;
 
 	plen = strlen(pat);
-	aux = malloc(plen*sizeof(int));
-	state = malloc((plen+1)*sizeof(int));
+	aux = malloc(plen*sizeof (int));
+	state = malloc((plen+1)*sizeof (int));
 	if (aux == NULL || state == NULL) {
 		if (aux) free(aux);
 		if (state) free(state);
@@ -433,6 +431,9 @@ dorscsi()
 		case 'F':		/* "F" free	*/
 			freebuf();
 			break;
+		case 'N':		/* "N" um Bus	*/
+			numbus();
+			break;
 		case 'B':		/* "B" us	*/
 			havebus();
 			break;
@@ -468,13 +469,19 @@ scsiversion()
 	char	*str;
 	char	what[CMD_SIZE];
 
-	readarg(what, sizeof(what));
+	readarg(what, sizeof (what));
 	DEBUG1("rscsid: V %s\n", what);
-	if (scsi_ptr == NULL) {
-		rscsirespond(-1, EBADF);
+
+	/*
+	 * If there was no 'O'pen command yet, scsi_ptr is NULL
+	 * and our libscg returns values for the library instead
+	 * of returning values for the low level transport.
+	 */
+	str = scg_version(scsi_ptr, atoi(what));
+	if (str == NULL) {
+		rscsirespond(-1, EINVAL);
 		return;
 	}
-	str = scg_version(scsi_ptr, atoi(what));
 	ret = strlen(str);
 	ret++;	/* Include null char */
 	rscsirespond(ret, geterrno());
@@ -494,7 +501,7 @@ openscsi()
 	if (scsi_ptr != NULL)
 		(void) scg_close(scsi_ptr);
 
-	readarg(device, sizeof(device));
+	readarg(device, sizeof (device));
 	DEBUG1("rscsid: O %s\n", device);
 	if (strncmp(device, "REMOTE", 6) == 0) {
 		scsi_ptr = NULL;
@@ -503,7 +510,7 @@ openscsi()
 		scsi_ptr = NULL;
 		seterrno(EACCES);
 	} else {
-		scsi_ptr = scg_open(device, errstr, sizeof(errstr), debug, lverbose);
+		scsi_ptr = scg_open(device, errstr, sizeof (errstr), debug, lverbose);
 		if (scsi_ptr == NULL) {
 			ret = -1;
 		} else {
@@ -522,13 +529,13 @@ openscsi()
 /*		rscsirespond(ret, geterrno());*/
 		return;
 	}
-	DEBUG4("rscsid:>A 0 %d.%d,%d,%d\n", 
+	DEBUG4("rscsid:>A 0 %d.%d,%d,%d\n",
 		scg_scsibus(scsi_ptr),
 		0,
 		scg_target(scsi_ptr),
 		scg_lun(scsi_ptr));
 
-	ret = js_snprintf(rbuf, sizeof(rbuf), "A0\n%d\n%d\n%d\n%d\n",
+	ret = js_snprintf(rbuf, sizeof (rbuf), "A0\n%d\n%d\n%d\n%d\n",
 		scg_scsibus(scsi_ptr),
 		0,
 		scg_target(scsi_ptr),
@@ -542,7 +549,7 @@ closescsi()
 	int	ret;
 	char	device[CMD_SIZE];
 
-	readarg(device, sizeof(device));
+	readarg(device, sizeof (device));
 	DEBUG1("rscsid: C %s\n", device);
 	ret = scg_close(scsi_ptr);
 	rscsirespond(ret, geterrno());
@@ -555,7 +562,7 @@ maxdma()
 	int	ret;
 	char	amt[CMD_SIZE];
 
-	readarg(amt, sizeof(amt));
+	readarg(amt, sizeof (amt));
 	DEBUG1("rscsid: D %s\n", amt);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -571,7 +578,7 @@ getbuf()
 	int	ret = 0;
 	char	amt[CMD_SIZE];
 
-	readarg(amt, sizeof(amt));
+	readarg(amt, sizeof (amt));
 	DEBUG1("rscsid: M %s\n", amt);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -589,7 +596,7 @@ freebuf()
 	int	ret = 0;
 	char	dummy[CMD_SIZE];
 
-	readarg(dummy, sizeof(dummy));
+	readarg(dummy, sizeof (dummy));
 	DEBUG1("rscsid: F %s\n", dummy);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -601,14 +608,31 @@ freebuf()
 }
 
 LOCAL void
+numbus()
+{
+	int	ret;
+
+	char	dummy[CMD_SIZE];
+
+	readarg(dummy, sizeof (dummy));
+	DEBUG1("rscsid: N %s\n", dummy);
+	if (scsi_ptr == NULL) {
+		rscsirespond(-1, EBADF);
+		return;
+	}
+	ret = scg_numbus(scsi_ptr);
+	rscsirespond(ret, geterrno());
+}
+
+LOCAL void
 havebus()
 {
 	int	ret;
 	char	bus[CMD_SIZE];
 	char	chan[CMD_SIZE];
 
-	readarg(bus, sizeof(bus));
-	readarg(chan, sizeof(chan));
+	readarg(bus, sizeof (bus));
+	readarg(chan, sizeof (chan));
 	DEBUG2("rscsid: B %s.%s\n", bus, chan);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -627,10 +651,10 @@ scsifileno()
 	char	tgt[CMD_SIZE];
 	char	lun[CMD_SIZE];
 
-	readarg(bus, sizeof(bus));
-	readarg(chan, sizeof(chan));
-	readarg(tgt, sizeof(tgt));
-	readarg(lun, sizeof(lun));
+	readarg(bus, sizeof (bus));
+	readarg(chan, sizeof (chan));
+	readarg(tgt, sizeof (tgt));
+	readarg(lun, sizeof (lun));
 	DEBUG4("rscsid: T %s.%s,%s,%s\n", bus, chan, tgt, lun);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -654,7 +678,7 @@ initiator_id()
 	int	ret;
 	char	dummy[CMD_SIZE];
 
-	readarg(dummy, sizeof(dummy));
+	readarg(dummy, sizeof (dummy));
 	DEBUG1("rscsid: I %s\n", dummy);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -674,7 +698,7 @@ isatapi()
 	int	ret;
 	char	dummy[CMD_SIZE];
 
-	readarg(dummy, sizeof(dummy));
+	readarg(dummy, sizeof (dummy));
 	DEBUG1("rscsid: A %s\n", dummy);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -694,7 +718,7 @@ scsireset()
 	int	ret;
 	char	what[CMD_SIZE];
 
-	readarg(what, sizeof(what));
+	readarg(what, sizeof (what));
 	DEBUG1("rscsid: R %s\n", what);
 	if (scsi_ptr == NULL) {
 		rscsirespond(-1, EBADF);
@@ -734,11 +758,11 @@ sendcmd()
 	 *	-	sss	(e.g. 10)
 	 *	-	sss.uuu	(e.g. 10.23)
 	 */
-	readarg(count, sizeof(count));
-	readarg(flags, sizeof(flags));
-	readarg(cdb_len, sizeof(cdb_len));
-	readarg(sense_len, sizeof(sense_len));
-	readarg(timeout, sizeof(timeout));
+	readarg(count, sizeof (count));
+	readarg(flags, sizeof (flags));
+	readarg(cdb_len, sizeof (cdb_len));
+	readarg(sense_len, sizeof (sense_len));
+	readarg(timeout, sizeof (timeout));
 	DEBUG5("rscsid: S %s %s %s %s %s", count, flags, cdb_len, sense_len, timeout);
 	csize = atoi(count);
 	cflags = atoi(flags);
@@ -754,12 +778,12 @@ sendcmd()
 		voidarg(clen);
 		if ((cflags & SCG_RECV_DATA) == 0 && csize > 0)
 			voidarg(csize);
-		rscsirespond(-1, scsi_ptr==NULL ? EBADF : EINVAL);
+		rscsirespond(-1, scsi_ptr == NULL ? EBADF : EINVAL);
 		return;
 	}
 
 	scmd = scsi_ptr->scmd;
-	fillbytes((caddr_t)scmd, sizeof(*scmd), '\0');
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
 	scmd->addr = (caddr_t)Sbuf;
 	scmd->size = csize;
 	scmd->flags = cflags;
@@ -801,7 +825,7 @@ sendcmd()
 		*(Uchar *)&scmd->scb,
 		scmd->sense_count);
 
-	ret = js_snprintf(rbuf, sizeof(rbuf), "A%d\n%d\n%d\n%d\n%d\n",
+	ret = js_snprintf(rbuf, sizeof (rbuf), "A%d\n%d\n%d\n%d\n%d\n",
 		n,
 		scmd->error,
 		scmd->ux_errno,
@@ -814,7 +838,7 @@ sendcmd()
 	}
 	if ((cflags & SCG_RECV_DATA) == 0)
 		n = 0;
-	if (n > 0 && ((ret + n) <= sizeof(rbuf))) {
+	if (n > 0 && ((ret + n) <= sizeof (rbuf))) {
 		movebytes(Sbuf, &rbuf[ret], n);
 		ret += n;
 		n = 0;
@@ -885,10 +909,10 @@ voidarg(n)
 {
 	register int	i;
 	register int	amt;
-		 char	buf[512];
+		char	buf[512];
 
 	for (i = 0; i < n; i += amt) {
-		amt = sizeof(buf);
+		amt = sizeof (buf);
 		if ((n - i) < amt)
 			amt = n - i;
 		readbuf(buf, amt);
@@ -924,13 +948,13 @@ preparebuffer(size)
 
 #ifdef	SO_SNDBUF
 	while (size > 512 &&
-	       setsockopt(STDOUT_FILENO, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof (size)) < 0)
+		setsockopt(STDOUT_FILENO, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof (size)) < 0)
 		size -= 512;
 	DEBUG1("rscsid: sndsize: %d\n", size);
 #endif
 #ifdef	SO_RCVBUF
 	while (size > 512 &&
-	       setsockopt(STDIN_FILENO, SOL_SOCKET, SO_RCVBUF, (char *)&size, sizeof (size)) < 0)
+		setsockopt(STDIN_FILENO, SOL_SOCKET, SO_RCVBUF, (char *)&size, sizeof (size)) < 0)
 		size -= 512;
 	DEBUG1("rscsid: rcvsize: %d\n", size);
 #endif
@@ -972,7 +996,7 @@ rscsireply(ret)
 	char	rbuf[CMD_SIZE];
 
 	DEBUG1("rscsid:>A %d\n", ret);
-	(void) js_snprintf(rbuf, sizeof(rbuf), "A%d\n", ret);
+	(void) js_snprintf(rbuf, sizeof (rbuf), "A%d\n", ret);
 	(void) _nixwrite(STDOUT_FILENO, rbuf, strlen(rbuf));
 }
 
@@ -990,9 +1014,9 @@ rscsierror(err, str, xstr)
 		xlen = strlen(xstr) + 1;
 
 	DEBUG3("rscsid:>E %d (%s) [%s]\n", err, str, xstr?xstr:"");
-	n = js_snprintf(rbuf, sizeof(rbuf), "E%d\n%s\n%d\n", err, str, xlen);
+	n = js_snprintf(rbuf, sizeof (rbuf), "E%d\n%s\n%d\n", err, str, xlen);
 
-	if (xlen > 0 && ((xlen + n) <= sizeof(rbuf))) {
+	if (xlen > 0 && ((xlen + n) <= sizeof (rbuf))) {
 		movebytes(xstr, &rbuf[n], xlen);
 		n += xlen;
 		xlen = 0;

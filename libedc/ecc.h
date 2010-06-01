@@ -1,4 +1,4 @@
-/* @(#)ecc.h	1.4 02/10/19 Copyright 1998-2002 Heiko Eissfeldt, Joerg Schilling */
+/* @(#)ecc.h	1.5 06/05/14 Copyright 1998-2002 Heiko Eissfeldt, Joerg Schilling */
 
 /*
  * compact disc reed-solomon routines
@@ -7,19 +7,15 @@
  * (c) 2002 by Joerg Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #define RS_L12_BITS 8
@@ -85,6 +81,9 @@ int get_sector_type	__PR((void));
                     Sync-, header- and edc- fields will be added.
 */
 int do_encode_L2	__PR((unsigned char *inout, int sectortype, unsigned address));
+int encode_L2_Q		__PR((unsigned char inout[4 + L2_RAW + 4 + 8 + L2_P + L2_Q]));
+int encode_L2_P		__PR((unsigned char inout[4 + L2_RAW + 4 + 8 + L2_P]));
+
 int decode_L2_Q		__PR((unsigned char inout[4 + L2_RAW + 12 + L2_Q]));
 int decode_L2_P		__PR((unsigned char inout[4 + L2_RAW + 12 + L2_Q + L2_P]));
 unsigned int build_edc	__PR((unsigned char inout[], int from, int upto));

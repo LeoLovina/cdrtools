@@ -1,9 +1,8 @@
-#ident @(#)isovfy.mk	1.4 04/06/01 
+#ident @(#)isovfy.mk	1.10 08/10/26 
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
+# it under the terms of the GNU General Public License version 2
+# as published by the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,12 +24,16 @@ CPPOPTS +=	-DUSE_LIBSCHILY
 CPPOPTS +=	-DUSE_LARGEFILES
 CPPOPTS +=	-DUSE_SCG
 CPPOPTS +=	-I..
-CPPOPTS +=	-I../../cdrecord
+CPPOPTS +=	-I../../libscg
+CPPOPTS +=	-I../../libscgcmd
+CPPOPTS +=	-I../../libcdrdeflt
+CPPOPTS +=	-DSCHILY_PRINT
+
 CFILES=		isovfy.c \
-		scsi.c scsi_cdr.c cd_misc.c modes.c \
-		defaults.c getnum.c
-LIBS=		-lrscg -lscg $(LIB_VOLMGT) -ldeflt -lschily $(SCSILIB) $(LIB_SOCKET)
-#XMK_FILE=	Makefile.man
+		scsi.c
+
+LIBS=		-lscgcmd -lrscg -lscg $(LIB_VOLMGT) -lcdrdeflt -ldeflt -lschily $(SCSILIB) $(LIB_SOCKET)
+XMK_FILE=	isovfy_man.mk
 
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.cmd

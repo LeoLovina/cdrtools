@@ -1,7 +1,7 @@
-/* @(#)scsi-openserver.c	1.31 04/01/15 Copyright 1998 J. Schilling, Santa Cruz Operation */
+/* @(#)scsi-openserver.c	1.35 10/05/24 Copyright 1998-2010 J. Schilling, Copyright 1998,2000 Santa Cruz Operation */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-openserver.c	1.31 04/01/15 Copyright 1998 J. Schilling, Santa Cruz Operation";
+	"@(#)scsi-openserver.c	1.35 10/05/24 Copyright 1998-2010 J. Schilling, Copyright 1998,2000 Santa Cruz Operation";
 #endif
 /*
  *	Interface for the SCO SCSI implementation.
@@ -12,22 +12,27 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1998 J. Schilling, Santa Cruz Operation
+ *	Copyright (c) 1998-2010 J. Schilling
+ *	Copyright (c) 1998,2000 Santa Cruz Operation
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #undef	sense
@@ -41,7 +46,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.31";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-openserver.c-1.35";	/* The version for this transport*/
 
 #define	MAX_SCG		16		/* Max # of cdrom devices */
 #define	MAX_TGT		16		/* Not really needed	  */
@@ -122,7 +127,7 @@ LOCAL	long	max_dma		= MAX_DMA; /* use MAX_DMA DMA buffer by default */
  * By default we will use the SCSIUSERCMD2 ioctl(), in order to execute
  * the SCSIUSERCMD ioctl() instead set the environment variable
  * LIBSCG_SCSIUSERCMD to any value. Using the olderSCSIUSERCMD ioctl() will
- * if the SCSI commands returns a CHECK CONDITION status, run a seperate
+ * if the SCSI commands returns a CHECK CONDITION status, run a separate
  * REQUEST_SENSE command immediately. But we need to remember that in a
  * multi-tasking environment, there might be other code which has accessed
  * the device in between these two steps and therefore the sense code
@@ -779,6 +784,13 @@ scgo_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (MAX_SCG);
+}
+
 LOCAL BOOL
 scgo_havebus(scgp, busno)
 	SCSI	*scgp;
@@ -982,9 +994,13 @@ scgo_send(scgp)
 
 			if (scgp->debug > 0) {
 				if (errno != 0)
-					js_fprintf((FILE *)scgp->errfile, "ux_errno: %d (%s) \n", sp->ux_errno, strerror(sp->ux_errno));
+					js_fprintf((FILE *)scgp->errfile,
+							"ux_errno: %d (%s) \n",
+							sp->ux_errno, strerror(sp->ux_errno));
 				if (sp->u_scb.cmd_scb[0] != 0)
-					js_fprintf((FILE *)scgp->errfile, "tgt_stat: %d \n", sp->u_scb.cmd_scb[0]);
+					js_fprintf((FILE *)scgp->errfile,
+							"tgt_stat: %d \n",
+							sp->u_scb.cmd_scb[0]);
 			}
 			break;
 
@@ -1023,9 +1039,13 @@ scgo_send(scgp)
 
 			if (scgp->debug > 0) {
 				if (errno != 0)
-					js_fprintf((FILE *)scgp->errfile, "ux_errno: %d (%s) \n", sp->ux_errno, strerror(sp->ux_errno));
+					js_fprintf((FILE *)scgp->errfile,
+						"ux_errno: %d (%s) \n",
+						sp->ux_errno, strerror(sp->ux_errno));
 				if (sp->u_scb.cmd_scb[0] != 0)
-					js_fprintf((FILE *)scgp->errfile, "tgt_stat: %d \n", sp->u_scb.cmd_scb[0]);
+					js_fprintf((FILE *)scgp->errfile,
+						"tgt_stat: %d \n",
+						sp->u_scb.cmd_scb[0]);
 			}
 			break;
 

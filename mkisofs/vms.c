@@ -1,7 +1,7 @@
-/* @(#)vms.c	1.9 04/03/04 joerg */
+/* @(#)vms.c	1.10 06/09/13 joerg */
 #ifndef lint
 static	char sccsid[] =
-	"@(#)vms.c	1.9 04/03/04 joerg";
+	"@(#)vms.c	1.10 06/09/13 joerg";
 
 #endif
 /*
@@ -11,7 +11,7 @@ static	char sccsid[] =
  *
  */
 
-#include <mconfig.h>
+#include <schily/mconfig.h>
 #ifdef VMS
 #define	opendir	fake_opendir
 #include "mkisofs.h"

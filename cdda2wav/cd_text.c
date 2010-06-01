@@ -1,7 +1,21 @@
-/* @(#)cd_text.c	1.5 03/12/31 Copyright 2000-2001 Heiko Eissfeldt */
+/* @(#)cd_text.c	1.10 10/01/09 Copyright 2000-2001 Heiko Eissfeldt, Copyright 2006-2010 J. Schilling */
 
-/* This is an include file! */
-/**************** CD-Text special treatment **********************************/
+/*
+ * This is an include file!
+ */
+/*
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * See the file CDDL.Schily.txt in this distribution for details.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
+ */
+
+/* *************** CD-Text special treatment ******************************* */
 
 typedef struct {
 	unsigned char headerfield[4];
@@ -42,77 +56,82 @@ static unsigned short crctab[1<<8] = { /* as calculated by initcrctab() */
     0x7c26,  0x6c07,  0x5c64,  0x4c45,  0x3ca2,  0x2c83,  0x1ce0,  0x0cc1,
     0xef1f,  0xff3e,  0xcf5d,  0xdf7c,  0xaf9b,  0xbfba,  0x8fd9,  0x9ff8,
     0x6e17,  0x7e36,  0x4e55,  0x5e74,  0x2e93,  0x3eb2,  0x0ed1,  0x1ef0,
-    };
+};
 
-#define SUBSIZE	18*8
+#define	SUBSIZE	18*8
 
-static unsigned short updcrc __PR((
-	    unsigned int    p_crc,
-            register unsigned char   *cp,
-            register size_t  cnt));
+static unsigned short	updcrc	__PR((unsigned int p_crc,
+					unsigned char   *cp,
+					size_t  cnt));
 
-static unsigned short updcrc(p_crc, cp, cnt)
-	unsigned int p_crc;
-        register unsigned char   *cp;
-        register size_t  cnt;
+static unsigned short
+updcrc(p_crc, cp, cnt)
+	unsigned int		p_crc;
+	register unsigned char	*cp;
+	register size_t		cnt;
 {
-      register unsigned short crc = (unsigned short)p_crc;
-      while( cnt-- ) {
-            crc = (crc<<8) ^ crctab[(crc>>(16-8)) ^ (*cp++)];
-      }
-      return( crc );
+	register unsigned short	crc = (unsigned short)p_crc;
+
+	while (cnt--) {
+		crc = (crc<<8) ^ crctab[(crc>>(16-8)) ^ (*cp++)];
+	}
+	return (crc);
 }
 
-static unsigned short calcCRC __PR((unsigned char *buf, unsigned bsize));
+static unsigned short	calcCRC	__PR((unsigned char *buf, unsigned bsize));
 
-static unsigned short calcCRC(buf, bsize)
-	unsigned char *buf;
-	unsigned bsize;
+static unsigned short
+calcCRC(buf, bsize)
+	unsigned char	*buf;
+	unsigned	bsize;
 {
-      return updcrc( 0x0, (unsigned char *)buf, bsize );
+	return (updcrc(0x0, (unsigned char *)buf, bsize));
 }
 
 static unsigned char    fliptab[8] = {
-        0x01,
-        0x02,
-        0x04,
-        0x08,
-        0x10,
-        0x20,
-        0x40,
-        0x80,
+				0x01,
+				0x02,
+				0x04,
+				0x08,
+				0x10,
+				0x20,
+				0x40,
+				0x80,
 };
 
-static int flip_error_corr __PR((unsigned char *b, int crc));
+static int	flip_error_corr	__PR((unsigned char *b, int crc));
 
-static int flip_error_corr(b, crc)
-	unsigned char *b;
-	int crc;
+static int
+flip_error_corr(b, crc)
+	unsigned char	*b;
+	int		crc;
 {
-  if (crc != 0) {
-    int i;
-    for (i = 0; i < SUBSIZE; i++) {
-      char      c;
+	if (crc != 0) {
+		int	i;
 
-      c = fliptab[i%8];
-      b[i / 8] ^= c;
-      if ((crc = calcCRC(b, SUBSIZE/8)) == 0) {
-        return crc;
-      }
-      b[i / 8] ^= c;
-    }
-  }
-  return crc & 0xffff;
+		for (i = 0; i < SUBSIZE; i++) {
+			char	c;
+
+			c = fliptab[i%8];
+			b[i / 8] ^= c;
+			if ((crc = calcCRC(b, SUBSIZE/8)) == 0) {
+				return (crc);
+			}
+			b[i / 8] ^= c;
+		}
+	}
+	return (crc & 0xffff);
 }
 
 
-static int cdtext_crc_ok __PR((cdtextpackdata *c));
+static int	cdtext_crc_ok	__PR((cdtextpackdata *c));
 
-static int cdtext_crc_ok (c)
-	cdtextpackdata *c;
+static int
+cdtext_crc_ok(c)
+	cdtextpackdata	*c;
 {
-	int crc;
-	int retval;
+	int	crc;
+	int	retval;
 
 	c->crcfield[0] ^= 0xff;
 	c->crcfield[1] ^= 0xff;
@@ -121,301 +140,497 @@ static int cdtext_crc_ok (c)
 	c->crcfield[0] ^= 0xff;
 	c->crcfield[1] ^= 0xff;
 #if	0
-          fprintf(stderr, "%02x %02x %02x %02x  ",
-                          c->headerfield[0], c->headerfield[1], c->headerfield[2], c->headerfield[3]);
-          fprintf(stderr,
-"%c %c %c %c %c %c %c %c %c %c %c %c  "
-                        , c->textdatafield[0]
-                        , c->textdatafield[1]
-                        , c->textdatafield[2]
-                        , c->textdatafield[3]
-                        , c->textdatafield[4]
-                        , c->textdatafield[5]
-                        , c->textdatafield[6]
-                        , c->textdatafield[7]
-                        , c->textdatafield[8]
-                        , c->textdatafield[9]
-                        , c->textdatafield[10]
-                        , c->textdatafield[11]
-                 );
-          fprintf(stderr, "%02x %02x \n"
-                        , c->crcfield[0]
-                        , c->crcfield[1]
-		);
+	fprintf(stderr, "%02x %02x %02x %02x  ",
+		c->headerfield[0], c->headerfield[1],
+		c->headerfield[2], c->headerfield[3]);
+	fprintf(stderr,
+		"%c %c %c %c %c %c %c %c %c %c %c %c  ",
+		c->textdatafield[0],
+		c->textdatafield[1],
+		c->textdatafield[2],
+		c->textdatafield[3],
+		c->textdatafield[4],
+		c->textdatafield[5],
+		c->textdatafield[6],
+		c->textdatafield[7],
+		c->textdatafield[8],
+		c->textdatafield[9],
+		c->textdatafield[10],
+		c->textdatafield[11]);
+	fprintf(stderr, "%02x %02x \n",
+		c->crcfield[0],
+		c->crcfield[1]);
 #endif
-	return retval;
+	return (retval);
 }
 
-#define DETAILED 0
+#define	DETAILED	0
 
 #if	DETAILED
-static void dump_binary __PR((cdtextpackdata *c));
+static void	dump_binary	__PR((cdtextpackdata *c));
 
-static void dump_binary(c)
-	cdtextpackdata *c;
+static void
+dump_binary(c)
+	cdtextpackdata	*c;
 {
-          fprintf(stderr, ": header fields %02x %02x %02x  ",
-                          c->headerfield[1], c->headerfield[2], c->headerfield[3]);
-          fprintf(stderr,
-"%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x"
-                        , c->textdatafield[0]
-                        , c->textdatafield[1]
-                        , c->textdatafield[2]
-                        , c->textdatafield[3]
-                        , c->textdatafield[4]
-                        , c->textdatafield[5]
-                        , c->textdatafield[6]
-                        , c->textdatafield[7]
-                        , c->textdatafield[8]
-                        , c->textdatafield[9]
-                        , c->textdatafield[10]
-                        , c->textdatafield[11]
-                 );
+	fprintf(stderr, ": header fields %02x %02x %02x  ",
+		c->headerfield[1], c->headerfield[2], c->headerfield[3]);
+	fprintf(stderr,
+		"%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+		c->textdatafield[0],
+		c->textdatafield[1],
+		c->textdatafield[2],
+		c->textdatafield[3],
+		c->textdatafield[4],
+		c->textdatafield[5],
+		c->textdatafield[6],
+		c->textdatafield[7],
+		c->textdatafield[8],
+		c->textdatafield[9],
+		c->textdatafield[10],
+		c->textdatafield[11]);
 }
 #endif
 
-static int process_header __PR((cdtextpackdata *c, unsigned tracknr, int dbcc, unsigned char *line));
+static int	process_header	__PR((cdtextpackdata *c, unsigned tracknr,
+					int dbcc, unsigned char *line));
 
-static int process_header(c, tracknr, dbcc, line)
-	cdtextpackdata *c;
-	unsigned tracknr;
-	int dbcc;
-	unsigned char *line;
+static int
+process_header(c, tracknr, dbcc, line)
+	cdtextpackdata	*c;
+	unsigned	tracknr;
+	int		dbcc;
+	unsigned char	*line;
 {
-      switch ((int)c->headerfield[0]) {
+	switch ((int)c->headerfield[0]) {
 
-        case 0x80: /* Title of album or track */
+	case 0x80:	/* Title of album or track */
 #if	DETAILED
-          fprintf (stderr, "Title");
+		fprintf(stderr, "Title");
 #endif
-	  if (tracknr > 0 && tracknr < 100
-	    && global.tracktitle[tracknr] == NULL) {
-	    unsigned len;
+		if (tracknr > 0 && tracknr < 100 &&
+		    global.tracktitle[tracknr] == NULL) {
+			unsigned	len;
 
-	    len = strlen((char *)line);
+			len = strlen((char *)line);
 
-            if (len > 0)
-            	global.tracktitle[tracknr] = malloc(len + 1);
-            if (global.tracktitle[tracknr] != NULL) {
-               memcpy(global.tracktitle[tracknr], line, len);
-               global.tracktitle[tracknr][len] = '\0';
-            }
-          } else 
-	  if (tracknr == 0
-	    && global.disctitle == NULL) {
-	    unsigned len;
+			if (len > 0)
+				global.tracktitle[tracknr] = malloc(len + 1);
+			if (global.tracktitle[tracknr] != NULL) {
+				memcpy(global.tracktitle[tracknr], line, len);
+				global.tracktitle[tracknr][len] = '\0';
+			}
+		} else if (tracknr == 0 &&
+			    global.disctitle == NULL) {
+			unsigned	len;
 
-	    len = strlen((char *)line);
+			len = strlen((char *)line);
 
-            if (len > 0)
-            	global.disctitle = malloc(len + 1);
-            if (global.disctitle != NULL) {
-               memcpy(global.disctitle, line, len);
-               global.disctitle[len] = '\0';
-            }
-	  }
-        break;
-        case 0x81: /* Name(s) of the performer(s) */
-#if	DETAILED
-          fprintf(stderr, "Performer(s)");
-#endif
-	  if (tracknr > 0 && tracknr < 100
-	    && global.trackcreator[tracknr] == NULL) {
-	    unsigned len;
+			if (len > 0)
+				global.disctitle = malloc(len + 1);
+			if (global.disctitle != NULL) {
+				memcpy(global.disctitle, line, len);
+				global.disctitle[len] = '\0';
+			}
+		}
+		break;
 
-	    len = strlen((char *)line);
+	case 0x81:	/* Name(s) of the performer(s) */
+#if	DETAILED
+		fprintf(stderr, "Performer(s)");
+#endif
+		if (tracknr > 0 && tracknr < 100 &&
+		    global.trackperformer[tracknr] == NULL) {
+			unsigned	len;
 
-            if (len > 0)
-		global.trackcreator[tracknr] = malloc(len + 1);
+			len = strlen((char *)line);
 
-            if (global.trackcreator[tracknr] != NULL) {
-               memcpy(global.trackcreator[tracknr], line, len);
-               global.trackcreator[tracknr][len] = '\0';
-            }
-          } else 
-	  if (tracknr == 0
-	    && global.creator == NULL) {
-	    unsigned len;
+			if (len > 0)
+				global.trackperformer[tracknr] = malloc(len + 1);
 
-	    len = strlen((char *)line);
+			if (global.trackperformer[tracknr] != NULL) {
+				memcpy(global.trackperformer[tracknr], line,
+									len);
+				global.trackperformer[tracknr][len] = '\0';
+			}
+		} else if (tracknr == 0 &&
+			    global.performer == NULL) {
+			unsigned	len;
 
-            if (len > 0)
-            	global.creator = malloc(len + 1);
-            if (global.creator != NULL) {
-               memcpy(global.creator, line, len);
-               global.creator[len] = '\0';
-            }
-	  }
-        break;
-        case 0x82: /* Name(s) of the songwriter(s) */
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.performer = malloc(len + 1);
+			if (global.performer != NULL) {
+				memcpy(global.performer, line, len);
+				global.performer[len] = '\0';
+			}
+		}
+		break;
+
+	case 0x82:	/* Name(s) of the songwriter(s) */
 #if	DETAILED
-          fprintf(stderr, "Songwriter(s)");
+		fprintf(stderr, "Songwriter(s)");
 #endif
-        break;
-        case 0x83: /* Name(s) of the composer(s) */
+		if (tracknr > 0 && tracknr < 100 &&
+		    global.tracksongwriter[tracknr] == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.tracksongwriter[tracknr] = malloc(len + 1);
+
+			if (global.tracksongwriter[tracknr] != NULL) {
+				memcpy(global.tracksongwriter[tracknr], line,
+									len);
+				global.tracksongwriter[tracknr][len] = '\0';
+			}
+		} else if (tracknr == 0 &&
+			    global.songwriter == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.songwriter = malloc(len + 1);
+			if (global.songwriter != NULL) {
+				memcpy(global.songwriter, line, len);
+				global.songwriter[len] = '\0';
+			}
+		}
+		break;
+
+	case 0x83:	/* Name(s) of the composer(s) */
 #if	DETAILED
-          fprintf(stderr, "Composer(s)");
+		fprintf(stderr, "Composer(s)");
 #endif
-        break;
-        case 0x84: /* Name(s) of the arranger(s) */
+		if (tracknr > 0 && tracknr < 100 &&
+		    global.trackcomposer[tracknr] == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.trackcomposer[tracknr] = malloc(len + 1);
+
+			if (global.trackcomposer[tracknr] != NULL) {
+				memcpy(global.trackcomposer[tracknr], line,
+									len);
+				global.trackcomposer[tracknr][len] = '\0';
+			}
+		} else if (tracknr == 0 &&
+			    global.composer == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.composer = malloc(len + 1);
+			if (global.composer != NULL) {
+				memcpy(global.composer, line, len);
+				global.composer[len] = '\0';
+			}
+		}
+		break;
+
+	case 0x84:	/* Name(s) of the arranger(s) */
 #if	DETAILED
-          fprintf(stderr, "Arranger(s)");
+		fprintf(stderr, "Arranger(s)");
 #endif
-        break;
-        case 0x85: /* Message from content provider and/or artist */
+		if (tracknr > 0 && tracknr < 100 &&
+		    global.trackarranger[tracknr] == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.trackarranger[tracknr] = malloc(len + 1);
+
+			if (global.trackarranger[tracknr] != NULL) {
+				memcpy(global.trackarranger[tracknr], line,
+									len);
+				global.trackarranger[tracknr][len] = '\0';
+			}
+		} else if (tracknr == 0 &&
+			    global.arranger == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.arranger = malloc(len + 1);
+			if (global.arranger != NULL) {
+				memcpy(global.arranger, line, len);
+				global.arranger[len] = '\0';
+			}
+		}
+		break;
+
+	case 0x85:	/* Message from content provider and/or artist */
 #if	DETAILED
-          fprintf(stderr, "Message");
+		fprintf(stderr, "Message");
 #endif
-        break;
-        case 0x86: /* Disc Identification and information */
+		if (tracknr > 0 && tracknr < 100 &&
+		    global.trackmessage[tracknr] == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.trackmessage[tracknr] = malloc(len + 1);
+
+			if (global.trackmessage[tracknr] != NULL) {
+				memcpy(global.trackmessage[tracknr], line,
+									len);
+				global.trackmessage[tracknr][len] = '\0';
+			}
+		} else if (tracknr == 0 &&
+			    global.message == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.message = malloc(len + 1);
+			if (global.message != NULL) {
+				memcpy(global.message, line, len);
+				global.message[len] = '\0';
+			}
+		}
+		break;
+
+	case 0x86:	/* Disc Identification and information */
 #if	DETAILED
-          fprintf(stderr, "Disc identification");
+		fprintf(stderr, "Disc identification");
 #endif
-	  if (tracknr == 0 && line[0] != '\0') {
-	    fprintf(stderr, "Disc identification: %s\n", line);
-	  }
-        break;
-        case 0x87: /* Genre Identification and information */
+		if (tracknr == 0 && line[0] != '\0') {
+			fprintf(stderr, "Disc identification: %s\n", line);
+		}
+		break;
+
+	case 0x87:	/* Genre Identification and information */
 #if	DETAILED
-          fprintf(stderr, "Genre identification");
+		fprintf(stderr, "Genre identification");
 #endif
-        break;
-        case 0x8e: /* UPC/EAN code or ISRC code */
+		break;
+
+	case 0x8d:	/* Closed information */
 #if	DETAILED
-          fprintf(stderr, "UPC or ISRC");
+		fprintf(stderr, "Closed information");
 #endif
-	  if (tracknr > 0 && tracknr < 100) {
-	    Set_ISRC(tracknr, line);
-	  } else
-	  if (tracknr == 0 && line[0] != '\0') {
-	    Set_MCN(line);
-	  }
-        break;
-        case 0x88: /* Table of Content information */
+		if (tracknr > 0 && tracknr < 100 &&
+		    global.trackclosed_info[tracknr] == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.trackclosed_info[tracknr] = malloc(len + 1);
+
+			if (global.trackclosed_info[tracknr] != NULL) {
+				memcpy(global.trackclosed_info[tracknr], line,
+									len);
+				global.trackclosed_info[tracknr][len] = '\0';
+			}
+		} else if (tracknr == 0 &&
+			    global.closed_info == NULL) {
+			unsigned	len;
+
+			len = strlen((char *)line);
+
+			if (len > 0)
+				global.closed_info = malloc(len + 1);
+			if (global.closed_info != NULL) {
+				memcpy(global.closed_info, line, len);
+				global.closed_info[len] = '\0';
+			}
+		}
+		break;
+
+	case 0x8e:	/* UPC/EAN code or ISRC code */
 #if	DETAILED
-          fprintf(stderr, "Table of Content identification");
-	  dump_binary(c); 
+		fprintf(stderr, "UPC or ISRC");
 #endif
-        return 0;
-        case 0x89: /* Second Table of Content information */
+		if (tracknr > 0 && tracknr < 100) {
+			Set_ISRC(tracknr, line);
+		} else if (tracknr == 0 && line[0] != '\0') {
+			Set_MCN(line);
+		}
+		break;
+
+	case 0x88:	/* Table of Content information */
 #if	DETAILED
-          fprintf(stderr, "Second Table of Content identification");
-	  dump_binary(c); 
+		fprintf(stderr, "Table of Content identification");
+		dump_binary(c);
 #endif
-        return 0;
-        case 0x8f: /* Size information of the block */
+		return (0);
+
+	case 0x89:	/* Second Table of Content information */
+#if	DETAILED
+		fprintf(stderr, "Second Table of Content identification");
+		dump_binary(c);
+#endif
+		return (0);
+
+	case 0x8f:	/* Size information of the block */
 #if	DETAILED == 0
-	  break;
+		break;
 #else
-          switch (tracknr) {
-	    case 0:
-	  fprintf(stderr, "first track is %d, last track is %d\n", 
-			c->textdatafield[1],
-			c->textdatafield[2]);
-	  if (c->textdatafield[3] & 0x80) {
-		fprintf(stderr, "Program Area CD Text information available\n");
-	        if (c->textdatafield[3] & 0x40) {
-		  fprintf(stderr, "Program Area copy protection available\n");
-	        }
-	  }
-	  if (c->textdatafield[3] & 0x07) {
-		fprintf(stderr, "message information is %scopyrighted\n", 
-			c->textdatafield[3] & 0x04 ? "": "not ");
-		fprintf(stderr, "Names of performer/songwriter/composer/arranger(s) are %scopyrighted\n", 
-			c->textdatafield[3] & 0x02 ? "": "not ");
-		fprintf(stderr, "album and track names are %scopyrighted\n", 
-			c->textdatafield[3] & 0x01 ? "": "not ");
-	  }
-	  fprintf(stderr, "%d packs with album/track names\n", c->textdatafield[4]);
-	  fprintf(stderr, "%d packs with performer names\n", c->textdatafield[5]);
-	  fprintf(stderr, "%d packs with songwriter names\n", c->textdatafield[6]);
-	  fprintf(stderr, "%d packs with composer names\n", c->textdatafield[7]);
-	  fprintf(stderr, "%d packs with arranger names\n", c->textdatafield[8]);
-	  fprintf(stderr, "%d packs with artist or content provider messages\n", c->textdatafield[9]);
-	  fprintf(stderr, "%d packs with disc identification information\n", c->textdatafield[10]);
-	  fprintf(stderr, "%d packs with genre identification/information\n", c->textdatafield[11]);
-	  break;
-	case 1:
-	  fprintf(stderr, "%d packs with table of contents information\n", c->textdatafield[0]);
-	  fprintf(stderr, "%d packs with second table of contents information\n", c->textdatafield[1]);
-	  fprintf(stderr, "%d packs with reserved information\n", c->textdatafield[2]);
-	  fprintf(stderr, "%d packs with reserved information\n", c->textdatafield[3]);
-	  fprintf(stderr, "%d packs with reserved information\n", c->textdatafield[4]);
-	  fprintf(stderr, "%d packs with closed information\n", c->textdatafield[5]);
-	  fprintf(stderr, "%d packs with UPC/EAN ISRC information\n", c->textdatafield[6]);
-	  fprintf(stderr, "%d packs with size information\n", c->textdatafield[7]);
-	  fprintf(stderr, "last sequence numbers for blocks 1-8: %d %d %d %d "
-		 ,c->textdatafield[8]
-		 ,c->textdatafield[9]
-		 ,c->textdatafield[10]
-		 ,c->textdatafield[11]
-		);
-	  break;
-	case 2:
-	  fprintf(stderr, "%d %d %d %d\n"
-		 ,c->textdatafield[0]
-		 ,c->textdatafield[1]
-		 ,c->textdatafield[2]
-		 ,c->textdatafield[3]
-		);
-	  fprintf(stderr, "Language codes for blocks 1-8: %d %d %d %d %d %d %d %d\n"
-		 ,c->textdatafield[4]
-		 ,c->textdatafield[5]
-		 ,c->textdatafield[6]
-		 ,c->textdatafield[7]
-		 ,c->textdatafield[8]
-		 ,c->textdatafield[9]
-		 ,c->textdatafield[10]
-		 ,c->textdatafield[11]
-		);
-	  break;
-        }
-        fprintf(stderr, "Blocksize");
-	dump_binary(c); 
-        return 0;
+		switch (tracknr) {
+
+		case 0:
+			fprintf(outfp,
+				"first track is %d, last track is %d\n",
+				c->textdatafield[1],
+				c->textdatafield[2]);
+			if (c->textdatafield[3] & 0x80) {
+				fprintf(outfp,
+				"Program Area CD Text information available\n");
+				if (c->textdatafield[3] & 0x40) {
+					fprintf(outfp, "Program Area copy protection available\n");
+				}
+			}
+			if (c->textdatafield[3] & 0x07) {
+				fprintf(outfp,
+				"message information is %scopyrighted\n",
+					c->textdatafield[3] & 0x04 ?
+							"": "not ");
+				fprintf(outfp,
+				"Names of performer/songwriter/composer/arranger(s) are %scopyrighted\n",
+					c->textdatafield[3] & 0x02 ?
+							"": "not ");
+				fprintf(outfp,
+				"album and track names are %scopyrighted\n",
+					c->textdatafield[3] & 0x01 ?
+							"": "not ");
+			}
+			fprintf(outfp,
+				"%d packs with album/track names\n",
+				c->textdatafield[4]);
+			fprintf(outfp,
+				"%d packs with performer names\n",
+				c->textdatafield[5]);
+			fprintf(outfp,
+				"%d packs with songwriter names\n",
+				c->textdatafield[6]);
+			fprintf(outfp,
+				"%d packs with composer names\n",
+				c->textdatafield[7]);
+			fprintf(outfp,
+				"%d packs with arranger names\n",
+				c->textdatafield[8]);
+			fprintf(outfp,
+				"%d packs with artist or content provider messages\n",
+				c->textdatafield[9]);
+			fprintf(outfp,
+				"%d packs with disc identification information\n",
+				c->textdatafield[10]);
+			fprintf(outfp,
+			"%d packs with genre identification/information\n",
+				c->textdatafield[11]);
+			break;
+
+		case 1:
+			fprintf(outfp,
+			"%d packs with table of contents information\n",
+				c->textdatafield[0]);
+			fprintf(outfp,
+			"%d packs with second table of contents information\n",
+				c->textdatafield[1]);
+			fprintf(outfp,
+				"%d packs with reserved information\n",
+				c->textdatafield[2]);
+			fprintf(outfp,
+				"%d packs with reserved information\n",
+				c->textdatafield[3]);
+			fprintf(outfp,
+				"%d packs with reserved information\n",
+				c->textdatafield[4]);
+			fprintf(outfp,
+				"%d packs with closed information\n",
+				c->textdatafield[5]);
+			fprintf(outfp,
+				"%d packs with UPC/EAN ISRC information\n",
+				c->textdatafield[6]);
+			fprintf(outfp,
+				"%d packs with size information\n",
+				c->textdatafield[7]);
+			fprintf(outfp,
+			"last sequence numbers for blocks 1-8: %d %d %d %d ",
+				c->textdatafield[8],
+				c->textdatafield[9],
+				c->textdatafield[10],
+				c->textdatafield[11]);
+			break;
+
+		case 2:
+			fprintf(outfp, "%d %d %d %d\n",
+				c->textdatafield[0],
+				c->textdatafield[1],
+				c->textdatafield[2],
+				c->textdatafield[3]);
+			fprintf(outfp,
+			"Language codes for blocks 1-8: %d %d %d %d %d %d %d %d\n",
+				c->textdatafield[4],
+				c->textdatafield[5],
+				c->textdatafield[6],
+				c->textdatafield[7],
+				c->textdatafield[8],
+				c->textdatafield[9],
+				c->textdatafield[10],
+				c->textdatafield[11]);
+			break;
+		}
+
+		fprintf(stderr, "Blocksize");
+		dump_binary(c);
+		return (0);
+
 #if !defined DEBUG_CDTEXT
-        default:
+	default:
 #else
-      }
+	}
 #endif
-      fprintf(stderr, ": header fields %02x %02x %02x  ",
-              c->headerfield[1], c->headerfield[2], c->headerfield[3]);
+
+		fprintf(stderr, ": header fields %02x %02x %02x  ",
+			c->headerfield[1], c->headerfield[2],
+			c->headerfield[3]);
 #endif /* DETAILED */
 
 #if !defined DEBUG_CDTEXT
-      }
+	}
 #if	DETAILED
-      if (tracknr == 0) {
-            fprintf(stderr, " for album   : ->");
-      } else {
-            fprintf(stderr, " for track %2u: ->", tracknr);
-      }
-      fputs ((char *) line, stderr);
-      fputs ("<-", stderr);
+	if (tracknr == 0) {
+		fprintf(stderr, " for album   : ->");
+	} else {
+		fprintf(stderr, " for track %2u: ->", tracknr);
+	}
+	fputs((char *)line, stderr);
+	fputs("<-", stderr);
 #endif
 
-      if (dbcc != 0) {
+	if (dbcc != 0) {
 #else
-      {
+	{
 #endif
-      /* EMPTY */
+		/* EMPTY */
 #if	DETAILED
-          fprintf(stderr,
-"  %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x"
-                        , c->textdatafield[0]
-                        , c->textdatafield[1]
-                        , c->textdatafield[2]
-                        , c->textdatafield[3]
-                        , c->textdatafield[4]
-                        , c->textdatafield[5]
-                        , c->textdatafield[6]
-                        , c->textdatafield[7]
-                        , c->textdatafield[8]
-                        , c->textdatafield[9]
-                        , c->textdatafield[10]
-                        , c->textdatafield[11]
-                 );
+		fprintf(stderr,
+		"  %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+			c->textdatafield[0],
+			c->textdatafield[1],
+			c->textdatafield[2],
+			c->textdatafield[3],
+			c->textdatafield[4],
+			c->textdatafield[5],
+			c->textdatafield[6],
+			c->textdatafield[7],
+			c->textdatafield[8],
+			c->textdatafield[9],
+			c->textdatafield[10],
+			c->textdatafield[11]);
 #endif
-      }
-      return 0;
+	}
+	return (0);
 }

@@ -1,55 +1,52 @@
-/* @(#)drv_mmc.c	1.157 04/05/25 Copyright 1997-2004 J. Schilling */
+/* @(#)drv_mmc.c	1.198 10/05/11 Copyright 1997-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)drv_mmc.c	1.157 04/05/25 Copyright 1997-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)drv_mmc.c	1.198 10/05/11 Copyright 1997-2010 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
  *	SCSI-3/mmc conforming drives
  *	e.g. Yamaha CDR-400, Ricoh MP6200
  *
- *	Copyright (c) 1997-2004 J. Schilling
+ *	Copyright (c) 1997-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 /*#define	DEBUG*/
 #define	PRINT_ATIP
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <fctldefs.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <timedefs.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/fcntl.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/time.h>
 
-#include <utypes.h>
-#include <btorder.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
 
-#include <scsimmc.h>
+#include "scsimmc.h"
 #include "mmcvendor.h"
 #include "cdrecord.h"
 
@@ -80,20 +77,21 @@ LOCAL	char	us_clv_to_speed[16] = {
 LOCAL	int	mmc_load		__PR((SCSI *scgp, cdr_t *dp));
 LOCAL	int	mmc_unload		__PR((SCSI *scgp, cdr_t *dp));
 #endif
-EXPORT	void	mmc_opthelp		__PR((cdr_t *dp, int excode));
+EXPORT	void	mmc_opthelp		__PR((SCSI *scgp, cdr_t *dp, int excode));
 EXPORT	char	*hasdrvopt		__PR((char *optstr, char *optname));
+EXPORT	char	*hasdrvoptx		__PR((char *optstr, char *optname, int flag));
 LOCAL	cdr_t	*identify_mmc		__PR((SCSI *scgp, cdr_t *, struct scsi_inquiry *));
 LOCAL	int	attach_mmc		__PR((SCSI *scgp, cdr_t *));
 EXPORT	int	check_writemodes_mmc	__PR((SCSI *scgp, cdr_t *dp));
 LOCAL	int	deflt_writemodes_mmc	__PR((SCSI *scgp, BOOL reset_dummy));
-LOCAL	int	get_diskinfo		__PR((SCSI *scgp, struct disk_info *dip));
 LOCAL	void	di_to_dstat		__PR((struct disk_info *dip, dstat_t *dsp));
 LOCAL	int	get_atip		__PR((SCSI *scgp, struct atipinfo *atp));
-#ifdef	PRINT_ATIP
+#ifdef	PRINT_PMA
 LOCAL	int	get_pma			__PR((SCSI *scgp));
 #endif
 LOCAL	int	init_mmc		__PR((SCSI *scgp, cdr_t *dp));
 LOCAL	int	getdisktype_mmc		__PR((SCSI *scgp, cdr_t *dp));
+LOCAL	int	prdiskstatus_mmc	__PR((SCSI *scgp, cdr_t *dp));
 LOCAL	int	speed_select_mmc	__PR((SCSI *scgp, cdr_t *dp, int *speedp));
 LOCAL	int	mmc_set_speed		__PR((SCSI *scgp, int readspeed, int writespeed, int rotctl));
 LOCAL	int	next_wr_addr_mmc	__PR((SCSI *scgp, track_t *trackp, long *ap));
@@ -115,10 +113,14 @@ LOCAL int	stats_mmc		__PR((SCSI *scgp, cdr_t *dp));
 LOCAL BOOL	mmc_isplextor		__PR((SCSI *scgp));
 LOCAL BOOL	mmc_isyamaha		__PR((SCSI *scgp));
 LOCAL void	do_varirec_plextor	__PR((SCSI *scgp));
+LOCAL int	do_gigarec_plextor	__PR((SCSI *scgp));
 LOCAL int	drivemode_plextor	__PR((SCSI *scgp, caddr_t bp, int cnt, int modecode, void *modeval));
 LOCAL int	drivemode2_plextor	__PR((SCSI *scgp, caddr_t bp, int cnt, int modecode, void *modeval));
 LOCAL int	check_varirec_plextor	__PR((SCSI *scgp));
+LOCAL int	check_gigarec_plextor	__PR((SCSI *scgp));
 LOCAL int	varirec_plextor		__PR((SCSI *scgp, BOOL on, int val));
+LOCAL int	gigarec_plextor		__PR((SCSI *scgp, int val));
+LOCAL Int32_t	gigarec_mult		__PR((int code, Int32_t	val));
 LOCAL int	check_ss_hide_plextor	__PR((SCSI *scgp));
 LOCAL int	check_speed_rd_plextor	__PR((SCSI *scgp));
 LOCAL int	check_powerrec_plextor	__PR((SCSI *scgp));
@@ -127,6 +129,10 @@ LOCAL int	speed_rd_plextor	__PR((SCSI *scgp, BOOL do_speedrd));
 LOCAL int	powerrec_plextor	__PR((SCSI *scgp, BOOL do_powerrec));
 LOCAL int	get_speeds_plextor	__PR((SCSI *scgp, int *selp, int *maxp, int *lastp));
 LOCAL int	bpc_plextor		__PR((SCSI *scgp, int mode, int *bpp));
+LOCAL int	plextor_enable		__PR((SCSI *scgp));
+LOCAL int	plextor_disable		__PR((SCSI *scgp));
+LOCAL int	plextor_getauth		__PR((SCSI *scgp, void *dp, int cnt));
+LOCAL int	plextor_setauth		__PR((SCSI *scgp, void *dp, int cnt));
 LOCAL int	set_audiomaster_yamaha	__PR((SCSI *scgp, cdr_t *dp, BOOL keep_mode));
 
 EXPORT struct ricoh_mode_page_30 * get_justlink_ricoh	__PR((SCSI *scgp, Uchar *mode));
@@ -158,8 +164,11 @@ mmc_unload(scgp, dp)
  * MMC CD-writer
  */
 cdr_t	cdr_mmc = {
-	0, 0,
+	0, 0, 0,
 	CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_ALL,
+	WM_SAO,
 	372, 372,
 	"mmc_cdr",
 	"generic SCSI-3/mmc   CD-R/CD-RW driver",
@@ -169,6 +178,7 @@ cdr_t	cdr_mmc = {
 	attach_mmc,
 	init_mmc,
 	getdisktype_mmc,
+	prdiskstatus_mmc,
 	scsi_load,
 	scsi_unload,
 	read_buff_cap,
@@ -201,8 +211,11 @@ cdr_t	cdr_mmc = {
  * Sony MMC CD-writer
  */
 cdr_t	cdr_mmc_sony = {
-	0, 0,
+	0, 0, 0,
 	CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_ALL,
+	WM_SAO,
 	372, 372,
 	"mmc_cdr_sony",
 	"generic SCSI-3/mmc   CD-R/CD-RW driver (Sony 928 variant)",
@@ -212,6 +225,7 @@ cdr_t	cdr_mmc_sony = {
 	attach_mmc,
 	init_mmc,
 	getdisktype_mmc,
+	prdiskstatus_mmc,
 	scsi_load,
 	scsi_unload,
 	read_buff_cap,
@@ -244,8 +258,11 @@ cdr_t	cdr_mmc_sony = {
  * SCSI-3/mmc conformant CD-ROM drive
  */
 cdr_t	cdr_cd = {
-	0, 0,
+	0, 0, 0,
 	CDR_ISREADER|CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_NONE,
+	WM_NONE,
 	372, 372,
 	"mmc_cd",
 	"generic SCSI-3/mmc   CD-ROM driver",
@@ -255,6 +272,7 @@ cdr_t	cdr_cd = {
 	attach_mmc,
 	cmd_dummy,
 	drive_getdisktype,
+	prdiskstatus_mmc,
 	scsi_load,
 	scsi_unload,
 	read_buff_cap,
@@ -287,8 +305,11 @@ cdr_t	cdr_cd = {
  * Old pre SCSI-3/mmc CD drive
  */
 cdr_t	cdr_oldcd = {
-	0, 0,
+	0, 0, 0,
 	CDR_ISREADER,
+	0,
+	CDR_CDRW_NONE,
+	WM_NONE,
 	372, 372,
 	"scsi2_cd",
 	"generic SCSI-2       CD-ROM driver",
@@ -298,6 +319,7 @@ cdr_t	cdr_oldcd = {
 	drive_attach,
 	cmd_dummy,
 	drive_getdisktype,
+	prdiskstatus_mmc,
 	scsi_load,
 	scsi_unload,
 	buf_dummy,
@@ -327,21 +349,25 @@ cdr_t	cdr_oldcd = {
 };
 
 /*
- * SCSI-3/mmc conformant CD or DVD writer
+ * SCSI-3/mmc conformant CD, DVD or BE writer
  * Checks the current medium and then returns either cdr_mmc or cdr_dvd
  */
 cdr_t	cdr_cd_dvd = {
-	0, 0,
+	0, 0, 0,
 	CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_ALL,
+	WM_NONE,
 	372, 372,
 	"mmc_cd_dvd",
-	"generic SCSI-3/mmc   CD/DVD driver (checks media)",
+	"generic SCSI-3/mmc   CD/DVD/BD driver (checks media)",
 	0,
 	(dstat_t *)0,
 	identify_mmc,
 	attach_mmc,
 	cmd_dummy,
 	drive_getdisktype,
+	no_diskstatus,
 	scsi_load,
 	scsi_unload,
 	read_buff_cap,
@@ -371,7 +397,8 @@ cdr_t	cdr_cd_dvd = {
 };
 
 EXPORT void
-mmc_opthelp(dp, excode)
+mmc_opthelp(scgp, dp, excode)
+	SCSI	*scgp;
 	cdr_t	*dp;
 	int	excode;
 {
@@ -388,6 +415,10 @@ mmc_opthelp(dp, excode)
 		error("		Only works for audio and if speed is set to 4\n");
 		haveopts = TRUE;
 	}
+	if (dp->cdr_flags & CDR_GIGAREC) {
+		error("gigarec=val	Set GigaRec capacity ratio to 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4\n");
+		haveopts = TRUE;
+	}
 	if (dp->cdr_flags & CDR_AUDIOMASTER) {
 		error("audiomaster	Turn Audio Master feature on (SAO CD-R Audio/Data only)\n");
 		haveopts = TRUE;
@@ -398,7 +429,7 @@ mmc_opthelp(dp, excode)
 	}
 	if (dp->cdr_flags & CDR_SPEEDREAD) {
 		error("speedread	Tell the drive to read as fast as possible\n");
-		error("nospeedread	Disable to wead as fast as possible\n");
+		error("nospeedread	Disable to read as fast as possible\n");
 		haveopts = TRUE;
 	}
 	if (dp->cdr_flags & CDR_DISKTATTOO) {
@@ -416,6 +447,14 @@ mmc_opthelp(dp, excode)
 		error("nohidecdr	Disable hiding CD-R media\n");
 		haveopts = TRUE;
 	}
+	if (dp->cdr_flags & CDR_LAYER_JUMP) {
+		error("layerbreak	Write DVD-R/DL media in automatic layer jump mode\n");
+		haveopts = TRUE;
+	}
+	if ((dp->cdr_flags & CDR_LAYER_JUMP) || get_curprofile(scgp) == 0x2B) {
+		error("layerbreak=val	Set jayer jump address for DVD+-R/DL media\n");
+		haveopts = TRUE;
+	}
 	if (!haveopts) {
 		error("None supported for this drive.\n");
 	}
@@ -426,6 +465,15 @@ EXPORT char *
 hasdrvopt(optstr, optname)
 	char	*optstr;
 	char	*optname;
+{
+	return (hasdrvoptx(optstr, optname, 1));
+}
+
+EXPORT char *
+hasdrvoptx(optstr, optname, flag)
+	char	*optstr;
+	char	*optname;
+	int	flag;
 {
 	char	*ep;
 	char	*np;
@@ -462,7 +510,8 @@ hasdrvopt(optstr, optname)
 			optlen -= 2;
 			not = TRUE;
 		}
-		if (strncmp(optstr, optname, optlen) == 0) {
+		if (optlen == optnamelen &&
+		    strncmp(optstr, optname, optlen) == 0) {
 			ret = &optstr[optlen];
 			break;
 		}
@@ -470,9 +519,14 @@ hasdrvopt(optstr, optname)
 	}
 	if (ret != NULL) {
 		if (*ret == ',' || *ret == '\0') {
+			if (flag) {
+				if (not)
+					return ("0");
+				return ("1");
+			}
 			if (not)
-				return ("0");
-			return ("1");
+				return (NULL);
+			return ("");
 		}
 		if (*ret == '=') {
 			if (not)
@@ -556,7 +610,10 @@ identify_mmc(scgp, dp, ip)
 	if (profile >= 0) {
 		if (lverbose)
 			print_profiles(scgp);
-		if (profile == 0 || profile == 0x12 || profile > 0x19) {
+		if (lverbose > 1)
+			print_features(scgp);
+		/*	    NONE	    DVD-MINUS-END */
+		if (profile == 0 || profile > 0x19) {
 			is_dvd = FALSE;
 			dp = &cdr_cd;
 
@@ -574,29 +631,42 @@ identify_mmc(scgp, dp, ip)
 				 * Other MMC-3 drive without media
 				 */
 				return (dp);
-			} if (profile == 0x12) {	/* DVD-RAM */
-				errmsgno(EX_BAD,
-				"Found unsupported DVD-RAM media.\n");
-				return (dp);
-			} else {			/* DVD+RW DVD+R */
-				errmsgno(EX_BAD,
-				"Found DVD+ media but DVD+R/DVD+RW support code is missing.\n");
-				errmsgno(EX_BAD,
-				"If you need DVD+R/DVD+RW support, ask the Author for cdrecord-ProDVD.\n");
-				errmsgno(EX_BAD,
-				"Free test versions and free keys for personal use are at ftp://ftp.berlios.de/pub/cdrecord/ProDVD/\n");
-				return (dp);
 			}
-		} else if (profile >= 0x10 && profile < 0x18) {
-			errmsgno(EX_BAD,
-			"Found DVD media but DVD-R/DVD-RW support code is missing.\n");
-			errmsgno(EX_BAD,
-			"If you need DVD-R/DVD-RW support, ask the Author for cdrecord-ProDVD.\n");
-			errmsgno(EX_BAD,
-			"Free test versions and free keys for personal use are at ftp://ftp.berlios.de/pub/cdrecord/ProDVD/\n");
+			if (profile <= 0x1F ||	/* DVD+RW DVD+R */
+				    profile == 0x2B) {	/* DVD+R/DL */
+				extern	cdr_t	cdr_dvdplus;
+
+				dp = &cdr_dvdplus;
+				dp = dp->cdr_identify(scgp, dp, scgp->inq);
+				return (dp);
+			} else if (profile >= 0x40 && profile <= 0x4F) {
+				extern	cdr_t	cdr_bd;
+
+				dp = &cdr_bd;
+				dp = dp->cdr_identify(scgp, dp, scgp->inq);
+				return (dp);
+			} else if (profile >= 0x50 && profile <= 0x5F) {
+				errmsgno(EX_BAD,
+				"Found unsupported HD-DVD 0x%X profile.\n", profile);
+				errmsgno(EX_BAD,
+				"If you need HD-DVD support, sponsor a sample drive.\n");
+				return ((cdr_t *)0);
+			} else {
+				errmsgno(EX_BAD,
+				"Found unsupported 0x%X profile.\n", profile);
+				return ((cdr_t *)0);
+			}
+		} else if (profile >= 0x10 && profile <= 0x19) {
+			extern	cdr_t	cdr_dvd;
+
+			dp = &cdr_dvd;
+			dp = dp->cdr_identify(scgp, dp, scgp->inq);
 			return (dp);
 		}
 	} else {
+		/*
+		 * profile < 0
+		 */
 		if (xdebug)
 			printf("Drive is pre MMC-3\n");
 	}
@@ -623,16 +693,23 @@ identify_mmc(scgp, dp, ip)
 #ifdef	DVD_DEBUG
 	if (1) {	/* Always check for DVD media in debug mode */
 #else
-	if ((cdwr || cdwrw) && dvdwr) {
+	if (profile < 0 && ((cdwr || cdwrw) && dvdwr)) {
 #endif
 		char	xb[32];
 
+		/*
+		 * Be careful here. It has been reported that the
+		 * Pioneer DVR-110 will lock up in case that
+		 * read_dvd_structure() is called if a non-DVD medium is
+		 * loaded. For this reason, we only come here with
+		 * Pre MMC-3 drives.
+		 */
 #ifndef	DVD_DEBUG
 		scgp->silent++;
 #else
 		error("identify_dvd: checking for DVD media\n");
 #endif
-		if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0, 0, 0) >= 0) {
+		if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0, 0, 0, 0) >= 0) {
 			/*
 			 * If read DVD structure is supported and works, then
 			 * we must have a DVD media in the drive. Signal to
@@ -648,7 +725,7 @@ identify_mmc(scgp, dp, ip)
 				 * read_dvd_structure() command again.
 				 */
 				load_media(scgp, dp, FALSE);
-				if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0, 0, 0) >= 0) {
+				if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0, 0, 0, 0) >= 0) {
 					is_dvd = TRUE;
 				}
 				scsi_prevent_removal(scgp, 0);
@@ -661,12 +738,11 @@ identify_mmc(scgp, dp, ip)
 #endif
 	}
 	if (is_dvd) {
-		errmsgno(EX_BAD,
-		"Found DVD media but DVD-R/DVD-RW support code is missing.\n");
-		errmsgno(EX_BAD,
-		"If you need DVD-R/DVD-RW support, ask the Author for cdrecord-ProDVD.\n");
-		errmsgno(EX_BAD,
-		"Free test versions and free keys for personal use are at ftp://ftp.berlios.de/pub/cdrecord/ProDVD/\n");
+		extern	cdr_t	cdr_dvd;
+
+		dp = &cdr_dvd;
+		dp = dp->cdr_identify(scgp, dp, scgp->inq);
+		return (dp);
 	}
 	return (dp);
 }
@@ -676,6 +752,7 @@ attach_mmc(scgp, dp)
 	SCSI	*scgp;
 	cdr_t			*dp;
 {
+	int	ret;
 	Uchar	mode[0x100];
 	struct	cd_mode_page_2A *mp;
 	struct	ricoh_mode_page_30 *rp = NULL;
@@ -733,8 +810,23 @@ attach_mmc(scgp, dp)
 	}
 
 	if (mmc_isplextor(scgp)) {
+		char	*p;
+
+		p = hasdrvopt(driveropts, "plexdisable");
+		if (p != NULL && *p == '1') {
+			plextor_disable(scgp);
+		} else {
+			p = NULL;
+		}
+
 		if (check_varirec_plextor(scgp) >= 0)
 			dp->cdr_flags |= CDR_VARIREC;
+
+		if (check_gigarec_plextor(scgp) < 0 && p == NULL)
+			plextor_enable(scgp);
+
+		if (check_gigarec_plextor(scgp) >= 0)
+			dp->cdr_flags |= CDR_GIGAREC;
 
 		if (check_ss_hide_plextor(scgp) >= 0)
 			dp->cdr_flags |= CDR_SINGLESESS|CDR_HIDE_CDR;
@@ -744,6 +836,12 @@ attach_mmc(scgp, dp)
 
 		if (check_speed_rd_plextor(scgp) >= 0)
 			dp->cdr_flags |= CDR_SPEEDREAD;
+
+		/*
+		 * Newer Plextor drives
+		 */
+		if (set_audiomaster_yamaha(scgp, dp, FALSE) >= 0)
+			dp->cdr_flags |= CDR_AUDIOMASTER;
 	}
 	if (mmc_isyamaha(scgp)) {
 		if (set_audiomaster_yamaha(scgp, dp, FALSE) >= 0)
@@ -784,7 +882,7 @@ attach_mmc(scgp, dp)
 		char	*p;
 
 		if (strcmp(driveropts, "help") == 0) {
-			mmc_opthelp(dp, 0);
+			mmc_opthelp(scgp, dp, 0);
 		}
 
 		p = hasdrvopt(driveropts, "burnfree");
@@ -801,6 +899,11 @@ attach_mmc(scgp, dp)
 		p = hasdrvopt(driveropts, "varirec");
 		if (p != NULL && (dp->cdr_flags & CDR_VARIREC) != 0) {
 			dp->cdr_dstat->ds_cdrflags |= RF_VARIREC;
+		}
+
+		p = hasdrvopt(driveropts, "gigarec");
+		if (p != NULL && (dp->cdr_flags & CDR_GIGAREC) != 0) {
+			dp->cdr_dstat->ds_cdrflags |= RF_GIGAREC;
 		}
 
 		p = hasdrvopt(driveropts, "audiomaster");
@@ -852,6 +955,14 @@ attach_mmc(scgp, dp)
 			}
 		}
 	}
+
+	if ((ret = get_supported_cdrw_media_types(scgp)) < 0) {
+		dp->cdr_cdrw_support = CDR_CDRW_ALL;
+		return (0);
+	}
+	dp->cdr_cdrw_support = ret;
+	if (lverbose > 1)
+		printf("Supported CD-RW media types: %02X\n", dp->cdr_cdrw_support);
 
 	return (0);
 }
@@ -994,6 +1105,17 @@ check_writemodes_mmc(scgp, dp)
 			printf("RAW/R96R ");
 	}
 
+	mp->track_mode = TM_DATA;
+	mp->write_type = WT_LAYER_JUMP;
+
+	if (set_mode_params(scgp, "CD write parameter", mode, len, 0, -1) &&
+	    has_profile(scgp, 0x16) == 1) {
+		dp->cdr_flags |= CDR_LAYER_JUMP;
+		if (xdebug)
+			printf("LAYER JUMP ");
+	} else
+		dp->cdr_flags &= ~CDR_LAYER_JUMP;
+
 	if (xdebug)
 		printf("\n");
 
@@ -1081,38 +1203,9 @@ deflt_writemodes_mmc(scgp, reset_dummy)
 }
 
 #ifdef	PRINT_ATIP
-LOCAL	void	print_di		__PR((struct disk_info *dip));
 LOCAL	void	atip_printspeed		__PR((char *fmt, int speedindex, char speedtab[]));
 LOCAL	void	print_atip		__PR((SCSI *scgp, struct atipinfo *atp));
 #endif	/* PRINT_ATIP */
-
-LOCAL int
-get_diskinfo(scgp, dip)
-	SCSI		*scgp;
-	struct disk_info *dip;
-{
-	int	len;
-	int	ret;
-
-	fillbytes((caddr_t)dip, sizeof (*dip), '\0');
-
-	/*
-	 * Used to be 2 instead of 4 (now). But some Y2k ATAPI drives as used
-	 * by IOMEGA create a DMA overrun if we try to transfer only 2 bytes.
-	 */
-/*	if (read_disk_info(scgp, (caddr_t)dip, 2) < 0)*/
-	if (read_disk_info(scgp, (caddr_t)dip, 4) < 0)
-		return (-1);
-	len = a_to_u_2_byte(dip->data_len);
-	len += 2;
-	ret = read_disk_info(scgp, (caddr_t)dip, len);
-
-#ifdef	DEBUG
-	scg_prbytes("Disk info:", (Uchar *)dip,
-				len-scg_getresid(scgp));
-#endif
-	return (ret);
-}
 
 LOCAL void
 di_to_dstat(dip, dsp)
@@ -1205,7 +1298,7 @@ get_atip(scgp, atp)
 	return (ret);
 }
 
-#ifdef	PRINT_ATIP
+#ifdef	PRINT_PMA
 
 LOCAL int
 /*get_pma(atp)*/
@@ -1248,7 +1341,7 @@ char	atp[1024];
 	return (ret);
 }
 
-#endif	/* PRINT_ATIP */
+#endif	/* PRINT_PMA */
 
 LOCAL int
 init_mmc(scgp, dp)
@@ -1270,8 +1363,15 @@ extern	char	*buf;
 	msf_t	msf;
 	BOOL	did_atip = FALSE;
 	BOOL	did_dummy = FALSE;
+	int	profile;
 
 	msf.msf_min = msf.msf_sec = msf.msf_frame = 0;
+
+	if (dsp->ds_type == DST_UNKNOWN) {
+		profile = get_curprofile(scgp);
+		if (profile >= 0)
+			dsp->ds_type = profile;
+	}
 
 	/*
 	 * It seems that there are drives that do not support to
@@ -1292,6 +1392,8 @@ extern	char	*buf;
 				dsp->ds_flags |= DSF_HIGHSP_ERA;
 			else if (atp->desc.sub_type == 2)
 				dsp->ds_flags |= DSF_ULTRASP_ERA;
+			else if (atp->desc.sub_type == 3)
+				dsp->ds_flags |= DSF_ULTRASP_ERA | DSF_ULTRASPP_ERA;
 		}
 		if (atp->desc.a1_v) {
 			if (atp->desc.clv_low != 0)
@@ -1304,7 +1406,7 @@ extern	char	*buf;
 					dsp->ds_at_max_speed = hs_clv_to_speed[atp->desc.clv_high];
 			}
 		}
-		if (atp->desc.a2_v && atp->desc.erasable && atp->desc.sub_type == 2) {
+		if (atp->desc.a2_v && atp->desc.erasable && (atp->desc.sub_type == 2 || atp->desc.sub_type == 3)) {
 			Uint	vlow;
 			Uint	vhigh;
 
@@ -1327,9 +1429,12 @@ extern	char	*buf;
 			((struct atipinfo *)mode)->desc.uru);
 	}
 #endif
+	if ((dp->cdr_dstat->ds_cdrflags & RF_PRATIP) != 0) {
+		print_format_capacities(scgp);
+	}
 again:
 	dip = (struct disk_info *)buf;
-	if (get_diskinfo(scgp, dip) < 0)
+	if (get_diskinfo(scgp, dip, sizeof (*dip)) < 0)
 		return (-1);
 
 	/*
@@ -1360,7 +1465,7 @@ again:
 		 */
 		reload_media(scgp, dp);
 	}
-	if (get_diskinfo(scgp, dip) < 0)
+	if (get_diskinfo(scgp, dip, sizeof (*dip)) < 0)
 		return (-1);
 	di_to_dstat(dip, dsp);
 	if (!did_atip && dsp->ds_first_leadin < 0)
@@ -1388,7 +1493,9 @@ again:
 	 * Firmware 4.02 kann nicht get_pma
 	 */
 	if (dip->disk_status != DS_EMPTY) {
+#ifdef	PRINT_PMA
 /*		get_pma();*/
+#endif
 	}
 	printf("ATIP lead in:  %ld (%02d:%02d/%02d)\n",
 		msf_to_lba(mode[8], mode[9], mode[10], FALSE),
@@ -1396,67 +1503,24 @@ again:
 	printf("ATIP lead out: %ld (%02d:%02d/%02d)\n",
 		msf_to_lba(mode[12], mode[13], mode[14], TRUE),
 		mode[12], mode[13], mode[14]);
-	print_di(dip);
+	print_diskinfo(dip, TRUE);
 	print_atip(scgp, (struct atipinfo *)mode);
 #endif
 #endif	/* PRINT_ATIP */
 	return (drive_getdisktype(scgp, dp));
 }
 
+LOCAL int
+prdiskstatus_mmc(scgp, dp)
+	SCSI	*scgp;
+	cdr_t	*dp;
+{
+	return (prdiskstatus(scgp, dp, TRUE));
+}
+
 #ifdef	PRINT_ATIP
 
-#define	DOES(what, flag)	printf("  Does %s%s\n", flag?"":"not ", what);
-#define	IS(what, flag)		printf("  Is %s%s\n", flag?"":"not ", what);
-#define	VAL(what, val)		printf("  %s: %d\n", what, val[0]*256 + val[1]);
-#define	SVAL(what, val)		printf("  %s: %s\n", what, val);
-
-LOCAL void
-print_di(dip)
-	struct disk_info	*dip;
-{
-static	char *ds_name[] = { "empty", "incomplete/appendable", "complete", "illegal" };
-static	char *ss_name[] = { "empty", "incomplete/appendable", "illegal", "complete", };
-
-	IS("erasable", dip->erasable);
-	printf("disk status: %s\n", ds_name[dip->disk_status]);
-	printf("session status: %s\n", ss_name[dip->sess_status]);
-	printf("first track: %d number of sessions: %d first track in last sess: %d last track in last sess: %d\n",
-		dip->first_track,
-		dip->numsess,
-		dip->first_track_ls,
-		dip->last_track_ls);
-	IS("unrestricted", dip->uru);
-	printf("Disk type: ");
-	switch (dip->disk_type) {
-
-	case SES_DA_ROM:	printf("CD-DA or CD-ROM");	break;
-	case SES_CDI:		printf("CDI");			break;
-	case SES_XA:		printf("CD-ROM XA");		break;
-	case SES_UNDEF:		printf("undefined");		break;
-	default:		printf("reserved");		break;
-	}
-	printf("\n");
-	if (dip->did_v)
-		printf("Disk id: 0x%lX\n", a_to_u_4_byte(dip->disk_id));
-
-	printf("last start of lead in: %ld\n",
-		msf_to_lba(dip->last_lead_in[1],
-		dip->last_lead_in[2],
-		dip->last_lead_in[3], FALSE));
-	printf("last start of lead out: %ld\n",
-		msf_to_lba(dip->last_lead_out[1],
-		dip->last_lead_out[2],
-		dip->last_lead_out[3], TRUE));
-
-	if (dip->dbc_v)
-		printf("Disk bar code: 0x%lX%lX\n",
-			a_to_u_4_byte(dip->disk_barcode),
-			a_to_u_4_byte(&dip->disk_barcode[4]));
-
-	if (dip->num_opc_entries > 0) {
-		printf("OPC table:\n");
-	}
-}
+#define	IS(what, flag)		printf("Disk Is %s%s\n", flag?"":"not ", what);
 
 char	*cdr_subtypes[] = {
 	"Normal Rewritable (CLV) media",
@@ -1473,7 +1537,7 @@ char	*cdrw_subtypes[] = {
 	"Normal Rewritable (CLV) media",
 	"High speed Rewritable (CAV) media",
 	"Ultra High speed Rewritable media",
-	"Medium Type A, high Beta category (A+)",
+	"Ultra High speed+ Rewritable media",
 	"Medium Type B, low Beta category (B-)",
 	"Medium Type B, high Beta category (B+)",
 	"Medium Type C, low Beta category (C-)",
@@ -1537,7 +1601,7 @@ print_atip(scgp, atp)
 		if (atp->desc.erasable && atp->desc.sub_type == 1) {
 			speedvtab = hs_clv_to_speed;
 		}
-		if (atp->desc.a2_v && atp->desc.sub_type == 2) {
+		if (atp->desc.a2_v && (atp->desc.sub_type == 2 || atp->desc.sub_type == 3)) {
 			speedvtab = us_clv_to_speed;
 		}
 		if (atp->desc.clv_low != 0 || atp->desc.clv_high != 0) {
@@ -1773,21 +1837,21 @@ next_wr_addr_mmc(scgp, trackp, ap)
 
 
 	/*
-	 * Reading info for current track may require doing the read_track_info
+	 * Reading info for current track may require doing the get_trackinfo
 	 * with either the track number (if the track is currently being written)
 	 * or with 0xFF (if the track hasn't been started yet and is invisible
 	 */
 
 	if (trackp != 0 && trackp->track > 0 && is_packet(trackp)) {
 		scgp->silent++;
-		result = read_track_info(scgp, (caddr_t)&track_info, TI_TYPE_TRACK,
+		result = get_trackinfo(scgp, (caddr_t)&track_info, TI_TYPE_TRACK,
 							trackp->trackno,
 							sizeof (track_info));
 		scgp->silent--;
 	}
 
 	if (result < 0) {
-		if (read_track_info(scgp, (caddr_t)&track_info, TI_TYPE_TRACK, 0xFF,
+		if (get_trackinfo(scgp, (caddr_t)&track_info, TI_TYPE_TRACK, 0xFF,
 						sizeof (track_info)) < 0) {
 			errmsgno(EX_BAD, "Cannot get next writable address for 'invisible' track.\n");
 			errmsgno(EX_BAD, "This means that we are checking recorded media.\n");
@@ -1914,13 +1978,22 @@ open_track_mmc(scgp, dp, trackp)
 					(int)trackp->trackno,
 					trackp->trackstart-trackp->pregapsize);
 			}
-			/*
-			 * XXX Do we need to check isecsize too?
-			 */
-			pad_track(scgp, dp, trackp,
-				trackp->trackstart-trackp->pregapsize,
-				(Llong)trackp->pregapsize*trackp->secsize,
+			if (trackp->track == 1 && is_hidden(trackp)) {
+				pad_track(scgp, dp, trackp,
+					trackp->trackstart-trackp->pregapsize,
+					(Llong)(trackp->pregapsize-trackp->trackstart)*trackp->secsize,
 					FALSE, 0);
+				if (write_track_data(scgp, dp, track_base(trackp)) < 0)
+					return (-1);
+			} else {
+				/*
+				 * XXX Do we need to check isecsize too?
+				 */
+				pad_track(scgp, dp, trackp,
+					trackp->trackstart-trackp->pregapsize,
+					(Llong)trackp->pregapsize*trackp->secsize,
+					FALSE, 0);
+			}
 		}
 		return (0);
 	}
@@ -2273,6 +2346,7 @@ send_opc_mmc(scgp, bp, cnt, doopc)
 	if (ret >= 0)
 		return (ret);
 
+	/* BEGIN CSTYLED */
 	/*
 	 * Hack for a mysterioys drive ....
 	 * Device type    : Removable CD-ROM
@@ -2290,6 +2364,7 @@ send_opc_mmc(scgp, bp, cnt, doopc)
 	 * Sense Code: 0x5A Qual 0x03 (operator selected write permit) Fru 0x0
 	 * Sense flags: Blk 0 (not valid)
 	 */
+	/* END CSTYLED */
 	if (scg_sense_key(scgp) == SC_UNIT_ATTENTION &&
 	    scg_sense_code(scgp) == 0x5A &&
 	    scg_sense_qual(scgp) == 0x03)
@@ -2352,6 +2427,8 @@ opt1_mmc(scgp, dp)
 		}
 	}
 	if (mmc_isplextor(scgp)) {
+		int	gcode;
+
 		if ((dp->cdr_flags & (CDR_SINGLESESS|CDR_HIDE_CDR)) != 0) {
 			if (ss_hide_plextor(scgp,
 			    (dp->cdr_dstat->ds_cdrflags & RF_SINGLESESS) != 0,
@@ -2363,6 +2440,36 @@ opt1_mmc(scgp, dp)
 			if (speed_rd_plextor(scgp,
 			    (dp->cdr_dstat->ds_cdrflags & RF_SPEEDREAD) != 0) < 0)
 				return (-1);
+		}
+
+		if ((dp->cdr_cmdflags & F_SETDROPTS) ||
+		    (wm_base(dp->cdr_dstat->ds_wrmode) == WM_SAO) ||
+		    (wm_base(dp->cdr_dstat->ds_wrmode) == WM_RAW))
+			gcode = do_gigarec_plextor(scgp);
+		else
+			gcode = gigarec_plextor(scgp, 0);
+		if (gcode != 0) {
+			msf_t   msf;
+
+			dp->cdr_dstat->ds_first_leadin =
+					gigarec_mult(gcode, dp->cdr_dstat->ds_first_leadin);
+			dp->cdr_dstat->ds_maxblocks =
+					gigarec_mult(gcode, dp->cdr_dstat->ds_maxblocks);
+
+			if (oflags & RF_PRATIP) {
+				lba_to_msf(dp->cdr_dstat->ds_first_leadin, &msf);
+				printf("New start of lead in: %ld (%02d:%02d/%02d)\n",
+					(long)dp->cdr_dstat->ds_first_leadin,
+					msf.msf_min,
+					msf.msf_sec,
+					msf.msf_frame);
+				lba_to_msf(dp->cdr_dstat->ds_maxblocks, &msf);
+				printf("New start of lead out: %ld (%02d:%02d/%02d)\n",
+					(long)dp->cdr_dstat->ds_maxblocks,
+					msf.msf_min,
+					msf.msf_sec,
+					msf.msf_frame);
+			}
 		}
 	}
 	return (0);
@@ -2777,18 +2884,75 @@ do_varirec_plextor(scgp)
 	char	*p;
 	int	voff;
 
-	p = hasdrvopt(driveropts, "varirec=");
+	p = hasdrvopt(driveropts, "varirec");
 	if (p == NULL || curspeed != 4) {
 		if (check_varirec_plextor(scgp) >= 0)
 			varirec_plextor(scgp, FALSE, 0);
 	} else {
-		if (*astoi(p, &voff) != '\0')
+		char	*ep;
+		ep = astoi(p, &voff);
+		if (*ep != '\0' && *ep != ',')
 			comerrno(EX_BAD,
 				"Bad varirec value '%s'.\n", p);
 		if (check_varirec_plextor(scgp) < 0)
 			comerrno(EX_BAD, "Drive does not support VariRec.\n");
 		varirec_plextor(scgp, TRUE, voff);
 	}
+}
+
+/*
+ * GigaRec value table
+ */
+struct gr {
+	Uchar	val;
+	char	vadd;
+	char	*name;
+} gr[] = {
+	{ 0x00,	0,  "off", },
+	{ 0x00,	0,  "1.0", },
+	{ 0x01,	2,  "1.2", },
+	{ 0x02,	3,  "1.3", },
+	{ 0x03,	4,  "1.4", },
+	{ 0x04,	1,  "1.1", },
+	{ 0x81,	-2, "0.8", },
+	{ 0x82,	-3, "0.7", },
+	{ 0x83,	-4, "0.6", },
+	{ 0x84,	-1, "0.9", },
+	{ 0x00,	0,  NULL, },
+};
+
+LOCAL int
+do_gigarec_plextor(scgp)
+	SCSI	*scgp;
+{
+	char	*p;
+	int	val = 0;	/* Make silly GCC happy */
+
+	p = hasdrvopt(driveropts, "gigarec");
+	if (p == NULL) {
+		if (check_gigarec_plextor(scgp) >= 0)
+			gigarec_plextor(scgp, 0);
+	} else {
+		struct gr *gp = gr;
+
+		if (strlen(p) >= 3) {
+			for (; gp->name != NULL; gp++) {
+				if (strncmp(p, gp->name, 3) == 0) {
+					if (p[3] != '\0' && p[3] != ',')
+						continue;
+					val = gp->val;
+					break;
+				}
+			}
+		}
+		if (gp->name == NULL)
+			comerrno(EX_BAD,
+				"Bad gigarec value '%s'.\n", p);
+		if (check_gigarec_plextor(scgp) < 0)
+			comerrno(EX_BAD, "Drive does not support GigaRec.\n");
+		return (gigarec_plextor(scgp, val));
+	}
+	return (0);
 }
 
 LOCAL int
@@ -2818,7 +2982,7 @@ drivemode_plextor(scgp, bp, cnt, modecode, modeval)
 	if (modeval)
 		movebytes(modeval, &scmd->cdb.g1_cdb.addr[1], 6);
 	else
-		i_to_2_byte(&scmd->cdb.g1_cdb.count[2], cnt);
+		i_to_2_byte(&scmd->cdb.cmd_cdb[9], cnt);
 
 	scgp->cmdname = "plextor drive mode";
 
@@ -2834,7 +2998,9 @@ drivemode_plextor(scgp, bp, cnt, modecode, modeval)
 #define	MB1_SS		0x01	/* Single Session Mode			   */
 #define	MB1_HIDE_CDR	0x02	/* Hide CDR Media			   */
 
-#define	MODE_CODE_VREC	0x02	/* Vari Rec Parameters			   */
+#define	MODE_CODE_VREC	0x02	/* Mode code for Vari Rec		   */
+
+#define	MODE_CODE_GREC	0x04	/* Mode code for Giga Rec		   */
 
 #define	MODE_CODE_SPEED	0xbb	/* Mode code for Speed Read		   */
 #define	MBbb_SPEAD_READ	0x01	/* Spead Read				   */
@@ -2867,7 +3033,7 @@ drivemode2_plextor(scgp, bp, cnt, modecode, modeval)
 	if (modeval)
 		scmd->cdb.g5_cdb.reladr = *(char *)modeval != 0 ? 1 : 0;
 	else
-		i_to_2_byte(&scmd->cdb.g1_cdb.count[1], cnt);
+		i_to_2_byte(&scmd->cdb.cmd_cdb[8], cnt);
 
 	scgp->cmdname = "plextor drive mode2";
 
@@ -2882,11 +3048,29 @@ check_varirec_plextor(scgp)
 	SCSI	*scgp;
 {
 	int	modecode = 2;
-	Uchar	getmode[8];
+	Uchar	pgetmode[8];
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
+		scgp->silent--;
+		return (-1);
+	}
+	scgp->silent--;
+
+	return (0);
+}
+
+LOCAL int
+check_gigarec_plextor(scgp)
+	SCSI	*scgp;
+{
+	int	modecode = 4;
+	Uchar	pgetmode[8];
+
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
+	scgp->silent++;
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
@@ -2902,48 +3086,120 @@ varirec_plextor(scgp, on, val)
 	int	val;
 {
 	int	modecode = 2;
-	Uchar	setmode[8];
-	Uchar	getmode[8];
+	Uchar	psetmode[8];
+	Uchar	pgetmode[8];
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
 	scgp->silent--;
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 
-	fillbytes(setmode, sizeof (setmode), '\0');
-	setmode[0] = on?1:0;
+	fillbytes(psetmode, sizeof (psetmode), '\0');
+	psetmode[0] = on?1:0;
 	if (on) {
+		/*
+		 * Before -2 .. +2
+		 * Since PX-716: -4 .. +4
+		 */
 		if (val < -2 || val > 2)
 			comerrno(EX_BAD, "Bad VariRec offset %d\n", val);
 		printf("Turning Varirec on.\n");
 		printf("Varirec offset is %d.\n", val);
 
 		if (val > 0) {
-			setmode[1] = val & 0x7F;
+			psetmode[1] = val & 0x7F;
 		} else {
-			setmode[1] = (-val) & 0x7F;
-			setmode[1] |= 0x80;
+			psetmode[1] = (-val) & 0x7F;
+			psetmode[1] |= 0x80;
 		}
 	}
 
-	if (drivemode_plextor(scgp, NULL, 0, modecode, setmode) < 0)
+	if (drivemode_plextor(scgp, NULL, 0, modecode, psetmode) < 0)
 		return (-1);
 
-	fillbytes(getmode, sizeof (getmode), '\0');
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0)
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0)
 		return (-1);
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 	return (0);
+}
+
+LOCAL int
+gigarec_plextor(scgp, val)
+	SCSI	*scgp;
+	int	val;
+{
+	int	modecode = 4;
+	Uchar	psetmode[8];
+	Uchar	pgetmode[8];
+
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
+	scgp->silent++;
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
+		scgp->silent--;
+		return (-1);
+	}
+	scgp->silent--;
+
+	if (lverbose > 1)
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
+
+
+	fillbytes(psetmode, sizeof (psetmode), '\0');
+	psetmode[1] = val;
+
+	if (drivemode_plextor(scgp, NULL, 0, modecode, psetmode) < 0)
+		return (-1);
+
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0)
+		return (-1);
+
+	if (lverbose > 1)
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
+
+	{
+		struct gr *gp = gr;
+
+		for (; gp->name != NULL; gp++) {
+			if (pgetmode[3] == gp->val)
+				break;
+		}
+		if (gp->name == NULL)
+			printf("Unknown GigaRec value 0x%X.\n", pgetmode[3]);
+		else
+			printf("GigaRec %sis %s.\n", gp->val?"value ":"", gp->name);
+	}
+	return (pgetmode[3]);
+}
+
+LOCAL Int32_t
+gigarec_mult(code, val)
+	int	code;
+	Int32_t	val;
+{
+	Int32_t	add;
+	struct gr *gp = gr;
+
+	for (; gp->name != NULL; gp++) {
+		if (code == gp->val)
+			break;
+	}
+	if (gp->vadd == 0)
+		return (val);
+
+	add = val * gp->vadd / 10;
+	return (val + add);
 }
 
 LOCAL int
@@ -2951,17 +3207,17 @@ check_ss_hide_plextor(scgp)
 	SCSI	*scgp;
 {
 	int	modecode = 1;
-	Uchar	getmode[8];
+	Uchar	pgetmode[8];
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
 	scgp->silent--;
 
-	return (getmode[2] & 0x03);
+	return (pgetmode[2] & 0x03);
 }
 
 LOCAL int
@@ -2969,17 +3225,17 @@ check_speed_rd_plextor(scgp)
 	SCSI	*scgp;
 {
 	int	modecode = 0xBB;
-	Uchar	getmode[8];
+	Uchar	pgetmode[8];
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
 	scgp->silent--;
 
-	return (getmode[2] & 0x01);
+	return (pgetmode[2] & 0x01);
 }
 
 LOCAL int
@@ -2987,17 +3243,17 @@ check_powerrec_plextor(scgp)
 	SCSI	*scgp;
 {
 	int	modecode = 0;
-	Uchar	getmode[8];
+	Uchar	pgetmode[8];
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode2_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode2_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
 	scgp->silent--;
 
-	if (getmode[2] & 1)
+	if (pgetmode[2] & 1)
 		return (1);
 
 	return (0);
@@ -3010,44 +3266,44 @@ ss_hide_plextor(scgp, do_ss, do_hide)
 	BOOL	do_hide;
 {
 	int	modecode = 1;
-	Uchar	setmode[8];
-	Uchar	getmode[8];
+	Uchar	psetmode[8];
+	Uchar	pgetmode[8];
 	BOOL	is_ss;
 	BOOL	is_hide;
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
 	scgp->silent--;
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 
-	is_ss = (getmode[2] & MB1_SS) != 0;
-	is_hide = (getmode[2] & MB1_HIDE_CDR) != 0;
+	is_ss = (pgetmode[2] & MB1_SS) != 0;
+	is_hide = (pgetmode[2] & MB1_HIDE_CDR) != 0;
 
 	if (lverbose > 0) {
 		printf("Single session is %s.\n", is_ss ? "ON":"OFF");
 		printf("Hide CDR is %s.\n", is_hide ? "ON":"OFF");
 	}
 
-	fillbytes(setmode, sizeof (setmode), '\0');
-	setmode[0] = getmode[2];		/* Copy over old values */
+	fillbytes(psetmode, sizeof (psetmode), '\0');
+	psetmode[0] = pgetmode[2];		/* Copy over old values */
 	if (do_ss >= 0) {
 		if (do_ss)
-			setmode[0] |= MB1_SS;
+			psetmode[0] |= MB1_SS;
 		else
-			setmode[0] &= ~MB1_SS;
+			psetmode[0] &= ~MB1_SS;
 	}
 	if (do_hide >= 0) {
 		if (do_hide)
-			setmode[0] |= MB1_HIDE_CDR;
+			psetmode[0] |= MB1_HIDE_CDR;
 		else
-			setmode[0] &= ~MB1_HIDE_CDR;
+			psetmode[0] &= ~MB1_HIDE_CDR;
 	}
 
 	if (do_ss >= 0 && do_ss != is_ss)
@@ -3055,15 +3311,15 @@ ss_hide_plextor(scgp, do_ss, do_hide)
 	if (do_hide >= 0 && do_hide != is_hide)
 		printf("Turning hide CDR %s.\n", do_hide?"on":"off");
 
-	if (drivemode_plextor(scgp, NULL, 0, modecode, setmode) < 0)
+	if (drivemode_plextor(scgp, NULL, 0, modecode, psetmode) < 0)
 		return (-1);
 
-	fillbytes(getmode, sizeof (getmode), '\0');
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0)
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0)
 		return (-1);
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 	return (0);
 }
@@ -3074,48 +3330,48 @@ speed_rd_plextor(scgp, do_speedrd)
 	BOOL	do_speedrd;
 {
 	int	modecode = 0xBB;
-	Uchar	setmode[8];
-	Uchar	getmode[8];
+	Uchar	psetmode[8];
+	Uchar	pgetmode[8];
 	BOOL	is_speedrd;
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
 	scgp->silent--;
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 
-	is_speedrd = (getmode[2] & MBbb_SPEAD_READ) != 0;
+	is_speedrd = (pgetmode[2] & MBbb_SPEAD_READ) != 0;
 
 	if (lverbose > 0)
 		printf("Speed-Read is %s.\n", is_speedrd ? "ON":"OFF");
 
-	fillbytes(setmode, sizeof (setmode), '\0');
-	setmode[0] = getmode[2];		/* Copy over old values */
+	fillbytes(psetmode, sizeof (psetmode), '\0');
+	psetmode[0] = pgetmode[2];		/* Copy over old values */
 	if (do_speedrd >= 0) {
 		if (do_speedrd)
-			setmode[0] |= MBbb_SPEAD_READ;
+			psetmode[0] |= MBbb_SPEAD_READ;
 		else
-			setmode[0] &= ~MBbb_SPEAD_READ;
+			psetmode[0] &= ~MBbb_SPEAD_READ;
 	}
 
 	if (do_speedrd >= 0 && do_speedrd != is_speedrd)
 		printf("Turning Speed-Read %s.\n", do_speedrd?"on":"off");
 
-	if (drivemode_plextor(scgp, NULL, 0, modecode, setmode) < 0)
+	if (drivemode_plextor(scgp, NULL, 0, modecode, psetmode) < 0)
 		return (-1);
 
-	fillbytes(getmode, sizeof (getmode), '\0');
-	if (drivemode_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0)
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
+	if (drivemode_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0)
 		return (-1);
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 	/*
 	 * Set current read speed to new max value.
@@ -3132,53 +3388,53 @@ powerrec_plextor(scgp, do_powerrec)
 	BOOL	do_powerrec;
 {
 	int	modecode = 0;
-	Uchar	setmode[8];
-	Uchar	getmode[8];
+	Uchar	psetmode[8];
+	Uchar	pgetmode[8];
 	BOOL	is_powerrec;
 	int	speed;
 
-	fillbytes(getmode, sizeof (getmode), '\0');
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
 	scgp->silent++;
-	if (drivemode2_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0) {
+	if (drivemode2_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0) {
 		scgp->silent--;
 		return (-1);
 	}
 	scgp->silent--;
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 
-	is_powerrec = (getmode[2] & 1) != 0;
+	is_powerrec = (pgetmode[2] & 1) != 0;
 
-	speed = a_to_u_2_byte(&getmode[4]);
+	speed = a_to_u_2_byte(&pgetmode[4]);
 
 	if (lverbose > 0) {
 		printf("Power-Rec is %s.\n", is_powerrec ? "ON":"OFF");
 		printf("Power-Rec write speed:     %dx (recommended)\n", speed / 176);
 	}
 
-	fillbytes(setmode, sizeof (setmode), '\0');
-	setmode[0] = getmode[2];		/* Copy over old values */
+	fillbytes(psetmode, sizeof (psetmode), '\0');
+	psetmode[0] = pgetmode[2];		/* Copy over old values */
 	if (do_powerrec >= 0) {
 		if (do_powerrec)
-			setmode[0] |= 1;
+			psetmode[0] |= 1;
 		else
-			setmode[0] &= ~1;
+			psetmode[0] &= ~1;
 	}
 
 	if (do_powerrec >= 0 && do_powerrec != is_powerrec)
 		printf("Turning Power-Rec %s.\n", do_powerrec?"on":"off");
 
-	if (drivemode2_plextor(scgp, NULL, 0, modecode, setmode) < 0)
+	if (drivemode2_plextor(scgp, NULL, 0, modecode, psetmode) < 0)
 		return (-1);
 
-	fillbytes(getmode, sizeof (getmode), '\0');
-	if (drivemode2_plextor(scgp, (caddr_t)getmode, sizeof (getmode), modecode, NULL) < 0)
+	fillbytes(pgetmode, sizeof (pgetmode), '\0');
+	if (drivemode2_plextor(scgp, (caddr_t)pgetmode, sizeof (pgetmode), modecode, NULL) < 0)
 		return (-1);
 
 	if (lverbose > 1)
-		scg_prbytes("Modes", getmode, sizeof (getmode));
+		scg_prbytes("Modes", pgetmode, sizeof (pgetmode));
 
 	return (0);
 }
@@ -3205,7 +3461,7 @@ get_speeds_plextor(scgp, selp, maxp, lastp)
 	scmd->cdb.g5_cdb.cmd = 0xEB;
 	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
 
-	i_to_2_byte(&scmd->cdb.g1_cdb.count[1], sizeof (buf));
+	i_to_2_byte(&scmd->cdb.cmd_cdb[8], sizeof (buf));
 
 	scgp->cmdname = "plextor get speedlist";
 
@@ -3251,7 +3507,7 @@ bpc_plextor(scgp, mode, bpp)
 	scmd->cdb.g5_cdb.addr[1] = 0x08;
 	scmd->cdb.g5_cdb.addr[2] = mode;
 
-	i_to_2_byte(&scmd->cdb.g1_cdb.count[1], sizeof (buf));
+	i_to_2_byte(&scmd->cdb.cmd_cdb[8], sizeof (buf));
 
 	scgp->cmdname = "plextor read bpc";
 
@@ -3265,6 +3521,86 @@ bpc_plextor(scgp, mode, bpp)
 	if (bpp)
 		*bpp = i;
 
+	return (0);
+}
+
+LOCAL int
+plextor_enable(scgp)
+	SCSI	*scgp;
+{
+	int		ret;
+	UInt32_t	key[4];
+
+	scgp->silent++;
+	ret = plextor_getauth(scgp, key, sizeof (key));
+	scgp->silent--;
+	if (ret < 0)
+		return (ret);
+
+	scgp->silent++;
+	ret = plextor_setauth(scgp, key, sizeof (key));
+	scgp->silent--;
+	return (ret);
+}
+
+LOCAL int
+plextor_disable(scgp)
+	SCSI	*scgp;
+{
+	return (plextor_setauth(scgp, NULL, 0));
+}
+
+LOCAL int
+plextor_getauth(scgp, dp, cnt)
+	SCSI	*scgp;
+	void	*dp;
+	int	cnt;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->flags |= SCG_RECV_DATA;
+	scmd->addr = dp;
+	scmd->size = cnt;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xD4;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[10] = cnt;
+
+	scgp->cmdname = "plextor getauth";
+
+	if (scg_cmd(scgp) < 0)
+		return (-1);
+	return (0);
+}
+
+LOCAL int
+plextor_setauth(scgp, dp, cnt)
+	SCSI	*scgp;
+	void	*dp;
+	int	cnt;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->addr = dp;
+	scmd->size = cnt;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xD5;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] = 0x01;
+	if (cnt != 0)				/* If cnt == 0 clearauth */
+		scmd->cdb.cmd_cdb[2] = 0x01;
+	scmd->cdb.cmd_cdb[10] = cnt;
+
+	scgp->cmdname = "plextor setauth";
+
+	if (scg_cmd(scgp) < 0)
+		return (-1);
 	return (0);
 }
 

@@ -1,10 +1,12 @@
-/* @(#)apple.c	1.19 04/03/02 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)apple.c	1.42 10/02/28 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson, Copyright 2000-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)apple.c	1.19 04/03/02 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+static	UConst char sccsid[] =
+	"@(#)apple.c	1.42 10/02/28 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson, Copyright 2000-2010 J. Schilling";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
+ *	Copyright (c) 2000-2010 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,75 +41,90 @@ static	char sccsid[] =
 
 #ifdef APPLE_HYB
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <errno.h>
-#include <fctldefs.h>
-#include <utypes.h>
-#include <ctype.h>
-#include <netinet/in.h>
-#include <apple.h>
-#include <schily.h>
+#include <schily/errno.h>
+#include <schily/fcntl.h>
+#include <schily/utypes.h>
+#include <schily/ctype.h>
+#include <schily/in.h>
+#include "apple.h"
+#include <schily/schily.h>
 
 /* tidy up mkisofs definition ... */
 typedef struct directory_entry dir_ent;
 
 /* routines for getting HFS names and info */
+EXPORT	void	del_hfs_info	__PR((struct hfs_info *hfs_info));
+EXPORT	void	set_root_info	__PR((char *name));
+EXPORT	int	get_hfs_dir	__PR((char *wname, char *dname, dir_ent	*s_entry));
+EXPORT	int	get_hfs_info	__PR((char *wname, char	*dname, dir_ent	*s_entry));
+EXPORT	int	get_hfs_rname	__PR((char *wname, char *dname, char *rname));
+EXPORT	int	hfs_exclude	__PR((char *d_name));
+EXPORT	int	hfs_excludepath	__PR((char *path));
+EXPORT	void	print_hfs_info	__PR((dir_ent *s_entry));
+EXPORT	int	file_is_resource __PR((char *fname, int hfstype));
+EXPORT	void	hfs_init	__PR((char *name, Ushort fdflags, Uint hfs_select));
+EXPORT	void	delete_rsrc_ent	__PR((dir_ent *s_entry));
+EXPORT	void	clean_hfs	__PR((void));
+EXPORT	void	perr		__PR((char *a));
 #ifndef	HAVE_STRCASECMP
-static int	strcasecmp	__PR((const char *s1, const char *s2));
+LOCAL	int	strcasecmp	__PR((const char *s1, const char *s2));
 #endif
-static int	get_none_dir	__PR((char *, char *, dir_ent *, int));
-static int	get_none_info	__PR((char *, char *, dir_ent *, int));
-static int	get_cap_dir	__PR((char *, char *, dir_ent *, int));
-static int	get_cap_info	__PR((char *, char *, dir_ent *, int));
-static int	get_es_dir	__PR((char *, char *, dir_ent *, int));
-static int	get_es_info	__PR((char *, char *, dir_ent *, int));
-static int	get_dbl_dir	__PR((char *, char *, dir_ent *, int));
-static int	get_dbl_info	__PR((char *, char *, dir_ent *, int));
-static int	get_mb_info	__PR((char *, char *, dir_ent *, int));
-static int	get_sgl_info	__PR((char *, char *, dir_ent *, int));
-static int	get_fe_dir	__PR((char *, char *, dir_ent *, int));
-static int	get_fe_info	__PR((char *, char *, dir_ent *, int));
-static int	get_sgi_dir	__PR((char *, char *, dir_ent *, int));
-static int	get_sgi_info	__PR((char *, char *, dir_ent *, int));
-static int	get_sfm_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_none_dir	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_none_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_cap_dir	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_cap_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_es_dir	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_es_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_dbl_dir	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_dbl_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_mb_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_sgl_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_fe_dir	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_fe_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_sgi_dir	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_sgi_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_sfm_info	__PR((char *, char *, dir_ent *, int));
 
 #ifdef IS_MACOS_X
-static int	get_xhfs_dir	__PR((char *, char *, dir_ent *, int));
-static int	get_xhfs_info	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_xhfs_dir	__PR((char *, char *, dir_ent *, int));
+LOCAL	int	get_xhfs_info	__PR((char *, char *, dir_ent *, int));
 #else
 #define	get_xhfs_dir	get_none_dir
 #define	get_xhfs_info	get_none_info
 #endif /* IS_MACOS_X */
+#define	OSX_RES_FORK_SUFFIX	"/..namedfork/rsrc"
 
-static void	set_ct		__PR((hfsdirent *, char *, char *));
-static void	set_Dinfo	__PR((byte *, hfsdirent *));
-static void	set_Finfo	__PR((byte *, hfsdirent *));
-static void	cstrncpy	__PR((char *, char *, int));
-static unsigned char dehex	__PR((char));
-static unsigned char hex2char	__PR((char *));
-static void	hstrncpy	__PR((unsigned char *, char *, int));
-static int	read_info_file	__PR((char *, void *, int));
+LOCAL	int	is_pathcomponent	__PR((char *, char *));
 
-/*static unsigned short	calc_mb_crc	__PR((unsigned char *, long, unsigned short));*/
-static struct hfs_info *get_hfs_fe_info	__PR((struct hfs_info *, char *));
-static struct hfs_info *get_hfs_sgi_info __PR((struct hfs_info *, char *));
-static struct hfs_info *match_key	__PR((struct hfs_info *, char *));
+LOCAL	void	set_ct		__PR((hfsdirent *, char *, char *));
+LOCAL	void	set_Dinfo	__PR((byte *, hfsdirent *));
+LOCAL	void	set_Finfo	__PR((byte *, hfsdirent *));
+LOCAL	void	cstrncpy	__PR((char *, char *, int));
+LOCAL	unsigned char dehex	__PR((char));
+LOCAL	unsigned char hex2char	__PR((char *));
+LOCAL	void	hstrncpy	__PR((unsigned char *, char *, size_t));
+LOCAL	int	read_info_file	__PR((char *, void *, int));
 
-static int	get_hfs_itype	__PR((char *, char *, char *));
-static void	map_ext		__PR((char *, char **, char **, short *, char *));
+/*LOCAL	unsigned short	calc_mb_crc	__PR((unsigned char *, long, unsigned short));*/
+LOCAL	struct hfs_info *get_hfs_fe_info __PR((struct hfs_info *, char *));
+LOCAL	struct hfs_info *get_hfs_sgi_info __PR((struct hfs_info *, char *));
+LOCAL	struct hfs_info *match_key	__PR((struct hfs_info *, char *));
 
-static afpmap	**map;		/* list of mappings */
-static afpmap	*defmap;	/* the default mapping */
-static int	last_ent;	/* previous mapped entry */
-static int	map_num;	/* number of mappings */
-static int	mlen;		/* min extension length */
-static char	tmp[PATH_MAX];	/* tmp working buffer */
-static int	hfs_num;	/* number of file types */
-static char	p_buf[PATH_MAX]; /* info working buffer */
-static FILE	*p_fp = NULL;	/* probe File pointer */
-static int	p_num = 0;	/* probe bytes read */
-static unsigned	int hselect;	/* type of HFS file selected */
+LOCAL	int	get_hfs_itype	__PR((char *, char *, char *));
+LOCAL	void	map_ext		__PR((char *, char **, char **, short *, char *));
+
+LOCAL	afpmap	**map;		/* list of mappings */
+LOCAL	afpmap	*defmap;	/* the default mapping */
+LOCAL	int	last_ent;	/* previous mapped entry */
+LOCAL	int	map_num;	/* number of mappings */
+LOCAL	int	mlen;		/* min extension length */
+LOCAL	char	tmp[PATH_MAX];	/* tmp working buffer */
+LOCAL	int	hfs_num;	/* number of file types */
+LOCAL	char	p_buf[PATH_MAX]; /* info working buffer */
+LOCAL	FILE	*p_fp = NULL;	/* probe File pointer */
+LOCAL	int	p_num = 0;	/* probe bytes read */
+LOCAL	unsigned int hselect;	/* type of HFS file selected */
 
 struct hfs_type {	/* Types of various HFS Unix files */
 	int	type;	/* type of file */
@@ -123,7 +140,7 @@ struct hfs_type {	/* Types of various HFS Unix files */
 };
 
 /* Above filled in */
-static struct hfs_type hfs_types[] = {
+LOCAL struct hfs_type hfs_types[] = {
 	{TYPE_NONE, INSERT, "", "", get_none_info, get_none_dir, "None"},
 	{TYPE_CAP, INSERT, ".finderinfo/", ".resource/",
 				get_cap_info, get_cap_dir, "CAP"},
@@ -146,13 +163,20 @@ static struct hfs_type hfs_types[] = {
 				get_sfm_info, get_none_dir, "SFM"},
 	{TYPE_XDBL, INSERT, "._", "._", get_dbl_info, get_dbl_dir,
 				"MacOS X AppleDouble"},
+#ifdef	__needed__
+	/*
+	 * Causes syslog error since Mac OS X 10.4
+	 */
 	{TYPE_XHFS, APPEND | NOINFO, "/rsrc", "/rsrc", get_xhfs_info, get_xhfs_dir,
 				"MacOS X HFS"}
+#endif
+	{TYPE_XHFS, APPEND | NOINFO, OSX_RES_FORK_SUFFIX, OSX_RES_FORK_SUFFIX, get_xhfs_info, get_xhfs_dir,
+				"MacOS X HFS"},
 };
 
 /* used by get_magic_match() return */
-static char	tmp_type[CT_SIZE + 1],
-		tmp_creator[CT_SIZE + 1];
+LOCAL	char	tmp_type[CT_SIZE + 1];
+LOCAL	char	tmp_creator[CT_SIZE + 1];
 
 #ifdef	__used__
 /*
@@ -160,7 +184,7 @@ static char	tmp_type[CT_SIZE + 1],
  *	taken from mcvert.c modified by Jim Van Verth.
  */
 
-static unsigned short mb_magic[] = {
+LOCAL	unsigned short mb_magic[] = {
 	0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
 	0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
 	0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7, 0x62d6,
@@ -198,7 +222,7 @@ static unsigned short mb_magic[] = {
 #endif	/* __used__ */
 
 #ifndef	HAVE_STRCASECMP
-static int
+LOCAL int
 strcasecmp(s1, s2)
 	const char	*s1;
 	const char	*s2;
@@ -219,7 +243,7 @@ strcasecmp(s1, s2)
  *	CREATOR and TYPE are padded with spaces if not CT_SIZE long
  */
 
-static void
+LOCAL void
 set_ct(hfs_ent, c, t)
 	hfsdirent	*hfs_ent;
 	char		*c;
@@ -240,7 +264,7 @@ set_ct(hfs_ent, c, t)
  *
  *	':' is replaced by '%' and string is terminated with '\0'
  */
-static void
+LOCAL void
 cstrncpy(t, f, c)
 	char		*t;
 	char		*f;
@@ -270,10 +294,10 @@ cstrncpy(t, f, c)
  *	Taken from linux/fs/hfs/trans.c by Paul H. Hargrove
  */
 #ifdef	PROTOTYPES
-static unsigned char
+LOCAL unsigned char
 dehex(char c)
 #else
-static unsigned char
+LOCAL unsigned char
 dehex(c)
 	char	c;
 
@@ -292,7 +316,7 @@ dehex(c)
 	return (0);
 }
 
-static unsigned char
+LOCAL unsigned char
 hex2char(s)
 	char		*s;
 {
@@ -327,42 +351,50 @@ hex2char(s)
  *	that ":" is replaced by "%"
  *
  */
-static void
-hstrncpy(t, f, c)
+LOCAL void
+hstrncpy(t, f, tlen)
 	unsigned char	*t;
 	char		*f;
-	int		c;
+	size_t		tlen;	/* The to-length */
 {
 	unsigned char	o;
+	size_t		slen = strlen(f);
 
-	while (c-- && *f) {
+	while (tlen > 0 && *f) {
+		size_t	ofl = slen;
+		size_t	otl = tlen;
+
 		switch (*f) {
 		case ':':
 		case '%':
 			if ((o = hex2char(f)) == 0) {
-				*t = conv_charset('%', in_nls, hfs_onls);
+				goto def;
 			} else {
-				*t = o;
-				f += 2;
+				*t++ = o;
+				tlen--;
+				f += 3;
+				slen -= 3;
+				continue;
 			}
-			break;
+		def:
 		default:
-			*t = conv_charset(*f, in_nls, hfs_onls);
+			conv_charset(t, &tlen, (unsigned char *)f, &slen, in_nls, hfs_onls);
 			break;
 		}
-		t++;
-		f++;
+		t += otl - tlen;
+		f += ofl - slen;
 	}
-
 	*t = '\0';
 }
 
 /*
  *	basename: find just the filename with any directory component
  */
+#ifdef	__needed__
 /*
-	not used at the moment ...
-static char
+ *	not used at the moment ...
+ */
+LOCAL char
 basename(a)
 	char	*a;
 {
@@ -373,12 +405,12 @@ basename(a)
 	else
 		return (a);
 }
-*/
+#endif
 
 /*
  *	set_Dinfo: set directory info
  */
-static void
+LOCAL void
 set_Dinfo(ptr, ent)
 	byte		*ptr;
 	hfsdirent	*ent;
@@ -422,7 +454,7 @@ set_Dinfo(ptr, ent)
 /*
  *	set_Finfo: set file info
  */
-static void
+LOCAL void
 set_Finfo(ptr, ent)
 	byte		*ptr;
 	hfsdirent	*ent;
@@ -451,7 +483,7 @@ set_Finfo(ptr, ent)
 /*
  *	get_none_dir: ordinary Unix directory
  */
-static int
+LOCAL int
 get_none_dir(hname, dname, s_entry, ret)
 	char		*hname;
 	char		*dname;
@@ -468,7 +500,7 @@ get_none_dir(hname, dname, s_entry, ret)
 /*
  *	get_none_info: ordinary Unix file - try to map extension
  */
-static int
+LOCAL int
 get_none_info(hname, dname, s_entry, ret)
 	char		*hname;
 	char		*dname;
@@ -493,7 +525,7 @@ get_none_info(hname, dname, s_entry, ret)
  *	read_info_file:	open and read a finderinfo file for an HFS file
  *			or directory
  */
-static int
+LOCAL int
 read_info_file(name, info, len)
 	char		*name;	/* finderinfo filename */
 	void		*info;	/* info buffer */
@@ -519,7 +551,7 @@ read_info_file(name, info, len)
 /*
  *	get_cap_dir: get the CAP name for a directory
  */
-static int
+LOCAL int
 get_cap_dir(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -538,24 +570,24 @@ get_cap_dir(hname, dname, s_entry, ret)
 		info.fi_magic == FI_MAGIC &&
 		info.fi_bitmap & FI_BM_MACINTOSHFILENAME) {
 		/* use the finderinfo name if it exists */
-		cstrncpy((char *) (hfs_ent->name),
-				(char *) (info.fi_macfilename), HFS_MAX_FLEN);
+		cstrncpy((char *)(hfs_ent->name),
+				(char *)(info.fi_macfilename), HFS_MAX_FLEN);
 
 		set_Dinfo(info.finderinfo, hfs_ent);
 
 		return (ret);
 	} else {
 		/* otherwise give it it's Unix name */
-		hstrncpy((unsigned char *) (s_entry->hfs_ent->name),
+		hstrncpy((unsigned char *)(s_entry->hfs_ent->name),
 							dname, HFS_MAX_FLEN);
 		return (TYPE_NONE);
 	}
 }
 
 /*
-**	get_cap_info:	get CAP finderinfo for a file
-*/
-static int
+ *	get_cap_info:	get CAP finderinfo for a file
+ */
+LOCAL int
 get_cap_info(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -575,11 +607,11 @@ get_cap_info(hname, dname, s_entry, ret)
 
 		if (info.fi_bitmap & FI_BM_MACINTOSHFILENAME) {
 			/* use the finderinfo name if it exists */
-			cstrncpy((char *) (hfs_ent->name),
-				(char *) (info.fi_macfilename), HFS_MAX_FLEN);
+			cstrncpy((char *)(hfs_ent->name),
+				(char *)(info.fi_macfilename), HFS_MAX_FLEN);
 		} else {
 			/* use Unix name */
-			hstrncpy((unsigned char *) (hfs_ent->name), dname,
+			hstrncpy((unsigned char *)(hfs_ent->name), dname,
 								HFS_MAX_FLEN);
 		}
 
@@ -618,7 +650,7 @@ get_cap_info(hname, dname, s_entry, ret)
  *	based on code from Jens-Uwe Mager (jum@helios.de) and Phil Sylvester
  *	<psylvstr@interaccess.com>
  */
-static int
+LOCAL int
 get_es_dir(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -678,7 +710,7 @@ get_es_dir(hname, dname, s_entry, ret)
  *	based on code from Jens-Uwe Mager (jum@helios.de) and Phil Sylvester
  *	<psylvstr@interaccess.com>
  */
-static int
+LOCAL int
 get_es_info(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -759,7 +791,7 @@ get_es_info(hname, dname, s_entry, ret)
 		s_entry1->hfs_off = ES_INFO_SIZE;
 	}
 
-	set_733((char *) s_entry1->isorec.size, s_entry1->size);
+	set_733((char *)s_entry1->isorec.size, s_entry1->size);
 
 	return (ret);
 }
@@ -773,10 +805,10 @@ get_es_info(hname, dname, s_entry, ret)
  */
 #ifdef	__used__
 #ifdef	PROTOTYPES
-static unsigned short
+LOCAL unsigned short
 calc_mb_crc(unsigned char *p, long len, unsigned short seed)
 #else
-static unsigned short
+LOCAL unsigned short
 calc_mb_crc(p, len, seed)
 	unsigned char	*p;
 	long		len;
@@ -794,11 +826,11 @@ calc_mb_crc(p, len, seed)
 	}
 
 	return (hold);
-}/* calc_mb_crc() */
+} /* calc_mb_crc() */
 
 #endif	/* __used__ */
 
-static int
+LOCAL int
 get_mb_info(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -877,8 +909,8 @@ get_mb_info(hname, dname, s_entry, ret)
 		hfs_ent = s_entry->hfs_ent;
 
 		/* type and creator from finder info */
-		t = (char *) (info->type);
-		c = (char *) (info->auth);
+		t = (char *)(info->type);
+		c = (char *)(info->auth);
 
 		set_ct(hfs_ent, c, t);
 
@@ -887,9 +919,9 @@ get_mb_info(hname, dname, s_entry, ret)
 
 		if (icon_pos) {
 			hfs_ent->fdlocation.v =
-				d_getw((unsigned char *) info->icon_vert);
+				d_getw((unsigned char *)info->icon_vert);
 			hfs_ent->fdlocation.h =
-				d_getw((unsigned char *) info->icon_horiz);
+				d_getw((unsigned char *)info->icon_horiz);
 		} else {
 			/*
 			 * clear HFS_FNDR_HASBEENINITED to have tidy desktop ??
@@ -907,8 +939,8 @@ get_mb_info(hname, dname, s_entry, ret)
 		hfs_ent->mddate = d_toutime(d_getl(info->mdate));
 
 		/* set name */
-		hstrncpy((unsigned char *) (hfs_ent->name),
-			(char *) (info->name), MIN(HFS_MAX_FLEN, info->nlen));
+		hstrncpy((unsigned char *)(hfs_ent->name),
+			(char *)(info->name), MIN(HFS_MAX_FLEN, info->nlen));
 
 		/* set correct fork sizes */
 		hfs_ent->u.file.dsize = d_getl(info->dflen);
@@ -917,7 +949,7 @@ get_mb_info(hname, dname, s_entry, ret)
 		/* update directory entries for data fork */
 		s_entry->size = hfs_ent->u.file.dsize;
 		s_entry->hfs_off = MB_SIZE;
-		set_733((char *) s_entry->isorec.size, s_entry->size);
+		set_733((char *)s_entry->isorec.size, s_entry->size);
 
 		/*
 		 * real rsrc file starts after data fork (must be a multiple of
@@ -925,7 +957,7 @@ get_mb_info(hname, dname, s_entry, ret)
 		 */
 		s_entry1->size = hfs_ent->u.file.rsize;
 		s_entry1->hfs_off = MB_SIZE + ROUND_UP(hfs_ent->u.file.dsize, MB_SIZE);
-		set_733((char *) s_entry1->isorec.size, s_entry1->size);
+		set_733((char *)s_entry1->isorec.size, s_entry1->size);
 	}
 
 	return (ret);
@@ -936,7 +968,7 @@ get_mb_info(hname, dname, s_entry, ret)
  *
  *	Based on code from cvt2cap.c (c) May 1988, Paul Campbell
  */
-static int
+LOCAL int
 get_dbl_dir(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -974,7 +1006,7 @@ get_dbl_dir(hname, dname, s_entry, ret)
 					d_getl(hp->version) == A_VERSION2)))) {
 
 		/* read TOC of the AppleDouble file */
-		nentries = (int) d_getw(hp->nentries);
+		nentries = (int)d_getw(hp->nentries);
 		if (fread(hp->entries, A_ENTRY_SIZE, nentries, fp) < 1) {
 			fail = 1;
 			nentries = 0;
@@ -1002,6 +1034,7 @@ get_dbl_dir(hname, dname, s_entry, ret)
 		}
 
 		fclose(fp);
+		fp = NULL;
 
 		/* skip this if we had a problem */
 		if (!fail) {
@@ -1016,7 +1049,7 @@ get_dbl_dir(hname, dname, s_entry, ret)
 				 * length, the rest is the actual string.
 				 * The following *should* be OK
 				 */
-				if (len == 32 && (int) name[0] < 32) {
+				if (len == 32 && (int)name[0] < 32) {
 					cstrncpy(hfs_ent->name, &name[1],
 						MIN(name[0], HFS_MAX_FLEN));
 				} else {
@@ -1024,16 +1057,16 @@ get_dbl_dir(hname, dname, s_entry, ret)
 							HFS_MAX_FLEN);
 				}
 			} else {
-				hstrncpy((unsigned char *) (hfs_ent->name),
+				hstrncpy((unsigned char *)(hfs_ent->name),
 							dname, HFS_MAX_FLEN);
 			}
 		}
 	} else {
 		/* failed to open/read finderinfo */
 		fail = 1;
-		if (fp)
-			fclose(fp);
 	}
+	if (fp)
+		fclose(fp);
 
 	if (fail) {
 		/* problem with the file - try mapping/magic */
@@ -1069,7 +1102,7 @@ get_dbl_dir(hname, dname, s_entry, ret)
  *
  *	Based on code from cvt2cap.c (c) May 1988, Paul Campbell
  */
-static int
+LOCAL int
 get_dbl_info(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -1116,7 +1149,7 @@ get_dbl_info(hname, dname, s_entry, ret)
 				(ver == A_VERSION1 || ver == A_VERSION2)))) {
 
 		/* read TOC of the AppleDouble file */
-		nentries = (int) d_getw(hp->nentries);
+		nentries = (int)d_getw(hp->nentries);
 		if (fread(hp->entries, A_ENTRY_SIZE, nentries, fp) < 1) {
 			fail = 1;
 			nentries = 0;
@@ -1137,7 +1170,7 @@ get_dbl_info(hname, dname, s_entry, ret)
 				hfs_ent->u.file.rsize = s_entry1->size;
 				/* offset to start of real rsrc fork */
 				s_entry1->hfs_off = d_getl(ep->offset);
-				set_733((char *) s_entry1->isorec.size,
+				set_733((char *)s_entry1->isorec.size,
 								s_entry1->size);
 				break;
 			case ID_NAME:
@@ -1186,6 +1219,7 @@ get_dbl_info(hname, dname, s_entry, ret)
 		}
 
 		fclose(fp);
+		fp = NULL;
 
 		/* skip this if we had a problem */
 		if (!fail) {
@@ -1199,7 +1233,7 @@ get_dbl_info(hname, dname, s_entry, ret)
 				 * length, the rest is the actual string.
 				 * The following *should* be OK
 				 */
-				if (len == 32 && (int) name[0] < 32) {
+				if (len == 32 && (int)name[0] < 32) {
 					cstrncpy(hfs_ent->name, &name[1],
 						MIN(name[0], HFS_MAX_FLEN));
 				} else {
@@ -1207,16 +1241,16 @@ get_dbl_info(hname, dname, s_entry, ret)
 							HFS_MAX_FLEN);
 				}
 			} else {
-				hstrncpy((unsigned char *) (hfs_ent->name),
+				hstrncpy((unsigned char *)(hfs_ent->name),
 							dname, HFS_MAX_FLEN);
 			}
 		}
 	} else {
 		/* failed to open/read finderinfo */
 		fail = 1;
-		if (fp)
-			fclose(fp);
 	}
+	if (fp)
+		fclose(fp);
 
 	if (fail) {
 		/* problem with the file - try mapping/magic */
@@ -1235,7 +1269,7 @@ get_dbl_info(hname, dname, s_entry, ret)
  *
  *	Based on code from cvt2cap.c (c) May 1988, Paul Campbell
  */
-static int
+LOCAL int
 get_sgl_info(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -1244,7 +1278,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 {
 	FileInfo	*info = 0;	/* finderinfo struct */
 	a_hdr		*hp;
-	static a_entry	*entries;
+static	a_entry		*entries;
 	a_entry		*ep;
 	int		nentries;
 	hfsdirent	*hfs_ent;
@@ -1272,7 +1306,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 			return (TYPE_NONE);
 
 		/* check we have TOC for the AppleSingle file */
-		nentries = (int) d_getw(hp->nentries);
+		nentries = (int)d_getw(hp->nentries);
 		if (p_num < (int)(A_HDR_SIZE + nentries * A_ENTRY_SIZE))
 			return (TYPE_NONE);
 
@@ -1290,7 +1324,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 
 		hfs_ent = s_entry->hfs_ent;
 
-		nentries = (int) d_getw(hp->nentries);
+		nentries = (int)d_getw(hp->nentries);
 		ver = d_getl(hp->version);
 
 		/* extract what is needed */
@@ -1298,7 +1332,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 			switch ((int)d_getl(ep->id)) {
 			case ID_FINDER:
 				/* get the finder info */
-				info = (FileInfo *) (p_buf + d_getl(ep->offset));
+				info = (FileInfo *)(p_buf + d_getl(ep->offset));
 				break;
 			case ID_DATA:
 				/* set the offset and correct data fork size */
@@ -1306,7 +1340,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 							d_getl(ep->length);
 				/* offset to start of real data fork */
 				s_entry->hfs_off = d_getl(ep->offset);
-				set_733((char *) s_entry->isorec.size,
+				set_733((char *)s_entry->isorec.size,
 								s_entry->size);
 				break;
 			case ID_RESOURCE:
@@ -1315,7 +1349,7 @@ get_sgl_info(hname, dname, s_entry, ret)
 							d_getl(ep->length);
 				/* offset to start of real rsrc fork */
 				s_entry1->hfs_off = d_getl(ep->offset);
-				set_733((char *) s_entry1->isorec.size,
+				set_733((char *)s_entry1->isorec.size,
 								s_entry1->size);
 				break;
 			case ID_NAME:
@@ -1374,14 +1408,14 @@ get_sgl_info(hname, dname, s_entry, ret)
 			 * format - first char is the length, the rest is the
 			 * actual string. The following *should* be OK
 			 */
-			if (len == 32 && (int) name[0] < 32) {
+			if (len == 32 && (int)name[0] < 32) {
 				cstrncpy(hfs_ent->name, &name[1], MIN(name[0],
 								HFS_MAX_FLEN));
 			} else {
 				cstrncpy(hfs_ent->name, name, HFS_MAX_FLEN);
 			}
 		} else {
-			hstrncpy((unsigned char *) (hfs_ent->name), dname,
+			hstrncpy((unsigned char *)(hfs_ent->name), dname,
 								HFS_MAX_FLEN);
 		}
 	}
@@ -1401,7 +1435,7 @@ get_sgl_info(hname, dname, s_entry, ret)
  *	Only tested with PC Exchange v2.1 - don't know if it will work
  *	with v2.2 and above.
  */
-static struct hfs_info *
+LOCAL struct hfs_info *
 get_hfs_fe_info(hfs_info, name)
 	struct hfs_info	*hfs_info;
 	char		*name;
@@ -1418,9 +1452,6 @@ get_hfs_fe_info(hfs_info, name)
 			*k;
 	int		i;
 
-	if ((fp = fopen(name, "rb")) == NULL)
-		return (NULL);
-
 	/*
 	 * no longer attempt to find out FAT cluster
 	 * - rely on command line parameter
@@ -1430,6 +1461,9 @@ get_hfs_fe_info(hfs_info, name)
 
 	fe_num = afe_size / FE_SIZE;
 	fe_pad = afe_size % FE_SIZE;
+
+	if ((fp = fopen(name, "rb")) == NULL)
+		return (NULL);
 
 	while (fread(&info, 1, FE_SIZE, fp) != 0) {
 
@@ -1446,13 +1480,13 @@ get_hfs_fe_info(hfs_info, name)
 			 * get the bits we need
 			 * - ignore [cm]time for the moment
 			 */
-			cstrncpy(hfs_info->name, (char *) (info.name),
+			cstrncpy(hfs_info->name, (char *)(info.name),
 					info.nlen);
 
 			memcpy(hfs_info->finderinfo, info.finderinfo, INFOLEN);
 
-			s = (char *) (info.sname);
-			e = (char *) (info.ext);
+			s = (char *)(info.sname);
+			e = (char *)(info.ext);
 			k = keyname;
 
 			/*
@@ -1469,7 +1503,7 @@ get_hfs_fe_info(hfs_info, name)
 			}
 
 			/* extension - if it exists */
-			if (strncmp((const char *) (info.ext), "   ", 3)) {
+			if (strncmp((const char *)(info.ext), "   ", 3)) {
 				*k = '.';
 				k++;
 				for (i = 0; i < 3; i++, e++, k++) {
@@ -1481,7 +1515,7 @@ get_hfs_fe_info(hfs_info, name)
 			}
 			*k = '\0';
 
-			hfs_info1->keyname = strdup(keyname);
+			hfs_info1->keyname = e_strdup(keyname);
 		}
 		/*
 		 * each record is FE_SIZE long, and there are FE_NUM
@@ -1502,7 +1536,7 @@ get_hfs_fe_info(hfs_info, name)
  *		directory - saves on reading this many times for each
  *		file.
  */
-static struct hfs_info *
+LOCAL struct hfs_info *
 get_hfs_sgi_info(hfs_info, name)
 	struct hfs_info	*hfs_info;
 	char		*name;
@@ -1538,7 +1572,7 @@ get_hfs_sgi_info(hfs_info, name)
 /*
  *	del_hfs_info: delete the info list and recover memory
  */
-void
+EXPORT void
 del_hfs_info(hfs_info)
 	struct hfs_info	*hfs_info;
 {
@@ -1560,7 +1594,7 @@ del_hfs_info(hfs_info)
  *	match_key: find the correct hfs_ent using the Unix filename
  *		as the key
  */
-static struct hfs_info *
+LOCAL struct hfs_info *
 match_key(hfs_info, key)
 	struct hfs_info	*hfs_info;
 	char		*key;
@@ -1580,7 +1614,7 @@ match_key(hfs_info, key)
  *
  *	base on probing with od ...
  */
-static int
+LOCAL int
 get_fe_dir(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -1622,7 +1656,7 @@ get_fe_dir(hname, dname, s_entry, ret)
  *	base on probing with od and details from Mark Weinstein
  *	<mrwesq@earthlink.net>
  */
-static int
+LOCAL int
 get_fe_info(hname, dname, s_entry, ret)
 	char	*hname;		/* whole path */
 	char	*dname;		/* this dir name */
@@ -1690,7 +1724,7 @@ get_fe_info(hname, dname, s_entry, ret)
  *
  *	base on probing with od ...
  */
-static int
+LOCAL int
 get_sgi_dir(hname, dname, s_entry, ret)
 	char	*hname;		/* whole path */
 	char	*dname;		/* this dir name */
@@ -1733,7 +1767,7 @@ get_sgi_dir(hname, dname, s_entry, ret)
  *
  *	base on probing with od ...
  */
-static int
+LOCAL int
 get_sgi_info(hname, dname, s_entry, ret)
 	char	*hname;		/* whole path */
 	char	*dname;		/* this dir name */
@@ -1783,10 +1817,10 @@ get_sgi_info(hname, dname, s_entry, ret)
  *	get_sfm_info:	get SFM finderinfo for a file
  */
 
-static byte	sfm_magic[4] = {0x41, 0x46, 0x50, 0x00};
-static byte	sfm_version[4] = {0x00, 0x00, 0x01, 0x00};
+LOCAL	byte	sfm_magic[4] = {0x41, 0x46, 0x50, 0x00};
+LOCAL	byte	sfm_version[4] = {0x00, 0x00, 0x01, 0x00};
 
-static int
+LOCAL int
 get_sfm_info(hname, dname, s_entry, ret)
 	char	*hname;		/* whole path */
 	char	*dname;		/* this dir name */
@@ -1832,8 +1866,12 @@ get_sfm_info(hname, dname, s_entry, ret)
  *	we have to use a system call to get the finderinfo
  *
  *	The file name here is the pseudo name for the resource fork
+ *
+ *	Notes from HELIOS: we will not use the pseudo name here,
+ *	otherwise we will get the info for the resource file
+ *	instead of info for the data file.
  */
-static int
+LOCAL int
 get_xhfs_dir(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -1847,11 +1885,13 @@ get_xhfs_dir(hname, dname, s_entry, ret)
 	int		i;
 
 	memset(&attrs, 0, sizeof (attrs));
+	memset(&ainfo, 0, sizeof (ainfo));
 
 	/* set flags we need to get info from getattrlist() */
 	attrs.bitmapcount = ATTR_BIT_MAP_COUNT;
 	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME |
 				ATTR_CMN_FNDRINFO;
+	attrs.commonattr  |= ATTR_CMN_OBJID;		/* Helios add */
 
 	/* get the info */
 	err = getattrlist(hname, &attrs, &ainfo, sizeof (ainfo), 0);
@@ -1868,6 +1908,7 @@ get_xhfs_dir(hname, dname, s_entry, ret)
 				break;
 			}
 		}
+		err = 0;	/* HELIOS: don't do any afpfile mapping */
 	}
 
 	/* check finder info is OK */
@@ -1898,8 +1939,12 @@ get_xhfs_dir(hname, dname, s_entry, ret)
  *	we have to use a system call to get the finderinfo
  *
  *	The file name here is the pseudo name for the resource fork
+ *
+ *	Notes from HELIOS: we will not use the pseudo name here,
+ *	otherwise we will get the info for the resource file
+ *	instead of info for the data file.
  */
-static int
+LOCAL int
 get_xhfs_info(hname, dname, s_entry, ret)
 	char		*hname;		/* whole path */
 	char		*dname;		/* this dir name */
@@ -1911,17 +1956,26 @@ get_xhfs_info(hname, dname, s_entry, ret)
 	attrinfo	ainfo;
 	struct attrlist attrs;
 	int		i;
-	int		size;
+	char	tmphname[2048];	/* XXX is this sufficient with -find? */
+
+	strlcpy(tmphname, hname, sizeof (tmphname));
+	/*
+	 * delete the /..namedfork/rsrc
+	 */
+	tmphname[strlen(tmphname) - strlen(OSX_RES_FORK_SUFFIX)] = 0;
 
 	memset(&attrs, 0, sizeof (attrs));
+	memset(&ainfo, 0, sizeof (ainfo));
 
 	/* set flags we need to get info from getattrlist() */
 	attrs.bitmapcount = ATTR_BIT_MAP_COUNT;
 	attrs.commonattr  = ATTR_CMN_CRTIME | ATTR_CMN_MODTIME |
 				ATTR_CMN_FNDRINFO;
+	attrs.commonattr  |= ATTR_CMN_OBJID;		/* Helios add */
+	attrs.fileattr = ATTR_FILE_RSRCLENGTH;
 
 	/* get the info */
-	err = getattrlist(hname, &attrs, &ainfo, sizeof (ainfo), 0);
+	err = getattrlist(tmphname, &attrs, &ainfo, sizeof (ainfo), 0);
 
 	/* check finder info is OK */
 	if (err == 0) {
@@ -1942,6 +1996,8 @@ get_xhfs_info(hname, dname, s_entry, ret)
 				}
 			}
 		}
+
+		err = 0;	/* HELIOS: don't do any afpfile mapping */
 
 		if (err == 0) {
 
@@ -1977,7 +2033,7 @@ get_xhfs_info(hname, dname, s_entry, ret)
 				s_entry->whole_name, hfs_types[ret].desc);
 		}
 #endif
-		ret = get_none_info(hname, dname, s_entry, TYPE_NONE);
+		ret = get_none_info(tmphname, dname, s_entry, TYPE_NONE);
 	}
 
 	return (ret);
@@ -1987,7 +2043,7 @@ get_xhfs_info(hname, dname, s_entry, ret)
 /*
  *	get_hfs_itype: get the type of HFS info for a file
  */
-static int
+LOCAL int
 get_hfs_itype(wname, dname, htmp)
 	char	*wname;
 	char	*dname;
@@ -2044,7 +2100,7 @@ get_hfs_itype(wname, dname, htmp)
 /*
  *	set_root_info: set the root folder hfs_ent from given file
  */
-void
+EXPORT void
 set_root_info(name)
 	char	*name;
 {
@@ -2075,7 +2131,7 @@ set_root_info(name)
 /*
  *	get_hfs_dir: set the HFS directory name
  */
-int
+EXPORT int
 get_hfs_dir(wname, dname, s_entry)
 	char	*wname;
 	char	*dname;
@@ -2095,7 +2151,7 @@ get_hfs_dir(wname, dname, s_entry)
 /*
  *	get_hfs_info: set the HFS info for a file
  */
-int
+EXPORT int
 get_hfs_info(wname, dname, s_entry)
 	char	*wname;
 	char	*dname;
@@ -2168,7 +2224,7 @@ get_hfs_info(wname, dname, s_entry)
  *	fork exists - so testing the "filename/rsrc" pseudo file as
  *	the 'info' filename is OK ...
  */
-int
+EXPORT int
 get_hfs_rname(wname, dname, rname)
 	char	*wname;
 	char	*dname;
@@ -2242,11 +2298,12 @@ get_hfs_rname(wname, dname, rname)
 						close(p_fd);
 						return (TYPE_NONE);
 					}
-					/* get file pointer and close file */
+					/* get file pointer file */
 					p_fp = fdopen(p_fd, "rb");
-					close(p_fd);
-					if (p_fp == NULL)
+					if (p_fp == NULL) {
+						close(p_fd);
 						return (TYPE_NONE);
+					}
 				}
 			}
 			/*
@@ -2278,7 +2335,7 @@ get_hfs_rname(wname, dname, rname)
  *		     information that we want to exclude from the tree.
  *		     These files/directories are processed later ...
  */
-int
+EXPORT int
 hfs_exclude(d_name)
 	char	*d_name;
 {
@@ -2406,10 +2463,167 @@ hfs_exclude(d_name)
 }
 
 /*
+ *	is_pathcomponent: Check if <compare> is a path component of
+ *		<path>. Return 1 if yes and 0 otherwise.
+ */
+LOCAL int
+is_pathcomponent(path, compare)
+	char	*path;
+	char	*compare;
+{
+	char	*p, *q;
+	char	*r = path;
+
+	while ((p = strstr(r, compare)) != NULL) {
+		q = p + strlen(compare);
+		if ((*q == 0 || *q == '/') && (p == r || *(p - 1) == '/'))
+			return (1);
+		r = q;
+	}
+	return (0);
+}
+
+/*
+ *	hfs_excludepath: file/directory names that hold finder/resource
+ *		     information that we want to exclude from the tree.
+ *		     These files/directories are processed later ...
+ */
+EXPORT int
+hfs_excludepath(path)
+	char	*path;
+{
+	/* do not add the following to our list of dir entries */
+	if (DO_CAP & hselect) {
+		/* CAP */
+		if (is_pathcomponent(path, ".finderinfo"))
+			return (1);
+		if (is_pathcomponent(path, ".resource"))
+			return (1);
+		if (is_pathcomponent(path, ".ADeskTop"))
+			return (1);
+		if (is_pathcomponent(path, ".IDeskTop"))
+			return (1);
+		if (is_pathcomponent(path, "Network Trash Folder"))
+			return (1);
+		/*
+		 * special case when HFS volume is mounted using Linux's hfs_fs
+		 * Brad Midgley <brad@pht.com>
+		 */
+		if (is_pathcomponent(path, ".rootinfo"))
+			return (1);
+	}
+	if ((DO_ESH & hselect)) {
+		/* Helios EtherShare files */
+		if (is_pathcomponent(path, ".rsrc"))
+			return (1);
+		if (is_pathcomponent(path, ".Desktop"))
+			return (1);
+		if (is_pathcomponent(path, ".DeskServer"))
+			return (1);
+		if (is_pathcomponent(path, ".Label"))
+			return (1);
+	}
+	if (DO_DBL & hselect) {
+	/* Apple Double */
+		/*
+		 * special case when HFS volume is mounted using Linux's hfs_fs
+		 */
+		if (is_pathcomponent(path, "%RootInfo"))
+			return (1);
+		/*
+		 * have to be careful here - a filename starting with '%'
+		 * may be vaild if the next two letters are a hex character -
+		 * unfortunately '%' 'digit' 'digit' may be a valid resource
+		 * file name ...
+		 */
+		/* todo!! */
+		if (*path == '%')
+			if (hex2char(path) == 0)
+				return (1);
+	}
+	if (DO_NETA & hselect) {
+		if (is_pathcomponent(path, ".AppleDouble"))
+			return (1);
+		if (is_pathcomponent(path, ".AppleDesktop"))
+			return (1);
+	}
+	if ((DO_FEU & hselect) || (DO_FEL & hselect)) {
+		/* PC Exchange */
+		if (is_pathcomponent(path, "RESOURCE.FRK"))
+			return (1);
+		if (is_pathcomponent(path, "FINDER.DAT"))
+			return (1);
+		if (is_pathcomponent(path, "DESKTOP"))
+			return (1);
+		if (is_pathcomponent(path, "FILEID.DAT"))
+			return (1);
+		if (is_pathcomponent(path, "resource.frk"))
+			return (1);
+		if (is_pathcomponent(path, "finder.dat"))
+			return (1);
+		if (is_pathcomponent(path, "desktop"))
+			return (1);
+		if (is_pathcomponent(path, "fileid.dat"))
+			return (1);
+	}
+	if (DO_SGI & hselect) {
+		/* SGI */
+		if (is_pathcomponent(path, ".HSResource"))
+			return (1);
+		if (is_pathcomponent(path, ".HSancillary"))
+			return (1);
+	}
+	if (DO_DAVE & hselect) {
+		/* DAVE */
+		if (is_pathcomponent(path, "resource.frk"))
+			return (1);
+		if (is_pathcomponent(path, "DesktopFolderDB"))
+			return (1);
+	}
+#ifndef _WIN32
+	/*
+	 * NTFS streams are not "seen" as files,
+	 * so WinNT will not see these files -
+	 * so ignore - used for testing under Unix
+	 */
+	/* todo!! */
+	if (DO_SFM & hselect) {
+		/* SFM */
+		if (is_pathcomponent(path, ":Afp_Resource"))
+			return (1);
+		if (is_pathcomponent(path, ":Comments"))
+			return (1);
+		if (is_pathcomponent(path, ":Afp_AfpInfo"))
+			return (1);
+	}
+#endif	/* _WIN32 */
+
+	if (DO_XDBL & hselect) {
+		char	*p;
+		char	*r = path;
+		char	*compare = "._";
+		/* XDB */
+		while ((p = strstr(r, compare)) != NULL) {
+			if (p == r) {
+				if (*(p + strlen(compare)) != 0) {
+					return (1);
+				}
+			} else if (*(p - 1) == '/' && *(p + strlen(compare)) != 0) {
+				return (1);
+			}
+			r += strlen(compare);
+		}
+	}
+
+	return (0);
+}
+
+
+/*
  *	print_hfs_info: print info about the HFS files.
  *
  */
-void
+EXPORT void
 print_hfs_info(s_entry)
 	dir_ent	*s_entry;
 {
@@ -2417,20 +2631,78 @@ print_hfs_info(s_entry)
 	fprintf(stderr, "\tFile type: %s\n", hfs_types[s_entry->hfs_type].desc);
 	fprintf(stderr, "\tHFS Name: %s\n", s_entry->hfs_ent->name);
 	fprintf(stderr, "\tISO Name: %s\n", s_entry->isorec.name);
-	fprintf(stderr, "\tCREATOR: %s\n", s_entry->hfs_ent->u.file.creator);
-	fprintf(stderr, "\tTYPE:	%s\n", s_entry->hfs_ent->u.file.type);
+	fprintf(stderr, "\tCREATOR: '%s'\n", s_entry->hfs_ent->u.file.creator);
+	fprintf(stderr, "\tTYPE:	'%s'\n", s_entry->hfs_ent->u.file.type);
+	fprintf(stderr, "\tFlags:	 %d\n", s_entry->hfs_ent->fdflags);
+	fprintf(stderr, "\tISO-Size: %ld\n", (long)get_733(s_entry->isorec.size));
+	fprintf(stderr, "\tSize:     %llu\n", (Llong)s_entry->size);
+	fprintf(stderr, "\tExtent:	 %ld\n", (long)get_733(s_entry->isorec.extent));
+	if (s_entry->assoc) {
+		fprintf(stderr, "\tResource Name: %s\n", s_entry->assoc->whole_name);
+		fprintf(stderr, "\t\tISO-Size:	%ld\n", (long)get_733(s_entry->assoc->isorec.size));
+		fprintf(stderr, "\t\tSize:     %llu\n", (Llong)s_entry->assoc->size);
+		fprintf(stderr, "\t\tExtent:	%ld\n", (long)get_733(s_entry->assoc->isorec.extent));
+	}
 }
 
+/* test if passed file is a resource file */
+EXPORT int
+file_is_resource(fname, hfstype)
+	char	*fname;
+	int	hfstype;
+{
+	char	compare[2048];
+
+	switch (hfstype) {
+	case TYPE_NONE:
+	case TYPE_MBIN:
+	case TYPE_SGL:
+		break;
+	case TYPE_XHFS:
+		strlcpy(compare, hfs_types[hfstype].rsrc, sizeof (compare));
+		if (strlen(fname) > strlen(compare)) {
+			if (strcmp(&fname[strlen(fname) - strlen(compare)], compare) == 0) {
+				return (1);
+			}
+		}
+		break;
+	case TYPE_DAVE:
+	case TYPE_SGI:
+	case TYPE_FEL:
+	case TYPE_FEU:
+	case TYPE_ESH:
+	case TYPE_NETA:
+	case TYPE_CAP:
+		strcpy(compare, "/");
+		strcat(compare, hfs_types[hfstype].rsrc);
+		if (strstr(fname, compare) != NULL) {
+			return (1);
+		}
+		break;
+	case TYPE_XDBL:
+	case TYPE_SFM:
+	case TYPE_DBL:
+		strcpy(compare, "/");
+		strcat(compare, hfs_types[hfstype].rsrc);
+		if (strstr(fname, compare) != NULL) {
+			return (1);
+		}
+		break;
+	default:
+		break;
+	}
+	return (0);
+}
 
 /*
  *	hfs_init: sets up the mapping list from the afpfile as well
  *		 the default mapping (with or without) an afpfile
  */
 #ifdef	PROTOTYPES
-void
+EXPORT void
 hfs_init(char *name, Ushort fdflags, Uint hfs_select)
 #else
-void
+EXPORT void
 hfs_init(name, fdflags, hfs_select)
 	char	*name;		/* afpfile name */
 	Ushort	fdflags;	/* default finder flags */
@@ -2551,8 +2823,7 @@ hfs_init(name, fdflags, hfs_select)
 			continue;
 		}
 		/* copy the extension found */
-		if ((amap->extn = (char *) strdup(tmp)) == NULL)
-			perr("not enough memory");
+		amap->extn = e_strdup(tmp);
 
 		/* set end-of-string */
 		*(t + 4) = *(c + 4) = '\0';
@@ -2578,6 +2849,7 @@ hfs_init(name, fdflags, hfs_select)
 		map[map_num++] = amap;
 
 	}
+	fclose(fp);
 
 	/* free up some memory */
 	if (map_num != count) {
@@ -2590,7 +2862,7 @@ hfs_init(name, fdflags, hfs_select)
 /*
  *	map_ext: map a files extension with the list to get type/creator
  */
-static void
+LOCAL void
 map_ext(name, type, creator, fdflags, whole_name)
 	char	*name;		/* filename */
 	char	**type;		/* set type */
@@ -2673,7 +2945,7 @@ map_ext(name, type, creator, fdflags, whole_name)
 	}
 }
 
-void
+EXPORT void
 delete_rsrc_ent(s_entry)
 	dir_ent	*s_entry;
 {
@@ -2691,7 +2963,7 @@ delete_rsrc_ent(s_entry)
 	free(s_entry1);
 }
 
-void
+EXPORT void
 clean_hfs()
 {
 	if (map)
@@ -2706,19 +2978,103 @@ clean_hfs()
 
 #endif	/* APPLE_HYB */
 
-void
+/*
+ * We are in hope that errno is set up by libhfs_iso if there
+ * is no system error code.
+ */
+EXPORT void
 perr(a)
 	char	*a;
 {
-#ifdef	USE_LIBSCHILY
 	if (a)
 		comerr("%s\n", a);
 	else
 		comerr("<no error message given>\n");
-#else
-	if (a)
-		fprintf(stderr, "mkhybrid: %s\n", a);
-	perror("mkhybrid");
-	exit(1);
-#endif
 }
+
+#ifndef APPLE_HFS_HYB
+
+/*
+ * Convert 2 bytes in big-endian format into local host format
+ */
+EXPORT short
+d_getw(p)
+	Uchar	*p;
+{
+	return ((short)((p[0] << 8) | p[1]));
+}
+
+/*
+ * Convert 4 bytes in big-endian format into local host format
+ */
+EXPORT long
+d_getl(p)
+	Uchar	*p;
+{
+	return ((long)((p[0] << 24) | (p[1] << 16) | (p[2] <<  8) | p[3]));
+}
+
+/*
+ *	Apple v1 strores dates beginnign with 1st Jan 1904
+ *	Apple v2 strores dates beginnign with 1st Jan 2000
+ */
+#define	V2TDIFF 946684800L	/* 30 years (1970 .. 2000)	*/
+#define	V1TDIFF	2082844800L	/* 66 years (1904 .. 1970)	*/
+#define	TZNONE	0x0F0F0F0F	/* no valid time		*/
+
+LOCAL unsigned long tzdiff = TZNONE;
+
+/*
+ * Calculate the timezone difference between local time and UTC
+ */
+LOCAL void
+inittzdiff()
+{
+	time_t		now;
+	struct tm	tm;
+	struct tm	*lmp;
+	struct tm	*gmp;
+
+	time(&now);
+	lmp = localtime(&now);
+	gmp = gmtime(&now);
+
+	tzdiff = 0;
+	if (lmp && gmp) {
+		tm = *gmp;
+		tm.tm_isdst = lmp->tm_isdst;
+
+		tzdiff = now - mktime(&tm);
+	}
+}
+
+/*
+ * Convert Macintosh time to UNIX time
+ */
+EXPORT unsigned long
+d_toutime(secs)
+	unsigned long	secs;
+{
+	time_t utime = secs;
+
+	if (tzdiff == TZNONE)
+		inittzdiff();
+
+	return (utime - V1TDIFF - tzdiff);
+}
+
+/*
+ * Convert Apple Double v2 time to UNIX time
+ */
+EXPORT unsigned long
+d_dtoutime(secs)
+	long		secs;
+{
+	time_t utime = secs;
+
+	if (tzdiff == TZNONE)
+		inittzdiff();
+
+	return (utime + V2TDIFF - tzdiff);
+}
+#endif	/* !APPLE_HFS_HYB */

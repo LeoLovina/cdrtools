@@ -1,25 +1,18 @@
-/* @(#)cdda_paranoia.h	1.20 04/02/20 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)cdda_paranoia.h	1.27 09/11/07 J. Schilling from cdparanoia-III-alpha9.8 */
 /*
- *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
- */
-/*
- * CopyPolicy: GNU Public License 2 applies
- * Copyright (C) by Monty (xiphmont@mit.edu)
- *
+ * CopyPolicy: GNU Lesser General Public License v2.1 applies
+ * Copyright (C) 1997-2001,2008 by Monty (xiphmont@mit.edu)
+ * Copyright (C) 2002-2008 by J. Schilling
  */
 
 #ifndef	_CDROM_PARANOIA_H
 #define	_CDROM_PARANOIA_H
 
-#ifndef _MCONFIG_H
-#include <mconfig.h>
+#ifndef _SCHILY_MCONFIG_H
+#include <schily/mconfig.h>
 #endif
-#ifndef _UTYPES_H
-#include <utypes.h>
-#endif
-
-#ifndef	__GNUC__
-#define	inline
+#ifndef _SCHILY_UTYPES_H
+#include <schily/utypes.h>
 #endif
 
 #define	CD_FRAMESIZE_RAW		2352
@@ -41,6 +34,7 @@
 #define	PARANOIA_CB_FIXUP_DROPPED	10	/* Fixed dropped bytes */
 #define	PARANOIA_CB_FIXUP_DUPED		11	/* Fixed duplicate bytes */
 #define	PARANOIA_CB_READERR		12	/* Hard read error */
+#define	PARANOIA_CB_CACHEERR		13	/* Cache seek positional error */
 
 /*
  * Cdparanoia modes to be set with paranoia_modeset()
@@ -63,7 +57,18 @@ typedef	void    cdrom_paranoia;
 /*
  * The interface from libcdparanoia to the high level caller
  */
-extern cdrom_paranoia	*paranoia_init	__PR((void * d, int nsectors));
+extern cdrom_paranoia *paranoia_init	__PR((void * d, int nsectors,
+			long	(*d_read)	__PR((void *d, void *buffer,
+							long beginsector,
+							long sectors)),
+			long	(*d_disc_firstsector)	__PR((void *d)),
+			long	(*d_disc_lastsector)	__PR((void *d)),
+			int	(*d_tracks)		__PR((void *d)),
+			long	(*d_track_firstsector) __PR((void *d, int track)),
+			long	(*d_track_lastsector)  __PR((void *d, int track)),
+			int 	(*d_sector_gettrack) __PR((void *d, long sector)),
+			int 	(*d_track_audiop) __PR((void *d, int track))));
+
 extern void	paranoia_dynoverlapset	__PR((cdrom_paranoia * p,
 							int minoverlap,
 							int maxoverlap));
@@ -75,20 +80,10 @@ extern void	paranoia_free		__PR((cdrom_paranoia * p));
 extern void	paranoia_overlapset	__PR((cdrom_paranoia * p, long overlap));
 
 #ifndef	HAVE_MEMMOVE
+#ifndef _SCHILY_SCHILY_H
+#include <schily/schily.h>
+#endif
 #define	memmove(dst, src, size)		movebytes((src), (dst), (size))
 #endif
-
-
-/*
- * The callback interface from libparanoia to the CD-ROM interface
- */
-extern long	cdda_disc_firstsector	__PR((void *d));		/* -> long sector */
-extern long	cdda_disc_lastsector	__PR((void *d));		/* -> long sector */
-extern long	cdda_read		__PR((void *d, void *buffer, long beginsector, long sectors));	/* -> long sectors */
-extern int	cdda_sector_gettrack	__PR((void *d, long sector));	/* -> int trackno */
-extern int	cdda_track_audiop	__PR((void *d, int track));	/* -> int Is audiotrack */
-extern long	cdda_track_firstsector	__PR((void *d, int track));	/* -> long sector */
-extern long	cdda_track_lastsector	__PR((void *d, int track));	/* -> long sector */
-extern int	cdda_tracks		__PR((void *d));		/* -> int tracks */
 
 #endif	/* _CDROM_PARANOIA_H */

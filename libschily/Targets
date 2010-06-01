@@ -1,6 +1,8 @@
+# @(#)Targets	1.19 10/05/08 Copyright 1995 J. Schilling
+
 CFILES_STDIO=	cvmod.c dat.c fcons.c fdown.c fdup.c \
 		ffileread.c ffilewrite.c \
-		fgetline.c fgetstr.c file_raise.c \
+		fgetline.c fgetstr.c file_getraise.c file_raise.c \
 		fileclose.c fileluopen.c fileopen.c filemopen.c \
 		filepos.c fileread.c filereopen.c fileseek.c filesize.c \
 		filestat.c filewrite.c flag.c flush.c fpipe.c \
@@ -14,22 +16,45 @@ CFILES_STDIO=	cvmod.c dat.c fcons.c fdown.c fdup.c \
 # Otherwise getfp.o would be made as dependency of avoffset
 #
 
-CFILES_REST=	astoi.c astoll.c breakline.c \
-		comerr.c cmpbytes.c cmpnullbytes.c \
-		error.c \
+CFILES_REST=	astoi.c astoll.c astoull.c basename.c breakline.c \
+		checkerr.c comerr.c fcomerr.c cmpbytes.c cmpnullbytes.c \
+		dirname.c \
+		eaccess.c error.c \
 		fconv.c fexec.c fillbytes.c \
-		findbytes.c findline.c format.c \
+		findinpath.c \
+		findbytes.c findline.c fnmatch.c format.c \
+		fstream.c \
 		getargs.c getav0.c geterrno.c getfp.c \
 		getdomainname.c gethostid.c gethostname.c getpagesize.c \
+		getnum.c getxnum.c \
+		gettnum.c getxtnum.c \
+		getperm.c \
+		gettimeofday.c \
 		handlecond.c \
 		jsprintf.c jssnprintf.c jssprintf.c \
-		match.c matchl.c movebytes.c \
-		printf.c \
+		match.c matchl.c matchw.c matchwl.c movebytes.c \
+		mem.c jmem.c fjmem.c \
 		raisecond.c rename.c \
 		saveargs.c serrmsg.c seterrno.c setfp.c \
-		snprintf.c spawn.c \
-		sprintf.c strcatl.c strdup.c streql.c \
+		sleep.c \
+		snprintf.c \
+		spawn.c \
+		strcat.c strcatl.c strchr.c strcmp.c strcpy.c \
+		strdup.c streql.c strlen.c strlcat.c strlcpy.c strncat.c strncmp.c \
+		strncpy.c strndup.c strnlen.c strrchr.c \
 		swabbytes.c \
-		usleep.c
+		usleep.c \
+		wcscat.c wcscatl.c wcschr.c wcscmp.c wcscpy.c \
+		wcsdup.c wcseql.c wcslen.c wcslcat.c wcslcpy.c wcsncat.c wcsncmp.c \
+		wcsncpy.c wcsndup.c wcsnlen.c wcsrchr.c
+
+#
+# These interfaces have been moved to libschilypr in order to make
+# programs that use libschily compatible with all software.
+#
+# printf.c snprintf.c sprintf.c 
+#
+# snprintf.c however is needed for portability on systems
+# that do not provide snprintf()
 
 CFILES=		$(CFILES_STDIO) $(CFILES_REST)

@@ -1,7 +1,8 @@
-/* @(#)hash.c	1.18 04/06/18 joerg */
+/* @(#)hash.c	1.27 09/11/25 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)hash.c	1.18 04/06/18 joerg";
+static	UConst char sccsid[] =
+	"@(#)hash.c	1.27 09/11/25 joerg";
 
 #endif
 /*
@@ -10,7 +11,7 @@ static	char sccsid[] =
  * Written by Eric Youngdale (1993).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999,2000 J. Schilling
+ * Copyright (c) 1999,2000-2009 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,16 +47,18 @@ static	char sccsid[] =
  * allow to disable the mkisofs inode cache.
  */
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <schily.h>
+#include <schily/schily.h>
 
-#define	NR_HASH	1024
+#define	NR_HASH	(16*1024)
 
-#define	HASH_FN(DEV, INO)	((DEV + INO + (INO >> 2) + (INO << 8)) % NR_HASH)
+#define	HASH_FN(DEV, INO)	((DEV + INO  + (INO >> 8) + (INO << 16)) % NR_HASH)
 
-static struct file_hash *hash_table[NR_HASH] = {0, };
+static struct file_hash *hash_table[NR_HASH];
 
+#ifdef	HASH_DEBUG
+EXPORT	void		debug_hash	__PR((void));
+#endif
 EXPORT	void		add_hash	__PR((struct directory_entry *spnt));
 EXPORT	struct file_hash *find_hash	__PR((dev_t dev, ino_t inode));
 EXPORT	void		flush_hash	__PR((void));
@@ -68,6 +71,41 @@ LOCAL	BOOL		isoname_endsok	__PR((char *name));
 EXPORT	int		delete_file_hash __PR((struct directory_entry *de));
 EXPORT	void		flush_file_hash	__PR((void));
 
+#ifdef	HASH_DEBUG
+EXPORT void
+debug_hash()
+{
+	struct file_hash **p = hash_table;
+	int	i;
+	int	j = 0;
+	struct file_hash *p2;
+	int	k;
+	int	maxlen = 0;
+	int	minlen = 100000000;
+	int	tot = 0;
+
+	for (i = 0; i < NR_HASH; i++, p++) {
+		if (*p == 0)
+			j++;
+		else {
+			p2 = *p;
+			k = 0;
+			while (p2) {
+				tot++;
+				k++;
+				p2 = p2->next;
+			}
+			if (k > maxlen)
+				maxlen = k;
+			if (k < minlen)
+				minlen = k;
+		}
+	}
+	error("Unbenutzt: %d von %d Einträgen maxlen %d minlen %d total %d optmittel %d\n",
+		j, NR_HASH, maxlen, minlen, tot, tot/NR_HASH);
+}
+#endif
+
 EXPORT void
 add_hash(spnt)
 	struct directory_entry	*spnt;
@@ -76,23 +114,16 @@ add_hash(spnt)
 	unsigned int    hash_number;
 
 	if (spnt->size == 0 || spnt->starting_block == 0)
-		if (spnt->size != 0 || spnt->starting_block != 0) {
-#ifdef	USE_LIBSCHILY
+		if (spnt->size != 0 && spnt->starting_block == 0) {
 			comerrno(EX_BAD,
 			"Non zero-length file '%s' assigned zero extent.\n",
 							spnt->name);
-#else
-			fprintf(stderr,
-			"Non zero-length file '%s' assigned zero extent.\n",
-							spnt->name);
-			exit(1);
-#endif
 		};
 
 	if (!cache_inodes)
 		return;
-	if (spnt->dev == (dev_t) UNCACHED_DEVICE ||
-				spnt->inode == UNCACHED_INODE) {
+	if (spnt->dev == UNCACHED_DEVICE &&
+	    (spnt->inode == TABLE_INODE || spnt->inode == UNCACHED_INODE)) {
 		return;
 	}
 	hash_number = HASH_FN((unsigned int) spnt->dev,
@@ -102,10 +133,11 @@ add_hash(spnt)
 	if (verbose > 1)
 		fprintf(stderr, "%s ", spnt->name);
 #endif
-	s_hash = (struct file_hash *) e_malloc(sizeof (struct file_hash));
+	s_hash = (struct file_hash *)e_malloc(sizeof (struct file_hash));
 	s_hash->next = hash_table[hash_number];
 	s_hash->inode = spnt->inode;
 	s_hash->dev = spnt->dev;
+	s_hash->nlink = 0;
 	s_hash->starting_block = spnt->starting_block;
 	s_hash->size = spnt->size;
 #ifdef SORTING
@@ -129,7 +161,8 @@ find_hash(dev, inode)
 
 	if (!cache_inodes)
 		return (NULL);
-	if (dev == (dev_t) UNCACHED_DEVICE || inode == UNCACHED_INODE)
+	if (dev == UNCACHED_DEVICE &&
+	    (inode == TABLE_INODE || inode == UNCACHED_INODE))
 		return (NULL);
 
 	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
@@ -164,7 +197,7 @@ flush_hash()
 	}
 }
 
-static struct file_hash *directory_hash_table[NR_HASH] = {0, };
+static struct file_hash *directory_hash_table[NR_HASH];
 
 #ifdef	PROTOTYPES
 EXPORT void
@@ -181,15 +214,17 @@ add_directory_hash(dev, inode)
 
 	if (!cache_inodes)
 		return;
-	if (dev == (dev_t) UNCACHED_DEVICE || inode == UNCACHED_INODE)
+	if (dev == UNCACHED_DEVICE &&
+	    (inode == TABLE_INODE || inode == UNCACHED_INODE))
 		return;
 
 	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
 
-	s_hash = (struct file_hash *) e_malloc(sizeof (struct file_hash));
+	s_hash = (struct file_hash *)e_malloc(sizeof (struct file_hash));
 	s_hash->next = directory_hash_table[hash_number];
 	s_hash->inode = inode;
 	s_hash->dev = dev;
+	s_hash->nlink = 0;
 	directory_hash_table[hash_number] = s_hash;
 }
 
@@ -208,7 +243,8 @@ find_directory_hash(dev, inode)
 
 	if (!cache_inodes)
 		return (NULL);
-	if (dev == (dev_t) UNCACHED_DEVICE || inode == UNCACHED_INODE)
+	if (dev == UNCACHED_DEVICE &&
+	    (inode == TABLE_INODE || inode == UNCACHED_INODE))
 		return (NULL);
 
 	hash_number = HASH_FN((unsigned int) dev, (unsigned int) inode);
@@ -224,6 +260,7 @@ find_directory_hash(dev, inode)
 struct name_hash {
 	struct name_hash *next;
 	struct directory_entry *de;
+	int	sum;
 };
 
 #define	NR_NAME_HASH	128
@@ -251,7 +288,7 @@ name_hash(name)
 		if (*p == ';') {
 			break;
 		}
-		hash = (hash << 15) + (hash << 3) + (hash >> 3) + *p++;
+		hash = (hash << 15) + (hash << 3) + (hash >> 3) + (*p++ & 0xFF);
 	}
 	return (hash % NR_NAME_HASH);
 }
@@ -262,10 +299,18 @@ add_file_hash(de)
 {
 	struct name_hash	*new;
 	int			hash;
+	Uchar			*p;
+	int			sum = 0;
 
-	new = (struct name_hash *) e_malloc(sizeof (struct name_hash));
+	new = (struct name_hash *)e_malloc(sizeof (struct name_hash));
 	new->de = de;
 	new->next = NULL;
+	for (p = (Uchar *)de->isorec.name; *p; p++) {
+		if (*p == ';')
+			break;
+		sum += *p & 0xFF;
+	}
+	new->sum = sum;
 	hash = name_hash(de->isorec.name);
 
 	/* Now insert into the hash table */
@@ -280,11 +325,21 @@ find_file_hash(name)
 	register char			*p1;
 	register char			*p2;
 	register struct name_hash	*nh;
+	register int			sum = 0;
 
 	if (debug > 1)
 		error("find_hash('%s')\n", name);
 
+	for (p1 = name; *p1; p1++) {
+		if (*p1 == ';')
+			break;
+		sum += *p1 & 0xFF;
+	}
+
 	for (nh = name_hash_table[name_hash(name)]; nh; nh = nh->next) {
+		if (nh->sum != sum)
+			continue;
+
 		p1 = name;
 		p2 = nh->de->isorec.name;
 		if (debug > 1)
@@ -319,7 +374,6 @@ find_file_hash(name)
 				p2++;
 				continue;
 			}
-			
 		}
 
 		/*

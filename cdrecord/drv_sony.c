@@ -1,47 +1,44 @@
-/* @(#)drv_sony.c	1.70 04/03/02 Copyright 1997-2004 J. Schilling */
+/* @(#)drv_sony.c	1.87 10/02/03 Copyright 1997-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)drv_sony.c	1.70 04/03/02 Copyright 1997-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)drv_sony.c	1.87 10/02/03 Copyright 1997-2010 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
  *	Sony
  *
- *	Copyright (c) 1997-2004 J. Schilling
+ *	Copyright (c) 1997-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 /*#define	SONY_DEBUG*/
 
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>	/* Include sys/types.h to make off_t available */
-#include <standard.h>
-#include <fctldefs.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <timedefs.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>	/* Include sys/types.h to make off_t available */
+#include <schily/standard.h>
+#include <schily/fcntl.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/time.h>
 
-#include <utypes.h>
-#include <btorder.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
@@ -206,10 +203,14 @@ LOCAL	int	write_continue_sony	__PR((SCSI *scgp, caddr_t bp, long sectaddr, long 
 LOCAL	int	discontinue_sony	__PR((SCSI *scgp));
 LOCAL	int	write_track_sony	__PR((SCSI *scgp, long track, int sectype));
 LOCAL	int	close_track_sony	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
+#ifdef	__needed__
 LOCAL	int	flush_sony		__PR((SCSI *scgp, int track));
+#endif
 LOCAL	int	finalize_sony		__PR((SCSI *scgp, cdr_t *dp, track_t *trackp));
 LOCAL	int	recover_sony		__PR((SCSI *scgp, cdr_t *dp, int track));
+#ifdef	__needed__
 LOCAL	int	set_wr_parameter_sony	__PR((SCSI *scgp, caddr_t bp, int size));
+#endif
 LOCAL	int	next_wr_addr_sony	__PR((SCSI *scgp, track_t *trackp, long *ap));
 LOCAL	int	reserve_track_sony	__PR((SCSI *scgp, unsigned long len));
 LOCAL	int	init_sony		__PR((SCSI *scgp, cdr_t *dp));
@@ -234,8 +235,11 @@ LOCAL	void	print_sony_mp23		__PR((struct sony_924_mode_page_23 *xp, int len));
 LOCAL	int	buf_cap_sony		__PR((SCSI *scgp, long *, long *));
 
 cdr_t	cdr_sony_cdu924 = {
-	0, 0,
+	0, 0, 0,
 	CDR_TAO|CDR_SAO|CDR_CADDYLOAD|CDR_SWABAUDIO,
+	0,
+	CDR_CDRW_NONE,
+	WM_SAO,
 	2, 4,
 	"sony_cdu924",
 	"driver for Sony CDU-924 / CDU-948",
@@ -245,6 +249,7 @@ cdr_t	cdr_sony_cdu924 = {
 	sony_attach,
 	init_sony,
 	getdisktype_sony,
+	no_diskstatus,
 	scsi_load,
 	scsi_unload,
 	buf_cap_sony,
@@ -450,6 +455,7 @@ finalize_sony(scgp, dp, trackp)
 	return (0);
 }
 
+#ifdef	__needed__
 LOCAL int
 flush_sony(scgp, track)
 	SCSI	*scgp;
@@ -475,6 +481,7 @@ flush_sony(scgp, track)
 		return (-1);
 	return (0);
 }
+#endif
 
 LOCAL int
 recover_sony(scgp, dp, track)
@@ -499,6 +506,7 @@ recover_sony(scgp, dp, track)
 	return (0);
 }
 
+#ifdef	__needed__
 LOCAL int
 set_wr_parameter_sony(scgp, bp, size)
 	SCSI	*scgp;
@@ -523,6 +531,7 @@ set_wr_parameter_sony(scgp, bp, size)
 		return (-1);
 	return (0);
 }
+#endif
 
 LOCAL int
 next_wr_addr_sony(scgp, trackp, ap)
@@ -548,7 +557,7 @@ reserve_track_sony(scgp, len)
 	scmd->sense_len = CCS_SENSE_LEN;
 	scmd->cdb.g1_cdb.cmd = 0xF3;
 	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
-	i_to_4_byte(&scmd->cdb.g1_cdb.addr[3], len);
+	i_to_4_byte(&scmd->cdb.cmd_cdb[5], len);
 
 	scgp->cmdname = "reserve_track";
 
@@ -592,9 +601,9 @@ getdisktype_sony(scgp, dp)
 
 		if (xp->disk_appl_code[0] == 0xFF)
 			dummy = -1;
-	}
-	if (dummy < 0)
+	} else {
 		return (drive_getdisktype(scgp, dp));
+	}
 
 	if ((dp->cdr_dstat->ds_cdrflags & RF_PRATIP) != 0 && dummy >= 0) {
 
@@ -883,13 +892,22 @@ open_track_sony(scgp, dp, trackp)
 					(int)trackp->trackno,
 					trackp->trackstart-trackp->pregapsize);
 			}
-			/*
-			 * XXX Do we need to check isecsize too?
-			 */
-			pad_track(scgp, dp, trackp,
-				trackp->trackstart-trackp->pregapsize,
-				(Llong)trackp->pregapsize*trackp->secsize,
+			if (trackp->track == 1 && is_hidden(trackp)) {
+				pad_track(scgp, dp, trackp,
+					trackp->trackstart-trackp->pregapsize,
+					(Llong)(trackp->pregapsize-trackp->trackstart)*trackp->secsize,
 					FALSE, 0);
+				if (write_track_data(scgp, dp, track_base(trackp)) < 0)
+					return (-1);
+			} else {
+				/*
+				 * XXX Do we need to check isecsize too?
+				 */
+				pad_track(scgp, dp, trackp,
+					trackp->trackstart-trackp->pregapsize,
+					(Llong)trackp->pregapsize*trackp->secsize,
+					FALSE, 0);
+			}
 		}
 		return (0);
 	}

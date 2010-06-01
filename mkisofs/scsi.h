@@ -1,12 +1,11 @@
-/* @(#)scsi.h	1.1 04/05/27 Copyright 1997-2004 J. Schilling */
+/* @(#)scsi.h	1.2 06/10/08 Copyright 1997-2004 J. Schilling */
 /*
  *	Copyright (c) 1997-2004 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * it under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,7 +21,7 @@
 #define	_SCSI_H
 
 #ifdef	USE_SCG
-extern int	readsecs	__PR((int startsecno, void *buffer, int sectorcount));
+extern int	readsecs	__PR((UInt32_t startsecno, void *buffer, int sectorcount));
 extern int	scsidev_open	__PR((char *path));
 extern int	scsidev_close	__PR((void));
 #endif

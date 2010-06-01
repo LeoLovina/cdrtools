@@ -1,9 +1,8 @@
-#ident @(#)isoinfo.mk	1.5 04/06/01 
+#ident @(#)isoinfo.mk	1.14 09/11/19 
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
+# it under the terms of the GNU General Public License version 2
+# as published by the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,12 +24,21 @@ CPPOPTS +=	-DUSE_LIBSCHILY
 CPPOPTS +=	-DUSE_LARGEFILES
 CPPOPTS +=	-DUSE_SCG
 CPPOPTS +=	-I..
-CPPOPTS +=	-I../../cdrecord
+CPPOPTS +=	-I../../libscg
+CPPOPTS +=	-I../../libscgcmd
+CPPOPTS +=	-I../../libcdrdeflt
+CPPOPTS +=	-DSCHILY_PRINT
+CPPOPTS +=	-DUSE_NLS
+CPPOPTS +=	-DUSE_ICONV
+CPPOPTS +=	-DINS_BASE=\"${INS_BASE}\"
+
 CFILES=		isoinfo.c \
-		scsi.c scsi_cdr.c cd_misc.c modes.c \
-		defaults.c getnum.c
-LIBS=		-lunls -lrscg -lscg $(LIB_VOLMGT) -ldeflt -lschily $(SCSILIB) $(LIB_SOCKET)
-XMK_FILE=	Makefile.man
+		scsi.c
+
+LIBS=		-lsiconv -lscgcmd -lrscg -lscg $(LIB_VOLMGT) -lcdrdeflt -ldeflt -lschily \
+			$(SCSILIB) $(LIB_SOCKET) $(LIB_ICONV) $(LIB_INTL)
+
+XMK_FILE=	isoinfo_man.mk
 
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.cmd

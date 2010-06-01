@@ -1,7 +1,8 @@
-/* @(#)name.c	1.28 04/03/05 joerg */
+/* @(#)name.c	1.37 09/07/10 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)name.c	1.28 04/03/05 joerg";
+static	UConst char sccsid[] =
+	"@(#)name.c	1.37 09/07/10 joerg";
 
 #endif
 /*
@@ -13,7 +14,7 @@ static	char sccsid[] =
  * Almost totally rewritten by J. Schilling (2000).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999,2000 J. Schilling
+ * Copyright (c) 1999,2000-2009 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,11 +31,10 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <standard.h>
-#include <schily.h>
-#include <ctype.h>
+#include <schily/standard.h>
+#include <schily/schily.h>
+#include <schily/ctype.h>
 
 void	iso9660_check		__PR((struct iso_directory_record *idr,	struct directory_entry *ndr));
 int	iso9660_file_length	__PR((const char *name,
@@ -67,7 +67,7 @@ iso9660_check(idr, ndr)
 	if ((np = strrchr(ndr->isorec.name, ';')) != NULL) {
 		*np = '\0';		/* Strip off new version # */
 	}
-	if (strcmp(idr->name, ndr->isorec.name)) {
+	if (strcmp(idr->name, ndr->isorec.name) != 0) {
 		if (p)
 			*p = ';';	/* Restore old version # */
 		if (np)
@@ -124,7 +124,9 @@ iso9660_file_length(name, sresult, dirflag)
 	int		ochars_before_dot;
 	int		seen_dot = 0;
 	int		seen_semic = 0;
+#ifdef		Eric_code_does_not_work
 	int		tildes = 0;
+#endif
 
 	result = sresult->isorec.name;
 
@@ -350,7 +352,19 @@ iso9660_file_length(name, sresult, dirflag)
 					 * extension.
 					 */
 					if (iso9660_level >= 4) {
-						c = conv_charset(c, in_nls, out_nls);
+						size_t	flen = 1;
+						size_t	tlen = 1;
+
+						/*
+						 * XXX This currently only works for
+						 * XXX non iconv() based locales.
+						 */
+						if (in_nls->sic_cd2uni == NULL) {
+							conv_charset(
+							    (Uchar *)&c, &tlen,
+							    (Uchar *)&c, &flen,
+							    in_nls, out_nls);
+						}
 					} else {
 						c = '_';
 					}
@@ -478,6 +492,7 @@ iso9660_file_length(name, sresult, dirflag)
 	 * In case of name conflicts, this is what would end up being used as
 	 * the 'extension'.
 	 */
+#ifdef		Eric_code_does_not_work
 	if (tildes == 2) {
 		int	prio1 = 0;
 
@@ -494,6 +509,7 @@ iso9660_file_length(name, sresult, dirflag)
 		}
 		priority = prio1;
 	}
+#endif
 	/*
 	 * If this is not a directory, force a '.' in case we haven't seen one,
 	 * and add a version number if we haven't seen one of those either.

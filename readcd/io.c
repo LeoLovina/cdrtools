@@ -1,36 +1,35 @@
-/* @(#)io.c	1.19 98/10/10 Copyright 1988 J. Schilling */
+/* @(#)io.c	1.7 09/07/10 Copyright 1988-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)io.c	1.19 98/10/10 Copyright 1988 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)io.c	1.7 09/07/10 Copyright 1988-2009 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1988 J. Schilling
+ *	Copyright (c) 1988-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <standard.h>
-#include <vadefs.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <utypes.h>
-#include <schily.h>
-#include <ctype.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/varargs.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
+#include <schily/ctype.h>
+
+#include "iodefs.h"
 
 struct disk {
 	int	dummy;
@@ -47,9 +46,9 @@ extern	BOOL	getlong		__PR((char *, long *, long, long));
 extern	BOOL	getint		__PR((char *, int *, int, int));
 extern	BOOL	yes		__PR((char *, ...));
 
-LOCAL
-char *skipwhite(s)
-		 const char	*s;
+LOCAL char *
+skipwhite(s)
+		const char	*s;
 {
 	register const Uchar	*p = (const Uchar *)s;
 
@@ -62,8 +61,7 @@ char *skipwhite(s)
 }
 
 /* ARGSUSED */
-EXPORT
-BOOL
+EXPORT BOOL
 cvt_std(linep, lp, mini, maxi, dp)
 	char	*linep;
 	long	*lp;
@@ -121,8 +119,8 @@ prt_std(s, l, mini, maxi, dp)
 	printf("%s %ld (%ld - %ld)/<cr>:", s, l, mini, maxi);
 }
 
-EXPORT
-BOOL getvalue(s, lp, mini, maxi, prt, cvt, dp)
+EXPORT BOOL
+getvalue(s, lp, mini, maxi, prt, cvt, dp)
 	char	*s;
 	long	*lp;
 	long	mini;
@@ -134,7 +132,7 @@ BOOL getvalue(s, lp, mini, maxi, prt, cvt, dp)
 	char	line[128];
 	char	*linep;
 
-	for(;;) {
+	for (;;) {
 		(*prt)(s, *lp, mini, maxi, dp);
 		flush();
 		line[0] = '\0';
@@ -158,8 +156,8 @@ BOOL getvalue(s, lp, mini, maxi, prt, cvt, dp)
 	/* NOTREACHED */
 }
 
-EXPORT
-BOOL getlong(s, lp, mini, maxi)
+EXPORT BOOL
+getlong(s, lp, mini, maxi)
 	char	*s;
 	long	*lp;
 	long	mini;
@@ -168,8 +166,8 @@ BOOL getlong(s, lp, mini, maxi)
 	return (getvalue(s, lp, mini, maxi, prt_std, cvt_std, (void *)0));
 }
 
-EXPORT
-BOOL getint(s, ip, mini, maxi)
+EXPORT BOOL
+getint(s, ip, mini, maxi)
 	char	*s;
 	int	*ip;
 	int	mini;
@@ -185,10 +183,11 @@ BOOL getint(s, ip, mini, maxi)
 
 /* VARARGS1 */
 #ifdef	PROTOTYPES
-EXPORT BOOL yes(char *form, ...)
+EXPORT BOOL
+yes(char *form, ...)
 #else
-EXPORT
-BOOL yes(form, va_alist)
+EXPORT BOOL
+yes(form, va_alist)
 	char	*form;
 	va_dcl
 #endif
@@ -205,16 +204,16 @@ again:
 	printf("%r", form, args);
 	va_end(args);
 	flush();
-	if (getline(okbuf, sizeof(okbuf)) == EOF)
+	if (getline(okbuf, sizeof (okbuf)) == EOF)
 		exit(EX_BAD);
 	if (okbuf[0] == '?') {
 		printf("Enter 'y', 'Y', 'yes' or 'YES' if you agree with the previous asked question.\n");
 		printf("All other input will be handled as if the question has beed answered with 'no'.\n");
 		goto again;
 	}
-	if(streql(okbuf, "y") || streql(okbuf, "yes") ||
-	   streql(okbuf, "Y") || streql(okbuf, "YES"))
-		return(TRUE);
+	if (streql(okbuf, "y") || streql(okbuf, "yes") ||
+	    streql(okbuf, "Y") || streql(okbuf, "YES"))
+		return (TRUE);
 	else
-		return(FALSE);
+		return (FALSE);
 }

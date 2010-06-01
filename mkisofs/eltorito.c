@@ -1,7 +1,8 @@
-/* @(#)eltorito.c	1.32 04/05/23 joerg */
+/* @(#)eltorito.c	1.48 09/11/25 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)eltorito.c	1.32 04/05/23 joerg";
+static	UConst char sccsid[] =
+	"@(#)eltorito.c	1.48 09/11/25 joerg";
 
 #endif
 /*
@@ -11,7 +12,7 @@ static	char sccsid[] =
  *  Written by Michael Fulbright <msf@redhat.com> (1996).
  *
  * Copyright 1996 RedHat Software, Incorporated
- * Copyright (c) 1999-2004 J. Schilling
+ * Copyright (c) 1999-2009 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,51 +29,53 @@ static	char sccsid[] =
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <mconfig.h>
 #include "mkisofs.h"
-#include <fctldefs.h>
-#include <utypes.h>
-#include <intcvt.h>
+#include <schily/fcntl.h>
+#include <schily/utypes.h>
+#include <schily/intcvt.h>
 #include "match.h"
 #include "diskmbr.h"
 #include "bootinfo.h"
-#include <schily.h>
+#include <schily/schily.h>
 
 #undef MIN
 #define	MIN(a, b) (((a) < (b))? (a): (b))
 
-static struct eltorito_validation_entry valid_desc;
-static struct eltorito_boot_descriptor gboot_desc;
-static struct disk_master_boot_record disk_mbr;
-static unsigned int bcat_de_flags;
-
-	void	init_boot_catalog	__PR((const char *path));
-	void	insert_boot_cat		__PR((void));
-static	void	get_torito_desc		__PR((struct eltorito_boot_descriptor *boot_desc));
-static	void	fill_boot_desc		__PR((struct eltorito_defaultboot_entry *boot_desc_entry,
+EXPORT	void	init_boot_catalog	__PR((const char *path));
+EXPORT	void	insert_boot_cat		__PR((void));
+LOCAL	void	get_torito_desc		__PR((struct eltorito_boot_descriptor *boot_desc));
+LOCAL	void	fill_boot_desc		__PR((struct eltorito_defaultboot_entry *boot_desc_entry,
 						struct eltorito_boot_entry_info *boot_entry));
-	void	get_boot_entry		__PR((void));
-	void	new_boot_entry		__PR((void));
-static	int	tvd_write		__PR((FILE * outfile));
+EXPORT	void	get_boot_entry		__PR((void));
+EXPORT	int	new_boot_entry		__PR((void));
+EXPORT	void	ex_boot_enoent		__PR((char *msg, char *pname));
+LOCAL	int	tvd_write		__PR((FILE *outfile));
 
 
-LOCAL	char	*bootcat_path;		/* filename of boot catalog */
+LOCAL	struct eltorito_validation_entry valid_desc;
+LOCAL	struct eltorito_boot_descriptor	gboot_desc;
+LOCAL	struct disk_master_boot_record	disk_mbr;
+LOCAL	unsigned int			bcat_de_flags;
+LOCAL	char				*bootcat_path; /* name of bootcatalog */
+
 /*
  * Make sure any existing boot catalog is excluded
  */
-void
+EXPORT void
 init_boot_catalog(path)
 	const char	*path;
 {
 #ifdef	SORTING
-	struct eltorito_boot_entry_info * cbe;
+	struct eltorito_boot_entry_info	*cbe;
 
 	for (cbe = first_boot_entry;
 	    cbe != NULL;
 	    cbe = cbe->next) {
 		char	*p;
 
-		p = (char *) e_malloc(strlen(cbe->boot_image) + strlen(path) + 2);
+		if (cbe->boot_image == NULL)
+			comerrno(EX_BAD, "Missing boot image name, use -eltorito-boot option.\n");
+		p = (char *)e_malloc(strlen(cbe->boot_image) + strlen(path) + 2);
 		strcpy(p, path);
 		if (p[strlen(p) - 1] != '/') {
 			strcat(p, "/");
@@ -82,7 +85,7 @@ init_boot_catalog(path)
 		free(p);
 	}
 #endif
-	bootcat_path = (char *) e_malloc(strlen(boot_catalog) + strlen(path) + 2);
+	bootcat_path = (char *)e_malloc(strlen(boot_catalog) + strlen(path) + 2);
 	strcpy(bootcat_path, path);
 	if (bootcat_path[strlen(bootcat_path) - 1] != '/') {
 		strcat(bootcat_path, "/");
@@ -105,14 +108,17 @@ init_boot_catalog(path)
 	if (j_matches(boot_catalog) || j_matches(bootcat_path))
 		bcat_de_flags |= INHIBIT_JOLIET_ENTRY;
 
-}/* init_boot_catalog(... */
+	if (u_matches(boot_catalog) || u_matches(bootcat_path))
+		bcat_de_flags |= INHIBIT_UDF_ENTRY;
+
+} /* init_boot_catalog(... */
 
 /*
  * Create a boot catalog file in memory - mkisofs already uses this type of
  * file for the TRANS.TBL files. Therefore the boot catalog is set up in
  * similar way
  */
-void
+EXPORT void
 insert_boot_cat()
 {
 	struct directory_entry	*de;
@@ -126,14 +132,14 @@ insert_boot_cat()
 
 	init_fstatbuf();
 
-	buffer = (char *) e_malloc(SECTOR_SIZE);
+	buffer = (char *)e_malloc(SECTOR_SIZE);
 	memset(buffer, 0, SECTOR_SIZE);
 
 	/*
 	 * try to find the directory that will contain the boot.cat file
 	 * - not very neat, but I can't think of a better way
 	 */
-	p1 = strdup(boot_catalog);
+	p1 = e_strdup(boot_catalog);
 
 	/* get dirname (p1) and basename (p2) of boot.cat */
 	if ((p2 = strrchr(p1, '/')) != NULL) {
@@ -143,16 +149,8 @@ insert_boot_cat()
 		/* find the dirname directory entry */
 		de = search_tree_file(root, p1);
 		if (!de) {
-#ifdef	USE_LIBSCHILY
-			comerrno(EX_BAD,
-			"Uh oh, I cant find the boot catalog directory '%s'!\n",
-								p1);
-#else
-			fprintf(stderr,
-			"Uh oh, I cant find the boot catalog directory '%s'!\n",
-								p1);
-			exit(1);
-#endif
+			ex_boot_enoent("catalog directory", p1);
+			/* NOTREACHED */
 		}
 		this_dir = 0;
 
@@ -164,20 +162,12 @@ insert_boot_cat()
 
 		/* find the correct sub-directory entry */
 		for (dir = de->filedir->subdir; dir; dir = dir->next)
-			if (!(strcmp(dir->de_name, p3)))
+			if (strcmp(dir->de_name, p3) == 0)
 				this_dir = dir;
 
 		if (this_dir == 0) {
-#ifdef	USE_LIBSCHILY
-			comerrno(EX_BAD,
-			"Uh oh, I cant find the boot catalog directory '%s'!\n",
-								p3);
-#else
-			fprintf(stderr,
-			"Uh oh, I cant find the boot catalog directory '%s'!\n",
-								p3);
-			exit(1);
-#endif
+			ex_boot_enoent("catalog directory", p3);
+			/* NOTREACHED */
 		}
 	} else {
 		/* boot.cat is in the root directory */
@@ -210,13 +200,13 @@ insert_boot_cat()
 	s_entry->priority = 32768;
 	iso9660_date(s_entry->isorec.date, fstatbuf.st_mtime);
 	s_entry->inode = TABLE_INODE;
-	s_entry->dev = (dev_t) UNCACHED_DEVICE;
+	s_entry->dev = (dev_t)UNCACHED_DEVICE;
 	set_723(s_entry->isorec.volume_sequence_number,
 						volume_sequence_number);
-	set_733((char *) s_entry->isorec.size, SECTOR_SIZE);
+	set_733((char *)s_entry->isorec.size, SECTOR_SIZE);
 	s_entry->size = SECTOR_SIZE;
 	s_entry->filedir = this_dir;
-	s_entry->name = strdup(p2);
+	s_entry->name = e_strdup(p2);
 	iso9660_file_length(p2, s_entry, 0);
 
 	/* flag file as necessary */
@@ -240,7 +230,7 @@ insert_boot_cat()
 		sprintf(buffer, "F\t%s\n", s_entry->name);
 
 		/* copy the TRANS.TBL entry info and clear the buffer */
-		s_entry->table = strdup(buffer);
+		s_entry->table = e_strdup(buffer);
 		memset(buffer, 0, SECTOR_SIZE);
 
 		/*
@@ -257,7 +247,7 @@ insert_boot_cat()
 	}
 }
 
-static void
+LOCAL void
 get_torito_desc(boot_desc)
 	struct eltorito_boot_descriptor	*boot_desc;
 {
@@ -283,14 +273,8 @@ get_torito_desc(boot_desc)
 	 */
 	de2 = search_tree_file(root, boot_catalog);
 	if (!de2 || !(de2->de_flags & MEMORY_FILE)) {
-#ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD, "Uh oh, I cant find the boot catalog '%s'!\n",
-							boot_catalog);
-#else
-		fprintf(stderr, "Uh oh, I cant find the boot catalog '%s'!\n",
-							boot_catalog);
-		exit(1);
-#endif
+		ex_boot_enoent("catalog", boot_catalog);
+		/* NOTREACHED */
 	}
 	set_731(boot_desc->bootcat_ptr,
 		(unsigned int) get_733(de2->isorec.extent));
@@ -311,8 +295,8 @@ get_torito_desc(boot_desc)
 		memcpy_max(valid_desc.id, publisher,
 						MIN(23, strlen(publisher)));
 
-	valid_desc.key1[0] = (char) 0x55;
-	valid_desc.key2[0] = (char) 0xAA;
+	valid_desc.key1[0] = (char)0x55;
+	valid_desc.key2[0] = (char)0xAA;
 
 	/* compute the checksum */
 	checksum = 0;
@@ -337,22 +321,16 @@ get_torito_desc(boot_desc)
 		offset += sizeof (boot_desc_record)) {
 
 		if (offset >= SECTOR_SIZE) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			"Too many El Torito boot entries\n");
-#else
-			fprintf(stderr,
-			"Too many El Torito boot entries\n");
-			exit(1);
-#endif
 		}
 		fill_boot_desc(&boot_desc_record, current_boot_entry);
 		memcpy(de2->table + offset, &boot_desc_record,
 					sizeof (boot_desc_record));
 	}
-}/* get_torito_desc(... */
+} /* get_torito_desc(... */
 
-static void
+LOCAL void
 fill_boot_desc(boot_desc_entry, boot_entry)
 	struct eltorito_defaultboot_entry *boot_desc_entry;
 	struct eltorito_boot_entry_info *boot_entry;
@@ -369,18 +347,12 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 	/* now adjust boot catalog lets find boot image first */
 	de = search_tree_file(root, boot_entry->boot_image);
 	if (!de) {
-#ifdef	USE_LIBSCHILY
-		comerrno(EX_BAD, "Uh oh, I cant find the boot image '%s' !\n",
-							boot_entry->boot_image);
-#else
-		fprintf(stderr, "Uh oh, I cant find the boot image '%s' !\n",
-							boot_entry->boot_image);
-		exit(1);
-#endif
+		ex_boot_enoent("image", boot_entry->boot_image);
+		/* NOTREACHED */
 	}
 	/* now make the initial/default entry for boot catalog */
 	memset(boot_desc_entry, 0, sizeof (*boot_desc_entry));
-	boot_desc_entry->boot_id[0] = (char) boot_entry->not_bootable ?
+	boot_desc_entry->boot_id[0] = (char)boot_entry->not_bootable ?
 				EL_TORITO_NOT_BOOTABLE : EL_TORITO_BOOTABLE;
 
 	/* use default BIOS loadpnt */
@@ -408,40 +380,19 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 		/* read MBR */
 		bootmbr = open(de->whole_name, O_RDONLY | O_BINARY);
 		if (bootmbr == -1) {
-#ifdef	USE_LIBSCHILY
 			comerr("Error opening boot image '%s' for read.\n",
 							de->whole_name);
-#else
-			fprintf(stderr,
-				"Error opening boot image '%s' for read.\n",
-							de->whole_name);
-			perror("");
-			exit(1);
-#endif
 		}
 		if (read(bootmbr, &disk_mbr, sizeof (disk_mbr)) !=
 							sizeof (disk_mbr)) {
-#ifdef	USE_LIBSCHILY
 			comerr("Error reading MBR from boot image '%s'.\n",
 							de->whole_name);
-#else
-			fprintf(stderr,
-				"Error reading MBR from boot image '%s'.\n",
-							de->whole_name);
-			exit(1);
-#endif
 		}
 		close(bootmbr);
 		if (la_to_u_2_byte(disk_mbr.magic) != MBR_MAGIC) {
-#ifdef	USE_LIBSCHILY
 			errmsgno(EX_BAD,
 			"Warning: boot image '%s' MBR is not a boot sector.\n",
 							de->whole_name);
-#else
-			fprintf(stderr,
-				"Warning: boot image '%s' MBR is not a boot sector.\n",
-							de->whole_name);
-#endif
 		}
 		/* find partition type */
 		boot_desc_entry->sys_type[0] = PARTITION_UNUSED;
@@ -457,16 +408,9 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 			if (disk_mbr.partition[i].type != PARTITION_UNUSED) {
 				if (boot_desc_entry->sys_type[0] !=
 							PARTITION_UNUSED) {
-#ifdef	USE_LIBSCHILY
 					comerrno(EX_BAD,
 					"Boot image '%s' has multiple partitions.\n",
 							de->whole_name);
-#else
-					fprintf(stderr,
-					"Boot image '%s' has multiple partitions.\n",
-							de->whole_name);
-					exit(1);
-#endif
 				}
 				boot_desc_entry->sys_type[0] =
 						disk_mbr.partition[i].type;
@@ -505,16 +449,9 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 			}
 		}
 		if (boot_desc_entry->sys_type[0] == PARTITION_UNUSED) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 					"Boot image '%s' has no partitions.\n",
 							de->whole_name);
-#else
-			fprintf(stderr,
-					"Boot image '%s' has no partitions.\n",
-							de->whole_name);
-			exit(1);
-#endif
 		}
 #ifdef DEBUG_TORITO
 		fprintf(stderr, "Partition type %u\n",
@@ -550,16 +487,9 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 				fprintf(stderr, "Emulating a 1200 kB floppy\n");
 
 		} else {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			"Error - boot image '%s' has not an allowable size.\n",
 							de->whole_name);
-#else
-			fprintf(stderr,
-			"Error - boot image '%s' has not an allowable size.\n",
-							de->whole_name);
-			exit(1);
-#endif
 		}
 
 		/* load single boot sector for floppies */
@@ -588,33 +518,18 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 
 		bootimage = open(de->whole_name, O_RDWR | O_BINARY);
 		if (bootimage == -1) {
-#ifdef	USE_LIBSCHILY
 			comerr(
 			"Error opening boot image file '%s' for update.\n",
 							de->whole_name);
-#else
-			fprintf(stderr,
-			"Error opening boot image file '%s' for update.\n",
-							de->whole_name);
-			perror("");
-			exit(1);
-#endif
 		}
 	/* Compute checksum of boot image, sans 64 bytes */
 		total_len = 0;
 		bi_checksum = 0;
 		while ((len = read(bootimage, csum_buffer, SECTOR_SIZE)) > 0) {
 			if (total_len & 3) {
-#ifdef	USE_LIBSCHILY
 				comerrno(EX_BAD,
 				"Odd alignment at non-end-of-file in boot image '%s'.\n",
 							de->whole_name);
-#else
-				fprintf(stderr,
-				"Odd alignment at non-end-of-file in boot image '%s'.\n",
-							de->whole_name);
-				exit(1);
-#endif
 			}
 			if (total_len < 64)
 				memset(csum_buffer, 0, 64 - total_len);
@@ -626,16 +541,9 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 		}
 
 		if (total_len != de->size) {
-#ifdef	USE_LIBSCHILY
 			comerrno(EX_BAD,
 			"Boot image file '%s' changed underneath us!\n",
 						de->whole_name);
-#else
-			fprintf(stderr,
-			"Boot image file '%s' changed underneath us!\n",
-						de->whole_name);
-			exit(1);
-#endif
 		}
 		/* End of file, set position to byte 8 */
 		lseek(bootimage, (off_t)8, SEEK_SET);
@@ -649,9 +557,9 @@ fill_boot_desc(boot_desc_entry, boot_entry)
 		write(bootimage, &bi_table, sizeof (bi_table));
 		close(bootimage);
 	}
-}/* fill_boot_desc(... */
+} /* fill_boot_desc(... */
 
-void
+EXPORT void
 get_boot_entry()
 {
 	if (current_boot_entry)
@@ -670,27 +578,35 @@ get_boot_entry()
 	}
 }
 
-void
+EXPORT int
 new_boot_entry()
 {
 	current_boot_entry = NULL;
+	return (1);
+}
+
+/*
+ * Exit with a boot no entry message.
+ */
+EXPORT void
+ex_boot_enoent(msg, pname)
+	char	*msg;
+	char	*pname;
+{
+	comerrno(EX_BAD, "Uh oh, I cant find the boot %s '%s' inside the target tree.\n", msg, pname);
+	/* NOTREACHED */
 }
 
 /*
  * Function to write the EVD for the disc.
  */
-static int
+LOCAL int
 tvd_write(outfile)
 	FILE	*outfile;
 {
 	/* check the boot image is not NULL */
 	if (!boot_image) {
-#ifdef	USE_LIBSCHILY
 		comerrno(EX_BAD, "No boot image specified.\n");
-#else
-		fprintf(stderr, "No boot image specified.\n");
-		exit(1);
-#endif
 	}
 	/* Next we write out the boot volume descriptor for the disc */
 	get_torito_desc(&gboot_desc);

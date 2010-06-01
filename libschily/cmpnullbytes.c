@@ -1,42 +1,44 @@
-/* @(#)cmpnullbytes.c	1.2 03/06/15 Copyright 1988,2002-2003 J. Schilling */
+/* @(#)cmpnullbytes.c	1.9 10/05/24 Copyright 1988,2002-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)cmpnullbytes.c	1.2 03/06/15 Copyright 1988,2002-2003 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)cmpnullbytes.c	1.9 10/05/24 Copyright 1988,2002-2010 J. Schilling";
 #endif  /* lint */
 /*
  *	compare data against null
+ *	Return the index of the first non-null character
  *
- *	Copyright (c) 1988,2002-2003 J. Schilling
+ *	Copyright (c) 1988,2002-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <standard.h>
-#include <align.h>
-#include <schily.h>
+#include <schily/standard.h>
+#include <schily/align.h>
+#include <schily/types.h>
+#include <schily/schily.h>
 
 #define	DO8(a)	a; a; a; a; a; a; a; a;
 
-EXPORT int
+/*
+ * Return the index of the first non-null character
+ */
+EXPORT ssize_t
 cmpnullbytes(fromp, cnt)
 	const void	*fromp;
-	int		cnt;
+	ssize_t		cnt;
 {
 	register const char	*from	= (char *)fromp;
-	register int		n;
+	register ssize_t	n;
 
 	/*
 	 * If we change cnt to be unsigned, check for == instead of <=
@@ -53,10 +55,10 @@ cmpnullbytes(fromp, cnt)
 	}
 	n++;
 
-	if (n >= (int)(8 * sizeof (long))) {
+	if (n >= (ssize_t)(8 * sizeof (long))) {
 		if (laligned(from)) {
 			register const long *froml = (const long *)from;
-			register int rem = n % (8 * sizeof (long));
+			register ssize_t rem = n % (8 * sizeof (long));
 
 			n /= (8 * sizeof (long));
 			do {
@@ -103,5 +105,5 @@ ldiff:
 			goto cdiff;
 	} while (--n > 0);
 cdiff:
-	return (--from - (char *)fromp);
+	return ((ssize_t)(--from - (char *)fromp));
 }

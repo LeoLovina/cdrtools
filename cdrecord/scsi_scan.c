@@ -1,38 +1,35 @@
-/* @(#)scsi_scan.c	1.19 04/04/16 Copyright 1997-2004 J. Schilling */
+/* @(#)scsi_scan.c	1.34 09/07/10 Copyright 1997-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)scsi_scan.c	1.19 04/04/16 Copyright 1997-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)scsi_scan.c	1.34 09/07/10 Copyright 1997-2009 J. Schilling";
 #endif
 /*
  *	Scan SCSI Bus.
  *	Stolen from sformat. Need a more general form to
  *	re-use it in sformat too.
  *
- *	Copyright (c) 1997-2004 J. Schilling
+ *	Copyright (c) 1997-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <stdxlib.h>
-#include <standard.h>
-#include <btorder.h>
-#include <errno.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/standard.h>
+#include <schily/btorder.h>
+#include <schily/errno.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
@@ -44,7 +41,11 @@ static	char sccsid[] =
 
 LOCAL	void	print_product		__PR((FILE *f, struct scsi_inquiry *ip));
 EXPORT	int	select_target		__PR((SCSI *scgp, FILE *f));
+EXPORT	int	find_target		__PR((SCSI *scgp, int type, int idx));
+LOCAL	int	_select_target		__PR((SCSI *scgp, FILE *f, int type, int idx));
+#ifdef	__ready__
 LOCAL	int	select_unit		__PR((SCSI *scgp, FILE *f));
+#endif
 
 LOCAL void
 print_product(f, ip)
@@ -65,75 +66,119 @@ select_target(scgp, f)
 	SCSI	*scgp;
 	FILE	*f;
 {
+	return (_select_target(scgp, f, -1, -1));
+}
+
+EXPORT int
+find_target(scgp, type, idx)
+	SCSI	*scgp;
+	int	type;
+	int	idx;
+{
+	return (_select_target(scgp, (FILE *)NULL, type, idx));
+}
+
+LOCAL int
+_select_target(scgp, f, type, idx)
+	SCSI	*scgp;
+	FILE	*f;
+	int	type;
+	int	idx;
+{
 	int	initiator;
-#ifdef	FMT
 	int	cscsibus = scg_scsibus(scgp);
 	int	ctarget  = scg_target(scgp);
 	int	clun	 = scg_lun(scgp);
-#endif
+	int	numbus	 = scg_numbus(scgp);
 	int	n;
 	int	low	= -1;
 	int	high	= -1;
-	int	amt	= 0;
+	int	amt	= -1;
 	int	bus;
 	int	tgt;
 	int	lun = 0;
+	int	err;
 	BOOL	have_tgt;
 
+	if (numbus < 0)
+		numbus = 1024;
 	scgp->silent++;
 
-	for (bus = 0; bus < 256; bus++) {
+	for (bus = 0; bus < numbus; bus++) {
 		scg_settarget(scgp, bus, 0, 0);
 
 		if (!scg_havebus(scgp, bus))
 			continue;
 
 		initiator = scg_initiator_id(scgp);
-		fprintf(f, "scsibus%d:\n", bus);
+		if (f)
+			fprintf(f, "scsibus%d:\n", bus);
 
 		for (tgt = 0; tgt < 16; tgt++) {
 			n = bus*100 + tgt;
 
 			scg_settarget(scgp, bus, tgt, lun);
+			seterrno(0);
 			have_tgt = unit_ready(scgp) || scgp->scmd->error != SCG_FATAL;
+			err = geterrno();
+			if (err == EPERM || err == EACCES)
+				return (-1);
 
 			if (!have_tgt && tgt > 7) {
 				if (scgp->scmd->ux_errno == EINVAL)
 					break;
 				continue;
 			}
-
+			if (f) {
 #ifdef	FMT
-			if (print_disknames(bus, tgt, -1) < 8)
-				fprintf(f, "\t");
-			else
-				fprintf(f, " ");
+				if (print_disknames(bus, tgt, -1) < 8)
+					fprintf(f, "\t");
+				else
+					fprintf(f, " ");
 #else
-			fprintf(f, "\t");
-#endif
-			if (fprintf(f, "%d,%d,%d", bus, tgt, lun) < 8)
 				fprintf(f, "\t");
-			else
-				fprintf(f, " ");
-			fprintf(f, "%3d) ", n);
+#endif
+				if (fprintf(f, "%d,%d,%d", bus, tgt, lun) < 8)
+					fprintf(f, "\t");
+				else
+					fprintf(f, " ");
+				fprintf(f, "%3d) ", n);
+			}
 			if (tgt == initiator) {
-				fprintf(f, "HOST ADAPTOR\n");
+				if (f)
+					fprintf(f, "HOST ADAPTOR\n");
 				continue;
 			}
 			if (!have_tgt) {
 				/*
 				 * Hack: fd -> -2 means no access
 				 */
-				fprintf(f, "%c\n", scgp->fd == -2 ? '?':'*');
+				if (f) {
+					fprintf(f, "%c\n",
+						scgp->fd == -2 ? '?':'*');
+				}
 				continue;
 			}
-			amt++;
 			if (low < 0)
 				low = n;
 			high = n;
 
 			getdev(scgp, FALSE);
-			print_product(f, scgp->inq);
+			if (f)
+				print_product(f, scgp->inq);
+			if (type >= 0 && scgp->inq->type == type) {
+				amt++;
+				if (amt == 0)	/* amt starts at -1 */
+					amt++;
+				if (amt == idx) {
+					scgp->silent--;
+					return (amt);
+				}
+			} else if (type < 0) {
+				amt++;
+			}
+			if (amt == 0)	/* amt starts at -1 */
+				amt++;
 		}
 	}
 	scgp->silent--;
@@ -150,11 +195,12 @@ select_target(scgp, f)
 	scg_settarget(scgp, bus, tgt, lun);
 	return (select_unit(scgp));
 
-	scg_settarget(scgp, cscsibus, ctarget, clun);
 #endif
+	scg_settarget(scgp, cscsibus, ctarget, clun);
 	return (amt);
 }
 
+#ifdef	__ready__
 LOCAL int
 select_unit(scgp, f)
 	SCSI	*scgp;
@@ -226,3 +272,4 @@ select_unit(scgp, f)
 	scg_settarget(scgp, scg_scsibus(scgp), scg_target(scgp), clun);
 	return (1);
 }
+#endif

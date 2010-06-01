@@ -1,42 +1,34 @@
-/* @(#)spawn.c	1.16 03/07/13 Copyright 1985, 1989, 1995-2003 J. Schilling */
+/* @(#)spawn.c	1.26 09/11/15 Copyright 1985, 1989, 1995-2009 J. Schilling */
 /*
  *	Spawn another process/ wait for child process
  *
- *	Copyright (c) 1985, 1989, 1995-2003 J. Schilling
+ *	Copyright (c) 1985, 1989, 1995-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <standard.h>
-#define	fspawnl	__nothing__	/* prototype in schily.h is wrong */
-#define	spawnl	__nothing__	/* prototype in schily.h is wrong */
-#include <schily.h>
-#undef	fspawnl
-#undef	spawnl
-#include <unixstd.h>
-#include <stdxlib.h>
-#include <vadefs.h>
-#include <waitdefs.h>
-#include <errno.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/unistd.h>
+#include <schily/stdlib.h>
+#include <schily/varargs.h>
+#include <schily/wait.h>
+#include <schily/errno.h>
+#include <schily/schily.h>
+#define	VMS_VFORK_OK
+#include <schily/vfork.h>
 
 #define	MAX_F_ARGS	16
-
-EXPORT	int	fspawnl	__PR((FILE *, FILE *, FILE *, ...));
 
 EXPORT int
 fspawnv(in, out, err, argc, argv)
@@ -54,50 +46,56 @@ fspawnv(in, out, err, argc, argv)
 	return (wait_chld(pid));
 }
 
-/* VARARGS5 */
+/* VARARGS3 */
 #ifdef	PROTOTYPES
 EXPORT int
-fspawnl(FILE *in, FILE *out, FILE *err, ...)
+fspawnl(FILE *in, FILE *out, FILE *err, const char *arg0, ...)
 #else
 EXPORT int
-fspawnl(in, out, err, va_alist)
-	FILE	*in;
-	FILE	*out;
-	FILE	*err;
+fspawnl(in, out, err, arg0, va_alist)
+	FILE		*in;
+	FILE		*out;
+	FILE		*err;
+	const char	*arg0;
 	va_dcl
 #endif
 {
 	va_list	args;
 	int	ac = 0;
-	char	*xav[MAX_F_ARGS];
+	char	*xav[MAX_F_ARGS+1];
 	char	**av;
-	char	**pav;
+const	char	**pav;
 	char	*p;
 	int	ret;
 
 #ifdef	PROTOTYPES
-	va_start(args, err);
+	va_start(args, arg0);
 #else
 	va_start(args);
 #endif
-	while (va_arg(args, char *) != NULL)
+	if (arg0) {
 		ac++;
+		while (va_arg(args, char *) != NULL)
+			ac++;
+	}
 	va_end(args);
 
-	if (ac < MAX_F_ARGS) {
-		pav = av = xav;
+	if (ac <= MAX_F_ARGS) {
+		av = xav;
 	} else {
-		pav = av = (char **)malloc((ac+1)*sizeof (char *));
+		av = (char **)malloc((ac+1)*sizeof (char *));
 		if (av == 0)
 			return (-1);
 	}
+	pav = (const char **)av;
 
 #ifdef	PROTOTYPES
-	va_start(args, err);
+	va_start(args, arg0);
 #else
 	va_start(args);
 #endif
-	do {
+	*pav++ = arg0;
+	if (arg0) do {
 		p = va_arg(args, char *);
 		*pav++ = p;
 	} while (p != NULL);
@@ -119,10 +117,10 @@ fspawnv_nowait(in, out, err, name, argc, argv)
 	char		* const argv[];
 {
 	int	pid = -1;	/* Initialization needed to make GCC happy */
-	int	i;
+	volatile int	i;
 
 	for (i = 1; i < 64; i *= 2) {
-		if ((pid = fork()) >= 0)
+		if ((pid = vfork()) >= 0)
 			break;
 		sleep(i);
 	}
@@ -133,7 +131,7 @@ fspawnv_nowait(in, out, err, name, argc, argv)
 				 * so we have to cast argv tp (char **)
 				 */
 	fexecv(name, in, out, err, argc, (char **)argv);
-	exit(geterrno());
+	_exit(geterrno());
 	/* NOTREACHED */
 #ifndef	lint
 	return (0);		/* keep gnu compiler happy */

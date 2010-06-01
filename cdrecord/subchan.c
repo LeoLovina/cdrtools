@@ -1,35 +1,32 @@
-/* @(#)subchan.c	1.19 04/05/15 Copyright 2000-2004 J. Schilling */
+/* @(#)subchan.c	1.27 10/02/03 Copyright 2000-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)subchan.c	1.19 04/05/15 Copyright 2000-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)subchan.c	1.27 10/02/03 Copyright 2000-2010 J. Schilling";
 #endif
 /*
  *	Subchannel processing
  *
- *	Copyright (c) 2000-2004 J. Schilling
+ *	Copyright (c) 2000-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <unixstd.h>
-#include <standard.h>
-#include <utypes.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/unistd.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
 
 #include <scg/scsitransp.h>
 
@@ -51,7 +48,9 @@ EXPORT	void	qpto96		__PR((Uchar *sub, Uchar *subq, int dop));
 EXPORT	void	addrw		__PR((Uchar *sub, Uchar	*subrwptr));
 EXPORT	void	qwto16		__PR((Uchar *subq, Uchar *subptr));
 EXPORT	void	subrecodesecs	__PR((track_t *trackp, Uchar *bp, int address, int nsecs));
+#ifdef	DO_SUBINTERLEAVE
 LOCAL	void	subinterleave	__PR((Uchar *sub));
+#endif
 
 /*#define	TEST_CRC*/
 #ifdef	TEST_CRC
@@ -256,8 +255,10 @@ write_leadin(scgp, dp, trackp, leadinstart)
 				if (textoff >= textlen)
 					textoff = 0;
 			}
+#ifdef	DO_SUBINTERLEAVE
 /*			if (is_raw96p(&trackp[0]))*/
 /*				subinterleave(subp);*/
+#endif
 		}
 		if ((startsec+secspt-1) == i || i == -151) {
 			if ((i-startsec+1) < secspt) {
@@ -361,8 +362,10 @@ write_leadout(scgp, dp, trackp)
 			qpto16(subp, sub, p);
 		} else {
 			qpto96(subp, sub, p);
+#ifdef	DO_SUBINTERLEAVE
 /*			if (is_raw96p(&trackp[0]))*/
 /*				subinterleave(subp);*/
+#endif
 		}
 		if ((startsec+secspt-1) == i || i == (endsec-1)) {
 			if ((i-startsec+1) < secspt) {
@@ -427,12 +430,16 @@ static	long	nextmcn = -1000000L;
 static	long	nextisrc = -1000000L;
 static	Uchar	lastindex = 255;
 
+	if (trackno == 0 && is_hidden(trackp))
+		trackno = trackp[1].trackno;
+
 	fillbytes(sub, 12, '\0');
 
 	mcn = track_base(trackp)->isrc;
 	rsecno = secno - trackp->trackstart;
 	if ((secno + nsecs) > (trackp->trackstart + trackp->tracksecs)) {
-		comerrno(EX_BAD, "Implementation botch: track boundary in buffer.\n");
+		comerrno(EX_BAD,
+			"Implementation botch: track boundary in buffer.\n");
 	}
 	sup = sp + 2352;
 	if (mcn && (nextmcn < secno || nextmcn > (secno+100))) {
@@ -445,7 +452,10 @@ static	Uchar	lastindex = 255;
 	if (is_copy(trackp))
 		ctrl |= TM_ALLOW_COPY << 4;
 
-/*error("Tracknl %d nindex %d trackstart %ld rsecno %d index0start %ld nsecs %d\n", trackno, nindex, trackp->trackstart, rsecno, trackp->index0start, nsecs);*/
+#ifdef	SUB_DEBUG
+	error("Tracknl %d nindex %d trackstart %ld rsecno %d index0start %ld nsecs %d\n",
+	trackno, nindex, trackp->trackstart, rsecno, trackp->index0start, nsecs);
+#endif
 
 	if (rsecno < 0) {
 		/*
@@ -545,8 +555,10 @@ static	Uchar	lastindex = 255;
 			qpto16(sup, sub, curindex == 0);
 		} else {
 			qpto96(sup, sub, curindex == 0);
+#ifdef	DO_SUBINTERLEAVE
 /*			if (is_raw96p(trackp))*/
 /*				subinterleave(sup);*/
+#endif
 		}
 		lastindex = curindex;
 		secno++;
@@ -761,6 +773,7 @@ qpto96(sub, subqptr, dop)
 	 */
 	fillbytes(sub, 96, '\0');
 
+	/* BEGIN CSTYLED */
 	if (dop) for (i = 0, p = sub; i < 96; i++) {
 		*p++ |= 0x80;
 	}
@@ -1000,6 +1013,7 @@ index 3 < - > 23
 delay index mod 8
 #endif
 
+#ifdef	DO_SUBINTERLEAVE
 /*
  * Sub 96 Bytes Interleave
  */
@@ -1033,3 +1047,4 @@ subinterleave(sub)
 		p += 24;
 	}
 }
+#endif	/* DO_SUBINTERLEAVE */

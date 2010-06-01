@@ -1,43 +1,40 @@
-/* @(#)skel.c	1.3 04/07/11 Copyright 1987, 1995-2004 J. Schilling */
+/* @(#)skel.c	1.21 10/05/17 Copyright 1987, 1995-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)skel.c	1.3 04/07/11 Copyright 1987, 1995-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)skel.c	1.21 10/05/17 Copyright 1987, 1995-2010 J. Schilling";
 #endif
 /*
  *	Skeleton for the use of the scg genearal SCSI - driver
  *
- *	Copyright (c) 1987, 1995-2004 J. Schilling
+ *	Copyright (c) 1987, 1995-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <standard.h>
-#include <unixstd.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <fctldefs.h>
-#include <timedefs.h>
-#include <signal.h>
-#include <schily.h>
-
-#ifdef	NEED_O_BINARY
-#include <io.h>					/* for setmode() prototype */
-#endif
+#define	SKEL_MAIN
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/unistd.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/fcntl.h>
+#include <schily/time.h>
+#include <schily/errno.h>
+#include <schily/signal.h>
+#include <schily/schily.h>
+#include <schily/priv.h>
+#include <schily/io.h>				/* for setmode() prototype */
 
 #include <scg/scgcmd.h>
 #include <scg/scsireg.h>
@@ -45,12 +42,10 @@ static	char sccsid[] =
 
 #include "scsi_scan.h"
 #include "cdrecord.h"
-#include "defaults.h"
+#include "cdrdeflt.h"
+#include "iodefs.h"
 
-char	skel_version[] = "1.0";
-
-extern	BOOL	getlong		__PR((char *, long *, long, long));
-extern	BOOL	getint		__PR((char *, int *, int, int));
+char	skel_version[] = "1.2";
 
 struct exargs {
 	SCSI	*scgp;
@@ -60,14 +55,31 @@ struct exargs {
 	char	oerr[3];
 } exargs;
 
+#ifndef	NO_DOIT
+#define	NEED_PRSTATS
+#endif
+
 LOCAL	void	usage		__PR((int ret));
 EXPORT	int	main		__PR((int ac, char **av));
 LOCAL	void	intr		__PR((int sig));
 LOCAL	void	exscsi		__PR((int excode, void *arg));
+#ifdef	__needed__
 LOCAL	void	excdr		__PR((int excode, void *arg));
+#endif
+#ifdef	NEED_PRSTATS
 LOCAL	int	prstats		__PR((void));
+#endif
+#ifdef	__needed__
 LOCAL	int	prstats_silent	__PR((void));
+#endif
+
+#ifndef	NO_DOIT
+#include "doit.c"
+#endif
+
+#ifndef	DOIT_MAIN
 LOCAL	void	doit		__PR((SCSI *scgp));
+#endif
 LOCAL	void	dofile		__PR((SCSI *scgp, char *filename));
 
 
@@ -77,7 +89,7 @@ int	didintr;
 int	exsig;
 
 char	*Sbuf;
-long	Sbufsize;
+long	Sbufsize = -1L;
 
 int	help;
 int	xdebug;
@@ -104,8 +116,9 @@ usage(ret)
 	error("\t-silent,-s	do not print status of failed SCSI commands\n");
 	error("\t-scanbus	scan the SCSI bus and exit\n");
 	exit(ret);
-}	
+}
 
+/* CSTYLED */
 char	opts[]   = "debug#,d+,kdebug#,kd#,timeout#,quiet,q,verbose+,v+,Verbose+,V+,x+,xd#,silent,s,help,h,version,scanbus,dev*,ts&,f*";
 
 EXPORT int
@@ -117,9 +130,9 @@ main(ac, av)
 	int	fcount;
 	int	cac;
 	char	* const *cav;
-	int	scsibus	= 0;
-	int	target	= 0;
-	int	lun	= 0;
+	int	scsibus	= -1;
+	int	target	= -1;
+	int	lun	= -1;
 	int	silent	= 0;
 	int	verbose	= 0;
 	int	kdebug	= 0;
@@ -129,6 +142,7 @@ main(ac, av)
 	int	scanbus = 0;
 	SCSI	*scgp;
 	char	*filename = NULL;
+	int	err;
 
 	save_args(ac, av);
 
@@ -155,7 +169,7 @@ main(ac, av)
 	if (help)
 		usage(0);
 	if (pversion) {
-		printf("scgskeleton %s (%s-%s-%s) Copyright (C) 1987, 1995-2003 Jörg Schilling\n",
+		printf("scgskeleton %s (%s-%s-%s) Copyright (C) 1987, 1995-2010 Jörg Schilling\n",
 								skel_version,
 								HOST_CPU, HOST_VENDOR, HOST_OS);
 		exit(0);
@@ -193,19 +207,22 @@ main(ac, av)
 				usage(EX_BAD);
 				/* NOTREACHED */
 			}
-		} else {
-			scsibus = 0;
 		}
 		cac--;
 		cav++;
 	}
 /*error("dev: '%s'\n", dev);*/
 
-	cdr_defaults(&dev, NULL, NULL, NULL);
+	cdr_defaults(&dev, NULL, NULL, &Sbufsize, NULL);
 	if (debug) {
 		printf("dev: '%s'\n", dev);
 	}
-	if (dev) {
+	if (!scanbus && dev == NULL &&
+	    scsibus == -1 && (target == -1 || lun == -1)) {
+		errmsgno(EX_BAD, "No SCSI device specified.\n");
+		usage(EX_BAD);
+	}
+	if (dev || scanbus) {
 		char	errstr[80];
 
 		/*
@@ -214,13 +231,14 @@ main(ac, av)
 		 * remote routines that are located inside libscg.
 		 */
 		scg_remote();
-		if ((strncmp(dev, "HELP", 4) == 0) ||
-		    (strncmp(dev, "help", 4) == 0)) {
+		if (dev != NULL &&
+		    ((strncmp(dev, "HELP", 4) == 0) ||
+		    (strncmp(dev, "help", 4) == 0))) {
 			scg_help(stderr);
 			exit(0);
 		}
 		if ((scgp = scg_open(dev, errstr, sizeof (errstr), debug, lverbose)) == (SCSI *)0) {
-			int	err = geterrno();
+			err = geterrno();
 
 			errmsgno(err, "%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
 			errmsgno(EX_BAD, "For possible targets try 'scgskeleton -scanbus'. Make sure you are root.\n");
@@ -245,12 +263,30 @@ main(ac, av)
 	scgp->kdebug = kdebug;
 	scg_settimeout(scgp, deftimeout);
 
-	if (Sbufsize == 0)
+	if (Sbufsize < 0)
 		Sbufsize = 256*1024L;
 	Sbufsize = scg_bufsize(scgp, Sbufsize);
 	if ((Sbuf = scg_getbuf(scgp, Sbufsize)) == NULL)
 		comerr("Cannot get SCSI I/O buffer.\n");
 
+#ifdef	HAVE_PRIV_SET
+	/*
+	 * Give up privs we do not need anymore.
+	 * We no longer need:
+	 *	file_dac_read,net_privaddr
+	 * We still need:
+	 *	sys_devices
+	 */
+	priv_set(PRIV_OFF, PRIV_EFFECTIVE,
+		PRIV_FILE_DAC_READ, PRIV_NET_PRIVADDR, NULL);
+	priv_set(PRIV_OFF, PRIV_PERMITTED,
+		PRIV_FILE_DAC_READ, PRIV_NET_PRIVADDR, NULL);
+	priv_set(PRIV_OFF, PRIV_INHERITABLE,
+		PRIV_FILE_DAC_READ, PRIV_NET_PRIVADDR, PRIV_SYS_DEVICES, NULL);
+#endif
+	/*
+	 * This is only for OS that do not support fine grained privs.
+	 */
 	is_suid = geteuid() != getuid();
 	/*
 	 * We don't need root privilleges anymore.
@@ -269,10 +305,15 @@ main(ac, av)
 	/* code to use SCG */
 
 	if (scanbus) {
-		select_target(scgp, stdout);
+		if (select_target(scgp, stdout) < 0)
+			exit(EX_BAD);
 		exit(0);
 	}
+	seterrno(0);
 	do_inquiry(scgp, FALSE);
+	err = geterrno();
+	if (err == EPERM || err == EACCES)
+		exit(EX_BAD);
 	allow_atapi(scgp, TRUE);    /* Try to switch to 10 byte mode cmds */
 
 	exargs.scgp	   = scgp;
@@ -349,6 +390,7 @@ exscsi(excode, arg)
 	}
 }
 
+#ifdef	__needed__
 LOCAL void
 excdr(excode, arg)
 	int	excode;
@@ -360,7 +402,9 @@ excdr(excode, arg)
 	/* Do several other restores/statistics here (see cdrecord.c) */
 #endif
 }
+#endif
 
+#ifdef	NEED_PRSTATS
 /*
  * Return milliseconds since start time.
  */
@@ -388,7 +432,9 @@ prstats()
 	error("Time total: %d.%03dsec\n", sec, usec/1000);
 	return (1000*sec + (usec / 1000));
 }
+#endif
 
+#ifdef	__needed__
 /*
  * Return milliseconds since start time, but be silent this time.
  */
@@ -415,7 +461,9 @@ prstats_silent()
 
 	return (1000*sec + (usec / 1000));
 }
+#endif
 
+#ifndef	DOIT_MAIN
 LOCAL void
 doit(scgp)
 	SCSI	*scgp;
@@ -441,6 +489,8 @@ doit(scgp)
 		}
 	}
 }
+#endif	/* DOIT_MAIN */
+
 
 LOCAL void
 dofile(scgp, filename)

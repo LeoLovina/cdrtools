@@ -1,4 +1,4 @@
-#ident @(#)Makefile	1.3 04/01/02 
+#ident @(#)Makefile	1.7 08/08/01 
 ###########################################################################
 #include		$(MAKE_M_ARCH).def
 SRCROOT=	..
@@ -11,10 +11,12 @@ TARGET=		rscsi
 INSMODE=	4711
 INSUSR=		root
 #CPPOPTS +=	-DUSE_REMOTE
+CPPOPTS +=	-I../libscg
+
 CFILES=		rscsi.c
 #HFILES=
 LIBS=		-lscg $(LIB_VOLMGT) -ldeflt -lschily $(SCSILIB) $(LIB_SOCKET)
-#XMK_FILE=	Makefile.man
+XMK_FILE=	Makefile.man Makefile.dfl Makefile.doc
 
 ###########################################################################
 include		$(SRCROOT)/$(RULESDIR)/rules.cmd

@@ -1,45 +1,42 @@
-/* @(#)rename.c	1.6 04/09/04 Copyright 1998-2003 J. Schilling */
+/* @(#)rename.c	1.10 09/07/08 Copyright 1998-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)rename.c	1.6 04/09/04 Copyright 1998-2003 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)rename.c	1.10 09/07/08 Copyright 1998-2009 J. Schilling";
 #endif
 /*
  *	rename() for old systems that don't have it.
  *
- *	Copyright (c) 1998-2003 J. Schilling
+ *	Copyright (c) 1998-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #define	rename	__nothing__
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
 #ifndef	HAVE_RENAME
 
-#include <stdio.h>	/* XXX not OK but needed for js_xx() in schily.h */
-#include <unixstd.h>
-#include <strdefs.h>
-#include <statdefs.h>
-#include <maxpath.h>
-#include <standard.h>
-#include <utypes.h>
-#include <schily.h>
-#include <errno.h>
+#include <schily/stdio.h>	/* XXX not OK but needed for js_xx() in schily/schily.h */
+#include <schily/unistd.h>
+#include <schily/string.h>
+#include <schily/stat.h>
+#include <schily/maxpath.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/schily.h>
+#include <schily/errno.h>
 #undef	rename
-#include <libport.h>
+#include <schily/libport.h>
 
 #ifndef	MAXPATHNAME
 #define	MAXPATHNAME	1024

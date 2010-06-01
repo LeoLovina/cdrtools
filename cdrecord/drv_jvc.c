@@ -1,48 +1,45 @@
-/** @(#)drv_jvc.c	1.80 04/03/01 Copyright 1997-2004 J. Schilling */
+/** @(#)drv_jvc.c	1.94 10/05/11 Copyright 1997-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)drv_jvc.c	1.80 04/03/01 Copyright 1997-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)drv_jvc.c	1.94 10/05/11 Copyright 1997-2010 J. Schilling";
 #endif
 /*
  *	CDR device implementation for
  *	JVC/TEAC
  *
- *	Copyright (c) 1997-2004 J. Schilling
+ *	Copyright (c) 1997-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 /*#define	XXDEBUG*/
 /*#define	XXBUFFER*/
 
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <fctldefs.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <unixstd.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/fcntl.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/unistd.h>
 #ifdef	XXDEBUG
-#include <stdxlib.h>
+#include <schily/stdlib.h>
 #endif
 
-#include <utypes.h>
-#include <btorder.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
@@ -228,7 +225,9 @@ LOCAL	int	opt_power_judge		__PR((SCSI *scgp, int judge));
 LOCAL	int	clear_subcode		__PR((SCSI *scgp));
 LOCAL	int	set_limits		__PR((SCSI *scgp, long lba, long length));
 LOCAL	int	set_subcode		__PR((SCSI *scgp, Uchar *subcode_data, int length));
+#ifdef	XDI
 LOCAL	int	read_disk_info_teac	__PR((SCSI *scgp, Uchar *data, int length, int type));
+#endif
 LOCAL	int	teac_freeze		__PR((SCSI *scgp, int bp_flag));
 LOCAL	int	teac_wr_pma		__PR((SCSI *scgp));
 LOCAL	int	teac_rd_pma		__PR((SCSI *scgp));
@@ -236,8 +235,8 @@ LOCAL	int	next_wr_addr_teac	__PR((SCSI *scgp, long start_lba, long last_lba));
 LOCAL	int	blank_jvc		__PR((SCSI *scgp, cdr_t *dp, long addr, int blanktype));
 LOCAL	int	buf_cap_teac		__PR((SCSI *scgp, long *sp, long *fp));
 LOCAL	long	read_peak_buffer_cap_teac __PR((SCSI *scgp));
-LOCAL	int	buffer_inquiry_teac	__PR((SCSI *scgp, int fmt));
 #ifdef	XXBUFFER
+LOCAL	int	buffer_inquiry_teac	__PR((SCSI *scgp, int fmt));
 LOCAL	void	check_buffer_teac	__PR((SCSI *scgp));
 #endif
 #ifdef	XXDEBUG
@@ -246,9 +245,12 @@ LOCAL	void	xxtest_teac		__PR((SCSI *scgp));
 
 
 cdr_t	cdr_teac_cdr50 = {
-	0, 0,
+	0, 0, 0,
 /*	CDR_TAO|CDR_SAO|CDR_SWABAUDIO|CDR_NO_LOLIMIT,*/
 	CDR_TAO|CDR_SWABAUDIO|CDR_NO_LOLIMIT,
+	0,
+	CDR_CDRW_ALL,
+	WM_TAO,
 	2, 4,
 	"teac_cdr50",
 	"driver for Teac CD-R50S, Teac CD-R55S, JVC XR-W2010, Pinnacle RCD-5020",
@@ -258,6 +260,7 @@ cdr_t	cdr_teac_cdr50 = {
 	teac_attach,
 	teac_init,
 	teac_getdisktype,
+	no_diskstatus,
 	scsi_load,
 	scsi_unload,
 	buf_cap_teac,
@@ -1043,6 +1046,7 @@ set_subcode(scgp, subcode_data, length)
 	return (scg_cmd(scgp));
 }
 
+#ifdef	XDI
 LOCAL int
 read_disk_info_teac(scgp, data, length, type)
 	SCSI	*scgp;
@@ -1069,6 +1073,7 @@ read_disk_info_teac(scgp, data, length, type)
 
 	return (scg_cmd(scgp));
 }
+#endif
 
 /*
  * Perform the freeze command for Teac Drives.
@@ -1286,10 +1291,10 @@ read_peak_buffer_cap_teac(scgp)
 	if (scg_cmd(scgp) < 0)
 		return (-1);
 
-/*	if (scgp->verbose) {*/
+	if (scgp->verbose) {
 		scg_prbytes("WRa Data", xx, sizeof (xx) - scg_getresid(scgp));
 		printf("Buffer cap: %ld\n", a_to_u_3_byte(&xx[1]));
-/*	}*/
+	}
 	return (a_to_u_3_byte(&xx[1]));
 /*	return (0);*/
 #endif
@@ -1299,6 +1304,7 @@ read_peak_buffer_cap_teac(scgp)
 #define	BI_448_BYTE	0x40
 #define	BI_APP_CODE	0x10
 
+#ifdef	XXBUFFER
 LOCAL int
 buffer_inquiry_teac(scgp, fmt)
 	SCSI	*scgp;
@@ -1337,7 +1343,7 @@ buffer_inquiry_teac(scgp, fmt)
 	if (scg_cmd(scgp) < 0)
 		return (-1);
 
-/*	if (scgp->verbose) {*/
+	if (scgp->verbose) {
 /*		scg_prbytes("WRa Data", xx, sizeof (xx) - scg_getresid(scgp));*/
 /*		scg_prbytes("WRa Data", xx, 1);*/
 
@@ -1345,12 +1351,11 @@ buffer_inquiry_teac(scgp, fmt)
 		scg_prbytes("WRa Data", xx, 9);
 		printf("%d\n", xx[8] - xx[1]);
 /*		printf("Buffer cap: %ld\n", a_to_u_3_byte(&xx[1]));*/
-/*	}*/
+	}
 	return (0);
 #endif
 }
 
-#ifdef	XXBUFFER
 LOCAL void
 check_buffer_teac(scgp)
 	SCSI	*scgp;
@@ -1386,7 +1391,7 @@ g7_teac(scgp)
 	scmd->cdb_len = SC_G5_CDBLEN;
 	scmd->sense_len = CCS_SENSE_LEN;
 
-	scmd->cdb.g5_cdb.cmd = 0xDf;
+	scmd->cdb.g5_cdb.cmd = 0xDF;
 /*	scmd->cdb.g5_cdb.cmd = 0xE5;*/
 	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
 
@@ -1431,7 +1436,7 @@ g6_teac(scgp)
 	scmd->cdb.g1_cdb.cmd = 0xC3;
 	scmd->cdb.g1_cdb.cmd = 0xC6;
 	scmd->cdb.g1_cdb.cmd = 0xC7;	/* Read TOC */
-	scmd->cdb.g1_cdb.cmd = 0xCe;
+	scmd->cdb.g1_cdb.cmd = 0xCE;
 	scmd->cdb.g1_cdb.cmd = 0xCF;
 	scmd->cdb.g1_cdb.cmd = 0xC7;	/* Read TOC */
 	scmd->cdb.g1_cdb.lun = scg_lun(scgp);

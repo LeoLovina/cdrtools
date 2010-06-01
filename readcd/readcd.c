@@ -1,43 +1,39 @@
-/* @(#)readcd.c	1.74 04/09/08 Copyright 1987, 1995-2004 J. Schilling */
+/* @(#)readcd.c	1.111 10/05/11 Copyright 1987, 1995-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)readcd.c	1.74 04/09/08 Copyright 1987, 1995-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)readcd.c	1.111 10/05/11 Copyright 1987, 1995-2010 J. Schilling";
 #endif
 /*
  *	Skeleton for the use of the scg genearal SCSI - driver
  *
- *	Copyright (c) 1987, 1995-2004 J. Schilling
+ *	Copyright (c) 1987, 1995-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <standard.h>
-#include <unixstd.h>
-#include <stdxlib.h>
-#include <strdefs.h>
-#include <fctldefs.h>
-#include <timedefs.h>
-#include <signal.h>
-#include <schily.h>
-
-#ifdef	NEED_O_BINARY
-#include <io.h>					/* for setmode() prototype */
-#endif
+#include <schily/mconfig.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/unistd.h>
+#include <schily/stdlib.h>
+#include <schily/string.h>
+#include <schily/fcntl.h>
+#include <schily/time.h>
+#include <schily/errno.h>
+#include <schily/signal.h>
+#include <schily/schily.h>
+#include <schily/priv.h>
+#include <schily/io.h>				/* for setmode() prototype */
 
 #include <scg/scgcmd.h>
 #include <scg/scsireg.h>
@@ -47,11 +43,15 @@ static	char sccsid[] =
 #include "scsimmc.h"
 #define	qpto96	__nothing__
 #include "cdrecord.h"
-#include "defaults.h"
+#include "cdrdeflt.h"
 #undef	qpto96
 #include "movesect.h"
 
-char	cdr_version[] = "2.01";
+#include <ecc.h>
+#include <edc.h>
+#include "version.h"
+
+char	cdr_version[] = VERSION;
 
 #if	defined(PROTOTYPES)
 #define	UINT_C(a)	(a##u)
@@ -62,6 +62,7 @@ char	cdr_version[] = "2.01";
 #define	UINT_C(a)	((unsigned)(a))
 #define	ULONG_C(a)	((unsigned long)(a))
 #define	USHORT_C(a)	((unsigned short)(a))
+/* CSTYLED */
 #define	CONCAT(a, b)	a/**/b
 #endif
 
@@ -82,15 +83,67 @@ typedef struct {
 	int	c2_maxerrs;
 	int	c2_errsecs;
 	int	c2_badsecs;
-	int	secsize;
+	int	secsize;	/* The output sector size on the file    */
+	int	isecsize;	/* The input sector size from the medium */
 	BOOL	ismmc;
 } rparm_t;
+
+typedef struct {
+	int	c1_errors;
+	int	c2_errors;
+	int	cu_errors;
+	int	pi_errors;
+} cxerror_t;
+
+typedef int (*start_cx_func_t)	__PR((SCSI*));	/* initiates a scan */
+typedef int (*end_cx_func_t)	__PR((SCSI*));	/* ends a scan */
+typedef int (*one_interval_func_t) __PR((SCSI *, /* scans a certain range, */
+				cxerror_t *,	/* should be 75 sectors. */
+				long, void *));	/* Return value is the next */
+						/* sector to be scanned */
+/*
+ * Describes one set of functions needed to perform an cx scan.
+ */
+typedef struct {
+	start_cx_func_t		start_func;
+	end_cx_func_t		end_func;
+	one_interval_func_t	one_interval_func;
+} cx_scan_procedure_t;
+
+LOCAL	BOOL	mmc_isplextor		__PR((SCSI* scgp));
+LOCAL	int	plextor_init_cx_scan	__PR((SCSI* scgp));
+LOCAL	int	plextor_init_pi8_scan	__PR((SCSI* scgp));
+LOCAL	int	plextor_init_pif_scan	__PR((SCSI* scgp));
+LOCAL	int	plextor_end_scan	__PR((SCSI* scgp));
+LOCAL	int	plextor_read_cx_values	__PR((SCSI* scgp, cxerror_t *pe, BOOL dopi));
+LOCAL	int	nec_init_cx_scan	__PR((SCSI* scgp));
+LOCAL	int	nec_end_scan		__PR((SCSI* scgp));
+LOCAL	int	nec_scan_one_interval	__PR((SCSI* scgp, cxerror_t *pe, long addr, void *p));
+LOCAL	int	plextor_scan_one_interval __PR((SCSI* scgp, cxerror_t *pe, long addr, void *p));
+LOCAL	int	plextor_scan_one_dvd_interval __PR((SCSI* scgp, cxerror_t *pe, long addr, void *p));
+
+
+/*
+ * Currently, Plextor and NEC cx scanning is supported
+ */
+cx_scan_procedure_t	cx_scan_procedures[] = {
+		{   plextor_init_cx_scan,
+		    plextor_end_scan,
+		    plextor_scan_one_interval },
+
+		{   nec_init_cx_scan,
+		    nec_end_scan,
+		    nec_scan_one_interval },
+
+		{ NULL }
+};
 
 struct exargs {
 	SCSI	*scgp;
 	int	old_secsize;
 	int	flags;
 	int	exflags;
+	int	excode;
 	char	oerr[3];
 } exargs;
 
@@ -99,9 +152,13 @@ EXPORT	BOOL	cvt_bcyls	__PR((void));
 EXPORT	void	print_defect_list __PR((void));
 LOCAL	void	usage		__PR((int ret));
 EXPORT	int	main		__PR((int ac, char **av));
+LOCAL	void	scg_openerr	__PR((char *errstr));
+LOCAL	int	find_drive	__PR((SCSI *scgp, char *dev));
 LOCAL	void	intr		__PR((int sig));
 LOCAL	void	exscsi		__PR((int excode, void *arg));
+#ifdef	__needed__
 LOCAL	void	excdr		__PR((int excode, void *arg));
+#endif
 LOCAL	int	prstats		__PR((void));
 LOCAL	int	prstats_silent	__PR((void));
 LOCAL	void	dorw		__PR((SCSI *scgp, char *filename, char *sectors));
@@ -117,11 +174,14 @@ LOCAL	void	get_sectype	__PR((SCSI *scgp, long addr, char *st));
 #endif
 
 LOCAL	void	readc2_disk	__PR((SCSI *scgp, parm_t *parmp));
+LOCAL	void	readcx_disk	__PR((SCSI *scgp, parm_t *parmp));
+LOCAL	void	readpi_disk	__PR((SCSI *scgp, parm_t *parmp));
 LOCAL	int	fread_data	__PR((SCSI *scgp, rparm_t *rp, caddr_t bp, long addr, int cnt));
 #ifdef	CLONE_WRITE
 LOCAL	int	fread_2448	__PR((SCSI *scgp, rparm_t *rp, caddr_t bp, long addr, int cnt));
 LOCAL	int	fread_2448_16	__PR((SCSI *scgp, rparm_t *rp, caddr_t bp, long addr, int cnt));
 LOCAL	int	fread_2352	__PR((SCSI *scgp, rparm_t *rp, caddr_t bp, long addr, int cnt));
+LOCAL	int	fread_2048	__PR((SCSI *scgp, rparm_t *rp, caddr_t bp, long addr, int cnt));
 LOCAL	int	fread_lin	__PR((SCSI *scgp, rparm_t *rp, caddr_t bp, long addr, int cnt));
 #endif
 LOCAL	int	bits		__PR((int c));
@@ -155,6 +215,8 @@ LOCAL	int	choice		__PR((int n));
 LOCAL	void	ra		__PR((SCSI *scgp));
 
 EXPORT	int	read_da		__PR((SCSI *scgp, caddr_t bp, long addr, int cnt, int framesize, int subcode));
+LOCAL	int	read_sectors	__PR((SCSI *scgp, void *p, long addr, int cnt));
+LOCAL	int	read_dvd_sectors __PR((SCSI *scgp, void *p, long addr, int cnt));
 EXPORT	int	read_cd		__PR((SCSI *scgp, caddr_t bp, long addr, int cnt, int framesize, int data, int subch));
 
 LOCAL	void	oldmode		__PR((SCSI *scgp, int *errp, int *retrp));
@@ -171,7 +233,7 @@ int	didintr;
 int	exsig;
 
 char	*Sbuf;
-long	Sbufsize;
+long	Sbufsize = -1L;
 
 /*#define	MAX_RETRY	32*/
 #define	MAX_RETRY	128
@@ -183,10 +245,16 @@ int	quiet;
 BOOL	is_suid;
 BOOL	is_cdrom;
 BOOL	is_dvd;
+BOOL	is_bd;
 BOOL	do_write;
 BOOL	c2scan;
+BOOL	cxscan;
+BOOL	pi8scan;
+BOOL	pifscan;
+BOOL	plot;
 BOOL	fulltoc;
 BOOL	clone;
+BOOL	edc_corr;
 BOOL	noerror;
 BOOL	nocorr;
 BOOL	notrunc;
@@ -215,9 +283,14 @@ usage(ret)
 	error("\tts=#		set maximum transfer size for a single SCSI command\n");
 	error("\t-w		Switch to write mode\n");
 	error("\t-c2scan		Do a C2 error scan\n");
+	error("\t-cxscan		Do a C1/C2/CU scan (only available on a few drives)\n");
+	error("\t-pi8scan	Do a DVD pisum8 scan (only available on a few drives)\n");
+	error("\t-pifscan	Do a DVD pif scan (only available on a few drives)\n");
+	error("\t-plot		Print data suitable for gnuplot\n");
 #ifdef	CLONE_WRITE
 	error("\t-fulltoc	Retrieve the full TOC\n");
 	error("\t-clone		Retrieve the full TOC and all data\n");
+	error("\t-edc-corr	Try to do user level Reed Solomon repair (experimental)\n");
 #endif
 	error("\ttimeout=#	set the default SCSI command timeout to #.\n");
 	error("\tdebug=#,-d	Set to # or increment misc debug level\n");
@@ -239,9 +312,10 @@ usage(ret)
 	error("\n");
 	error("sectors=0-0 will read nothing, sectors=0-1 will read one sector starting from 0\n");
 	exit(ret);
-}	
+}
 
-char	opts[]   = "debug#,d+,kdebug#,kd#,timeout#,quiet,q,verbose+,v+,Verbose+,V+,x+,xd#,silent,s,help,h,version,scanbus,dev*,sectors*,w,c2scan,fulltoc,clone,noerror,nocorr,notrunc,retries#,factor,f*,speed#,ts&,overhead,meshpoints#";
+/* CSTYLED */
+char	opts[]   = "debug#,d+,kdebug#,kd#,timeout#,quiet,q,verbose+,v+,Verbose+,V+,x+,xd#,silent,s,help,h,version,scanbus,dev*,sectors*,w,c2scan,cxscan,pi8scan,pifscan,plot,fulltoc,clone,edc-corr,noerror,nocorr,notrunc,retries#,factor,f*,speed#,ts&,overhead,meshpoints#";
 
 EXPORT int
 main(ac, av)
@@ -252,9 +326,9 @@ main(ac, av)
 	int	fcount;
 	int	cac;
 	char	* const *cav;
-	int	scsibus	= 0;
-	int	target	= 0;
-	int	lun	= 0;
+	int	scsibus	= -1;
+	int	target	= -1;
+	int	lun	= -1;
 	int	silent	= 0;
 	int	verbose	= 0;
 	int	kdebug	= 0;
@@ -284,8 +358,10 @@ main(ac, av)
 			&silent, &silent,
 			&help, &help, &pversion,
 			&scanbus, &dev, &sectors, &do_write,
-			&c2scan,
+			&c2scan, &cxscan, &pi8scan, &pifscan,
+			&plot,
 			&fulltoc, &clone,
+			&edc_corr,
 			&noerror, &nocorr,
 			&notrunc, &retries, &do_factor, &filename,
 			&speed, getnum, &Sbufsize,
@@ -296,7 +372,7 @@ main(ac, av)
 	if (help)
 		usage(0);
 	if (pversion) {
-		printf("readcd %s (%s-%s-%s) Copyright (C) 1987, 1995-2003 Jörg Schilling\n",
+		printf("readcd %s (%s-%s-%s) Copyright (C) 1987, 1995-2010 Jörg Schilling\n",
 								cdr_version,
 								HOST_CPU, HOST_VENDOR, HOST_OS);
 		exit(0);
@@ -334,20 +410,17 @@ main(ac, av)
 				usage(EX_BAD);
 				/* NOTREACHED */
 			}
-		} else {
-			scsibus = 0;
 		}
 		cac--;
 		cav++;
 	}
 /*error("dev: '%s'\n", dev);*/
-
 	if (!scanbus)
-		cdr_defaults(&dev, NULL, NULL, NULL);
+		cdr_defaults(&dev, NULL, NULL, &Sbufsize, NULL);
 	if (debug) {
 		printf("dev: '%s'\n", dev);
 	}
-	if (dev) {
+	if (dev || scanbus || (scsibus < 0 && target < 0 && lun < 0)) {
 		char	errstr[80];
 
 		/*
@@ -356,19 +429,24 @@ main(ac, av)
 		 * remote routines that are located inside libscg.
 		 */
 		scg_remote();
-		if ((strncmp(dev, "HELP", 4) == 0) ||
-		    (strncmp(dev, "help", 4) == 0)) {
+		if (dev != NULL &&
+		    ((strncmp(dev, "HELP", 4) == 0) ||
+		    (strncmp(dev, "help", 4) == 0))) {
 			scg_help(stderr);
 			exit(0);
 		}
 		if ((scgp = scg_open(dev, errstr, sizeof (errstr), debug, lverbose)) == (SCSI *)0) {
-			int	err = geterrno();
+			scg_openerr(errstr);
+			/* NOTREACHED */
+		}
+		if (!scanbus && scg_scsibus(scgp) < 0 &&
+				scg_target(scgp) < 0 && scg_lun(scgp) < 0) {
+			int i = find_drive(scgp, dev);
 
-			errmsgno(err, "%s%sCannot open SCSI driver.\n", errstr, errstr[0]?". ":"");
-			errmsgno(EX_BAD, "For possible targets try 'readcd -scanbus'.%s\n",
-						geteuid() ? " Make sure you are root.":"");
-			errmsgno(EX_BAD, "For possible transport specifiers try 'readcd dev=help'.\n");
-			exit(err);
+			if (i < 0) {
+				scg_openerr("");
+				/* NOTREACHED */
+			}
 		}
 	} else {
 		if (scsibus == -1 && target >= 0 && lun >= 0)
@@ -388,13 +466,34 @@ main(ac, av)
 	scgp->kdebug = kdebug;
 	scg_settimeout(scgp, deftimeout);
 
-	if (Sbufsize == 0)
+	if (Sbufsize < 0)
 		Sbufsize = 256*1024L;
 	Sbufsize = scg_bufsize(scgp, Sbufsize);
 	if ((Sbuf = scg_getbuf(scgp, Sbufsize)) == NULL)
 		comerr("Cannot get SCSI I/O buffer.\n");
 
-	is_suid = geteuid() != getuid();
+#ifdef	HAVE_PRIV_SET
+	is_suid = priv_ineffect(PRIV_FILE_DAC_READ) &&
+		    !priv_ineffect(PRIV_PROC_SETID);
+	/*
+	 * Give up privs we do not need anymore.
+	 * We no longer need:
+	 *	file_dac_read,net_privaddr
+	 * We still need:
+	 *	sys_devices
+	 */
+	priv_set(PRIV_OFF, PRIV_EFFECTIVE,
+		PRIV_FILE_DAC_READ, PRIV_NET_PRIVADDR, NULL);
+	priv_set(PRIV_OFF, PRIV_PERMITTED,
+		PRIV_FILE_DAC_READ, PRIV_NET_PRIVADDR, NULL);
+	priv_set(PRIV_OFF, PRIV_INHERITABLE,
+		PRIV_FILE_DAC_READ, PRIV_NET_PRIVADDR, PRIV_SYS_DEVICES, NULL);
+#endif
+	/*
+	 * This is only for OS that do not support fine grained privs.
+	 */
+	if (!is_suid)
+		is_suid = geteuid() != getuid();
 	/*
 	 * We don't need root privilleges anymore.
 	 */
@@ -412,10 +511,23 @@ main(ac, av)
 	/* code to use SCG */
 
 	if (scanbus) {
-		select_target(scgp, stdout);
+		int	i = select_target(scgp, stdout);
+
+		if (i < 0) {
+			scg_openerr("");
+			/* NOTREACHED */
+		}
 		exit(0);
 	}
-	do_inquiry(scgp, FALSE);
+	seterrno(0);
+	if (!do_inquiry(scgp, FALSE)) {
+		int	err = geterrno();
+
+		if (err == EPERM || err == EACCES) {
+			scg_openerr("");
+			/* NOTREACHED */
+		}
+	}
 	allow_atapi(scgp, TRUE);    /* Try to switch to 10 byte mode cmds */
 	if (is_mmc(scgp, NULL, NULL)) {
 		int	rspeed;
@@ -435,6 +547,8 @@ main(ac, av)
 				is_cdrom = TRUE;
 			if (rspeed >= 0x10 && rspeed < 0x20)
 				is_dvd = TRUE;
+			if (rspeed >= 0x40 && rspeed < 0x50)
+				is_bd = TRUE;
 		} else {
 			BOOL	dvd;
 
@@ -444,7 +558,7 @@ main(ac, av)
 			} else {
 				char	xb[32];
 
-				if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0, 0, 0) >= 0) {
+				if (read_dvd_structure(scgp, (caddr_t)xb, 32, 0, 0, 0, 0) >= 0) {
 				/*
 				 * If read DVD structure is supported and works, then
 				 * we must have a DVD media in the drive. Signal to
@@ -463,15 +577,17 @@ main(ac, av)
 			speed = 0xFFFF;
 		scsi_set_speed(scgp, speed, speed, ROTCTL_CLV);
 		if (scsi_get_speed(scgp, &rspeed, &wspeed) >= 0) {
-			error("Read  speed: %5d kB/s (CD %3dx, DVD %2dx).\n",
-				rspeed, rspeed/176, rspeed/1385);
-			error("Write speed: %5d kB/s (CD %3dx, DVD %2dx).\n",
-				wspeed, wspeed/176, wspeed/1385);
+			error("Read  speed: %5d kB/s (CD %3dx, DVD %2dx, BD %2dx).\n",
+				rspeed, rspeed/176, rspeed/1385, rspeed/4495);
+			error("Write speed: %5d kB/s (CD %3dx, DVD %2dx, BD %2dx).\n",
+				wspeed, wspeed/176, wspeed/1385, wspeed/4495);
 		}
 	}
 	exargs.scgp	   = scgp;
 	exargs.old_secsize = -1;
 /*	exargs.flags	   = flags;*/
+	exargs.exflags	   = 0;
+	exargs.excode	   = 0;
 	exargs.oerr[2]	   = 0;
 
 	/*
@@ -488,16 +604,71 @@ main(ac, av)
 
 	if (is_suid) {
 		if (scgp->inq->type != INQ_ROMD)
-			comerrno(EX_BAD, "Not root. Will only work on CD-ROM in suid mode\n");
+			comerrno(EX_BAD, "Not root. Will only work on CD-ROM in suid/priv mode\n");
 	}
 
-	if (filename || sectors || c2scan || meshpoints || fulltoc || clone) {
+	if (filename || sectors || c2scan || cxscan || pi8scan || pifscan ||
+	    meshpoints || fulltoc ||
+	    clone || edc_corr) {
 		dorw(scgp, filename, sectors);
 	} else {
 		doit(scgp);
 	}
-	comexit(0);
-	return (0);
+	comexit(exargs.excode);
+	return (exargs.excode);
+}
+
+LOCAL void
+scg_openerr(errstr)
+	char	*errstr;
+{
+	int	err = geterrno();
+
+	errmsgno(err, "%s%sCannot open or use SCSI driver.\n", errstr, errstr[0]?". ":"");
+	errmsgno(EX_BAD, "For possible targets try 'readcd -scanbus'.%s\n",
+				geteuid() ? " Make sure you are root.":"");
+	errmsgno(EX_BAD, "For possible transport specifiers try 'readcd dev=help'.\n");
+	exit(err);
+}
+
+LOCAL int
+find_drive(scgp, dev)
+	SCSI	*scgp;
+	char	*dev;
+{
+	int	ntarget;
+
+	error("No target specified, trying to find one...\n");
+	ntarget = find_target(scgp, INQ_ROMD, -1);
+	if (ntarget < 0)
+		return (ntarget);
+	if (ntarget == 1) {
+		/*
+		 * Simple case, exactly one CD-ROM found.
+		 */
+		find_target(scgp, INQ_ROMD, 1);
+	} else if (ntarget <= 0 && (ntarget = find_target(scgp, INQ_WORM, -1)) == 1) {
+		/*
+		 * Exactly one CD-ROM acting as WORM found.
+		 */
+		find_target(scgp, INQ_WORM, 1);
+	} else if (ntarget <= 0) {
+		/*
+		 * No single CD-ROM or WORM found.
+		 */
+		errmsgno(EX_BAD, "No CD/DVD/BD-Recorder target found.\n");
+		errmsgno(EX_BAD, "Your platform may not allow to scan for SCSI devices.\n");
+		comerrno(EX_BAD, "Call 'readcd dev=help' or ask your sysadmin for possible targets.\n");
+	} else {
+		errmsgno(EX_BAD, "Too many CD/DVD/BD-Recorder targets found.\n");
+		select_target(scgp, stdout);
+		comerrno(EX_BAD, "Select a target from the list above and use 'readcd dev=%s%sb,t,l'.\n",
+			dev?dev:"", dev?(dev[strlen(dev)-1] == ':'?"":":"):"");
+	}
+	error("Using dev=%s%s%d,%d,%d.\n",
+			dev?dev:"", dev?(dev[strlen(dev)-1] == ':'?"":":"):"",
+			scg_scsibus(scgp), scg_target(scgp), scg_lun(scgp));
+	return (ntarget);
 }
 
 /*
@@ -548,6 +719,7 @@ exscsi(excode, arg)
 	}
 }
 
+#ifdef	__needed__
 LOCAL void
 excdr(excode, arg)
 	int	excode;
@@ -559,6 +731,7 @@ excdr(excode, arg)
 	/* Do several other restores/statistics here (see cdrecord.c) */
 #endif
 }
+#endif
 
 /*
  * Return milliseconds since start time.
@@ -651,15 +824,17 @@ dorw(scgp, filename, sectors)
 		if (params.name == NULL)
 			params.name = "/dev/null";
 		read_ftoc(scgp, &params, FALSE);
-	} else if (clone) {
+	} else if (clone || edc_corr) {
 		if (!is_mmc(scgp, NULL, NULL))
 			comerrno(EX_BAD, "Unsupported device for clone mode.\n");
-		noerror = TRUE;
+		if (!edc_corr)
+			noerror = TRUE;
 		if (retries == MAX_RETRY)
 			retries = 10;
 		if (params.name == NULL)
 			params.name = "/dev/null";
 
+		if (clone)
 		if (read_ftoc(scgp, &params, TRUE) < 0)
 			comerrno(EX_BAD, "Read fulltoc problems.\n");
 		readcd_disk(scgp, &params);
@@ -672,6 +847,24 @@ dorw(scgp, filename, sectors)
 		if (params.name == NULL)
 			params.name = "/dev/null";
 		readc2_disk(scgp, &params);
+	} else if (cxscan) {
+		if (plot && lverbose == 0)
+			lverbose = 1;
+		noerror = TRUE;
+		if (retries == MAX_RETRY)
+			retries = 10;
+		if (params.name == NULL)
+			params.name = "/dev/null";
+		readcx_disk(scgp, &params);
+	} else if (pi8scan || pifscan) {
+		if (plot && lverbose == 0)
+			lverbose = 1;
+		noerror = TRUE;
+		if (retries == MAX_RETRY)
+			retries = 10;
+		if (params.name == NULL)
+			params.name = "/dev/null";
+		readpi_disk(scgp, &params);
 	} else if (do_write)
 		write_disk(scgp, &params);
 	else
@@ -738,7 +931,7 @@ read_disk(scgp, parmp)
 	rp.c2_maxerrs = 0;
 	rp.c2_errsecs = 0;
 	rp.c2_badsecs = 0;
-	rp.secsize = scgp->cap->c_bsize;
+	rp.isecsize = rp.secsize = scgp->cap->c_bsize;
 
 	read_generic(scgp, parmp, fread_data, &rp, fdata_null);
 }
@@ -770,7 +963,7 @@ readcd_disk(scgp, parmp)
 	rp.c2_maxerrs = 0;
 	rp.c2_errsecs = 0;
 	rp.c2_badsecs = 0;
-	rp.secsize = 2448;
+	rp.isecsize = rp.secsize = 2448;
 	rp.ismmc = is_mmc(scgp, NULL, NULL);
 	funcp = fread_2448;
 
@@ -783,6 +976,11 @@ readcd_disk(scgp, parmp)
 
 			funcp = fread_2448_16;
 		}
+	}
+	if (edc_corr) {
+		funcp = fread_2048;
+		rp.secsize = 2048;	/* We ouput CD-ROM data sectors  */
+		rp.isecsize = 2352;	/* We read CD-DA sectors from CD */
 	}
 
 	oldmode(scgp, &oerr, &oretr);
@@ -821,7 +1019,7 @@ read_lin(scgp, parmp)
 	rp.c2_maxerrs = 0;
 	rp.c2_errsecs = 0;
 	rp.c2_badsecs = 0;
-	rp.secsize = 2448;
+	rp.isecsize = rp.secsize = 2448;
 	rp.ismmc = is_mmc(scgp, NULL, NULL);
 	domode(scgp, -1, -1);
 	read_generic(scgp, &parm, fread_lin, &rp, fdata_null);
@@ -850,7 +1048,7 @@ read_secheader(scgp, addr)
 	rp.c2_maxerrs = 0;
 	rp.c2_errsecs = 0;
 	rp.c2_badsecs = 0;
-	rp.secsize = 2352;
+	rp.isecsize = rp.secsize = 2352;
 	rp.ismmc = is_mmc(scgp, NULL, NULL);
 
 	wait_unit_ready(scgp, 10);
@@ -882,7 +1080,8 @@ read_ftoc(scgp, parmp, do_sectype)
 
 
 	strcpy(filename, "toc.dat");
-	if (strcmp(parmp->name, "/dev/null") != 0) {
+	if (parmp != NULL &&
+	    strcmp(parmp->name, "/dev/null") != 0) {
 
 		len = strlen(parmp->name);
 		if (len > (sizeof (filename)-5)) {
@@ -902,6 +1101,14 @@ read_ftoc(scgp, parmp, do_sectype)
 	len = a_to_u_2_byte(tp->len) + sizeof (struct tocheader)-2;
 	error("TOC len: %d. First Session: %d Last Session: %d.\n", len, tp->first, tp->last);
 
+	/*
+	 * XXX there is a bug in some ASPI versions that
+	 * XXX cause a hang with odd transfer lengths.
+	 * XXX We should workaround the problem where it exists
+	 * XXX but the problem may exist elsewhere too.
+	 */
+	if (len & 1)
+		len++;
 	if (read_toc(scgp, xxb, 0, len, 0, FMT_FULLTOC) < 0) {
 		if (len & 1) {
 			/*
@@ -1079,7 +1286,7 @@ readc2_disk(scgp, parmp)
 	rp.c2_maxerrs = 0;
 	rp.c2_errsecs = 0;
 	rp.c2_badsecs = 0;
-	rp.secsize = 2352 + 294;
+	rp.isecsize = rp.secsize = 2352 + 294;	/* CD-DA + C2 bit pointers */
 	rp.ismmc = is_mmc(scgp, NULL, NULL);
 
 	oldmode(scgp, &oerr, &oretr);
@@ -1099,6 +1306,200 @@ readc2_disk(scgp, parmp)
 	printf("C2 errors rate: %f%% \n", (100.0*rp.c2_errors)/scgp->cap->c_baddr/2352);
 	printf("C2 errors on worst sector: %d, sectors with 100+ C2 errors: %d\n", rp.c2_maxerrs, rp.c2_badsecs);
 }
+
+
+LOCAL void
+readcx_disk(scgp, parmp)
+	SCSI	*scgp;
+	parm_t	*parmp;
+{
+	long			addr = 0L;
+	long			end = 0L;
+	int			secs;	/* # of seconds */
+	cxerror_t		errors;
+	cxerror_t		stats;
+	cxerror_t		max_errors;
+	cx_scan_procedure_t	*sp;
+	BOOL			askrange = FALSE;
+	BOOL			isrange = FALSE;
+	FILE			*f = stdout;
+
+	if (is_suid) {
+		if (scgp->inq->type != INQ_ROMD)
+			comerrno(EX_BAD, "Not root. Will only read from CD in suid/priv mode\n");
+	}
+
+	scgp->silent++;
+	if (read_capacity(scgp) >= 0)
+		end = scgp->cap->c_baddr + 1;
+	scgp->silent--;
+	print_capacity(scgp, stderr);
+
+	if (parmp == NULL || parmp->askrange)
+		askrange = TRUE;
+	if (parmp != NULL && !askrange && (parmp->start <= parmp->end))
+		isrange = TRUE;
+
+	if ((end <= 0 && isrange) || (askrange && scg_yes("Ignore disk size? ")))
+		end = 10000000;	/* Hack to read empty (e.g. blank=fast) disks */
+
+	if (parmp) {
+		addr = parmp->start;
+		if (parmp->end != -1 && parmp->end < end)
+			end = parmp->end;
+	}
+
+	for (sp = cx_scan_procedures; sp->start_func; sp++) {
+		if ((*sp->start_func)(scgp) >= 0)
+			break;
+	}
+	if (sp->start_func == NULL)
+		comerrno(EX_BAD, "Unsupported drive for -cxscan\n");
+
+	secs = (end - addr) / 75;	/* Compute # of seconds */
+
+	fillbytes(&stats, sizeof (stats), '\0');
+	fillbytes(&max_errors, sizeof (max_errors), '\0');
+
+	while (addr < end) {
+		addr = (*sp->one_interval_func)(scgp, &errors, addr, Sbuf);
+		stats.c1_errors += errors.c1_errors;
+		stats.c2_errors += errors.c2_errors;
+		stats.cu_errors += errors.cu_errors;
+		stats.pi_errors += errors.pi_errors;
+		max_errors.c1_errors = max(max_errors.c1_errors, errors.c1_errors);
+		max_errors.c2_errors = max(max_errors.c2_errors, errors.c2_errors);
+		max_errors.cu_errors = max(max_errors.cu_errors, errors.cu_errors);
+		max_errors.pi_errors = max(max_errors.pi_errors, errors.pi_errors);
+		if (lverbose > 1 ||
+		    (lverbose > 0 &&
+		    (errors.c1_errors || errors.c2_errors || errors.cu_errors))) {
+			if (plot) {
+				printf("%8ld %4d %4d %4d\n",
+				addr,
+				errors.c1_errors, errors.c2_errors,
+				errors.cu_errors);
+				flush();
+			} else {
+				printf(" %3ldm %02lds: C1: %4d,  C2: %4d,  CU: %4d\n",
+				addr/75/60, addr/75%60,
+				errors.c1_errors, errors.c2_errors,
+				errors.cu_errors);
+			}
+		}
+		if (didintr) {
+			(*sp->end_func)(scgp);
+			comexit(exsig);
+		}
+	}
+
+	if (plot)
+		f = stderr;
+	fprintf(f, "\n\ntotal result:\n\n");
+	fprintf(f, "total:   C1: %5d,   C2: %5d,   CU: %5d\n",
+			stats.c1_errors, stats.c2_errors, stats.cu_errors);
+	fprintf(f, "max  :   C1: %5d,   C2: %5d,   CU: %5d\n",
+			max_errors.c1_errors, max_errors.c2_errors,
+			max_errors.cu_errors);
+	fprintf(f, "avg/s:   C1: %5.1f,   C2: %5.1f,   CU: %5.1f\n\n",
+			(float)stats.c1_errors/secs,
+			(float)stats.c2_errors/secs,
+			(float)stats.cu_errors/secs);
+
+	(*sp->end_func)(scgp);
+}
+
+
+LOCAL void
+readpi_disk(scgp, parmp)
+	SCSI	*scgp;
+	parm_t	*parmp;
+{
+	long			addr = 0L;
+	long			end = 0L;
+	int			secs;	/* # of seconds */
+	cxerror_t		errors;
+	cxerror_t		stats;
+	cxerror_t		max_errors;
+	BOOL			askrange = FALSE;
+	BOOL			isrange = FALSE;
+	FILE			*f = stdout;
+
+	if (is_suid) {
+		if (scgp->inq->type != INQ_ROMD)
+			comerrno(EX_BAD, "Not root. Will only read from CD in suid/priv mode\n");
+	}
+
+	scgp->silent++;
+	if (read_capacity(scgp) >= 0)
+		end = scgp->cap->c_baddr + 1;
+	scgp->silent--;
+	print_capacity(scgp, stderr);
+
+	if (parmp == NULL || parmp->askrange)
+		askrange = TRUE;
+	if (parmp != NULL && !askrange && (parmp->start <= parmp->end))
+		isrange = TRUE;
+
+	if ((end <= 0 && isrange) || (askrange && scg_yes("Ignore disk size? ")))
+		end = 10000000;	/* Hack to read empty (e.g. blank=fast) disks */
+
+	if (parmp) {
+		addr = parmp->start;
+		if (parmp->end != -1 && parmp->end < end)
+			end = parmp->end;
+	}
+
+	if (pifscan) {
+		if (plextor_init_pif_scan(scgp) < 0)
+			comerrno(EX_BAD, "Unsupported drive for -pifscan\n");
+	} else if (plextor_init_pi8_scan(scgp) < 0)
+		comerrno(EX_BAD, "Unsupported drive for -pi8scan\n");
+
+	secs = (end - addr) / (8*16);	/* Compute # of blocks */
+	if (pifscan)
+		secs = (end - addr) / (16);	/* Compute # of blocks */
+
+	fillbytes(&stats, sizeof (stats), '\0');
+	fillbytes(&max_errors, sizeof (max_errors), '\0');
+
+	while (addr < end) {
+		addr = plextor_scan_one_dvd_interval(scgp, &errors, addr, Sbuf);
+		stats.c1_errors += errors.c1_errors;
+		stats.c2_errors += errors.c2_errors;
+		stats.cu_errors += errors.cu_errors;
+		stats.pi_errors += errors.pi_errors;
+		max_errors.c1_errors = max(max_errors.c1_errors, errors.c1_errors);
+		max_errors.c2_errors = max(max_errors.c2_errors, errors.c2_errors);
+		max_errors.cu_errors = max(max_errors.cu_errors, errors.cu_errors);
+		max_errors.pi_errors = max(max_errors.pi_errors, errors.pi_errors);
+		if (lverbose > 1 ||
+		    (lverbose > 0 && errors.pi_errors)) {
+			printf(" %8ld %6d\n",
+				addr,
+				errors.pi_errors);
+			if (plot)
+				flush();
+		}
+		if (didintr) {
+			plextor_end_scan(scgp);
+			comexit(exsig);
+		}
+	}
+
+	if (plot)
+		f = stderr;
+	fprintf(f, "\n\ntotal result:\n\n");
+	fprintf(f, "total:   PI: %8d\n",
+			stats.pi_errors);
+	fprintf(f, "max  :   PI: %8d\n",
+			max_errors.pi_errors);
+	fprintf(f, "avg sum: PI: %8.1f\n\n",
+			(float)stats.pi_errors/secs);
+
+	plextor_end_scan(scgp);
+}
+
 
 /* ARGSUSED */
 LOCAL int
@@ -1203,6 +1604,53 @@ fread_2352(scgp, rp, bp, addr, cnt)
 			/* Sync + all headers + user data + EDC/ECC + all subch */
 			0x02));
 	}
+}
+
+/*
+ * -ledc_ecc_dec read variant:	read CD-DA sectors (2352 bytes) and output
+ *				corrected CD-ROM sectors (2048 bytes).
+ */
+LOCAL int
+fread_2048(scgp, rp, bp, addr, cnt)
+	SCSI	*scgp;
+	rparm_t	*rp;
+	caddr_t	bp;
+	long	addr;
+	int	cnt;
+{
+	int	ret;
+	char	*from;
+	char	*to;
+	char	*p;
+	int	i = 0;
+	int	secsize = rp->secsize;
+	BOOL	OK = TRUE;
+
+	rp->secsize = rp->isecsize;
+	ret = fread_2352(scgp, rp, bp, addr, cnt);
+	rp->secsize = secsize;
+
+	from = bp;
+	from += 16;
+	to = bp;
+	p = bp;
+	while (i < cnt) {
+		if (!crc_check((unsigned char *)p, MODE_1)) {
+			do_decode_L2((unsigned char *)p, MODE_1, FALSE, 0);
+			if (!crc_check((unsigned char *)p, MODE_1))
+				OK = FALSE;
+/*			error("defect? %d: %d\n", crc_check((unsigned char *)p, MODE_1), addr+i);*/
+		}
+		move2048(from, to);
+		from += 2352;
+		to += 2048;
+		p += 2352;
+		i++;
+	}
+	if (OK)
+		return (0);
+	else
+		return (-1);
 }
 
 LOCAL int
@@ -1545,7 +1993,13 @@ read_retry(scgp, bp, addr, cnt, rfunc, rp)
 			} else {
 				if (scg_getresid(scgp)) {
 					error("\nresid: %d\n", scg_getresid(scgp));
-					return (-1);
+					/*
+					 * If we use -ledc_ecc_dec for
+					 * correction, let the correction
+					 * happen on an upper layer.
+					 */
+					if (!edc_corr)
+						return (-1);
 				}
 				break;
 			}
@@ -1613,7 +2067,7 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 
 	if (is_suid) {
 		if (scgp->inq->type != INQ_ROMD)
-			comerrno(EX_BAD, "Not root. Will only read from CD in suid mode\n");
+			comerrno(EX_BAD, "Not root. Will only read from CD in suid/priv mode\n");
 	}
 
 	if (parmp == NULL || parmp->askrange)
@@ -1628,7 +2082,7 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 		end = scgp->cap->c_baddr + 1;
 	scgp->silent--;
 
-	if (end <= 0 || isrange || (askrange && scg_yes("Ignore disk size? ")))
+	if ((end <= 0 && isrange) || (askrange && scg_yes("Ignore disk size? ")))
 		end = 10000000;	/* Hack to read empty (e.g. blank=fast) disks */
 
 	if (parmp) {
@@ -1644,6 +2098,11 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 		if (parmp->end != -1 && parmp->end < end)
 			end = parmp->end;
 		cnt = Sbufsize / secsize;
+		/*
+		 * XXX clean up this hack in future.
+		 */
+		if (edc_corr)
+			cnt = Sbufsize / rp->isecsize;
 	}
 
 	if (defname == NULL) {
@@ -1670,6 +2129,11 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 	if (askrange) {
 /* XXX askcnt */
 		cnt = Sbufsize / secsize;
+		/*
+		 * XXX clean up this hack in future.
+		 */
+		if (edc_corr)
+			cnt = Sbufsize / rp->isecsize;
 		getlong("Enter number of sectors per copy:", &cnt, 1L, cnt);
 	}
 
@@ -1678,11 +2142,10 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 	filename[sizeof (filename)-1] = '\0';
 	if (streql(filename, "-")) {
 		f = stdout;
-#ifdef	NEED_O_BINARY
 		setmode(STDOUT_FILENO, O_BINARY);
-#endif
 	} else if ((f = fileopen(filename, notrunc?"wcub":"wctub")) == NULL)
 		comerr("Cannot open '%s'.\n", filename);
+	file_raise(f, FALSE);
 
 	error("end:  %8ld\n", end);
 	if (gettimeofday(&starttime, (struct timezone *)0) < 0)
@@ -1713,12 +2176,16 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 				speed = ((addr - old_addr)/(1000.0/secsize)) / (0.001*(msec - old_msec));
 				if (do_factor) {
 					if (is_cdrom)
-						speed /= 176.400;
+						speed /= 176.400 * (secsize/2352.0);
 					else if (is_dvd)
 						speed /= 1385.0;
+					if (is_bd)
+						speed /= 4495.0;
 				}
 				error("addr: %8ld cnt: %ld", addr, cnt);
 				printf("%8ld %8.2f\n", addr, speed);
+				if (plot)
+					flush();
 				error("\r");
 				next_point += secs_per_point;
 				old_addr = addr;
@@ -1743,13 +2210,22 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 			}
 			errmsgno(err, "Cannot read source disk\n");
 
-			if (read_retry(scgp, Sbuf, addr, cnt, rfunc, rp) < 0)
+			if (read_retry(scgp, Sbuf, addr, cnt, rfunc, rp) < 0) {
+				exargs.excode = -2;
 				goto out;
+			}
 		} else {
 			scgp->silent--;
 			if (scg_getresid(scgp)) {
 				error("\nresid: %d\n", scg_getresid(scgp));
-				goto out;
+				/*
+				 * If we use -ledc_ecc_dec for
+				 * correction, let the correction
+				 * happen on an upper layer, but make it an
+				 * error in case of DMA residual problems.
+				 */
+				if (!edc_corr)
+					goto out;
 			}
 		}
 		(*dfunc)(rp, Sbuf, addr, cnt);
@@ -1757,6 +2233,7 @@ read_generic(scgp, parmp, rfunc, rp, dfunc)
 			err = geterrno();
 			error("\n");
 			errmsgno(err, "Cannot write '%s'\n", filename);
+			exargs.excode = err;
 			break;
 		}
 	}
@@ -1789,12 +2266,12 @@ write_disk(scgp, parmp)
 	long	addr = 0L;
 	long	cnt;
 	long	amt;
-	long	end;
+	long	end = 0L;
 	int	msec;
 	int	start;
 
 	if (is_suid)
-		comerrno(EX_BAD, "Not root. Will not write in suid mode\n");
+		comerrno(EX_BAD, "Not root. Will not write in suid/priv mode\n");
 
 	filename[0] = '\0';
 	if (read_capacity(scgp) >= 0) {
@@ -1839,9 +2316,7 @@ write_disk(scgp, parmp)
 	filename[sizeof (filename)-1] = '\0';
 	if (streql(filename, "-")) {
 		f = stdin;
-#ifdef	NEED_O_BINARY
 		setmode(STDIN_FILENO, O_BINARY);
-#endif
 	} else if ((f = fileopen(filename, "rub")) == NULL)
 		comerr("Cannot open '%s'.\n", filename);
 
@@ -1954,6 +2429,360 @@ read_da(scgp, bp, addr, cnt, framesize, subcode)
 	scgp->cmdname = "read_da";
 
 	return (scg_cmd(scgp));
+}
+
+LOCAL int
+read_sectors(scgp, p, addr, cnt)
+	SCSI	*scgp;
+	void	*p;
+	long	addr;
+	int	cnt;
+{
+	int	csize;
+	int	clusters;
+	int	rest;
+	int	i;
+	int	pos;
+
+	if (addr + cnt > scgp->cap->c_baddr + 1)
+		cnt = scgp->cap->c_baddr + 1 - addr;
+
+	csize = Sbufsize / (2352 + 294);
+	clusters = cnt / csize;
+	rest = cnt % csize;
+	pos = addr;
+
+	for (i = 0; i < clusters; i++) {
+		read_cd(scgp, p, pos, csize, 2352 + 294, 0xFA, 0);
+		pos += csize;
+	}
+
+	if (rest)
+		read_cd(scgp, p, pos, rest, 2352 + 294, 0xFA, 0);
+
+	return (csize * clusters + rest);
+}
+
+LOCAL int
+read_dvd_sectors(scgp, p, addr, cnt)
+	SCSI	*scgp;
+	void	*p;
+	long	addr;
+	int	cnt;
+{
+	int	csize;
+	int	clusters;
+	int	rest;
+	int	i;
+	int	pos;
+
+	if (addr + cnt > scgp->cap->c_baddr + 1)
+		cnt = scgp->cap->c_baddr + 1 - addr;
+
+	csize = Sbufsize / 2048;
+	clusters = cnt / csize;
+	rest = cnt % csize;
+	pos = addr;
+
+	for (i = 0; i < clusters; i++) {
+		read_g1(scgp, p, pos, csize);
+		pos += csize;
+	}
+
+	if (rest)
+		read_g1(scgp, p, pos, rest);
+
+	return (csize * clusters + rest);
+}
+
+LOCAL BOOL
+mmc_isplextor(scgp)
+	SCSI	*scgp;
+{
+	if (scgp->inq != NULL &&
+			strncmp(scgp->inq->vendor_info, "PLEXTOR", 7) == 0) {
+		return (TRUE);
+	}
+	return (FALSE);
+}
+
+LOCAL int
+plextor_init_cx_scan(scgp)
+	SCSI	*scgp;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	if (!mmc_isplextor(scgp))
+		return (-1);
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+
+	scmd->size = 0;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xEA;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x15;
+	scmd->cdb.cmd_cdb[3] = 0x01;
+
+	scgp->cmdname = "plextor_init_cx_scan";
+
+	return (scg_cmd(scgp));
+}
+
+LOCAL int
+plextor_init_pi8_scan(scgp)
+	SCSI	*scgp;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	if (!mmc_isplextor(scgp))
+		return (-1);
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+
+	scmd->size = 0;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xEA;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x15;
+	scmd->cdb.cmd_cdb[8] = 0x08;
+	scmd->cdb.cmd_cdb[9] = 0x10;
+
+	scgp->cmdname = "plextor_init_pi8_scan";
+
+	return (scg_cmd(scgp));
+}
+
+LOCAL int
+plextor_init_pif_scan(scgp)
+	SCSI	*scgp;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	if (!mmc_isplextor(scgp))
+		return (-1);
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+
+	scmd->size = 0;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xEA;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x15;
+	scmd->cdb.cmd_cdb[8] = 0x01;
+	scmd->cdb.cmd_cdb[9] = 0x12;
+
+	scgp->cmdname = "plextor_init_pif_scan";
+
+	return (scg_cmd(scgp));
+}
+
+LOCAL int
+nec_init_cx_scan(scgp)
+	SCSI	*scgp;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+	int		ret;
+
+	/*
+	 * initialize scan mode
+	 */
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+
+	scmd->size = 0;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xF3;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x01;
+
+	scgp->cmdname = "nec_init_cx_scan";
+
+	ret = scg_cmd(scgp);
+	if (ret < 0)
+		return (ret);
+
+	/*
+	 * set scan interval = 75 sectors
+	 */
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+	scmd->size = 0;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xF3;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x02;
+	scmd->cdb.cmd_cdb[8] = 75;
+
+	scgp->cmdname = "nec_set_cx_scan_interval";
+
+	return (scg_cmd(scgp));
+}
+
+LOCAL int
+plextor_scan_one_interval(scgp, pe, addr, p)
+	SCSI*		scgp;
+	cxerror_t	*pe;
+	long		addr;
+	void		*p;
+{
+	int	i;
+
+	i = read_sectors(scgp, p, addr, 75);
+	plextor_read_cx_values(scgp, pe, FALSE);
+
+	return (addr + i);
+}
+
+LOCAL int
+plextor_scan_one_dvd_interval(scgp, pe, addr, p)
+	SCSI*		scgp;
+	cxerror_t	*pe;
+	long		addr;
+	void		*p;
+{
+	int	i;
+
+	if (pifscan)
+		i = read_dvd_sectors(scgp, p, addr, 16);
+	else
+		i = read_dvd_sectors(scgp, p, addr, 16*8);
+	plextor_read_cx_values(scgp, pe, TRUE);
+
+	return (addr + i);
+}
+
+/* ARGSUSED */
+LOCAL int
+nec_scan_one_interval(scgp, pe, addr, p)
+	SCSI		*scgp;
+	cxerror_t	*pe;
+	long		addr;
+	void		*p;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+	Uchar		data[8];
+	int		ret;
+
+	fillbytes(data, sizeof (data), '\0');
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+	scmd->size = 8;
+	scmd->addr = (caddr_t)data;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xF3;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x03;
+
+	scgp->cmdname = "nec_set_cx_scan_interval";
+
+	ret = scg_cmd(scgp);
+
+	if (ret < 0)
+		return (ret);
+
+	pe->c1_errors = a_to_u_2_byte(data+4);
+	pe->c2_errors = a_to_u_2_byte(data+6);
+	pe->cu_errors = 0;
+
+	return ((int)data[1] * 4500 + (int)data[2] * 75 + (int)data[3]);
+}
+
+LOCAL int
+plextor_end_scan(scgp)
+	SCSI	*scgp;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+
+	scmd->size = 0;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xEA;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x17;
+
+	scgp->cmdname = "plextor_end_scan";
+
+	return (scg_cmd(scgp));
+}
+
+LOCAL int
+nec_end_scan(scgp)
+	SCSI	*scgp;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+	char		data[8];
+
+	fillbytes(data, sizeof (data), '\0');
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+
+	scmd->addr = data;
+	scmd->size = 8;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g5_cdb.cmd = 0xF3;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x0F;
+
+	scgp->cmdname = "nec_end_cx_scan";
+
+	return (scg_cmd(scgp));
+}
+
+LOCAL int
+plextor_read_cx_values(scgp, pe, dopi)
+	SCSI		*scgp;
+	cxerror_t	*pe;
+	BOOL		dopi;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+	char		data[52];
+	int		ret;
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+	fillbytes(data, sizeof (data), '\0');
+
+	scmd->addr = data;
+	scmd->size = dopi ? 52:0x1A;
+	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+
+	scmd->cdb.g5_cdb.cmd = 0xEA;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= 0x16;
+	scmd->cdb.cmd_cdb[2] = 0x01;
+	scmd->cdb.cmd_cdb[10] = dopi ? 52:0x1A;
+
+	scgp->cmdname = "plextor_read_cx_values";
+
+	ret = scg_cmd(scgp);
+	if (ret < 0) {
+		return (ret);
+	}
+
+	pe->c1_errors = a_to_u_2_byte(data+16) +	/* E11 ??? */
+			a_to_u_2_byte(data+14) +	/* E21 ??? */
+			a_to_u_2_byte(data+12);		/* E31 ??? */
+	pe->c2_errors = a_to_u_2_byte(data+22);
+	pe->cu_errors = a_to_u_2_byte(data+20);
+
+	pe->pi_errors = a_to_u_4_byte(data+36);
+
+	return (ret);
 }
 
 EXPORT int
@@ -2114,6 +2943,7 @@ qpto96(sub, subqptr, dop)
 	}
 	fillbytes(sub, 96, '\0');
 
+	/* CSTYLED */
 	if (dop) for (i = 0, p = sub; i < 96; i++) {
 		*p++ |= 0x80;
 	}

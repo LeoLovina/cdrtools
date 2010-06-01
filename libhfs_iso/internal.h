@@ -1,4 +1,4 @@
-/* @(#)internal.h	1.2 01/11/01 joerg */
+/* @(#)internal.h	1.3 06/09/13 joerg */
 /*
  * hfsutils - tools for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996, 1997 Robert Leslie
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <timedefs.h>
-#include <standard.h>
+#include <schily/time.h>
+#include <schily/standard.h>
 
 # include "hfs.h"
 

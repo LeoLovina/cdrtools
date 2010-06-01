@@ -1,30 +1,26 @@
-/* @(#)scsimmc.h	1.11 04/03/01 Copyright 1997-2004 J. Schilling */
+/* @(#)scsimmc.h	1.19 06/12/02 Copyright 1997-2006 J. Schilling */
 /*
  *	Definitions for SCSI/mmc compliant drives
  *
- *	Copyright (c) 1997-2004 J. Schilling
+ *	Copyright (c) 1997-2006 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef	_SCSIMMC_H
 #define	_SCSIMMC_H
 
-#include <utypes.h>
-#include <btorder.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
 
 typedef struct opc {
 	Uchar	opc_speed[2];
@@ -38,24 +34,27 @@ struct disk_info {
 	Ucbit	disk_status	: 2;	/* Status of the disk		*/
 	Ucbit	sess_status	: 2;	/* Status of last session	*/
 	Ucbit	erasable	: 1;	/* Disk is erasable		*/
-	Ucbit	res2		: 3;	/* Reserved			*/
+	Ucbit	dtype		: 3;	/* Disk information data type	*/
 	Uchar	first_track;		/* # of first track on disk	*/
 	Uchar	numsess;		/* # of sessions		*/
-	Uchar	first_track_ls;		/* First track in last sessaion	*/
-	Uchar	last_track_ls;		/* Last track in last sessaion	*/
+	Uchar	first_track_ls;		/* First track in last session	*/
+	Uchar	last_track_ls;		/* Last track in last session	*/
 	Ucbit	bg_format_stat	: 2;	/* Background format status	*/
 	Ucbit	dbit		: 1;	/* Dirty Bit of defect table	*/
-	Ucbit	res7_34		: 2;	/* Reserved			*/
+	Ucbit	res7_3		: 1;	/* Reserved			*/
+	Ucbit	dac_v		: 1;	/* Disk application code valid	*/
 	Ucbit	uru		: 1;	/* This is an unrestricted disk	*/
 	Ucbit	dbc_v		: 1;	/* Disk bar code valid		*/
 	Ucbit	did_v		: 1;	/* Disk id valid		*/
 	Uchar	disk_type;		/* Disk type			*/
-	Uchar	res9[3];		/* Reserved			*/
+	Uchar	numsess_msb;		/* # of sessions (MSB)		*/
+	Uchar	first_track_ls_msb;	/* First tr. in last ses. (MSB)	*/
+	Uchar	last_track_ls_msb;	/* Last tr. in last ses. (MSB)	*/
 	Uchar	disk_id[4];		/* Disk identification		*/
 	Uchar	last_lead_in[4];	/* Last session lead in time	*/
 	Uchar	last_lead_out[4];	/* Last session lead out time	*/
 	Uchar	disk_barcode[8];	/* Disk bar code		*/
-	Uchar	res32;			/* Reserved			*/
+	Uchar	disk_appl_code;		/* Disk application code	*/
 	Uchar	num_opc_entries;	/* # of OPC table entries	*/
 	opc_t	opc_table[1];		/* OPC table 			*/
 };
@@ -64,27 +63,30 @@ struct disk_info {
 
 struct disk_info {
 	Uchar	data_len[2];		/* Data len without this info	*/
-	Ucbit	res2		: 3;	/* Reserved			*/
+	Ucbit	dtype		: 3;	/* Disk information data type	*/
 	Ucbit	erasable	: 1;	/* Disk is erasable		*/
 	Ucbit	sess_status	: 2;	/* Status of last session	*/
 	Ucbit	disk_status	: 2;	/* Status of the disk		*/
 	Uchar	first_track;		/* # of first track on disk	*/
 	Uchar	numsess;		/* # of sessions		*/
-	Uchar	first_track_ls;		/* First track in last sessaion	*/
-	Uchar	last_track_ls;		/* Last track in last sessaion	*/
+	Uchar	first_track_ls;		/* First track in last session	*/
+	Uchar	last_track_ls;		/* Last track in last session	*/
 	Ucbit	did_v		: 1;	/* Disk id valid		*/
 	Ucbit	dbc_v		: 1;	/* Disk bar code valid		*/
 	Ucbit	uru		: 1;	/* This is an unrestricted disk	*/
-	Ucbit	res7_34		: 2;	/* Reserved			*/
+	Ucbit	dac_v		: 1;	/* Disk application code valid	*/
+	Ucbit	res7_3		: 1;	/* Reserved			*/
 	Ucbit	dbit		: 1;	/* Dirty Bit of defect table	*/
 	Ucbit	bg_format_stat	: 2;	/* Background format status	*/
 	Uchar	disk_type;		/* Disk type			*/
-	Uchar	res9[3];		/* Reserved			*/
+	Uchar	numsess_msb;		/* # of sessions (MSB)		*/
+	Uchar	first_track_ls_msb;	/* First tr. in last ses. (MSB)	*/
+	Uchar	last_track_ls_msb;	/* Last tr. in last ses. (MSB)	*/
 	Uchar	disk_id[4];		/* Disk identification		*/
 	Uchar	last_lead_in[4];	/* Last session lead in time	*/
 	Uchar	last_lead_out[4];	/* Last session lead out time	*/
 	Uchar	disk_barcode[8];	/* Disk bar code		*/
-	Uchar	res32;			/* Reserved			*/
+	Uchar	disk_appl_code;		/* Disk application code	*/
 	Uchar	num_opc_entries;	/* # of OPC table entries	*/
 	opc_t	opc_table[1];		/* OPC table 			*/
 };
@@ -281,10 +283,12 @@ struct rzone_info {
 	Uchar	rzone_num_lsb;		/* RZone number LSB		*/
 	Uchar	border_num_lsb;		/* Border number LSB		*/
 	Uchar	res_4;			/* Reserved			*/
-	Ucbit	res5_04		: 5;	/* Reserved			*/
+	Ucbit	trackmode	: 4;	/* Track mode			*/
+	Ucbit	copy		: 1;	/* Higher generation CD copy	*/
 	Ucbit	damage		: 1;	/* Damaged RZone		*/
-	Ucbit	res5_67		: 2;	/* Reserved			*/
-	Ucbit	res6_04		: 5;	/* Reserved			*/
+	Ucbit	ljrs		: 2;	/* Layer jump recording status	*/
+	Ucbit	datamode	: 4;	/* Data mode			*/
+	Ucbit	fp		: 1;	/* Fixed packet			*/
 	Ucbit	incremental	: 1;	/* RZone is to be written incremental */
 	Ucbit	blank		: 1;	/* RZone is blank		*/
 	Ucbit	rt		: 1;	/* RZone is reserved		*/
@@ -300,6 +304,9 @@ struct rzone_info {
 	Uchar	rzone_num_msb;		/* RZone number MSB		*/
 	Uchar	border_num_msb;		/* Border number MSB		*/
 	Uchar	res_34_35[2];		/* Reserved			*/
+	Uchar	read_compat_lba[4];	/* Read Compatibilty LBA	*/
+	Uchar	next_layer_jump[4];	/* Next layer jump address	*/
+	Uchar	last_layer_jump[4];	/* Last layer jump address	*/
 };
 
 #else				/* Motorola bitorder */
@@ -309,13 +316,15 @@ struct rzone_info {
 	Uchar	rzone_num_lsb;		/* RZone number LSB		*/
 	Uchar	border_num_lsb;		/* Border number LSB		*/
 	Uchar	res_4;			/* Reserved			*/
-	Ucbit	res5_67		: 2;	/* Reserved			*/
+	Ucbit	ljrs		: 2;	/* Layer jump recording status	*/
 	Ucbit	damage		: 1;	/* Damaged RZone		*/
-	Ucbit	res5_04		: 5;	/* Reserved			*/
+	Ucbit	copy		: 1;	/* Higher generation CD copy	*/
+	Ucbit	trackmode	: 4;	/* Track mode			*/
 	Ucbit	rt		: 1;	/* RZone is reserved		*/
 	Ucbit	blank		: 1;	/* RZone is blank		*/
 	Ucbit	incremental	: 1;	/* RZone is to be written incremental */
-	Ucbit	res6_04		: 5;	/* Reserved			*/
+	Ucbit	fp		: 1;	/* Fixed packet			*/
+	Ucbit	datamode	: 4;	/* Data mode			*/
 	Ucbit	res7_27		: 6;	/* Reserved			*/
 	Ucbit	lra_v		: 1;	/* Last rec address is valid	*/
 	Ucbit	nwa_v		: 1;	/* Next WR address is valid	*/
@@ -328,9 +337,20 @@ struct rzone_info {
 	Uchar	rzone_num_msb;		/* RZone number MSB		*/
 	Uchar	border_num_msb;		/* Border number MSB		*/
 	Uchar	res_34_35[2];		/* Reserved			*/
+	Uchar	read_compat_lba[4];	/* Read Compatibilty LBA	*/
+	Uchar	next_layer_jump[4];	/* Next layer jump address	*/
+	Uchar	last_layer_jump[4];	/* Last layer jump address	*/
 };
 
 #endif
+
+/*
+ * The lrjs values:
+ */
+#define	LRJS_NONE	0		/* DAO/Incremental/Blank	*/
+#define	LRJS_UNSPEC	1		/* WT == LJ but layerjump not set */
+#define	LRJS_MANUAL	2		/* Manual layer jump set	*/
+#define	LRJS_INTERVAL	3		/* Jump interval size set	*/
 
 #if defined(_BIT_FIELDS_LTOH)	/* Intel bitorder */
 
@@ -339,7 +359,7 @@ struct dvd_structure_00 {
 	Uchar	res23[2];		/* Reserved			*/
 	Ucbit	book_version	: 4;	/* DVD Book version		*/
 	Ucbit	book_type	: 4;	/* DVD Book type		*/
-	Ucbit	minimum_rate	: 4;	/* Minimum data rate (coded)	*/
+	Ucbit	maximum_rate	: 4;	/* Maximum data rate (coded)	*/
 	Ucbit	disc_size	: 4;	/* Disc size (coded)		*/
 	Ucbit	layer_type	: 4;	/* Layer type			*/
 	Ucbit	track_path	: 1;	/* 0 = parallel, 1 = opposit dir*/
@@ -365,7 +385,7 @@ struct dvd_structure_00 {
 	Ucbit	book_type	: 4;	/* DVD Book type		*/
 	Ucbit	book_version	: 4;	/* DVD Book version		*/
 	Ucbit	disc_size	: 4;	/* Disc size (coded)		*/
-	Ucbit	minimum_rate	: 4;	/* Minimum data rate (coded)	*/
+	Ucbit	maximum_rate	: 4;	/* Maximum data rate (coded)	*/
 	Ucbit	res2_7		: 1;	/* Reserved			*/
 	Ucbit	numlayers	: 2;	/* Number of Layers (0 == 1)	*/
 	Ucbit	track_path	: 1;	/* 0 = parallel, 1 = opposit dir*/
@@ -494,6 +514,27 @@ struct dvd_structure_0F_w {
 	Uchar	second[2];		/* Second (ascii)		*/
 };
 
+struct dvd_structure_20 {
+	Uchar	data_len[2];		/* Data len without this info	*/
+	Uchar	res23[2];		/* Reserved			*/
+	Uchar	res47[4];		/* Reserved			*/
+	Uchar	l0_area_cap[4];		/* Layer 0 area capacity	*/
+};
+
+struct dvd_structure_22 {
+	Uchar	data_len[2];		/* Data len without this info	*/
+	Uchar	res23[2];		/* Reserved			*/
+	Uchar	res47[4];		/* Reserved			*/
+	Uchar	jump_interval_size[4];	/* Jump interval size		*/
+};
+
+struct dvd_structure_23 {
+	Uchar	data_len[2];		/* Data len without this info	*/
+	Uchar	res23[2];		/* Reserved			*/
+	Uchar	res47[4];		/* Reserved			*/
+	Uchar	jump_lba[4];		/* Jump logical block address	*/
+};
+
 struct mmc_cue {
 	Uchar	cs_ctladr;		/* CTL/ADR for this track	*/
 	Uchar	cs_tno;			/* This track number		*/
@@ -527,7 +568,7 @@ struct mmc_performance {		/* Type == 00 (nominal)		*/
 	Uchar	end_perf[4];		/* Ending Performance		*/
 };
 
-struct mmc_exceptions {			/* Type == 00 (execptions)	*/
+struct mmc_exceptions {			/* Type == 00 (exceptions)	*/
 	Uchar	lba[4];			/* LBA				*/
 	Uchar	time[2];		/* Time				*/
 };

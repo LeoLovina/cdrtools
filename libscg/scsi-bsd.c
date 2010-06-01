@@ -1,7 +1,7 @@
-/* @(#)scsi-bsd.c	1.42 04/01/15 Copyright 1997 J. Schilling */
+/* @(#)scsi-bsd.c	1.51 10/05/22 Copyright 1997-2009 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-bsd.c	1.42 04/01/15 Copyright 1997 J. Schilling";
+	"@(#)scsi-bsd.c	1.51 10/05/22 Copyright 1997-2009 J. Schilling";
 #endif
 /*
  *	Interface for the NetBSD/FreeBSD/OpenBSD generic SCSI implementation.
@@ -18,28 +18,37 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef HAVE_CAMLIB_H
 
 #undef	sense
 #include <sys/scsiio.h>
+#if defined(__NetBSD__)
+#ifdef	USE_GETRAWPARTITION
+#include <util.h>
+#endif
+#endif
 
 /*
  *	Warning: you may change this source, but if you do that
@@ -48,9 +57,9 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.42";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.51";	/* The version for this transport*/
 
-#define	MAX_SCG		16	/* Max # of SCSI controllers */
+#define	MAX_SCG		32	/* Max # of SCSI controllers */
 #define	MAX_TGT		16
 #define	MAX_LUN		8
 
@@ -86,6 +95,9 @@ struct scg_local {
 #define	SADDR_LUN(a)	(a).lun
 #endif	/* __NetBSD__ && TYPE_ATAPI */
 
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+LOCAL	int	getslice	__PR((int n));
+#endif
 LOCAL	BOOL	scg_setup	__PR((SCSI *scgp, int f, int busno, int tgt, int tlun));
 
 /*
@@ -139,7 +151,14 @@ scgo_open(scgp, device)
 	register int	t;
 	register int	l;
 	register int	nopen = 0;
-	char		devname[64];
+	char		dev_name[64];
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+#ifdef	USE_GETRAWPARTITION
+		int	myslicename = getrawpartition();
+#else
+		int	myslicename = 0;
+#endif
+#endif
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -166,11 +185,93 @@ scgo_open(scgp, device)
 	if ((device != NULL && *device != '\0') || (busno == -2 && tgt == -2))
 		goto openbydev;
 
+
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	/*
+	 * I know of no method in NetBSD/OpenBSD to probe the scsibus and get
+	 * the mapping busnumber,target,lun --> devicename.
+	 *
+	 * For now, implement a true brute force hack to find cdroms to allow
+	 * cdrecord to work, but libscg is a generic SCSI transport lib.
+	 *
+	 * Note that this method only finds cd0-cd9. For a more correct
+	 * implementation we would at least need to also scan the disk and tape
+	 * devices.
+	 *
+	 * This still does not include scanners and other SCSI devices.
+	 * Help is needed!
+	 */
+	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
+		struct scsi_addr mysaddr;
+
+		for (l = 0; l < 10; l++) {
+		nextslice1:
+			sprintf(dev_name, "/dev/rcd%d%c", l, 'a' + myslicename);
+			f = open(dev_name, O_RDWR);
+			if (f >= 0) {
+				if (ioctl(f, SCIOCIDENTIFY, &mysaddr) < 0) {
+#ifndef	USE_GETRAWPARTITION
+					if (errno == ENOTTY && myslicename < 16) {
+						close(f);
+						myslicename = getslice(l);
+						goto nextslice1;
+					}
+#endif
+					close(f);
+					errno = EINVAL;
+					return (0);
+				}
+				if (busno == SADDR_BUS(mysaddr) &&
+				    tgt == SADDR_TARGET(mysaddr) &&
+				    tlun == SADDR_LUN(mysaddr)) {
+					scglocal(scgp)->scgfiles[busno][tgt][tlun] = f;
+					return (1);
+				}
+			} else {
+#if	defined(__OpenBSD__) && defined(ENOMEDIUM)
+				if (errno == ENOMEDIUM && myslicename < 16) {
+					myslicename = getslice(l);
+					goto nextslice1;
+				}
+#endif
+			}
+		}
+	} else for (l = 0; l < 10; l++) {
+		struct scsi_addr mysaddr;
+
+	nextslice2:
+		sprintf(dev_name, "/dev/rcd%d%c", l, 'a' + myslicename);
+		f = open(dev_name, O_RDWR);
+		if (f >= 0) {
+			if (ioctl(f, SCIOCIDENTIFY, &mysaddr) < 0) {
+#ifndef	USE_GETRAWPARTITION
+				if (errno == ENOTTY && myslicename < 16) {
+					close(f);
+					myslicename = getslice(l);
+					goto nextslice2;
+				}
+#endif
+				close(f);
+				errno = EINVAL;
+				return (0);
+			}
+			if (scg_setup(scgp, f, busno, tgt, tlun))
+				nopen++;
+		} else {
+#if	defined(__OpenBSD__) && defined(ENOMEDIUM)
+			if (errno == ENOMEDIUM && myslicename < 16) {
+				myslicename = getslice(l);
+				goto nextslice2;
+			}
+#endif
+		}
+	}
+#else /* ! __NetBSD__ || __OpenBSD__ */
 	if (busno >= 0 && tgt >= 0 && tlun >= 0) {
 
-		js_snprintf(devname, sizeof (devname),
+		js_snprintf(dev_name, sizeof (dev_name),
 				"/dev/su%d-%d-%d", busno, tgt, tlun);
-		f = open(devname, O_RDWR);
+		f = open(dev_name, O_RDWR);
 		if (f < 0) {
 			goto openbydev;
 		}
@@ -180,10 +281,10 @@ scgo_open(scgp, device)
 	} else for (b = 0; b < MAX_SCG; b++) {
 		for (t = 0; t < MAX_TGT; t++) {
 			for (l = 0; l < MAX_LUN; l++) {
-				js_snprintf(devname, sizeof (devname),
+				js_snprintf(dev_name, sizeof (dev_name),
 							"/dev/su%d-%d-%d", b, t, l);
-				f = open(devname, O_RDWR);
-/*				error("open (%s) = %d\n", devname, f);*/
+				f = open(dev_name, O_RDWR);
+/*				error("open (%s) = %d\n", dev_name, f);*/
 
 				if (f < 0) {
 					if (errno != ENOENT &&
@@ -192,7 +293,7 @@ scgo_open(scgp, device)
 						if (scgp->errstr)
 							js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
 								"Cannot open '%s'",
-								devname);
+								dev_name);
 						return (0);
 					}
 				} else {
@@ -202,6 +303,7 @@ scgo_open(scgp, device)
 			}
 		}
 	}
+#endif /* ! __NetBSD__ || __OpebBSD__ */
 	/*
 	 * Could not open /dev/su-* or got dev=devname:b,l,l / dev=devname:@,l
 	 * We do the apropriate tests and try our best.
@@ -241,6 +343,35 @@ openbydev:
 	}
 	return (nopen);
 }
+
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+/*
+ * Avoid to call getrawpartition() because this would force us to
+ * link against libutil.
+ */
+LOCAL int
+getslice(n)
+	int	n;
+{
+	struct scsi_addr saddr;
+	char		dev_name[64];
+	int		slice;
+	int		f;
+
+	for (slice = 0; slice < 16; slice++) {
+		sprintf(dev_name, "/dev/rcd%d%c", n, 'a' + slice);
+		f = open(dev_name, O_RDWR);
+		if (f >= 0) {
+			if (ioctl(f, SCIOCIDENTIFY, &saddr) >= 0) {
+				close(f);
+				break;
+			}
+			close(f);
+		}
+	}
+	return (slice);
+}
+#endif
 
 LOCAL int
 scgo_close(scgp)
@@ -303,8 +434,10 @@ scg_setup(scgp, f, busno, tgt, tlun)
 		return (FALSE);
 	}
 
-	if (scglocal(scgp)->scgfiles[Bus][Target][Lun] == (short)-1)
+	if (scglocal(scgp)->scgfiles[Bus][Target][Lun] == (short)-1) {
 		scglocal(scgp)->scgfiles[Bus][Target][Lun] = (short)f;
+		return (TRUE);
+	}
 
 	if (onetarget) {
 		if (Bus == busno && Target == tgt && Lun == tlun) {
@@ -347,6 +480,13 @@ scgo_freebuf(scgp)
 	if (scgp->bufbase)
 		free(scgp->bufbase);
 	scgp->bufbase = NULL;
+}
+
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (MAX_SCG);
 }
 
 LOCAL BOOL
@@ -518,7 +658,7 @@ scgo_send(scgp)
  *
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * Copyright (c) 1998 Kenneth D. Merry <ken@kdm.org>
- * Copyright (c) 1998 Joerg Schilling <schilling@fokus.gmd.de>
+ * Copyright (c) 1998-2009 Joerg Schilling <joerg.schilling@fokus.fraunhofer.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -561,7 +701,7 @@ scgo_send(scgp)
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.42";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-bsd.c-1.51";	/* The version for this transport*/
 
 #define	CAM_MAXDEVS	128
 struct scg_local {
@@ -626,6 +766,7 @@ scgo_open(scgp, device)
 	struct periph_match_pattern	*match_pat;
 	int				fd;
 
+	seterrno(0);
 	if ((device != NULL && *device != '\0') || (busno == -2 && tgt == -2)) {
 		errno = EINVAL;
 		if (scgp->errstr)
@@ -674,6 +815,9 @@ scgo_open(scgp, device)
 	 * system.
 	 */
 	ccb.ccb_h.func_code = XPT_DEV_MATCH;
+	ccb.ccb_h.path_id = CAM_XPT_PATH_ID;
+	ccb.ccb_h.target_id = CAM_TARGET_WILDCARD;
+	ccb.ccb_h.target_lun = CAM_LUN_WILDCARD;
 
 	/*
 	 * Setup the result buffer.
@@ -847,6 +991,36 @@ scgo_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	unsigned int	unit;
+	unsigned int	maxbus	= 0;
+	BOOL		found_bus = FALSE;
+
+	if (scgp->local == NULL)
+		return (0);
+
+	/*
+	 * There's a "cleaner" way to do this, using the matching code, but
+	 * it would involve more code than this solution...
+	 */
+	for (unit = 0; scglocal(scgp)->cam_devices[unit] != (struct cam_device *)-1; unit++) {
+		if (scglocal(scgp)->cam_devices[unit] == NULL)
+			continue;
+		found_bus = TRUE;
+		/*
+		 * path_id is unsigned, so maxbus cannot be initialized to -1.
+		 */
+		if (scglocal(scgp)->cam_devices[unit]->path_id > maxbus)
+			maxbus = scglocal(scgp)->cam_devices[unit]->path_id;
+	}
+	if (!found_bus)
+		return (0);
+	return (maxbus+1);
+}
+
 LOCAL BOOL
 scgo_havebus(scgp, busno)
 	SCSI	*scgp;
@@ -926,7 +1100,7 @@ scgo_send(scgp)
 	union ccb		ccb_space;
 	union ccb		*ccb = &ccb_space;
 	int			rv, result;
-	u_int32_t		ccb_flags;
+	u_int32_t		flags;
 
 	if (scgp->fd < 0) {
 #if 0
@@ -951,13 +1125,13 @@ scgo_send(scgp)
 	 * Set the data direction flags.
 	 */
 	if (sp->size != 0) {
-		ccb_flags = (sp->flags & SCG_RECV_DATA) ?   CAM_DIR_IN :
+		flags = (sp->flags & SCG_RECV_DATA) ?   CAM_DIR_IN :
 							    CAM_DIR_OUT;
 	} else {
-		ccb_flags = CAM_DIR_NONE;
+		flags = CAM_DIR_NONE;
 	}
 
-	ccb_flags |= CAM_DEV_QFRZDIS;
+	flags |= CAM_DEV_QFRZDIS;
 
 	/*
 	 * If you don't want to bother with sending tagged commands under CAM,
@@ -965,13 +1139,13 @@ scgo_send(scgp)
 	 * tagged commands to those devices that support it, we'll need to set
 	 * the tag action valid field like this in scgo_send():
 	 *
-	 *	ccb_flags |= CAM_DEV_QFRZDIS | CAM_TAG_ACTION_VALID;
+	 *	flags |= CAM_DEV_QFRZDIS | CAM_TAG_ACTION_VALID;
 	 */
 
 	cam_fill_csio(&ccb->csio,
 			/* retries */	1,
 			/* cbfncp */	NULL,
-			/* flags */	ccb_flags,
+			/* flags */	flags,
 			/* tag_action */ MSG_SIMPLE_Q_TAG,
 			/* data_ptr */	(u_int8_t *)sp->addr,
 			/* dxfer_len */	sp->size,
@@ -981,7 +1155,28 @@ scgo_send(scgp)
 
 	/* Run the command */
 	errno = 0;
-	if ((rv = cam_send_ccb(dev, ccb)) == -1) {
+	result = 16;
+	do {
+		/*
+		 * CAM_REQUEUE_REQ is a very unspecified status code. For this
+		 * reason, only the kernel could know why it happened.
+		 * This is therefore a loop that should be handled inside the
+		 * kernel in order not to break the layering model.
+		 * FreBSD unfortunately has dozens of places in the kernel that
+		 * set CAM_REQUEUE_REQ and most of the places that set
+		 * CAM_REQUEUE_REQ are handling missing kernel resources. As
+		 * it seems to be unlikely that there will be a clean fix in
+		 * the kernel soon, we are forced to handle this status here.
+		 *
+		 * Note that for May 2010, there is at least one definite bug
+		 * in the kernel where CAM_REQUEUE_REQ is returned for a SCSI
+		 * reservation conflict.
+		 */
+		rv = cam_send_ccb(dev, ccb);
+	} while (rv != -1 && --result > 0 &&
+		(ccb->ccb_h.status & CAM_STATUS_MASK) == CAM_REQUEUE_REQ);
+
+	if (rv == -1) {
 		return (rv);
 	} else {
 		/*

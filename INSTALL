@@ -15,7 +15,7 @@ Short overview for those who don't read manuals:
 
 	You **need** either my "smake" program, the SunPRO make 
 	from /usr/bin/make (SunOS 4.x) or /usr/ccs/bin/make (SunOS 5.x)
-	or GNU make to compile this program. Read README.gmake for 
+	or GNU make to compile this program. Read READMEs/README.gmake for 
 	more information on gmake and a list of the most annoying bugs in gmake.
 
 	All other make programs are either not smart enough or have bugs.
@@ -169,6 +169,91 @@ Using a different installation directory:
 
 		env INS_BASE=/usr/local make -e install
 
+	Note that INS_BASE=/usr/local needs to be specified for every operation
+	that compiles or links programs as the path is stored inside the
+	binaries.
+
+	The location for the root specific configuratin files is controlled
+	via the INS_RBASE= make macro. The default vaulue for this macro is "/".
+	If you like to install global default configuration files into 
+	/usr/local/etc instead of /etc, you need to spefify INS_RBASE=/usr/local
+
+	Note that some binaries have $(INS_BASE) and $(INS_RBASE) compiled into.
+	If you like to like to modify the compiled-in path values, call:
+
+		smake clean
+		smake INS_BASE=/usr/local INS_RBASE=/usr/local
+
+Compiling in a different ELF RUNPATH:
+
+	In order to allow binaries to work correctly even if the shared
+	libraries are not in the default search path of the runtime linker,
+	a RUINPATH needs to be set.
+
+	The ELF RUNPATH is by default derived from $(INS_BASE). If you like to
+	set INS_BASE=/usr and create binaries that do not include a RUNPATH at all,
+	call:
+
+		smake relink RUNPATH=
+
+
+Using a different man path prefix:
+
+	Man Pages are by default installed under:
+
+	$(INS_BASE)/$(MANBASE)/man
+	and MANBASE=share
+
+	If you like a different prefix for man pages, call:
+
+		smake DEFMANBASE=soething install
+
+	to install man pages into $(INS_BASE)/something/man/*
+
+	If you like to install man pages under $(INS_BASE)/man/*, call
+
+		smake DEFMANBASE=. install
+
+Installing stripped binaries:
+
+	If you like to install stripped binaries via "smake install", call:
+
+		smake STRIPFLAGS=-s install
+
+	This calls "strip" on every final install path for all executable
+	binaries.
+
+Installing to a prototype directory to implement package creation staging:
+
+	If you like to create a prototype directory tree that is used as an
+	intermediate store for package creation, use the DESTDIR macro:
+
+		smake INS_BASE=/usr/local DESTDIR=/tmp install
+
+	This will compile in "/usr/local" as prefix into all related binaries
+	and then create a usr/local tree below /tmp (i.e. /tmp/usr/local).
+
+	Note that you need to call "smake clean" before in case that the code
+	was previously compiled with different defaults.
+
+Setting different default directory permissions for install directories:
+
+	All directories that are created by the Schily makefile system in the
+	target directory path when
+
+		smake install
+
+	is called system use a special default 022 that is in DEFINSUMASK=
+	This causes all directories in the target install path to be created
+	with 0755 permissions.
+
+	All other directories that are created by the Schily makefile system 
+	use a single global default 002 that is in DEFUMASK=
+
+	If you like to create install directories with e.g. 0775 permissions,
+	call:
+
+		smake DEFINSUMASK=002 install
 
 Using a different C-compiler:
 
@@ -189,26 +274,32 @@ Using a different C-compiler:
 
 Creating 64 bit executables on Solaris:
 
-	If you like to create 64 bit executables you always need first to 
-	remove any old make results. This includes all autoconf results. In 
-	order to make sure that the source tree is in a "clean" state, call:
+	Simply call:
 
-		./.clean
-
-	at the top level directory. Then configure and compile everything by 
-	calling:
-
-		smake COPTX=-xarch=v9 LDOPTX=-xarch=v9
-
-	To do this with GCC, you need at least GCC-3.1. It is the first 64 bit
-	aware GCC. With GCC, call on Solaris:
-
-		smake CCOM=gcc COPTX=-m64 LDOPTX=-m64
+		make CCOM=gcc64
+	or
+		make CCOM=cc64
 
 	It is not clear if GCC already supports other platforms in 64 bit mode.
 	As all GCC versions before 3.1 did emit hundreds of compilation
 	warnings related to 64 bit bugs when compiling itself, there is little
 	hope that other platforms are already supported in 64 bit mode.
+
+Creating executables using the Sun Studio compiler on Linux:
+
+	Simply call:
+
+		make CCOM=suncc
+
+	If the compilation does not work, try:
+
+	mkdir   /opt/sunstudio12/prod/include/cc/linux 
+	cp      /usr/include/linux/types.h  /opt/sunstudio12/prod/include/cc/linux
+
+	Then edit /opt/sunstudio12/prod/include/cc/linux/types.h and remove all
+	lines like: "#if defined(__GNUC__) && !defined(__STRICT_ANSI__)"
+	as well as the related #endif.
+
 
 
 Getting help from make:
@@ -239,7 +330,7 @@ Hints for compilation:
 
 	SunPro make will work as is. GNU make need some special preparation.
 
-	Read README.gmake for more information on gmake.
+	Read READMEs/README.gmake for more information on gmake.
 
 	To use GNU make create a file called 'Gmake' in your search path
 	that contains:
@@ -307,6 +398,22 @@ Compiling the project to allow debugging with dbx/gdb:
 		make COPTX=-g LDOPTX=-g
 
 
+Creting Blastwave packages:
+
+	Call:
+		.clean
+		smake -f Mcsw
+
+	You need the program "fakeroot" and will find the results
+	in packages/<arch-dir>
+
+	Note that a single program source tree will allow you to create
+	packages like CSWstar but not the packages CSWschilybase and
+	CSWschilyutils on which CSWstar depends.
+
+
+
+
 	If you want to see an example, please have a look at the "star"
 	source. It may be found on:
 
@@ -322,6 +429,7 @@ Compiling the project to allow debugging with dbx/gdb:
 
 		man -F <man-page-name>
 
+
 Author:
 
 Joerg Schilling
@@ -330,6 +438,6 @@ D-13353 Berlin
 Germany
 
 Email: 	joerg@schily.isdn.cs.tu-berlin.de, js@cs.tu-berlin.de
-	schilling@fokus.fhg.de
+	joerg.schilling@fokus.fraunhufer.de
 
 Please mail bugs and suggestions to me.

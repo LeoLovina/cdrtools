@@ -1,35 +1,30 @@
-/* @(#)cdrecord.h	1.161 04/05/25 Copyright 1995-2004 J. Schilling */
+/* @(#)cdrecord.h	1.201 10/01/31 Copyright 1995-2010 J. Schilling */
 /*
  *	Definitions for cdrecord
  *
- *	Copyright (c) 1995-2004 J. Schilling
+ *	Copyright (c) 1995-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 /*
  * Make sure it is there. We need it for off_t.
  */
-#ifndef	_INCL_SYS_TYPES_H
-#include <sys/types.h>
-#define	_INCL_SYS_TYPES_H
+#ifndef	_SCHILY_TYPES_H
+#include <schily/types.h>
 #endif
 
-#ifndef	_UTYPES_H
-#include <utypes.h>
+#ifndef	_SCHILY_UTYPES_H
+#include <schily/utypes.h>
 #endif
 
 /*
@@ -66,6 +61,16 @@
 #define	F_SETDROPTS	0x10000000L	/* Set driver opts and exit */
 #define	F_FORMAT	0x20000000L	/* Format media */
 #define	F_ABORT		0x40000000L	/* Send abort sequence to drive */
+#ifdef	PROTOTYPES
+#define	F_MEDIAINFO	0x80000000UL	/* Print media info */
+#else
+#define	F_MEDIAINFO	0x80000000L	/* Print media info */
+#endif
+
+/*
+ * Defines for command extended line option flags2
+ */
+#define	F2_XX		0x01		/* Not yet		*/
 
 #ifdef	min
 #undef	min
@@ -88,15 +93,21 @@
  * It only has 256kB of buffer RAM.
  *
  * WARNING:	Philips CDD 521 dies if CDR_BUF_SIZE is to big.
- *		If you like to support the CDD 521 keep the buffer
- *		at 63kB.
+ *		If you like to support the CDD 521 keep the old buffer
+ *		size at 63kB.
  */
-/*#define	CDR_BUF_SIZE	(126*1024)*/
+/*#define	CDR_BUF_SIZE		(126*1024)*/
 #define	CDR_BUF_SIZE		(63*1024)
+#define	CDR_OLD_BUF_SIZE	(63*1024)
 #define	CDR_MAX_BUF_SIZE	(256*1024)
 
+/*
+ * Never set MIN_GRACE_TIME < 3 seconds. We need to give
+ * the volume management a chance to settle before we
+ * start writing.
+ */
 #ifndef	MIN_GRACE_TIME
-#define	MIN_GRACE_TIME	2		/* 2 seconds */
+#define	MIN_GRACE_TIME	3		/* 3 seconds */
 #endif
 #ifndef	GRACE_TIME
 #define	GRACE_TIME	9		/* 9 seconds */
@@ -198,10 +209,12 @@ typedef struct track {
 #define	TI_RAW96R	0x40000	/* This track uses 96 bytes RAW subch.	*/
 #define	TI_CLONE	0x80000	/* Special clone treatment needed	*/
 #define	TI_TEXT		0x100000 /* This track holds CD-Text information */
-#define	TI_DVD		0x200000 /* We are writing a DVD track		*/
+#define	TI_NOCD		0x200000 /* We are not writing a CD track	*/
 #define	TI_SAO		0x400000 /* This track is written in SAO mode	*/
 #define	TI_USEINFO	0x800000 /* Use information from *.inf files	*/
 #define	TI_QUADRO	0x1000000 /* Four Channel Audio Data		*/
+#define	TI_STDIN	0x2000000 /* Track read is from stdin		*/
+#define	TI_HIDDEN	0x4000000 /* Track is hidden / has hidden Tr.	*/
 
 
 #define	is_audio(tp)	(((tp)->flags & TI_AUDIO) != 0)
@@ -226,6 +239,7 @@ typedef struct track {
 #define	is_clone(tp)	(((tp)->flags & TI_CLONE) != 0)
 #define	is_text(tp)	(((tp)->flags & TI_TEXT) != 0)
 #define	is_quadro(tp)	(((tp)->flags & TI_QUADRO) != 0)
+#define	is_hidden(tp)	(((tp)->flags & TI_HIDDEN) != 0)
 
 /*
  * Defines for toc type / track type
@@ -327,7 +341,7 @@ extern	int	st2mode[];	/* Convert sector type to control nibble*/
 #define	WT_TAO		0x1	/* Track at once	*/
 #define	WT_SAO		0x2	/* Session at once	*/
 #define	WT_RAW		0x3	/* Raw			*/
-#define	WT_RES_4	0x4	/* Reserved		*/
+#define	WT_LAYER_JUMP	0x4	/* DVD-R/DL Layer jump	*/
 #define	WT_RES_5	0x5	/* Reserved		*/
 #define	WT_RES_6	0x6	/* Reserved		*/
 #define	WT_RES_7	0x7	/* Reserved		*/
@@ -515,6 +529,7 @@ typedef struct msf {
 #define	RF_SINGLESESS	0x0800	/* Plextor single sess. mode		*/
 #define	RF_HIDE_CDR	0x1000	/* Plextor hide CDR features		*/
 #define	RF_SPEEDREAD	0x2000	/* Plextor SpeedReed			*/
+#define	RF_GIGAREC	0x4000	/* Plextor GigaRec			*/
 
 /*
  * Definitions for read disk information "disk status"
@@ -563,21 +578,44 @@ typedef struct msf {
 #define	DSF_URU		0x0004	/* Disk is for unrestricted use		*/
 #define	DSF_ERA		0x0008	/* Disk is erasable			*/
 #define	DSF_HIGHSP_ERA	0x0010	/* Disk is high speed erasable		*/
-#define	DSF_ULTRASP_ERA	0x0020	/* Disk is high speed erasable		*/
+#define	DSF_ULTRASP_ERA	0x0020	/* Disk is ultra speed erasable		*/
+#define	DSF_ULTRASPP_ERA 0x0040	/* Disk is ultra speed+ erasable	*/
+#define	DSF_NOCD	0x0080	/* Disk is not a CD			*/
+
 #define	DSF_DVD		0x0100	/* Disk is a DVD			*/
 #define	DSF_DVD_PLUS_R	0x0200	/* Disk is a DVD+R			*/
 #define	DSF_DVD_PLUS_RW	0x0400	/* Disk is a DVD+RW			*/
 #define	DSF_NEED_FORMAT	0x0800	/* Disk needs to be formatted		*/
+#define	DSF_BD		0x1000	/* Disk is a BD				*/
+#define	DSF_BD_RE	0x2000	/* Disk is a BD-RE			*/
 
 /*
  * Definitions for disk_status disk type
  * used in "ds_type".
  */
-/* None defined yet */
+#define	DST_UNKNOWN	0
+#define	DST_CD_ROM	0x08
+#define	DST_CD_R	0x09
+#define	DST_CD_RW	0x0A
+#define	DST_DVD_ROM	0x10
+#define	DST_DVD_R	0x11
+#define	DST_DVD_RAM	0x12
+#define	DST_DVD_RW	0x13
+#define	DST_DVD_RW_SEQ	0x14
+#define	DST_DVD_R_DL	0x15
+#define	DST_DVD_R_DL_LJ	0x16
+#define	DST_DVD_PLUS_RW	0x1A
+#define	DST_DVD_PLUS_R	0x1B
+#define	DST_DVD_PLUS_R_DL 0x2B
+#define	DST_BD_ROM	0x40
+#define	DST_BD_R_SEQ	0x41
+#define	DST_BD_R	0x42
+#define	DST_BD_RE	0x43
 
 typedef	struct disk_status	dstat_t;
 
 struct disk_status {
+	track_t	*ds_trackp;		/* Pointer to track structure	*/
 	UInt32_t ds_diskid;		/* Disk identification		*/
 	UInt16_t ds_cdrflags;		/* Recording flags from cdrecord*/
 	UInt16_t ds_flags;		/* Disk_status flags		*/
@@ -614,6 +652,8 @@ struct disk_status {
 	UInt16_t ds_dr_cur_wspeed;	/* The drive's cur write speed	*/
 	UInt16_t ds_dr_max_wspeed;	/* The drive's max write speed	*/
 	UInt16_t ds_wspeed;		/* The selected/drive wr. speed */
+
+	Int32_t	 ds_layer_break;	/* Start of layer break		*/
 };
 
 /*
@@ -668,9 +708,14 @@ typedef	struct cdr_cmd	cdr_t;
 struct cdr_cmd {
 	int	cdr_dev;			/* Numerical device type */
 	UInt32_t cdr_cmdflags;			/* Command line options */
+	UInt32_t cdr_cmdflags2;			/* More cmdline options */
 	UInt32_t cdr_flags;			/* Drive related flags	*/
+	UInt32_t cdr_flags2;			/* More Drive flags	*/
+	UInt8_t	 cdr_cdrw_support;		/* CD-RW write media types */
+	UInt8_t	 cdr_wrmodedef;			/* Default write mode	*/
 	UInt16_t cdr_speeddef;			/* Default write speed	*/
 	UInt16_t cdr_speedmax;			/* Max. write speed	*/
+
 	char	*cdr_drname;			/* Driver ID string	*/
 	char	*cdr_drtext;			/* Driver ID text	*/
 	struct cd_mode_page_2A *cdr_cdcap;
@@ -683,6 +728,7 @@ struct cdr_cmd {
 	int	(*cdr_attach)		__PR((SCSI *scgp, cdr_t *));			/* init error decoding etc*/
 	int	(*cdr_init)		__PR((SCSI *scgp, cdr_t *));			/* init drive to useful deflts */
 	int	(*cdr_getdisktype)	__PR((SCSI *scgp, cdr_t *));			/* get disk type */
+	int	(*cdr_prdiskstatus)	__PR((SCSI *scgp, cdr_t *));			/* print disk status */
 	int	(*cdr_load)		__PR((SCSI *scgp, cdr_t *));			/* load disk */
 	int	(*cdr_unload)		__PR((SCSI *scgp, cdr_t *));			/* unload disk */
 	int	(*cdr_buffer_cap)	__PR((SCSI *scgp, long *sizep, long *freep));	/* read buffer capacity */
@@ -727,6 +773,7 @@ struct cdr_cmd {
 #endif
 #define	CDR_SRAW96P	0x200		/* Drive supports SAO raw96 pak	*/
 #define	CDR_SRAW96R	0x400		/* Drive supports SAO raw96 raw */
+#define	CDR_LAYER_JUMP	0x800		/* Drive s. DVD-R/DL Layer jump	*/
 #define	CDR_SWABAUDIO	0x1000		/* Drive swabs audio data	*/
 #define	CDR_ISREADER	0x2000		/* Drive is s CD-ROM reader	*/
 #define	CDR_TRAYLOAD	0x4000		/* Drive loads CD with tray	*/
@@ -742,6 +789,7 @@ struct cdr_cmd {
 #define	CDR_SINGLESESS	0x1000000	/* Drive sup. single sess. mode */
 #define	CDR_HIDE_CDR	0x2000000	/* Drive sup. hide CDR features	*/
 #define	CDR_SPEEDREAD	0x4000000	/* Drive sup. SpeedReed		*/
+#define	CDR_GIGAREC	0x8000000	/* Drive sup. GigaRec	 Plex.	*/
 #define	CDR_MMC		0x10000000	/* Drive is MMC compliant	*/
 #define	CDR_MMC2	0x20000000	/* Drive is MMC-2 compliant	*/
 #define	CDR_MMC3	0x40000000	/* Drive is MMC-3 compliant	*/
@@ -751,6 +799,21 @@ struct cdr_cmd {
 #define	CDR_ALLOC	0x80000000	/* structure is allocated	*/
 #endif
 
+/*
+ * Definitions for cdr_flags
+ */
+#define	CDR2_NOCD	0x01		/* Drive not operating on a CD	*/
+#define	CDR2_BD		0x02		/* Drive is a BluRay drive	*/
+
+/*
+ * Definitions for cdr_cdrw_support
+ */
+#define	CDR_CDRW_NONE	0x00		/* CD-RW writing not supported */
+#define	CDR_CDRW_MULTI	0x01		/* CD-RW multi speed supported */
+#define	CDR_CDRW_HIGH	0x02		/* CD-RW high speed supported */
+#define	CDR_CDRW_ULTRA	0x04		/* CD-RW ultra high speed supported */
+#define	CDR_CDRW_ULTRAP	0x08		/* CD-RW ultra high speed+ supported */
+#define	CDR_CDRW_ALL	0xFF		/* All bits set: unknown - support all */
 
 /*
  * cdrecord.c
@@ -760,11 +823,12 @@ extern	int	fill_buf	__PR((int f, track_t *trackp, long secno, char *bp, int size
 extern	int	get_buf		__PR((int f, track_t *trackp, long secno, char **bpp, int size));
 #ifdef	_SCG_SCSITRANSP_H
 extern	int	write_secs	__PR((SCSI *scgp, cdr_t *dp, char *bp, long startsec, int bytespt, int secspt, BOOL islast));
+extern	int	write_track_data __PR((SCSI *scgp, cdr_t *, track_t *));
 extern	int	pad_track	__PR((SCSI *scgp, cdr_t *dp, track_t *trackp,
 					long startsec, Llong amt,
 					BOOL dolast, Llong *bytesp));
 extern	void	load_media	__PR((SCSI *scgp, cdr_t *, BOOL));
-extern	void	unload_media	__PR((SCSI *scgp, cdr_t *, int));
+extern	void	unload_media	__PR((SCSI *scgp, cdr_t *, UInt32_t));
 extern	void	reload_media	__PR((SCSI *scgp, cdr_t *));
 #endif
 extern	void	raisepri	__PR((int));
@@ -779,11 +843,12 @@ extern	long	msf_to_lba	__PR((int m, int s, int f, BOOL force_positive));
 extern	BOOL	lba_to_msf	__PR((long lba, msf_t *mp));
 extern	void	sec_to_msf	__PR((long sec, msf_t *mp));
 extern	void	print_min_atip	__PR((long li, long lo));
+extern	BOOL	is_cdspeed	__PR((int speed));
 
 /*
  * fifo.c
  */
-extern	void	init_fifo	__PR((long));
+extern	long	init_fifo	__PR((long));
 extern	BOOL	init_faio	__PR((track_t *track, int));
 extern	BOOL	await_faio	__PR((void));
 extern	void	kill_faio	__PR((void));
@@ -890,9 +955,11 @@ extern	int	read_disk_info	__PR((SCSI *scgp, caddr_t, int));
 #define	TI_TYPE_TRACK	1	/* Address: 0 -> TOC, xx -> Track xx, 0xFF -> Inv Track */
 #define	TI_TYPE_SESS	2	/* Address is session # */
 extern	int	read_track_info	__PR((SCSI *scgp, caddr_t, int type, int addr, int cnt));
+extern	int	get_trackinfo	__PR((SCSI *scgp, caddr_t, int type, int addr, int cnt));
 extern	int	read_rzone_info	__PR((SCSI *scgp, caddr_t bp, int cnt));
 extern	int	reserve_tr_rzone __PR((SCSI *scgp, long size));
-extern	int	read_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int addr, int layer, int fmt));
+extern	int	read_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int mt, int addr, int layer, int fmt));
+extern	int	send_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int fmt));
 extern	int	send_opc	__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
 
 #define	CL_TYPE_STOP_DEICE	0	/* Stop De-icing a DVD+RW Media */
@@ -946,27 +1013,75 @@ extern	BOOL	mmc_check	__PR((SCSI *scgp, BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *cdrrwp, BOOL *cdwrwp,
 					BOOL *dvdp, BOOL *dvdwp));
 extern	void	print_capabilities	__PR((SCSI *scgp));
+
+extern	int	verify			__PR((SCSI *scgp, long start, int count, long *bad_block));
+#endif
+
+/*
+ * scsi_cdr.c
+ */
+#ifdef	_SCG_SCSITRANSP_H
+extern	void	print_capabilities_mmc4	__PR((SCSI *scgp));
 #endif
 
 /*
  * scsi_mmc.c
  */
+
+/*
+ * Definitions for the return value of get_mediatype()
+ */
+#define	MT_NONE		0	/* Unknown or unsupported	*/
+#define	MT_CD		1	/* CD type media		*/
+#define	MT_DVD		2	/* DVD type media		*/
+#define	MT_BD		3	/* Blu Ray type media		*/
+#define	MT_HDDVD	4	/* HD-DVD type media		*/
+
 #ifdef	_SCG_SCSITRANSP_H
 extern	int	get_configuration	__PR((SCSI *scgp, caddr_t bp, int cnt, int st_feature, int rt));
 extern	int	get_curprofile		__PR((SCSI *scgp));
+extern	int	has_profile		__PR((SCSI *scgp, int profile));
 extern	int	print_profiles		__PR((SCSI *scgp));
 extern	int	get_proflist		__PR((SCSI *scgp, BOOL *wp, BOOL *cdp, BOOL *dvdp,
 							BOOL *dvdplusp, BOOL *ddcdp));
 extern	int	get_wproflist		__PR((SCSI *scgp, BOOL *cdp, BOOL *dvdp,
 							BOOL *dvdplusp, BOOL *ddcdp));
+extern	int	get_mediatype		__PR((SCSI *scgp));
+#endif	/* _SCG_SCSITRANSP_H */
+extern	int	get_singlespeed		__PR((int mt));
+extern	float	get_secsps		__PR((int mt));
+extern	char	*get_mclassname		__PR((int mt));
+extern	int	get_blf			__PR((int mt));
+#ifdef	_SCG_SCSITRANSP_H
+extern	int	print_features		__PR((SCSI *scgp));
+extern	int	check_writemodes_mmc	__PR((SCSI *scgp, cdr_t *dp));
+extern	int	scsi_get_perf_maxspeed	__PR((SCSI *scgp, Ulong *readp, Ulong *writep, Ulong *endp));
+extern	int	scsi_get_perf_curspeed	__PR((SCSI *scgp, Ulong *readp, Ulong *writep, Ulong *endp));
+extern	int	speed_select_mdvd	__PR((SCSI *scgp, int readspeed, int writespeed));
+extern	void	print_format_capacities	__PR((SCSI *scgp));
+extern	int	get_format_capacities	__PR((SCSI *scgp, caddr_t bp, int cnt));
+extern	int	read_format_capacities	__PR((SCSI *scgp, caddr_t bp, int cnt));
+#endif	/* _SCG_SCSITRANSP_H */
+#ifdef _SCSIMMC_H
+extern	void	przone			__PR((struct rzone_info *rp));
+#endif	/* _SCSIMMC_H */
+#ifdef	_SCG_SCSITRANSP_H
+#ifdef	_SCSIMMC_H
+extern	int	get_diskinfo		__PR((SCSI *scgp, struct disk_info *dip, int cnt));
+extern	char	*get_ses_type		__PR((int ses_type));
+extern	void	print_diskinfo		__PR((struct disk_info *dip, BOOL is_cd));
 #endif
+extern	int	prdiskstatus		__PR((SCSI *scgp, cdr_t *dp, BOOL is_cd));
+extern	int	sessstatus		__PR((SCSI *scgp, BOOL is_cd, long *offp, long *nwap));
+extern	void	print_performance_mmc	__PR((SCSI *scgp));
+#endif	/* _SCG_SCSITRANSP_H */
 
 /*
- * mmc_misc.c
+ * scsi_mmc4.c
  */
 #ifdef	_SCG_SCSITRANSP_H
-extern	int	check_writemodes_mmc	__PR((SCSI *scgp, cdr_t *dp));
-#endif	/* _SCG_SCSITRANSP_H */
+extern	int	get_supported_cdrw_media_types	__PR((SCSI *scgp));
+#endif
 
 /*
  * cdr_drv.c
@@ -982,11 +1097,13 @@ extern	int	drive_attach		__PR((SCSI *scgp, cdr_t *));
 extern	int	attach_unknown		__PR((void));
 #ifdef	_SCG_SCSITRANSP_H
 extern	int	blank_dummy		__PR((SCSI *scgp, cdr_t *, long addr, int blanktype));
+extern	int	blank_simul		__PR((SCSI *scgp, cdr_t *, long addr, int blanktype));
 EXPORT	int	format_dummy		__PR((SCSI *scgp, cdr_t *, int fmtflags));
 extern	int	drive_getdisktype	__PR((SCSI *scgp, cdr_t *dp));
 extern	int	cmd_ill			__PR((SCSI *scgp));
 extern	int	cmd_dummy		__PR((SCSI *scgp, cdr_t *));
 extern	int	no_sendcue		__PR((SCSI *scgp, cdr_t *, track_t *trackp));
+extern	int	no_diskstatus		__PR((SCSI *scgp, cdr_t *));
 extern	int	buf_dummy		__PR((SCSI *scgp, long *sp, long *fp));
 #endif
 extern	BOOL	set_cdrcmds		__PR((char *name, cdr_t **dpp));
@@ -998,8 +1115,11 @@ extern	cdr_t	*get_cdrcmds		__PR((SCSI *scgp));
 /*
  * drv_mmc.c
  */
-extern	void	mmc_opthelp		__PR((cdr_t *dp, int excode));
+#ifdef	_SCG_SCSITRANSP_H
+extern	void	mmc_opthelp		__PR((SCSI *scgp, cdr_t *dp, int excode));
+#endif
 extern	char	*hasdrvopt		__PR((char *optstr, char *optname));
+extern	char	*hasdrvoptx		__PR((char *optstr, char *optname, int flag));
 #ifdef	_SCG_SCSITRANSP_H
 extern struct ricoh_mode_page_30 * get_justlink_ricoh	__PR((SCSI *scgp, Uchar *mode));
 #endif
@@ -1008,6 +1128,7 @@ extern struct ricoh_mode_page_30 * get_justlink_ricoh	__PR((SCSI *scgp, Uchar *m
  * isosize.c
  */
 extern	Llong	isosize		__PR((int f));
+extern	Llong	bisosize	__PR((char *bp, int len));
 
 /*
  * audiosize.c
@@ -1021,6 +1142,7 @@ extern	off_t	wavsize		__PR((int f));
  * auinfo.c
  */
 extern	BOOL	auinfosize	__PR((char *name, track_t *trackp));
+extern	BOOL	auinfhidden	__PR((char *name, int track, track_t *trackp));
 extern	void	auinfo		__PR((char *name, int track, track_t *trackp));
 #ifdef CDTEXT_H
 extern	textptr_t *gettextptr	__PR((int track, track_t *trackp));

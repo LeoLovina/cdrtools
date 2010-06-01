@@ -1,10 +1,12 @@
-/* @(#)desktop.c	1.6 04/03/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson */
+/* @(#)desktop.c	1.10 09/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson, Copyright 2000-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)desktop.c	1.6 04/03/04 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson";
+static	UConst char sccsid[] =
+	"@(#)desktop.c	1.10 09/07/09 joerg, Copyright 1997, 1998, 1999, 2000 James Pearson, Copyright 2000-2009 J. Schilling";
 #endif
 /*
  *      Copyright (c) 1997, 1998, 1999, 2000 James Pearson
+ *	Copyright (c) 2000-2009 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,9 +45,8 @@ static	char sccsid[] =
  *	Adapted from mkhfs routines for mkhybrid
  */
 
-#ifdef APPLE_HYB
+#ifdef APPLE_HFS_HYB
 
-#include <mconfig.h>
 #include "mkisofs.h"
 
 #define	DB	"Desktop DB"
@@ -171,4 +172,4 @@ make_desktop(vol, end)
 	return (0);
 }
 
-#endif	/* APPLE_HYB */
+#endif	/* APPLE_HFS_HYB */

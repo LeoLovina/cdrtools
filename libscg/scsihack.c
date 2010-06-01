@@ -1,7 +1,7 @@
-/* @(#)scsihack.c	1.43 03/11/28 Copyright 1997,2000,2001 J. Schilling */
+/* @(#)scsihack.c	1.55 09/07/13 Copyright 1997,2000-2009 J. Schilling */
 #ifndef lint
 static	char _sccsid[] =
-	"@(#)scsihack.c	1.43 03/11/28 Copyright 1997,2000,2001 J. Schilling";
+	"@(#)scsihack.c	1.55 09/07/13 Copyright 1997,2000-2009 J. Schilling";
 #endif
 /*
  *	Interface for other generic SCSI implementations.
@@ -24,47 +24,45 @@ static	char _sccsid[] =
  *	If your version has been integrated into the main steam release,
  *	the return value will be set to "schily".
  *
- *	Copyright (c) 1997,2000,2001 J. Schilling
+ *	Copyright (c) 1997,2000-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#ifdef	HAVE_SYS_PARAM_H
-#include <sys/param.h>	/* Include various defs needed with some OS */
-#endif
-#include <stdio.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <errno.h>
-#include <timedefs.h>
-#include <sys/ioctl.h>
-#include <fctldefs.h>
-#include <strdefs.h>
-#include <schily.h>
+#include <schily/param.h>	/* Include various defs needed with some OS */
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/errno.h>
+#include <schily/time.h>
+#include <schily/ioctl.h>
+#include <schily/fcntl.h>
+#include <schily/string.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsitransp.h>
 #include "scgtimes.h"
-
-#ifndef	HAVE_ERRNO_DEF
-extern	int	errno;
-#endif
 
 LOCAL	int	scgo_send	__PR((SCSI *scgp));
 LOCAL	char *	scgo_version	__PR((SCSI *scgp, int what));
@@ -75,6 +73,7 @@ LOCAL	long	scgo_maxdma	__PR((SCSI *scgp, long amt));
 LOCAL	void *	scgo_getbuf	__PR((SCSI *scgp, long amt));
 LOCAL	void	scgo_freebuf	__PR((SCSI *scgp));
 
+LOCAL	int	scgo_numbus	__PR((SCSI *scgp));
 LOCAL	BOOL	scgo_havebus	__PR((SCSI *scgp, int busno));
 LOCAL	int	scgo_fileno	__PR((SCSI *scgp, int busno, int tgt, int tlun));
 LOCAL	int	scgo_initiator_id __PR((SCSI *scgp));
@@ -92,6 +91,7 @@ EXPORT scg_ops_t scg_std_ops = {
 	scgo_maxdma,
 	scgo_getbuf,
 	scgo_freebuf,
+	scgo_numbus,
 	scgo_havebus,
 	scgo_fileno,
 	scgo_initiator_id,
@@ -129,7 +129,8 @@ EXPORT scg_ops_t scg_std_ops = {
 
 #endif	/* linux */
 
-#if	defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#if	defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || \
+	defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 #define	SCSI_IMPL		/* We have a SCSI implementation for *BSD */
 
 #include "scsi-bsd.c"
@@ -137,8 +138,7 @@ EXPORT scg_ops_t scg_std_ops = {
 #endif	/* *BSD */
 
 #if	defined(__bsdi__)	/* We have a SCSI implementation for BSD/OS 3.x (and later?) */
-# include <sys/param.h>
-# if (_BSDI_VERSION >= 199701)
+# if (_BSDI_VERSION >= 199701)	/* From sys/param.h included via schily/param.h */
 #  define	SCSI_IMPL
 
 #  include "scsi-bsd-os.c"
@@ -220,12 +220,12 @@ EXPORT scg_ops_t scg_std_ops = {
 
 #endif  /* OS/2 */
 
-#ifdef	__BEOS__
+#if defined(__BEOS__) || defined(__HAIKU__)
 #define	SCSI_IMPL		/* Yep, BeOS does that funky scsi stuff */
 #include "scsi-beos.c"
 #endif
 
-#ifdef	__CYGWIN32__
+#if defined(__CYGWIN32__) || defined(__MINGW32__)
 #define	SCSI_IMPL		/* Yep, we support WNT and W9? */
 #include "scsi-wnt.c"
 #endif
@@ -250,6 +250,16 @@ EXPORT scg_ops_t scg_std_ops = {
 #include "scsi-dos.c"
 #endif
 
+#ifdef	__MINT__		/* We have a SCSI implementation for ATARI/FreeMINT */
+#define	SCSI_IMPL
+#include "scsi-atari.c"
+#endif
+
+#ifdef	__SYLLABLE__		/* We have a SCSI implementation for Syllable */
+#define	SCSI_IMPL
+#include "scsi-syllable.c"
+#endif
+
 #ifdef	__NEW_ARCHITECTURE
 #define	SCSI_IMPL		/* We have a SCSI implementation for XXX */
 /*
@@ -272,6 +282,7 @@ EXPORT scg_ops_t scg_std_ops = {
 #define	scgo_dmaxdma		scgo_maxdma
 #define	scgo_dgetbuf		scgo_getbuf
 #define	scgo_dfreebuf		scgo_freebuf
+#define	scgo_dnumbus		scgo_numbus
 #define	scgo_dhavebus		scgo_havebus
 #define	scgo_dfileno		scgo_fileno
 #define	scgo_dinitiator_id	scgo_initiator_id
@@ -290,6 +301,7 @@ LOCAL	int	scgo_dclose	__PR((SCSI *scgp));
 LOCAL	long	scgo_dmaxdma	__PR((SCSI *scgp, long amt));
 LOCAL	void *	scgo_dgetbuf	__PR((SCSI *scgp, long amt));
 LOCAL	void	scgo_dfreebuf	__PR((SCSI *scgp));
+LOCAL	int	scgo_dnumbus	__PR((SCSI *scgp));
 LOCAL	BOOL	scgo_dhavebus	__PR((SCSI *scgp, int busno));
 LOCAL	int	scgo_dfileno	__PR((SCSI *scgp, int busno, int tgt, int tlun));
 LOCAL	int	scgo_dinitiator_id __PR((SCSI *scgp));
@@ -305,6 +317,7 @@ EXPORT scg_ops_t scg_remote_ops = {
 	scgo_dmaxdma,
 	scgo_dgetbuf,
 	scgo_dfreebuf,
+	scgo_dnumbus,
 	scgo_dhavebus,
 	scgo_dfileno,
 	scgo_dinitiator_id,
@@ -321,6 +334,7 @@ EXPORT scg_ops_t scg_dummy_ops = {
 	scgo_dmaxdma,
 	scgo_dgetbuf,
 	scgo_dfreebuf,
+	scgo_dnumbus,
 	scgo_dhavebus,
 	scgo_dfileno,
 	scgo_dinitiator_id,
@@ -335,7 +349,7 @@ EXPORT scg_ops_t scg_dummy_ops = {
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_dversion[] = "scsihack.c-1.43";	/* The version for this transport*/
+LOCAL	char	_scg_trans_dversion[] = "scsihack.c-1.55";	/* The version for this transport*/
 
 /*
  * Return version information for the low level SCSI transport code.
@@ -441,6 +455,13 @@ LOCAL void
 scgo_dfreebuf(scgp)
 	SCSI	*scgp;
 {
+}
+
+LOCAL BOOL
+scgo_dnumbus(scgp)
+	SCSI	*scgp;
+{
+	return (0);
 }
 
 LOCAL BOOL

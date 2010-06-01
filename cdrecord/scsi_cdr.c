@@ -1,32 +1,25 @@
-/*
-XXX
-SIZEOF testen !!!
-*/
-/* @(#)scsi_cdr.c	1.137 04/05/25 Copyright 1995-2004 J. Schilling */
+/* @(#)scsi_cdr.c	1.158 09/07/10 Copyright 1995-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)scsi_cdr.c	1.137 04/05/25 Copyright 1995-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)scsi_cdr.c	1.158 09/07/10 Copyright 1995-2009 J. Schilling";
 #endif
 /*
  *	SCSI command functions for cdrecord
  *	covering pre-MMC standard functions up to MMC-2
  *
- *	Copyright (c) 1995-2004 J. Schilling
+ *	Copyright (c) 1995-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 /*
@@ -37,21 +30,21 @@ static	char sccsid[] =
  *		most of the SCSI commands are send with the
  *		SCG_CMD_RETRY flag enabled.
  */
-#include <mconfig.h>
+#include <schily/mconfig.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <fctldefs.h>
-#include <errno.h>
-#include <strdefs.h>
-#include <timedefs.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/fcntl.h>
+#include <schily/errno.h>
+#include <schily/string.h>
+#include <schily/time.h>
 
-#include <utypes.h>
-#include <btorder.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include <scg/scsidefs.h>
@@ -97,9 +90,11 @@ EXPORT	int	read_toc_philips __PR((SCSI *scgp, caddr_t, int, int, int, int));
 EXPORT	int	read_header	__PR((SCSI *scgp, caddr_t, long, int, int));
 EXPORT	int	read_disk_info	__PR((SCSI *scgp, caddr_t, int));
 EXPORT	int	read_track_info	__PR((SCSI *scgp, caddr_t, int type, int addr, int cnt));
+EXPORT	int	get_trackinfo	__PR((SCSI *scgp, caddr_t, int type, int addr, int cnt));
 EXPORT	int	read_rzone_info	__PR((SCSI *scgp, caddr_t bp, int cnt));
 EXPORT	int	reserve_tr_rzone __PR((SCSI *scgp, long size));
-EXPORT	int	read_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int addr, int layer, int fmt));
+EXPORT	int	read_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int mt, int addr, int layer, int fmt));
+EXPORT	int	send_dvd_structure __PR((SCSI *scgp, caddr_t bp, int cnt, int fmt));
 EXPORT	int	send_opc	__PR((SCSI *scgp, caddr_t, int cnt, int doopc));
 EXPORT	int	read_track_info_philips	__PR((SCSI *scgp, caddr_t, int, int));
 EXPORT	int	scsi_close_tr_session __PR((SCSI *scgp, int type, int track, BOOL immed));
@@ -148,6 +143,7 @@ EXPORT	BOOL	mmc_check	__PR((SCSI *scgp, BOOL *cdrrp, BOOL *cdwrp,
 					BOOL *dvdp, BOOL *dvdwp));
 LOCAL	void	print_speed	__PR((char *fmt, int val));
 EXPORT	void	print_capabilities __PR((SCSI *scgp));
+extern	int	verify		__PR((SCSI *scgp, long start, int count, long *bad_block));
 
 EXPORT BOOL
 unit_ready(scgp)
@@ -190,11 +186,20 @@ wait_unit_ready(scgp, secs)
 	int	c;
 	int	k;
 	int	ret;
+	int	err;
 
+	seterrno(0);
 	scgp->silent++;
 	ret = test_unit_ready(scgp);		/* eat up unit attention */
-	if (ret < 0)
+	if (ret < 0) {
+		err = geterrno();
+
+		if (err == EPERM || err == EACCES) {
+			scgp->silent--;
+			return (FALSE);
+		}
 		ret = test_unit_ready(scgp);	/* got power on condition? */
+	}
 	scgp->silent--;
 
 	if (ret >= 0)				/* success that's enough */
@@ -317,23 +322,13 @@ request_sense(scgp)
 	SCSI	*scgp;
 {
 		char	sensebuf[CCS_SENSE_LEN];
-	register struct	scg_cmd	*scmd = scgp->scmd;
+		char	*cmdsave;
 
+	cmdsave = scgp->cmdname;
 
-	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
-	scmd->addr = sensebuf;
-	scmd->size = sizeof (sensebuf);
-	scmd->flags = SCG_RECV_DATA|SCG_DISRE_ENA;
-	scmd->cdb_len = SC_G0_CDBLEN;
-	scmd->sense_len = CCS_SENSE_LEN;
-	scmd->cdb.g0_cdb.cmd = SC_REQUEST_SENSE;
-	scmd->cdb.g0_cdb.lun = scg_lun(scgp);
-	scmd->cdb.g0_cdb.count = CCS_SENSE_LEN;
-
-	scgp->cmdname = "request_sense";
-
-	if (scg_cmd(scgp) < 0)
+	if (request_sense_b(scgp, sensebuf, sizeof (sensebuf)) < 0)
 		return (-1);
+	scgp->cmdname = cmdsave;
 	scg_prsense((Uchar *)sensebuf, CCS_SENSE_LEN - scg_getresid(scgp));
 	return (0);
 }
@@ -1043,12 +1038,46 @@ read_track_info(scgp, bp, type, addr, cnt)
 }
 
 EXPORT int
+get_trackinfo(scgp, bp, type, addr, cnt)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	type;
+	int	addr;
+	int	cnt;
+{
+	int	len;
+	int	ret;
+
+	fillbytes(bp, cnt, '\0');
+
+	/*
+	 * Used to be 2 instead of 4 (now). But some Y2k ATAPI drives as used
+	 * by IOMEGA create a DMA overrun if we try to transfer only 2 bytes.
+	 */
+	if (read_track_info(scgp, bp, type, addr, 4) < 0)
+		return (-1);
+
+	len = a_to_u_2_byte(bp);
+	len += 2;
+	if (len > cnt)
+		len = cnt;
+	ret = read_track_info(scgp, bp, type, addr, len);
+
+#ifdef	DEBUG
+	if (lverbose > 1)
+		scg_prbytes("Track info:", (Uchar *)bp,
+				len-scg_getresid(scgp));
+#endif
+	return (ret);
+}
+
+EXPORT int
 read_rzone_info(scgp, bp, cnt)
 	SCSI	*scgp;
 	caddr_t	bp;
 	int	cnt;
 {
-	return (read_track_info(scgp, bp, TI_TYPE_LBA, 0, cnt));
+	return (get_trackinfo(scgp, bp, TI_TYPE_LBA, 0, cnt));
 }
 
 EXPORT int
@@ -1067,7 +1096,7 @@ reserve_tr_rzone(scgp, size)
 	scmd->cdb.g1_cdb.cmd = 0x53;
 	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
 
-	i_to_4_byte(&scmd->cdb.g1_cdb.addr[3], size);
+	i_to_4_byte(&scmd->cdb.cmd_cdb[5], size);
 
 	scgp->cmdname = "reserve_track_rzone";
 
@@ -1077,10 +1106,11 @@ reserve_tr_rzone(scgp, size)
 }
 
 EXPORT int
-read_dvd_structure(scgp, bp, cnt, addr, layer, fmt)
+read_dvd_structure(scgp, bp, cnt, mt, addr, layer, fmt)
 	SCSI	*scgp;
 	caddr_t	bp;
 	int	cnt;
+	int	mt;
 	int	addr;
 	int	layer;
 	int	fmt;
@@ -1096,12 +1126,42 @@ read_dvd_structure(scgp, bp, cnt, addr, layer, fmt)
 	scmd->timeout = 4 * 60;		/* Needs up to 2 minutes ??? */
 	scmd->cdb.g5_cdb.cmd = 0xAD;
 	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	scmd->cdb.cmd_cdb[1] |= (mt & 0x0F);	/* Media Type */
 	g5_cdbaddr(&scmd->cdb.g5_cdb, addr);
 	g5_cdblen(&scmd->cdb.g5_cdb, cnt);
 	scmd->cdb.g5_cdb.count[0] = layer;
 	scmd->cdb.g5_cdb.count[1] = fmt;
 
 	scgp->cmdname = "read dvd structure";
+
+	if (scg_cmd(scgp) < 0)
+		return (-1);
+	return (0);
+}
+
+EXPORT int
+send_dvd_structure(scgp, bp, cnt, fmt)
+	SCSI	*scgp;
+	caddr_t	bp;
+	int	cnt;
+	int	fmt;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+	scmd->addr = bp;
+	scmd->size = cnt;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G5_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->timeout = 4 * 60;		/* Needs up to 2 minutes ??? */
+	scmd->cdb.g5_cdb.cmd = 0xBF;
+	scmd->cdb.g5_cdb.lun = scg_lun(scgp);
+	g5_cdblen(&scmd->cdb.g5_cdb, cnt);
+	scmd->cdb.g5_cdb.count[0] = 0;
+	scmd->cdb.g5_cdb.count[1] = fmt;
+
+	scgp->cmdname = "send dvd structure";
 
 	if (scg_cmd(scgp) < 0)
 		return (-1);
@@ -1729,6 +1789,7 @@ read_trackinfo(scgp, track, offp, msfp, adrp, controlp, modep)
 	struct	diskinfo *dp;
 	char	xb[256];
 	int	len;
+	long	off;
 
 	dp = (struct diskinfo *)xb;
 
@@ -1742,8 +1803,9 @@ read_trackinfo(scgp, track, offp, msfp, adrp, controlp, modep)
 	if (len <  (int)sizeof (struct diskinfo))
 		return (-1);
 
+	off = a_to_4_byte(dp->desc[0].addr);
 	if (offp)
-		*offp = a_to_4_byte(dp->desc[0].addr);
+		*offp = off;
 	if (adrp)
 		*adrp = dp->desc[0].adr;
 	if (controlp)
@@ -1762,9 +1824,9 @@ read_trackinfo(scgp, track, offp, msfp, adrp, controlp, modep)
 			 * Some drives (e.g. the Philips CDD-522) don't support
 			 * to read the TOC in MSF mode.
 			 */
-			long off = a_to_4_byte(dp->desc[0].addr);
+			long moff = a_to_4_byte(dp->desc[0].addr);
 
-			lba_to_msf(off, msfp);
+			lba_to_msf(moff, msfp);
 		} else {
 			msfp->msf_min = 0;
 			msfp->msf_sec = 0;
@@ -1784,7 +1846,7 @@ read_trackinfo(scgp, track, offp, msfp, adrp, controlp, modep)
 	fillbytes((caddr_t)xb, sizeof (xb), '\0');
 
 	scgp->silent++;
-	if (read_header(scgp, xb, *offp, 8, 0) >= 0) {
+	if (read_header(scgp, xb, off, 8, 0) >= 0) {
 		*modep = xb[0];
 	} else if (read_track_info_philips(scgp, xb, track, 14) >= 0) {
 		*modep = xb[0xb] & 0xF;
@@ -2601,7 +2663,7 @@ printdev(scgp)
 	case DEV_MMC_CDR:	printf("Generic mmc CD-R");	break;
 	case DEV_MMC_CDRW:	printf("Generic mmc CD-RW");	break;
 	case DEV_MMC_DVD:	printf("Generic mmc2 DVD-ROM");	break;
-	case DEV_MMC_DVD_WR:	printf("Generic mmc2 DVD-R/DVD-RW"); break;
+	case DEV_MMC_DVD_WR:	printf("Generic mmc2 DVD-R/DVD-RW/DVD-RAM"); break;
 	case DEV_CDD_521_OLD:	printf("Philips old CDD-521");	break;
 	case DEV_CDD_521:	printf("Philips CDD-521");	break;
 	case DEV_CDD_522:	printf("Philips CDD-522");	break;
@@ -2675,8 +2737,8 @@ scsi_load(scgp, dp)
 	int	key;
 	int	code;
 
-	if ((dp->cdr_flags & CDR_CADDYLOAD) == 0) {
-		if (scsi_start_stop_unit(scgp, 1, 1, dp && (dp->cdr_cmdflags&F_IMMED)) >= 0)
+	if (dp && (dp->cdr_flags & CDR_CADDYLOAD) == 0) {
+		if (scsi_start_stop_unit(scgp, 1, 1, dp->cdr_cmdflags&F_IMMED) >= 0)
 			return (0);
 	}
 
@@ -2688,7 +2750,7 @@ scsi_load(scgp, dp)
 
 	if (key == SC_NOT_READY && (code == 0x3A || code == 0x30)) {
 		errmsgno(EX_BAD, "Cannot load media with %s drive!\n",
-			(dp->cdr_flags & CDR_CADDYLOAD) ? "caddy" : "this");
+			dp && (dp->cdr_flags & CDR_CADDYLOAD) ? "caddy" : "this");
 		errmsgno(EX_BAD, "Try to load media by hand.\n");
 	}
 	return (-1);
@@ -2876,7 +2938,8 @@ print_speed(fmt, val)
 {
 	printf("  %s: %5d kB/s", fmt, val);
 	printf(" (CD %3ux,", val/176);
-	printf(" DVD %2ux)\n", val/1385);
+	printf(" DVD %2ux,", val/1385);
+	printf(" BD %2ux)\n", val/4495);
 }
 
 #define	DOES(what, flag)	printf("  Does %s%s\n", flag?"":"not ", what)
@@ -3004,9 +3067,45 @@ static	const	char	*rotctl[4] = {"CLV/PCAV", "CAV", "reserved(2)", "reserved(3)"}
 			printf(" %5d kB/s", n);
 			printf(" %s", rotctl[pp->rot_ctl_sel]);
 			printf(" (CD %3ux,", n/176);
-			printf(" DVD %2ux)\n", n/1385);
+			printf(" DVD %2ux,", n/1385);
+			printf(" BD %2ux)\n", n/4495);
 		}
 	}
 
 	/* Generic SCSI-3/mmc CD	*/
+}
+
+EXPORT int
+verify(scgp, start, count, bad_block)
+	SCSI	*scgp;
+	long	start;
+	int	count;
+	long	*bad_block;
+{
+	register struct	scg_cmd	*scmd = scgp->scmd;
+
+	fillbytes((caddr_t)scmd, sizeof (*scmd), '\0');
+	scmd->addr = (caddr_t)0;
+	scmd->size = 0;
+	scmd->flags = SCG_DISRE_ENA;
+	scmd->cdb_len = SC_G1_CDBLEN;
+	scmd->sense_len = CCS_SENSE_LEN;
+	scmd->cdb.g1_cdb.cmd = 0x2F;	/* Verify */
+	scmd->cdb.g1_cdb.lun = scg_lun(scgp);
+	g1_cdbaddr(&scmd->cdb.g1_cdb, start);
+	g1_cdblen(&scmd->cdb.g1_cdb, count);
+
+	scgp->cmdname = "verify";
+
+	if (scg_cmd(scgp) < 0) {
+		if (scmd->sense.code >= 0x70) {	/* extended Sense */
+			*bad_block =
+				a_to_4_byte(&((struct scsi_ext_sense *)
+							&scmd->sense)->info_1);
+		} else {
+			*bad_block = a_to_u_3_byte(&scmd->sense.high_addr);
+		}
+		return (-1);
+	}
+	return (0);
 }

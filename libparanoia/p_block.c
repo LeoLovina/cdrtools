@@ -1,17 +1,19 @@
-/* @(#)p_block.c	1.19 04/02/23 J. Schilling from cdparanoia-III-alpha9.8 */
+/* @(#)p_block.c	1.28 09/07/11 J. Schilling from cdparanoia-III-alpha9.8 */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-"@(#)p_block.c	1.19 04/02/23 J. Schilling from cdparanoia-III-alpha9.8";
+static	UConst char sccsid[] =
+"@(#)p_block.c	1.28 09/07/11 J. Schilling from cdparanoia-III-alpha9.8";
 
 #endif
 /*
- *	Modifications to make the code portable Copyright (c) 2002 J. Schilling
+ * CopyPolicy: GNU Lesser General Public License v2.1 applies
+ * Copyright (C) 1997-2001,2008 by Monty (xiphmont@mit.edu)
+ * Copyright (C) 2002-2009 by J. Schilling
  */
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <standard.h>
-#include <utypes.h>
-#include <strdefs.h>
+#include <schily/stdlib.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/string.h>
 #include "p_block.h"
 #include "cdda_paranoia.h"
 #include "pmalloc.h"
@@ -58,7 +60,17 @@ EXPORT	void		c_append	__PR((c_block * v,
 						Int16_t * vector, long size));
 EXPORT	void		c_removef	__PR((c_block * v, long cut));
 EXPORT	void		i_paranoia_firstlast	__PR((cdrom_paranoia * p));
-EXPORT	cdrom_paranoia	*paranoia_init	__PR((void * d, int nsectors));
+EXPORT	cdrom_paranoia *paranoia_init	__PR((void * d, int nsectors,
+			long	(*d_read) __PR((void *d, void *buffer,
+						long beginsector,
+						long sectors)),
+			long	(*d_disc_firstsector)	__PR((void *d)),
+			long	(*d_disc_lastsector)	__PR((void *d)),
+			int	(*d_tracks)		__PR((void *d)),
+			long	(*d_track_firstsector)	__PR((void *d, int track)),
+			long	(*d_track_lastsector)  __PR((void *d, int track)),
+			int 	(*d_sector_gettrack) __PR((void *d, long sector)),
+			int 	(*d_track_audiop) __PR((void *d, int track))));
 
 EXPORT linked_list *
 new_list(newp, freep)
@@ -494,6 +506,17 @@ c_removef(v, cut)
 /*
  * Initialization
  */
+
+/*
+ *  Get the beginning and ending sector bounds given cursor position.
+ *
+ * There are a couple of subtle differences between this and the
+ * cdda_firsttrack_sector and cdda_lasttrack_sector. If the cursor is
+ * at a sector later than cdda_firsttrack_sector, that sector will be
+ * used. As for the difference between cdda_lasttrack_sector, if the CD
+ * is mixed and there is a data track after the cursor but before the
+ * last audio track, the end of the audio sector before that is used.
+ */
 EXPORT void
 i_paranoia_firstlast(p)
 	cdrom_paranoia	*p;
@@ -502,27 +525,51 @@ i_paranoia_firstlast(p)
 	void	*d = p->d;
 
 	p->current_lastsector = -1;
-	for (i = cdda_sector_gettrack(d, p->cursor); i < cdda_tracks(d); i++)
-		if (!cdda_track_audiop(d, i))
-			p->current_lastsector = cdda_track_lastsector(d, i - 1);
+	for (i = p->d_sector_gettrack(d, p->cursor); i < p->d_tracks(d); i++)
+		if (!p->d_track_audiop(d, i))
+			p->current_lastsector = p->d_track_lastsector(d, i - 1);
 	if (p->current_lastsector == -1)
-		p->current_lastsector = cdda_disc_lastsector(d);
+		p->current_lastsector = p->d_disc_lastsector(d);
 
 	p->current_firstsector = -1;
-	for (i = cdda_sector_gettrack(d, p->cursor); i > 0; i--)
-		if (!cdda_track_audiop(d, i))
-			p->current_firstsector = cdda_track_firstsector(d, i + 1);
+	for (i = p->d_sector_gettrack(d, p->cursor); i > 0; i--)
+		if (!p->d_track_audiop(d, i))
+			p->current_firstsector = p->d_track_firstsector(d, i + 1);
 	if (p->current_firstsector == -1)
-		p->current_firstsector = cdda_disc_firstsector(d);
+		p->current_firstsector = p->d_disc_firstsector(d);
 
 }
 
 EXPORT cdrom_paranoia *
-paranoia_init(d, nsectors)
+paranoia_init(d, nsectors,
+		d_read,
+		d_disc_firstsector, d_disc_lastsector,
+		d_tracks,
+		d_track_firstsector, d_track_lastsector,
+		d_sector_gettrack, d_track_audiop)
 	void	*d;
 	int	nsectors;
+	long	(*d_read)		__PR((void *d, void *buffer,
+						long beginsector,
+						long sectors));
+	long	(*d_disc_firstsector)	__PR((void *d));
+	long	(*d_disc_lastsector)	__PR((void *d));
+	int	(*d_tracks)		__PR((void *d));
+	long	(*d_track_firstsector)	__PR((void *d, int track));
+	long	(*d_track_lastsector)	__PR((void *d, int track));
+	int	(*d_sector_gettrack)	__PR((void *d, long sector));
+	int	(*d_track_audiop)	__PR((void *d, int track));
 {
 	cdrom_paranoia	*p = _pcalloc(1, sizeof (cdrom_paranoia));
+
+	p->d_read		= d_read;
+	p->d_disc_firstsector	= d_disc_firstsector;
+	p->d_disc_lastsector	= d_disc_lastsector;
+	p->d_tracks		= d_tracks;
+	p->d_track_firstsector	= d_track_firstsector;
+	p->d_track_lastsector	= d_track_lastsector;
+	p->d_sector_gettrack	= d_sector_gettrack;
+	p->d_track_audiop	= d_track_audiop;
 
 	p->cache = new_list(vp_cblock_constructor_func,
 				vp_cblock_destructor_func);
@@ -540,7 +587,7 @@ paranoia_init(d, nsectors)
 	p->dynoverlap = MAX_SECTOR_OVERLAP * CD_FRAMEWORDS;
 	p->cache_limit = JIGGLE_MODULO;
 	p->enable = PARANOIA_MODE_FULL;
-	p->cursor = cdda_disc_firstsector(d);
+	p->cursor = p->d_disc_firstsector(d);
 	p->lastread = -1000000;
 
 	/*
@@ -559,9 +606,14 @@ paranoia_dynoverlapset(p, minoverlap, maxoverlap)
 {
 	if (minoverlap >= 0)
 		p->mindynoverlap = minoverlap;
-	if (maxoverlap > minoverlap)
+	if (maxoverlap > p->mindynoverlap)
 		p->maxdynoverlap = maxoverlap;
 
 	if (p->maxdynoverlap < p->mindynoverlap)
 		p->maxdynoverlap = p->mindynoverlap;
+
+	if (p->dynoverlap < p->mindynoverlap)
+		p->dynoverlap = p->mindynoverlap;
+	if (p->dynoverlap > p->maxdynoverlap)
+		p->dynoverlap = p->maxdynoverlap;
 }

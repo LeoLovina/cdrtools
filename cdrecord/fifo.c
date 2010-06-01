@@ -1,7 +1,8 @@
-/* @(#)fifo.c	1.47 04/03/02 Copyright 1989,1997-2004 J. Schilling */
+/* @(#)fifo.c	1.64 10/02/12 Copyright 1989,1997-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)fifo.c	1.47 04/03/02 Copyright 1989,1997-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)fifo.c	1.64 10/02/12 Copyright 1989,1997-2010 J. Schilling";
 #endif
 /*
  *	A "fifo" that uses shared memory between two processes
@@ -10,30 +11,33 @@ static	char sccsid[] =
  *	and a proposal from Finn Arne Gangstad <finnag@guardian.no>
  *	who had the idea to use a ring buffer to handle average size chunks.
  *
- *	Copyright (c) 1989,1997-2004 J. Schilling
+ *	Copyright (c) 1989,1997-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #ifndef	DEBUG
 #define	DEBUG
 #endif
 /*#define	XDEBUG*/
-#include <mconfig.h>
-#if	!defined(HAVE_SMMAP) && !defined(HAVE_USGSHM) && !defined(HAVE_DOSALLOCSHAREDMEM)
+#include <schily/mconfig.h>
+#if	defined(HAVE_OS_H) && \
+	defined(HAVE_CLONE_AREA) && defined(HAVE_CREATE_AREA) && \
+	defined(HAVE_DELETE_AREA)
+#include <OS.h>
+#	define	HAVE_BEOS_AREAS	/* BeOS/Zeta/Haiku */
+#endif
+#if	!defined(HAVE_SMMAP) && !defined(HAVE_USGSHM) && \
+	!defined(HAVE_DOSALLOCSHAREDMEM) && !defined(HAVE_BEOS_AREAS)
 #undef	FIFO			/* We cannot have a FIFO on this platform */
 #endif
 #if	!defined(HAVE_FORK)
@@ -57,20 +61,28 @@ static	char sccsid[] =
 #	define	USE_OS2SHM
 #endif
 
-#include <stdio.h>
-#include <stdxlib.h>
-#include <unixstd.h>	/* includes <sys/types.h> */
-#include <utypes.h>
-#include <fctldefs.h>
-#if defined(HAVE_SMMAP) && defined(USE_MMAP)
-#include <mmapdefs.h>
+#ifdef	HAVE_BEOS_AREAS		/* This is for BeOS/Zeta */
+#	undef	USE_MMAP
+#	undef	USE_USGSHM
+#	undef	USE_OS2SHM
+#	define	USE_BEOS_AREAS
 #endif
-#include <waitdefs.h>
-#include <standard.h>
-#include <errno.h>
-#include <signal.h>
-#include <libport.h>
-#include <schily.h>
+
+#include <schily/stdio.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>	/* includes <sys/types.h> */
+#include <schily/utypes.h>
+#include <schily/fcntl.h>
+#if defined(HAVE_SMMAP) && defined(USE_MMAP)
+#include <schily/mman.h>
+#endif
+#include <schily/wait.h>
+#include <schily/standard.h>
+#include <schily/errno.h>
+#include <schily/signal.h>
+#include <schily/libport.h>
+#include <schily/schily.h>
+#include <schily/vfork.h>
 
 #include "cdrecord.h"
 #include "xio.h"
@@ -152,7 +164,7 @@ LOCAL	long	buflen;			/* The size of the FIFO buffer */
 extern	int	debug;
 extern	int	lverbose;
 
-EXPORT	void	init_fifo	__PR((long));
+EXPORT	long	init_fifo	__PR((long));
 #ifdef	USE_MMAP
 LOCAL	char	*mkshare	__PR((int size));
 #endif
@@ -161,6 +173,10 @@ LOCAL	char	*mkshm		__PR((int size));
 #endif
 #ifdef	USE_OS2SHM
 LOCAL	char	*mkos2shm	__PR((int size));
+#endif
+#ifdef	USE_BEOS_AREAS
+LOCAL	char	*mkbeosshm	__PR((int size));
+LOCAL	void	beosshm_child	__PR((void));
 #endif
 
 EXPORT	BOOL	init_faio	__PR((track_t *trackp, int));
@@ -180,14 +196,14 @@ EXPORT	void	fifo_stats	__PR((void));
 EXPORT	int	fifo_percent	__PR((BOOL addone));
 
 
-EXPORT void
+EXPORT long
 init_fifo(fs)
 	long	fs;
 {
 	int	pagesize;
 
 	if (fs == 0L)
-		return;
+		return (fs);
 
 #ifdef	_SC_PAGESIZE
 	pagesize = sysconf(_SC_PAGESIZE);
@@ -205,6 +221,9 @@ init_fifo(fs)
 #endif
 #if	defined(USE_OS2SHM)
 	buf = mkos2shm(buflen);
+#endif
+#if	defined(USE_BEOS_AREAS)
+	buf = mkbeosshm(buflen);
 #endif
 
 	bufbase = buf;
@@ -224,6 +243,7 @@ init_fifo(fs)
 	if (debug)
 		ef = fopen("/tmp/ef", "w");
 #endif
+	return (buflen-pagesize); /* We use one page for administrative data */
 }
 
 #ifdef	USE_MMAP
@@ -257,8 +277,8 @@ mkshare(size)
 #endif
 
 #ifdef	USE_USGSHM
-#include <sys/ipc.h>
-#include <sys/shm.h>
+#include <schily/ipc.h>
+#include <schily/shm.h>
 LOCAL char *
 mkshm(size)
 	int	size;
@@ -325,6 +345,51 @@ mkos2shm(size)
 				(void *)addr, size);
 
 	return (addr);
+}
+#endif
+
+#ifdef	USE_BEOS_AREAS
+LOCAL	area_id	faio_aid;
+LOCAL	void	*faio_addr;
+LOCAL	char	faio_name[32];
+
+LOCAL char *
+mkbeosshm(size)
+	int	size;
+{
+	snprintf(faio_name, sizeof (faio_name), "cdrecord FIFO %lld",
+		(Llong)getpid());
+
+	faio_aid = create_area(faio_name, &faio_addr,
+			B_ANY_ADDRESS,
+			size,
+			B_NO_LOCK, B_READ_AREA|B_WRITE_AREA);
+	if (faio_addr == NULL) {
+		comerrno(faio_aid,
+			"Cannot get create_area for %d Bytes FIFO.\n", size);
+	}
+	if (debug) errmsgno(EX_BAD, "shared memory allocated attached at: %p size %d\n",
+				(void *)faio_addr, size);
+	return (faio_addr);
+}
+
+LOCAL void
+beosshm_child()
+{
+	/*
+	 * Delete the area created by fork that is copy-on-write.
+	 */
+	delete_area(area_for(faio_addr));
+	/*
+	 * Clone (share) the original one.
+	 */
+	faio_aid = clone_area(faio_name, &faio_addr,
+			B_ANY_ADDRESS, B_READ_AREA|B_WRITE_AREA,
+			faio_aid);
+	if (bufbase != faio_addr) {
+		comerrno(EX_BAD, "Panic FIFO addr.\n");
+		/* NOTREACHED */
+	}
 }
 #endif
 
@@ -431,6 +496,9 @@ init_faio(trackp, bufsize)
 #ifdef USE_OS2SHM
 		DosGetSharedMem(buf, 3); /* PAG_READ|PAG_WRITE */
 #endif
+#ifdef	USE_BEOS_AREAS
+		beosshm_child();
+#endif
 		/* Ignoring SIGALRM cures the SCO usleep() bug */
 /*		signal(SIGALRM, SIG_IGN);*/
 		__vfork_resume();	/* Needed on some platforms */
@@ -490,7 +558,7 @@ await_faio()
 		if (f->fd != lastfd &&
 			f->fd == STDIN_FILENO && f->len == 0) {
 			errmsgno(EX_BAD, "Premature EOF on stdin.\n");
-			kill(faio_pid, SIGKILL);
+			kill_faio();
 			return (FALSE);
 		}
 		lastfd = f->fd;
@@ -524,7 +592,9 @@ faio_reader(trackp)
 	if (debug)
 		printf("\nfaio_reader starting\n");
 
-	for (trackno = 1; trackno <= trackp->tracks; trackno++) {
+	for (trackno = 0; trackno <= trackp->tracks; trackno++) {
+		if (trackno == 0 && trackp[0].xfp == NULL)
+			continue;
 		if (debug)
 			printf("\nfaio_reader reading track %u\n", trackno);
 		faio_read_track(&trackp[trackno]);
@@ -598,7 +668,10 @@ faio_read_track(trackp)
 		secno += secspt;
 	} while (tracksize < 0 || bytes_read < tracksize);
 
-	xclose(trackp->xfp);	/* Don't keep files open longer than neccesary */
+	if (trackp->xfp != NULL) {
+		xclose(trackp->xfp);	/* Don't keep files open longer than neccesary */
+		trackp->xfp = NULL;
+	}
 }
 
 LOCAL void
@@ -766,13 +839,13 @@ fifo_percent(addone)
 }
 #else	/* FIFO */
 
-#include <standard.h>
-#include <utypes.h>	/* includes sys/types.h */
-#include <schily.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>	/* includes sys/types.h */
+#include <schily/schily.h>
 
 #include "cdrecord.h"
 
-EXPORT	void	init_fifo	__PR((long));
+EXPORT	long	init_fifo	__PR((long));
 EXPORT	BOOL	init_faio	__PR((track_t *track, int));
 EXPORT	BOOL	await_faio	__PR((void));
 EXPORT	void	kill_faio	__PR((void));
@@ -783,11 +856,12 @@ EXPORT	void	fifo_stats	__PR((void));
 EXPORT	int	fifo_percent	__PR((BOOL addone));
 
 
-EXPORT void
+EXPORT long
 init_fifo(fs)
 	long	fs;
 {
 	errmsgno(EX_BAD, "Fifo not supported.\n");
+	return (0L);
 }
 
 EXPORT BOOL

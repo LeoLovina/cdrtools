@@ -1,38 +1,35 @@
-/* @(#)audiosize.c	1.19 04/03/01 Copyright 1998-2004 J. Schilling */
+/* @(#)audiosize.c	1.23 09/07/05 Copyright 1998-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)audiosize.c	1.19 04/03/01 Copyright 1998-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)audiosize.c	1.23 09/07/05 Copyright 1998-2009 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1998-2004 J. Schilling
+ *	Copyright (c) 1998-2009 J. Schilling
  *
  *	First .vaw implementation made by Dave Platt <dplatt@iq.nc.com>
  *	Current .wav implementation with additional help from Heiko Eiﬂfeld.
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>
-#include <statdefs.h>
-#include <unixstd.h>
-#include <standard.h>
-#include <utypes.h>
-#include <strdefs.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/mconfig.h>
+#include <schily/stat.h>
+#include <schily/unistd.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/string.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include <scg/scgcmd.h>
 #include "auheader.h"
@@ -148,6 +145,7 @@ ausize(f)
 	mode = sb.st_mode & S_IFMT;
 	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
+	lseek(f, (off_t)0L, SEEK_SET);
 
 	if (read(f, &hdr, sizeof (hdr)) != sizeof (hdr))
 		goto err;
@@ -227,6 +225,7 @@ wavsize(f)
 	mode = sb.st_mode & S_IFMT;
 	if (!S_ISREG(mode) && !S_ISBLK(mode) && !S_ISCHR(mode))
 		return (-1L);
+	lseek(f, (off_t)0L, SEEK_SET);
 
 	cursor = (off_t)0;
 	gotFormat = FALSE;

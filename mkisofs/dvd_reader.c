@@ -1,7 +1,8 @@
-/* @(#)dvd_reader.c	1.3 04/03/04 joerg */
+/* @(#)dvd_reader.c	1.10 09/11/25 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)dvd_reader.c	1.3 04/03/04 joerg";
+static	UConst char sccsid[] =
+	"@(#)dvd_reader.c	1.10 09/11/25 joerg";
 #endif
 /*
  * Copyright (C) 2001, 2002 Billy Biggs <vektor@dumbterm.net>,
@@ -38,8 +39,8 @@ static	char sccsid[] =
 #ifdef DVD_VIDEO
 
 #include "mkisofs.h"
-#include <fctldefs.h>
-#include <schily.h>
+#include <schily/fcntl.h>
+#include <schily/schily.h>
 
 #include "dvd_reader.h"
 
@@ -53,12 +54,12 @@ struct dvd_file_s {
 
 
 EXPORT	void		DVDCloseFile	__PR((dvd_file_t *dvd_file));
-LOCAL	dvd_file_t *	DVDOpenFilePath	__PR((dvd_reader_t *dvd, char *filename));
-LOCAL	dvd_file_t *	DVDOpenVOBPath	__PR((dvd_reader_t *dvd, int title, int menu));
-EXPORT	dvd_file_t *	DVDOpenFile	__PR((dvd_reader_t *dvd, int titlenum,
+LOCAL	dvd_file_t	*DVDOpenFilePath __PR((dvd_reader_t *dvd, char *filename));
+LOCAL	dvd_file_t	*DVDOpenVOBPath	__PR((dvd_reader_t *dvd, int title, int menu));
+EXPORT	dvd_file_t	*DVDOpenFile	__PR((dvd_reader_t *dvd, int titlenum,
 						dvd_read_domain_t domain));
-LOCAL	dvd_reader_t *	DVDOpenPath	__PR((const char *path_root));
-EXPORT	dvd_reader_t *	DVDOpen		__PR((const char *path));
+LOCAL	dvd_reader_t	*DVDOpenPath	__PR((const char *path_root));
+EXPORT	dvd_reader_t	*DVDOpen		__PR((const char *path));
 EXPORT	void		DVDClose	__PR((dvd_reader_t *dvd));
 EXPORT	ssize_t		DVDFileSize	__PR((dvd_file_t *dvd_file));
 
@@ -94,7 +95,7 @@ DVDOpenFilePath(dvd, filename)
 				"%s/%s", dvd->path_root, filename);
 
 
-	dvd_file = (dvd_file_t *) e_malloc(sizeof (dvd_file_t));
+	dvd_file = (dvd_file_t *)e_malloc(sizeof (dvd_file_t));
 	if (!dvd_file)
 		return (0);
 	dvd_file->dvd = dvd;
@@ -125,7 +126,7 @@ DVDOpenVOBPath(dvd, title, menu)
 	dvd_file_t	*dvd_file;
 	int		i;
 
-	dvd_file = (dvd_file_t *) e_malloc(sizeof (dvd_file_t));
+	dvd_file = (dvd_file_t *)e_malloc(sizeof (dvd_file_t));
 	if (!dvd_file)
 		return (0);
 	dvd_file->dvd = dvd;
@@ -206,11 +207,7 @@ DVDOpenFile(dvd, titlenum, domain)
 		return (DVDOpenVOBPath(dvd, titlenum, 0));
 
 	default:
-#ifdef	USE_LIBSCHILY
 		errmsgno(EX_BAD, "Invalid domain for file open.\n");
-#else
-		fprintf(stderr, "Invalid domain for file open.\n");
-#endif
 		return (0);
 	}
 	return (DVDOpenFilePath(dvd, filename));
@@ -227,10 +224,10 @@ DVDOpenPath(path_root)
 {
 	dvd_reader_t	*dvd;
 
-	dvd = (dvd_reader_t *) e_malloc(sizeof (dvd_reader_t));
+	dvd = (dvd_reader_t *)e_malloc(sizeof (dvd_reader_t));
 	if (!dvd)
 		return (0);
-	dvd->path_root = strdup(path_root);
+	dvd->path_root = e_strdup(path_root);
 
 	return (dvd);
 }
@@ -252,12 +249,7 @@ DVDOpen(path)
 	ret = stat(path, &fileinfo);
 	if (ret < 0) {
 	/* If we can't stat the file, give up */
-#ifdef	USE_LIBSCHILY
-		errmsg("Can't stat %s\n", path);
-#else
-		fprintf(stderr, "Can't stat %s\n", path);
-		perror("");
-#endif
+		errmsg("Can't stat '%s'.\n", path);
 		return (0);
 	}
 
@@ -267,11 +259,7 @@ DVDOpen(path)
 	}
 
 	/* If it's none of the above, screw it. */
-#ifdef	USE_LIBSCHILY
-	errmsgno(EX_BAD, "Could not open %s\n", path);
-#else
-	fprintf(stderr, "Could not open %s\n", path);
-#endif
+	errmsgno(EX_BAD, "Could not open '%s'.\n", path);
 	return (0);
 }
 

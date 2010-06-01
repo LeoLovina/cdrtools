@@ -1,4 +1,4 @@
-/* @(#)dvd_reader.h	1.2 04/03/02 joerg */
+/* @(#)dvd_reader.h	1.3 06/09/13 joerg */
 
 #ifndef	_DVD_READER_H
 #define	_DVD_READER_H
@@ -37,7 +37,7 @@
  */
 
 
-#include <unixstd.h>	/* Make sure <sys/types.h> is included */
+#include <schily/unistd.h>	/* Make sure <sys/types.h> is included */
 
 /*
  * Maximum length of filenames for UDF.

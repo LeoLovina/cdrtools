@@ -1,7 +1,7 @@
-/* @(#)scsi-apollo.c	1.5 04/01/14 Copyright 1997,2000 J. Schilling */
+/* @(#)scsi-apollo.c	1.7 06/11/26 Copyright 1997,2000 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-apollo.c	1.5 04/01/14 Copyright 1997,2000 J. Schilling";
+	"@(#)scsi-apollo.c	1.7 06/11/26 Copyright 1997,2000 J. Schilling";
 #endif
 /*
  *	Code to support Apollo Domain/OS 10.4.1
@@ -10,19 +10,23 @@ static	char __sccsid[] =
  *	Apollo support code written by Paul Walker.
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #include <apollo/base.h>
@@ -37,7 +41,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-apollo.c-1.5";	/* The version for this transport */
+LOCAL	char	_scg_trans_version[] = "scsi-apollo.c-1.7";	/* The version for this transport */
 
 
 #define	MAX_SCG		1	/* Max # of SCSI controllers */
@@ -117,7 +121,9 @@ scgo_open(scgp, device)
 	scsi_$acquire(device, strlen(device), &scglocal(scgp)->handle, &status);
 	if (status.all) {
 		if (scgp->errstr)
-			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE, "Cannot open '%s', status %08x", device, status.all);
+			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
+				"Cannot open '%s', status %08x",
+				device, status.all);
 		return (0);
 	}
 	/*
@@ -128,7 +134,9 @@ scgo_open(scgp, device)
 	/*
 	 * Wire the sense buffer
 	 */
-	scsi_$wire(scglocal(scgp)->handle, (caddr_t)(scglocal(scgp)->DomainSensePointer), SCG_MAX_SENSE, &status);
+	scsi_$wire(scglocal(scgp)->handle,
+		(caddr_t)(scglocal(scgp)->DomainSensePointer),
+		SCG_MAX_SENSE, &status);
 	assert(status.all == 0);
 
 	if (scglocal(scgp)->scgfiles[0][0][0] == -1)
@@ -199,6 +207,13 @@ scgo_freebuf(scgp)
 	if (scgp->bufbase)
 		free(scgp->bufbase);
 	scgp->bufbase = NULL;
+}
+
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (MAX_SCG);
 }
 
 LOCAL BOOL
@@ -313,11 +328,15 @@ scsi_do_sense(scgp, sp)
 	sense_cdb.g0.cmd = SC_REQUEST_SENSE;
 	sense_cdb.g0.lun = sp->cdb.g0_cdb.lun;
 	sense_cdb.g0.len = sp->sense_len;
-	scsi_$do_command_2(scglocal(scgp)->handle, sense_cdb, sense_cdb_size, (caddr_t) (scglocal(scgp)->DomainSensePointer), sense_buffer_size, scsi_read, &sense_op_id, &sense_status);
+	scsi_$do_command_2(scglocal(scgp)->handle, sense_cdb, sense_cdb_size,
+		(caddr_t) (scglocal(scgp)->DomainSensePointer),
+		sense_buffer_size, scsi_read, &sense_op_id, &sense_status);
 	if (sense_status.all) {
 		printf("Error executing sense command, status is 0x%08x\n", sense_status.all);
 	}
-	scsi_$wait(scglocal(scgp)->handle, DomainScsiTimeout, true, sense_op_id, 1, &op_status, &sense_return_count, &sense_status);
+	scsi_$wait(scglocal(scgp)->handle, DomainScsiTimeout, true,
+		sense_op_id, 1, &op_status, &sense_return_count,
+		&sense_status);
 	/*
 	 * Print the sense information if debug is on, or if the information is
 	 * "unusual"
@@ -340,7 +359,9 @@ scsi_do_sense(scgp, sp)
 		/*
 		 * Illegal command
 		 */
-		printf("Illegal command detected, ASC=0x%02x, ASQ=0x%02x\n", ((u_char *) scglocal(scgp)->DomainSensePointer)[12], ((u_char *) scglocal(scgp)->DomainSensePointer)[13]);
+		printf("Illegal command detected, ASC=0x%02x, ASQ=0x%02x\n",
+			((u_char *) scglocal(scgp)->DomainSensePointer)[12],
+			((u_char *) scglocal(scgp)->DomainSensePointer)[13]);
 	}
 	/*
 	 * Copy the sense information to the driver
@@ -441,8 +462,10 @@ scgo_send(scgp)
 		return (0);
 	} else {
 		if (scgp->debug > 0) {
-			printf("wait_index=%d, return_count=%d, op_status: op=0x%x, cmd_status=0x%x, op_status=0x%x\n",
-				wait_index, return_count, op_status.op, op_status.cmd_status, op_status.op_status);
+			printf(
+			"wait_index=%d, return_count=%d, op_status: op=0x%x, cmd_status=0x%x, op_status=0x%x\n",
+				wait_index, return_count, op_status.op,
+				op_status.cmd_status, op_status.op_status);
 		}
 		switch (wait_index) {
 
@@ -545,7 +568,8 @@ scgo_send(scgp)
 			sp->ux_errno = EIO;
 			break;
 		default:
-			printf("\nUnhandled Domain/OS cmd_status error:  status=%08x\n", op_status.cmd_status.all);
+			printf("\nUnhandled Domain/OS cmd_status error:  status=%08x\n",
+				op_status.cmd_status.all);
 			error_$print(op_status.cmd_status);
 			exit(EXIT_FAILURE);
 		}
@@ -553,7 +577,8 @@ scgo_send(scgp)
 	if (sp->addr) {
 		if (scgp->debug > 0)
 			printf(" unwiring buffer\n");
-		scsi_$unwire(scglocal(scgp)->handle, sp->addr, buffer_length, sp->flags & SCG_RECV_DATA, &status);
+		scsi_$unwire(scglocal(scgp)->handle, sp->addr, buffer_length,
+					sp->flags & SCG_RECV_DATA, &status);
 		if (status.all) {
 			/*
 			 * Need better error handling

@@ -1,16 +1,16 @@
-/* @(#)scsi.c	1.19 04/03/04 Copyright 1997 J. Schilling */
+/* @(#)scsi.c	1.33 09/07/09 Copyright 1997-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)scsi.c	1.19 04/03/04 Copyright 1997 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)scsi.c	1.33 09/07/09 Copyright 1997-2009 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1997 J. Schilling
+ *	Copyright (c) 1997-2009 J. Schilling
  */
 /*
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * it under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,20 +23,19 @@ static	char sccsid[] =
  */
 
 #ifdef	USE_SCG
-#include <mconfig.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <schily.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/schily.h>
 
 #include "mkisofs.h"
 #include <scg/scsireg.h>
 #include <scg/scsitransp.h>
 
-#include "cdrecord.h"
-#include "../cdrecord/defaults.h"
+#include "libscgcmd.h"
+#include "cdrdeflt.h"
 
 /*
  * NOTICE:	You should not make BUF_SIZE more than
@@ -52,13 +51,13 @@ static	char sccsid[] =
 LOCAL	SCSI	*scgp;
 LOCAL	long	bufsize;		/* The size of the transfer buffer */
 
-EXPORT	int	readsecs	__PR((int startsecno, void *buffer, int sectorcount));
+EXPORT	int	readsecs	__PR((UInt32_t startsecno, void *buffer, int sectorcount));
 EXPORT	int	scsidev_open	__PR((char *path));
 EXPORT	int	scsidev_close	__PR((void));
 
 EXPORT int
 readsecs(startsecno, buffer, sectorcount)
-	int	startsecno;
+	UInt32_t startsecno;
 	void	*buffer;
 	int	sectorcount;
 {
@@ -108,21 +107,13 @@ readsecs(startsecno, buffer, sectorcount)
 	f = fileno(in_image);
 
 	if (lseek(f, (off_t)startsecno * SECTOR_SIZE, SEEK_SET) == (off_t)-1) {
-#ifdef	USE_LIBSCHILY
 		comerr("Seek error on old image\n");
-#else
-		fprintf(stderr, "Seek error on old image\n");
-		exit(10);
-#endif
 	}
-	if (read(f, buffer, (sectorcount * SECTOR_SIZE))
+	if ((amt = read(f, buffer, (sectorcount * SECTOR_SIZE)))
 			!= (sectorcount * SECTOR_SIZE)) {
-#ifdef	USE_LIBSCHILY
-		comerr("Read error on old image\n");
-#else
-		fprintf(stderr, " Read error on old image\n");
-		exit(10);
-#endif
+		if (amt < 0)
+			comerr("Read error on old image\n");
+		comerrno(EX_BAD, "Short read on old image\n"); /* < secnt aber > 0 */
 	}
 	return (sectorcount * SECTOR_SIZE);
 }
@@ -142,7 +133,7 @@ scsidev_open(path)
 	 */
 	scg_remote();
 
-	cdr_defaults(&path, NULL, NULL, NULL);
+	cdr_defaults(&path, NULL, NULL, NULL, NULL);
 			/* path, debug, verboseopen */
 	scgp = scg_open(path, errstr, sizeof (errstr), 0, 0);
 	if (scgp == 0) {
@@ -162,7 +153,6 @@ scsidev_open(path)
 	allow_atapi(scgp, TRUE);
 
 	if (!wait_unit_ready(scgp, 60)) { /* Eat Unit att / Wait for drive */
-		scgp->silent--;
 		return (-1);
 	}
 

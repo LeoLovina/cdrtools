@@ -1,7 +1,7 @@
-/* @(#)scsi-sun.c	1.82 04/01/14 Copyright 1988,1995,2000-2004 J. Schilling */
+/* @(#)scsi-sun.c	1.89 08/03/27 Copyright 1988,1995,2000-2008 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-sun.c	1.82 04/01/14 Copyright 1988,1995,2000-2004 J. Schilling";
+	"@(#)scsi-sun.c	1.89 08/03/27 Copyright 1988,1995,2000-2008 J. Schilling";
 #endif
 /*
  *	SCSI user level command transport routines for
@@ -13,27 +13,31 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1988,1995,2000-2004 J. Schilling
+ *	Copyright (c) 1988,1995,2000-2008 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #include <scg/scgio.h>
 
-#include <libport.h>		/* Needed for gethostid() */
+#include <schily/libport.h>	/* Needed for gethostid() */
 #ifdef	HAVE_SUN_DKIO_H
 #	include <sun/dkio.h>
 
@@ -56,12 +60,12 @@ static	char __sccsid[] =
 #ifdef	__SVR4
 /*#define	VOLMGT_DEBUG*/
 #include <volmgt.h>
-#include <statdefs.h>
+#include <schily/stat.h>
 #	define	USE_USCSI
 #endif
 
-LOCAL	char	_scg_trans_version[] = "scg-1.82";	/* The version for /dev/scg	*/
-LOCAL	char	_scg_utrans_version[] = "uscsi-1.82";	/* The version for USCSI	*/
+LOCAL	char	_scg_trans_version[] = "scg-1.89";	/* The version for /dev/scg	*/
+LOCAL	char	_scg_utrans_version[] = "uscsi-1.89";	/* The version for USCSI	*/
 
 #ifdef	USE_USCSI
 LOCAL	int	scgo_uhelp	__PR((SCSI *scgp, FILE *f));
@@ -73,6 +77,7 @@ LOCAL	int	scgo_ucinfo	__PR((int f, struct dk_cinfo *cp, int debug));
 LOCAL	int	scgo_ugettlun	__PR((int f, int *tgtp, int *lunp));
 LOCAL	long	scgo_umaxdma	__PR((SCSI *scgp, long amt));
 LOCAL	int	scgo_openide	__PR((void));
+LOCAL	int	scgo_unumbus	__PR((SCSI *scgp));
 LOCAL	BOOL	scgo_uhavebus	__PR((SCSI *scgp, int));
 LOCAL	int	scgo_ufileno	__PR((SCSI *scgp, int, int, int));
 LOCAL	int	scgo_uinitiator_id __PR((SCSI *scgp));
@@ -91,6 +96,7 @@ LOCAL scg_ops_t sun_uscsi_ops = {
 	scgo_umaxdma,
 	scgo_getbuf,		/* Shared with SCG driver */
 	scgo_freebuf,		/* Shared with SCG driver */
+	scgo_unumbus,
 	scgo_uhavebus,
 	scgo_ufileno,
 	scgo_uinitiator_id,
@@ -289,11 +295,11 @@ scgo_maxdma(scgp, amt)
 	long	amt;
 {
 	long	maxdma = MAX_DMA_OTHER;
-#if	!defined(__i386_) && !defined(i386)
+#if	!defined(__i386) && !defined(i386) && !defined(__amd64) && !defined(__x86_64)
 	int	cpu_type;
 #endif
 
-#if	defined(__i386_) || defined(i386)
+#if	defined(__i386) || defined(i386) || defined(__amd64) || defined(__x86_64)
 	maxdma = MAX_DMA_SUN386;
 #else
 	cpu_type = gethostid() >> 24;
@@ -324,6 +330,13 @@ scgo_maxdma(scgp, amt)
 		maxdma = MAX_DMA_SUN3;
 #endif
 	return (maxdma);
+}
+
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (MAX_SCG);
 }
 
 LOCAL BOOL
@@ -482,10 +495,17 @@ scgo_uopen(scgp, device)
 		js_fprintf((FILE *)scgp->errfile,
 				"Warning: Using USCSI interface.\n");
 	}
+#ifndef	SEEK_HOLE
+	/*
+	 * SEEK_HOLE first appears in Solaris 11 Build 14, volmgt supports
+	 * medialess drives since Build 21. Using SEEK_HOLD as indicator
+	 * seems to be the best guess.
+	 */
 	if (scgp->overbose > 0 && have_volmgt) {
 		js_fprintf((FILE *)scgp->errfile,
 		"Warning: Volume management is running, medialess managed drives are invisible.\n");
 	}
+#endif
 
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
 		errno = EINVAL;
@@ -538,6 +558,7 @@ uscsiscan:
 		scglocal(scgp)->u.scg_files[busno][tgt][tlun] = f;
 		return (1);
 	} else {
+		int	errsav = 0;
 
 		for (b = 0; b < MAX_SCG; b++) {
 			for (t = 0; t < MAX_TGT; t++) {
@@ -559,6 +580,7 @@ uscsiscan:
 					if (f < 0 && errno != ENOENT &&
 						    errno != ENXIO &&
 						    errno != ENODEV) {
+						errsav = geterrno();
 						if (scgp->errstr)
 							js_snprintf(scgp->errstr,
 							    SCSI_ERRSTR_SIZE,
@@ -576,6 +598,7 @@ uscsiscan:
 				}
 			}
 		}
+		seterrno(errsav);
 	}
 openbydev:
 	if (nopen == 0) {
@@ -879,7 +902,7 @@ scgo_umaxdma(scgp, amt)
 		}
 	}
 
-#if	defined(__i386_) || defined(i386)
+#if	defined(__i386) || defined(i386) || defined(__amd64) || defined(__x86_64)
 	/*
 	 * At least on Solaris 9 x86, DKIOCINFO returns a wrong value
 	 * for dki_maxtransfer if the target is an ATAPI drive.
@@ -928,7 +951,7 @@ scgo_umaxdma(scgp, amt)
 	return (maxdma);
 }
 
-#if	defined(__i386_) || defined(i386)
+#if	defined(__i386) || defined(i386) || defined(__amd64) || defined(__x86_64)
 LOCAL int
 scgo_openide()
 {
@@ -949,6 +972,13 @@ out:
 	return (f);
 }
 #endif
+
+LOCAL int
+scgo_unumbus(scgp)
+	SCSI	*scgp;
+{
+	return (MAX_SCG);
+}
 
 LOCAL BOOL
 scgo_uhavebus(scgp, busno)
@@ -1133,7 +1163,7 @@ again:
 			sp->error = SCG_FATAL;
 			return (0);
 		}
-		if (errno == ENOTTY || errno == EINVAL || errno == EACCES) {
+		if (errno == ENOTTY || errno == EINVAL || errno == EACCES || errno == EPERM) {
 			return (-1);
 		}
 	} else {

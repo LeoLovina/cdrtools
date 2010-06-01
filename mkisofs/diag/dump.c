@@ -1,7 +1,8 @@
-/* @(#)dump.c	1.21 04/09/08 joerg */
+/* @(#)dump.c	1.36 09/07/09 joerg */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)dump.c	1.21 04/09/08 joerg";
+static	UConst char sccsid[] =
+	"@(#)dump.c	1.36 09/07/09 joerg";
 #endif
 /*
  * File dump.c - dump a file/device both in hex and in ASCII.
@@ -9,37 +10,36 @@ static	char sccsid[] =
  * Written by Eric Youngdale (1993).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999-2004 J. Schilling
+ * Copyright (c) 1999-2009 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * it under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along with
+ * this program; see the file COPYING.  If not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <strdefs.h>
-#include <utypes.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/string.h>
+#include <schily/utypes.h>
 
-#include <stdio.h>
-#include <standard.h>
-#include <ttydefs.h>
-#include <signal.h>
-#include <schily.h>
+#include <schily/stdio.h>
+#include <schily/standard.h>
+#include <schily/termios.h>
+#include <schily/signal.h>
+#include <schily/schily.h>
 
 #include "../scsi.h"
-#include "../../cdrecord/defaults.h"
+#include "cdrdeflt.h"
+#include "../../cdrecord/version.h"
 
 /*
  * Note: always use these macros to avoid problems.
@@ -92,12 +92,8 @@ reset_tty()
 	if (ioctl(STDIN_FILENO, TCSETAF, &savetty) == -1) {
 #endif
 #endif
-#ifdef	USE_LIBSCHILY
-		comerr("Cannot put tty into normal mode\n");
-#else
 		printf("Cannot put tty into normal mode\n");
 		exit(1);
-#endif
 	}
 }
 
@@ -113,12 +109,8 @@ set_tty()
 	if (ioctl(STDIN_FILENO, TCSETAF, &newtty) == -1) {
 #endif
 #endif
-#ifdef	USE_LIBSCHILY
-		comerr("Cannot put tty into raw mode\n");
-#else
 		printf("Cannot put tty into raw mode\n");
 		exit(1);
-#endif
 	}
 }
 
@@ -259,7 +251,7 @@ main(argc, argv)
 	BOOL	help = FALSE;
 	BOOL	prvers = FALSE;
 	char	*filename = NULL;
-	char	*devname = NULL;
+	char	*sdevname = NULL;
 	char	c;
 	int	i;
 	int	j;
@@ -269,20 +261,21 @@ main(argc, argv)
 	cac = argc - 1;
 	cav = argv + 1;
 	if (getallargs(&cac, &cav, opts, &help, &help, &prvers,
-			&filename, &devname) < 0) {
+			&filename, &sdevname) < 0) {
 		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
 		usage(EX_BAD);
 	}
 	if (help)
 		usage(0);
 	if (prvers) {
-		printf("devdump %s (%s-%s-%s)\n", "2.01",
+		printf("devdump %s (%s-%s-%s) Copyright (C) 1993-1999 Eric Youngdale (C) 1999-2009 Jörg Schilling\n",
+					VERSION,
 					HOST_CPU, HOST_VENDOR, HOST_OS);
 		exit(0);
 	}
 	cac = argc - 1;
 	cav = argv + 1;
-	if (filename == NULL && devname == NULL) {
+	if (filename == NULL && sdevname == NULL) {
 		if (getfiles(&cac, &cav, opts) != 0) {
 			filename = cav[0];
 			cac--, cav++;
@@ -292,27 +285,23 @@ main(argc, argv)
 		errmsgno(EX_BAD, "Bad Argument: '%s'\n", cav[0]);
 		usage(EX_BAD);
 	}
-	if (filename != NULL && devname != NULL) {
+	if (filename != NULL && sdevname != NULL) {
 		errmsgno(EX_BAD, "Only one of -i or dev= allowed\n");
 		usage(EX_BAD);
 	}
 #ifdef	USE_SCG
-	if (filename == NULL && devname == NULL)
-		cdr_defaults(&devname, NULL, NULL, NULL);
+	if (filename == NULL && sdevname == NULL)
+		cdr_defaults(&sdevname, NULL, NULL, NULL, NULL);
 #endif
-	if (filename == NULL && devname == NULL) {
-#ifdef	USE_LIBSCHILY
-		errmsgno(EX_BAD, "ISO-9660 image not specified\n");
-#else
+	if (filename == NULL && sdevname == NULL) {
 		fprintf(stderr, "ISO-9660 image not specified\n");
-#endif
 		usage(EX_BAD);
 	}
 
 	if (filename != NULL)
 		infile = fopen(filename, "rb");
 	else
-		filename = devname;
+		filename = sdevname;
 
 	if (infile != NULL) {
 		/* EMPTY */;
@@ -321,12 +310,8 @@ main(argc, argv)
 #else
 	} else {
 #endif
-#ifdef	USE_LIBSCHILY
-		comerr("Cannot open '%s'\n", filename);
-#else
 		fprintf(stderr, "Cannot open '%s'\n", filename);
 		exit(1);
-#endif
 	}
 
 	for (i = 0; i < 30; i++)
@@ -345,12 +330,8 @@ main(argc, argv)
 	if (ioctl(STDIN_FILENO, TCGETA, &savetty) == -1) {
 #endif
 #endif
-#ifdef	USE_LIBSCHILY
-		comerr("Stdin must be a tty\n");
-#else
 		printf("Stdin must be a tty\n");
 		exit(1);
-#endif
 	}
 	newtty = savetty;
 #ifdef USE_V7_TTY
@@ -424,6 +405,7 @@ main(argc, argv)
 			break;
 	} while (1 == 1);
 	reset_tty();
-	fclose(infile);
+	if (infile != NULL)
+		fclose(infile);
 	return (0);
 }

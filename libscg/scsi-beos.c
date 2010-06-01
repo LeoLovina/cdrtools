@@ -1,7 +1,7 @@
-/* @(#)scsi-beos.c	1.22 04/01/15 Copyright 1998 J. Schilling */
+/* @(#)scsi-beos.c	1.29 09/06/30 Copyright 1998-2009 J. Schilling */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-beos.c	1.22 04/01/15 Copyright 1998 J. Schilling";
+	"@(#)scsi-beos.c	1.29 09/06/30 Copyright 1998-2009 J. Schilling";
 #endif
 /*
  *	Interface for the BeOS user-land raw SCSI implementation.
@@ -17,22 +17,26 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  *
- *	Copyright (c) 1998 J. Schilling
+ *	Copyright (c) 1998-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 
@@ -43,7 +47,7 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.22";	/* The version for this transport*/
+LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.29";	/* The version for this transport*/
 
 /*
  * There are also defines for:
@@ -52,7 +56,14 @@ LOCAL	char	_scg_trans_version[] = "scsi-beos.c-1.22";	/* The version for this tr
  *
  * in BeOS 5
  */
-#ifndef	B_BEOS_VERSION_5
+#ifdef	B_BEOS_VERSION_5
+#define	NEW_BEOS
+#endif
+#ifdef	__HAIKU__
+#define	NEW_BEOS
+#endif
+
+#ifndef	NEW_BEOS
 /*
  * New BeOS seems to include <be/kernel/OS.h> from device/scsi.h
  */
@@ -67,7 +78,7 @@ typedef unsigned short			ushort;
 #endif	/* _SYS_TYPES_H */
 
 #include <BeBuild.h>
-#include <sys/types.h>
+#include <schily/types.h>
 #include <Errors.h>
 
 
@@ -121,11 +132,11 @@ typedef uint32					perform_code;
 #endif	/* ! B_BEOS_VERSION_5 */
 
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
+#include <schily/stdlib.h>
+#include <schily/stdio.h>
+#include <schily/string.h>
+#include <schily/unistd.h>
+#include <schily/stat.h>
 #include <scg/scgio.h>
 
 /* this is really really dumb (tm) */
@@ -134,7 +145,11 @@ typedef uint32					perform_code;
 #include <device/scsi.h>
 
 #undef bool
+#ifdef	__HAIKU__	/* Probaby already since BeOS 5 */
+#include <CAM.h>
+#else
 #include <drivers/CAM.h>
+#endif
 
 struct _fdmap_ {
 	struct _fdmap_ *next;
@@ -189,7 +204,9 @@ scgo_open(scgp, device)
 {
 	int	busno	= scg_scsibus(scgp);
 	int	tgt	= scg_target(scgp);
+#ifdef	nonono
 	int	tlun	= scg_lun(scgp);
+#endif
 
 #ifdef	nonono
 	if (busno >= MAX_SCG || tgt >= MAX_TGT || tlun >= MAX_LUN) {
@@ -233,6 +250,7 @@ scgo_maxdma(scgp, amt)
 	SCSI	*scgp;
 	long	amt;
 {
+	return (128*1024);
 	return (256*1024);
 }
 
@@ -258,6 +276,13 @@ scgo_freebuf(scgp)
 	scgp->bufbase = NULL;
 }
 
+LOCAL int
+scgo_numbus(scgp)
+	SCSI	*scgp;
+{
+	return (16);	/* XXX we need a better way to find the # of busses */
+}
+
 LOCAL BOOL
 scgo_havebus(scgp, busno)
 	SCSI	*scgp;
@@ -269,7 +294,11 @@ scgo_havebus(scgp, busno)
 	if (busno < 8)
 		js_snprintf(buf, sizeof (buf), "/dev/bus/scsi/%d", busno);
 	else
+#ifdef	__HAIKU__
+		js_snprintf(buf, sizeof (buf), "/dev/disk/atapi/%d", busno-8);
+#else
 		js_snprintf(buf, sizeof (buf), "/dev/disk/ide/atapi/%d", busno-8);
+#endif
 	if (stat(buf, &sb))
 		return (FALSE);
 	return (TRUE);
@@ -297,8 +326,13 @@ scgo_fileno(scgp, busno, tgt, tlun)
 	} else {
 		char *tgtstr = (tgt == 0) ? "master" : (tgt == 1) ? "slave" : "dummy";
 		js_snprintf(buf, sizeof (buf),
+#ifdef	__HAIKU__
+					"/dev/disk/atapi/%d/%s/raw",
+					busno-8, tgtstr);
+#else
 					"/dev/disk/ide/atapi/%d/%s/%d/raw",
 					busno-8, tgtstr, tlun);
+#endif
 	}
 	fd = open(buf, 0);
 
@@ -362,37 +396,66 @@ scgo_send(scgp)
 	rdc.sense_data_length = sp->sense_len;
 	rdc.sense_data = sp->u_sense.cmd_sense;
 	rdc.flags = sp->flags & SCG_RECV_DATA ? B_RAW_DEVICE_DATA_IN : 0;
+	if (sp->size > 0)
+		rdc.flags |= B_RAW_DEVICE_REPORT_RESIDUAL;
 	rdc.timeout = sp->timeout * 1000000;
 
+	sp->error		= SCG_NO_ERROR;
+	sp->sense_count		= 0;
+	sp->u_scb.cmd_scb[0]	= 0;
+	sp->resid		= 0;
+
 	if (scgp->debug > 0) {
-		error("SEND(%d): cmd %02x, cdb = %d, data = %d, sense = %d\n",
+		error("SEND(%d): cmd %02x, cdblen = %d, datalen = %ld, senselen = %ld\n",
 			scgp->fd, rdc.command[0], rdc.command_length,
 			rdc.data_length, rdc.sense_data_length);
 	}
 	e = ioctl(scgp->fd, B_RAW_DEVICE_COMMAND, &rdc, sizeof (rdc));
+	if (scgp->debug > 0) {
+		error("SEND(%d): -> %d CAM Status %02X SCSI status %02X\n", e, rdc.cam_status, rdc.scsi_status);
+	}
 	sp->ux_errno = 0;
+#ifdef	DEBUG
+	error("err %d errno %x CAM %X SL %d DL %d/%d FL %X\n",
+		e, geterrno(), rdc.cam_status,
+		rdc.sense_data_length, rdc.data_length, sp->size, rdc.flags);
+#endif
 	if (!e) {
 		cam_error = rdc.cam_status;
 		scsi_error = rdc.scsi_status;
-		if (scgp->debug > 0)
-			error("result: cam %02x scsi %02x\n", cam_error, scsi_error);
 		sp->u_scb.cmd_scb[0] = scsi_error;
+		if (sp->size > 0)
+			sp->resid = sp->size - rdc.data_length;
 
-		switch (cam_error) {
+		switch (cam_error & CAM_STATUS_MASK) {
 
 		case CAM_REQ_CMP:
-			sp->resid = 0;
 			sp->error = SCG_NO_ERROR;
 			break;
+
 		case CAM_REQ_CMP_ERR:
 			sp->sense_count = sp->sense_len; /* XXX */
-			sp->error = SCG_RETRYABLE;
+			sp->error = SCG_NO_ERROR;
+			sp->ux_errno = EIO;
 			break;
-		default:
+
+		case CAM_CMD_TIMEOUT:
+			sp->error = SCG_TIMEOUT;
+			sp->ux_errno = EIO;
+
+		case CAM_SEL_TIMEOUT:
 			sp->error = SCG_FATAL;
+			sp->ux_errno = EIO;
+			break;
+
+		default:
+			sp->error = SCG_RETRYABLE;
+			sp->ux_errno = EIO;
 		}
 	} else {
 		sp->error = SCG_FATAL;
+		sp->ux_errno = geterrno();
+		sp->resid = sp->size;
 	}
 	return (0);
 }

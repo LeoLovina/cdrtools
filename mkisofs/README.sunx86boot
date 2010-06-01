@@ -1,3 +1,5 @@
+# @(#)README.sunx86boot	1.3 05/02/25 Copyright 2003 J. Schilling
+
 A Solaris x86 Boot CD looks the like this:
 
 -	A PC type fdisk partition map is in CD sector 0 at offset 0
@@ -42,9 +44,11 @@ boot CD:
 
 readcd dev=1,0 f=CD.out sectors=0-32
 
+Replace dev=1,0 with the apropriate values for your system (see readcd -scanbus).
+
 sdd if=CD.out bs=446 count=1 of=mboot
-sdd if=CD.out count=1 of=pboot
-sdd if=CD.out count=31 iseek=2048 of=bootblk
+sdd if=CD.out count=1 iseek=512 of=pboot
+sdd if=CD.out count=60 iseek=2048 of=bootblk
 
 To create the needed files for the misofs command line example below, do the
 following:
@@ -52,12 +56,13 @@ following:
 sdd if=mboot -fill of=eltoritoboot
 cat pboot >> eltoritoboot
 
-sdd -inull bs=1k count=1 of=genboot
+sdd -inull bs=2k count=1 of=genboot
 cat bootblk >> genboot
 
 If you like the CD to look more similar to the original Sun CDs, use:
 
 cp eltoritoboot genboot
+sdd -inull bs=1k count=1 >> genboot
 cat bootblk >> genboot
 
 If you like to create a CD similar to the Solaris 10 boot CD, do the following:

@@ -1,33 +1,30 @@
-/* @(#)fconv.c	1.33 03/11/23 Copyright 1985, 1995-2003 J. Schilling */
+/* @(#)fconv.c	1.42 10/05/24 Copyright 1985, 1995-2010 J. Schilling */
 /*
  *	Convert floating point numbers to strings for format.c
  *	Should rather use the MT-safe routines [efg]convert()
  *
- *	Copyright (c) 1985, 1995-2003 J. Schilling
+ *	Copyright (c) 1985, 1995-2010 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#include <mconfig.h>	/* <- may define NO_FLOATINGPOINT */
+#include <schily/mconfig.h>	/* <- may define NO_FLOATINGPOINT */
 #ifndef	NO_FLOATINGPOINT
 
-#include <stdxlib.h>
-#include <standard.h>
-#include <strdefs.h>
-#include <schily.h>
+#include <schily/stdlib.h>
+#include <schily/standard.h>
+#include <schily/string.h>
+#include <schily/schily.h>
+#include <schily/math.h>	/* The default place for isinf()/isnan() */
 
 #if	!defined(HAVE_STDLIB_H) || defined(HAVE_DTOA)
 extern	char	*ecvt __PR((double, int, int *, int *));
@@ -38,10 +35,19 @@ extern	char	*fcvt __PR((double, int, int *, int *));
 /*
  * *BSD alike libc
  */
+#define	FOUND_ISNAN
+#define	FOUND_ISINF
 #define	FOUND_ISXX
 #endif
 
-#include <math.h>
+#if	defined(HAVE_C99_ISNAN) && defined(HAVE_C99_ISINF)
+#ifndef	FOUND_ISXX
+#define	FOUND_ISXX
+#endif
+#define	FOUND_C99_ISNAN
+#define	FOUND_C99_ISINF
+#define	FOUND_C99_ISXX
+#endif
 
 #if	defined(HAVE_FP_H) && !defined(FOUND_ISXX)
 /*
@@ -58,47 +64,123 @@ extern	char	*fcvt __PR((double, int, int *, int *));
  * Let's hope that we will not get problems with the new order.
  */
 #include <fp.h>
-#ifndef	isnan
+#if	!defined(isnan) && defined(IS_NAN)
 #define	isnan	IS_NAN
+#define	FOUND_ISNAN
 #endif
-#ifndef	isinf
+#if	!defined(isinf) && defined(FINITE)
 #define	isinf	!FINITE
 /*#define	isinf	IS_INF*/
+#define	FOUND_ISINF
 #endif
+#if	defined(FOUND_ISNAN) && defined(FOUND_ISINF)
 #define	FOUND_ISXX
 #endif
+#endif
 
-#if	defined(HAVE_IEEEFP_H) && !defined(FOUND_ISXX)
+#if	defined(HAVE_IEEEFP_H) && !defined(FOUND_ISXX) && !defined(FOUND_C99_ISXX)
 /*
  * SVR4
  */
 #include <ieeefp.h>
+#ifdef	HAVE_ISNAND
 #ifndef	isnan
 #define	isnan	isnand
+#define	FOUND_ISNAN
 #endif
+#endif
+#ifdef	HAVE_FINITE
 #ifndef	isinf
 #define	isinf	!finite
+#define	FOUND_ISINF
 #endif
+#endif
+#if	defined(FOUND_ISNAN) && defined(FOUND_ISINF)
 #define	FOUND_ISXX
+#endif
 #endif
 
 /*
  * WAS:
  * #if	defined(__hpux) || defined(VMS) || defined(_SCO_DS) || defined(__QNX__)
  */
+#ifdef	__nneded__
 #if	defined(__hpux) || defined(__QNX__) || defined(__DJGPP__)
+#ifndef	FOUND_C99_ISXX
 #undef	isnan
 #undef	isinf
 #endif
+#endif
+#endif	/* __needed__ */
 
-#if	!defined(isnan) && !defined(HAVE_ISNAN)
+/*
+ * As we no longer check for defined(isnan)/defined(isinf), the next block
+ * should also handle the problems with DJGPP, HP-UX, QNX and VMS.
+ */
+#if	!defined(FOUND_ISNAN) && !defined(HAVE_C99_ISNAN)
+#undef	isnan
 #define	isnan(val)	(0)
+#define	NO_ISNAN
 #endif
-#if	!defined(isinf) && !defined(HAVE_ISINF)
+#if	!defined(FOUND_ISINF) && !defined(HAVE_C99_ISINF)
+#undef	isinf
 #define	isinf(val)	(0)
+#define	NO_ISINF
 #endif
+
+#if	defined(NO_ISNAN) || defined(NO_ISINF)
+#include <schily/float.h>	/* For values.h */
+#if	(_IEEE - 0) > 0		/* We know that there is IEEE FP */
+/*
+ * Note that older HP-UX versions have different #defines for MAXINT in
+ * values.h and sys/param.h
+ */
+#include <schily/utypes.h>
+#include <schily/btorder.h>
+
+#ifdef	WORDS_BIGENDIAN
+#define	fpw_high(x)	((UInt32_t *)&x)[0]
+#define	fpw_low(x)	((UInt32_t *)&x)[1]
+#else
+#define	fpw_high(x)	((UInt32_t *)&x)[1]
+#define	fpw_low(x)	((UInt32_t *)&x)[0]
+#endif
+#define	FP_EXP		0x7FF00000
+#define	fp_exp(x)	(fpw_high(x) & FP_EXP)
+#define	fp_exc(x)	(fp_exp(x) == FP_EXP)
+
+#ifdef	NO_ISNAN
+#undef	isnan
+#define	isnan(val)	(fp_exc(val) && \
+			(fpw_low(val) != 0 || (fpw_high(val) & 0xFFFFF) != 0))
+#endif
+#ifdef	NO_ISINF
+#undef	isinf
+#define	isinf(val)	(fp_exc(val) && \
+			fpw_low(val) == 0 && (fpw_high(val) & 0xFFFFF) == 0)
+#endif
+#endif	/* We know that there is IEEE FP */
+#endif	/* defined(NO_ISNAN) || defined(NO_ISINF) */
+
 
 #if !defined(HAVE_ECVT) || !defined(HAVE_FCVT) || !defined(HAVE_GCVT)
+
+#ifdef	NO_USER_XCVT
+	/*
+	 * We cannot define our own ecvt()/fcvt()/gcvt() so we need to use
+	 * local names instead.
+	 */
+#ifndef	HAVE_ECVT
+#	define	ecvt	js_ecvt
+#endif
+#ifndef	HAVE_FCVT
+#	define	fcvt	js_fcvt
+#endif
+#ifndef	HAVE_GCVT
+#	define	gcvt	js_gcvt
+#endif
+#endif
+
 #include "cvt.c"
 #endif
 

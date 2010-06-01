@@ -1,21 +1,17 @@
-/* @(#)filewrite.c	1.14 04/08/08 Copyright 1986, 1995-2003 J. Schilling */
+/* @(#)filewrite.c	1.17 09/06/30 Copyright 1986, 1995-2009 J. Schilling */
 /*
- *	Copyright (c) 1986, 1995-2003 J. Schilling
+ *	Copyright (c) 1986, 1995-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
 #include "schilyio.h"
@@ -24,23 +20,23 @@ static	char	_writeerr[]	= "file_write_err";
 
 #ifdef	HAVE_USG_STDIO
 
-EXPORT int
+EXPORT ssize_t
 filewrite(f, vbuf, len)
 	register FILE	*f;
 	void	*vbuf;
-	int	len;
+	size_t	len;
 {
 	register int	n;
-	int	cnt;
-	char		*buf = vbuf;
+	ssize_t	cnt;
+	char	*buf = vbuf;
 
 	down2(f, _IOWRT, _IORW);
 
 	if (f->_flag & _IONBF) {
-		cnt = write(fileno(f), buf, len);
+		cnt = _niwrite(fileno(f), buf, len);
 		if (cnt < 0) {
 			f->_flag |= _IOERR;
-			if (!(my_flag(f) & _IONORAISE))
+			if (!(my_flag(f) & _JS_IONORAISE))
 				raisecond(_writeerr, 0L);
 		}
 		return (cnt);
@@ -64,31 +60,31 @@ filewrite(f, vbuf, len)
 	}
 	if (!ferror(f))
 		return (cnt);
-	if (!(my_flag(f) & _IONORAISE))
+	if (!(my_flag(f) & _JS_IONORAISE))
 	raisecond(_writeerr, 0L);
 	return (-1);
 }
 
 #else
 
-EXPORT int
+EXPORT ssize_t
 filewrite(f, vbuf, len)
 	register FILE	*f;
 	void	*vbuf;
-	int	len;
+	size_t	len;
 {
-	int	cnt;
-	char		*buf = vbuf;
+	ssize_t	cnt;
+	char	*buf = vbuf;
 
 	down2(f, _IOWRT, _IORW);
 
-	if (my_flag(f) & _IOUNBUF)
-		return (write(fileno(f), buf, len));
+	if (my_flag(f) & _JS_IOUNBUF)
+		return (_niwrite(fileno(f), buf, len));
 	cnt = fwrite(buf, 1, len, f);
 
 	if (!ferror(f))
 		return (cnt);
-	if (!(my_flag(f) & _IONORAISE))
+	if (!(my_flag(f) & _JS_IONORAISE))
 	raisecond(_writeerr, 0L);
 	return (-1);
 }

@@ -1,9 +1,9 @@
-/* @(#)defaults.h	1.18 04/06/01 joerg */
+/* @(#)defaults.h	1.24 09/07/05 joerg */
 /*
  * Header file defaults.h - assorted default values for character strings in
  * the volume descriptor.
  *
- * Copyright (c) 1999-2004 J. Schilling
+ * Copyright (c) 1999-2009 J. Schilling
  */
 
 #define	PREPARER_DEFAULT 	NULL
@@ -59,12 +59,20 @@
 #define	SYSTEM_ID_DEFAULT	"Win32"
 #endif /* _WIN */
 
+#if	!defined(SYSTEM_ID_DEFAULT) && defined(__MINGW32__)
+#define	SYSTEM_ID_DEFAULT	"Win32/MinGW"
+#endif /* __MINGW32__ */
+
 #ifdef __EMX__
 #define	SYSTEM_ID_DEFAULT	"OS/2"
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #define	SYSTEM_ID_DEFAULT	"FreeBSD"
+#endif
+
+#ifdef __DragonFly__
+#define	SYSTEM_ID_DEFAULT	"DragonFly"
 #endif
 
 #ifdef __NetBSD__
@@ -97,6 +105,10 @@
 #define	SYSTEM_ID_DEFAULT	"BeOS"
 #endif
 
+#ifdef __HAIKU__
+#define	SYSTEM_ID_DEFAULT	"Haiku"
+#endif
+
 #ifdef __OS2
 #define	SYSTEM_ID_DEFAULT	"OS/2"
 #endif
@@ -119,6 +131,18 @@
 
 #ifdef	__DJGPP__
 #define	SYSTEM_ID_DEFAULT	"DOS"
+#endif
+
+#ifdef	__MINT__
+#define	SYSTEM_ID_DEFAULT	"ATARI-MiNT"
+#endif
+
+#ifdef	__SYLLABLE__
+#define	SYSTEM_ID_DEFAULT	"Syllable"
+#endif
+
+#ifdef	AMIGA
+#define	SYSTEM_ID_DEFAULT	"AMIGA"
 #endif
 
 #ifndef SYSTEM_ID_DEFAULT

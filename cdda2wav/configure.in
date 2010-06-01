@@ -1,4 +1,4 @@
-dnl @(#)configure.in	1.7 03/09/04	Copyright 1998-2003 Heiko Eiﬂfeldt
+dnl @(#)configure.in	1.11 09/08/08	Copyright 1998-2003 Heiko Eiﬂfeldt
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(cdda2wav.c)
 AC_CONFIG_HEADER(lconfig.h)
@@ -7,8 +7,8 @@ dnl get canonical host
 AC_CANONICAL_HOST
 
 dnl extract cdrtools version from the cdrecord.c file
-CDRTOOLS_VERSION=`sed -n -f ../../version.sed <../../../cdrecord/cdrecord.c`
-AC_SUBST(CDRTOOLS_VERSION)
+dnl CDRTOOLS_VERSION=`sed -n -f ../../version.sed <../../../cdrecord/cdrecord.c`
+dnl AC_SUBST(CDRTOOLS_VERSION)
 
 dnl set object extension needed for AC_CHECK_HEADERS by autoconf 2.57
 dnl _AC_COMPILER_OBJEXT
@@ -26,10 +26,11 @@ EXTRALIBS="$LIBS"
 AC_SUBST(EXTRALIBS)
 
 dnl check header files
-AC_CHECK_HEADERS(sys/cdio.h sundev/srreg.h sys/audioio.h sun/audioio.h)
+AC_CHECK_HEADERS(sys/cdio.h sys/cdrio.h sundev/srreg.h sys/audioio.h sun/audioio.h)
 AC_CHECK_HEADERS(soundcard.h sys/soundcard.h linux/soundcard.h machine/soundcard.h)
+dnl We no longer include HAVE_WINDOWS_H in lconfig.h but we need the test
+dnl result together with the test for mmsystem.h
 AC_CHECK_HEADERS(sys/asoundlib.h windows.h mmsystem.h)
-AC_CHECK_HEADERS(os2.h os2me.h)
 
 case "${ac_cv_header_sys_cdio_h}""${ac_cv_header_sundev_srreg_h}" in
    *yes*)
@@ -84,5 +85,5 @@ esac
 AC_SUBST(HAVE_OS2SOUND)
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(strtoul)
+
 AC_OUTPUT(local.cnf)

@@ -1,28 +1,38 @@
-/* @(#)isodebug.c	1.9 04/09/08 Copyright 1996-2004 J. Schilling */
+/* @(#)isodebug.c	1.27 10/05/24 Copyright 1996-2010 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)isodebug.c	1.9 04/09/08 Copyright 1996-2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)isodebug.c	1.27 10/05/24 Copyright 1996-2010 J. Schilling";
 #endif
 /*
- *	Copyright (c) 1996-2004 J. Schilling
+ *	Copyright (c) 1996-2010 J. Schilling
  */
-/*@@C@@*/
+/*
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * See the file CDDL.Schily.txt in this distribution for details.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
+ */
 
-#include <mconfig.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <statdefs.h>
-#include <stdxlib.h>
-#include <unixstd.h>
-#include <strdefs.h>
-#include <standard.h>
-#include <utypes.h>
-#include <intcvt.h>
-#include <schily.h>
+#include <schily/stdio.h>
+#include <schily/types.h>
+#include <schily/stat.h>
+#include <schily/stdlib.h>
+#include <schily/unistd.h>
+#include <schily/string.h>
+#include <schily/standard.h>
+#include <schily/utypes.h>
+#include <schily/intcvt.h>
+#include <schily/schily.h>
 
 #include "../scsi.h"
-#include "../../cdrecord/defaults.h"
+#include "cdrdeflt.h"
+#include "../../cdrecord/version.h"
 
 #define	_delta(from, to)	((to) - (from) + 1)
 
@@ -96,6 +106,7 @@ struct	iso9660_pr_voldesc {
 
 #define	infile	in_image
 EXPORT	FILE		*infile = NULL;
+LOCAL	int		vol_desc_sum;
 
 LOCAL void	usage		__PR((int excode));
 LOCAL char	*isodinfo	__PR((FILE *f));
@@ -129,6 +140,7 @@ static	struct iso9660_voldesc		vd;
 #endif
 	BOOL				found = FALSE;
 	off_t				sec_off = 16L;
+	int				i;
 
 #ifndef	USE_SCG
 	/*
@@ -158,6 +170,20 @@ static	struct iso9660_voldesc		vd;
 		sec_off++;
 
 		if (GET_UBYTE(vd.vd_type) == VD_PRIMARY) {
+			int	j;
+			int	s;
+			Uchar	*cp;
+			/*
+			 * Compute checksum used as a fingerprint in case we
+			 * include correct inode/link-count information in the
+			 * current image.
+			 */
+			for (j = 0, s = 0, cp = (Uchar *)&vd;
+						j < 2048; j++) {
+				s += cp[j] & 0xFF;
+			}
+			vol_desc_sum = s;
+
 			found = TRUE;
 /*			break;*/
 		}
@@ -176,6 +202,23 @@ static	struct iso9660_voldesc		vd;
 #endif
 	sec_off++;
 
+	if (strncmp((char *)&vd, "MKI ", 4) == 0)
+		return ((char *)&vd);
+
+	for (i = 0; i < 16; i++) {
+#ifdef	USE_SCG
+		readsecs(sec_off, &vd, 1);
+#else
+		if (lseek(fileno(f), (off_t)(sec_off * 2048L), SEEK_SET) == -1)
+			return (NULL);
+		read(fileno(f), &vd, sizeof (vd));
+#endif
+		sec_off++;
+
+		if (strncmp((char *)&vd, "MKI ", 4) == 0)
+			break;
+	}
+
 	return ((char *)&vd);
 }
 
@@ -190,7 +233,7 @@ main(argc, argv)
 	BOOL	help = FALSE;
 	BOOL	prvers = FALSE;
 	char	*filename = NULL;
-	char	*devname = NULL;
+	char	*sdevname = NULL;
 	char	*p;
 	char	*eol;
 
@@ -199,20 +242,21 @@ main(argc, argv)
 	cac = argc - 1;
 	cav = argv + 1;
 	if (getallargs(&cac, &cav, opts, &help, &help, &prvers,
-			&filename, &devname) < 0) {
+			&filename, &sdevname) < 0) {
 		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
 		usage(EX_BAD);
 	}
 	if (help)
 		usage(0);
 	if (prvers) {
-		printf("isodebug %s (%s-%s-%s)\n", "2.01",
+		printf("isodebug %s (%s-%s-%s) Copyright (C) 1996-2010 Jörg Schilling\n",
+					VERSION,
 					HOST_CPU, HOST_VENDOR, HOST_OS);
 		exit(0);
 	}
 	cac = argc - 1;
 	cav = argv + 1;
-	if (filename == NULL && devname == NULL) {
+	if (filename == NULL && sdevname == NULL) {
 		if (getfiles(&cac, &cav, opts) != 0) {
 			filename = cav[0];
 			cac--, cav++;
@@ -222,15 +266,15 @@ main(argc, argv)
 		errmsgno(EX_BAD, "Bad Argument: '%s'\n", cav[0]);
 		usage(EX_BAD);
 	}
-	if (filename != NULL && devname != NULL) {
+	if (filename != NULL && sdevname != NULL) {
 		errmsgno(EX_BAD, "Only one of -i or dev= allowed\n");
 		usage(EX_BAD);
 	}
 #ifdef	USE_SCG
-	if (filename == NULL && devname == NULL)
-		cdr_defaults(&devname, NULL, NULL, NULL);
+	if (filename == NULL && sdevname == NULL)
+		cdr_defaults(&sdevname, NULL, NULL, NULL, NULL);
 #endif
-	if (filename == NULL && devname == NULL) {
+	if (filename == NULL && sdevname == NULL) {
 		errmsgno(EX_BAD, "ISO-9660 image not specified\n");
 		usage(EX_BAD);
 	}
@@ -238,7 +282,7 @@ main(argc, argv)
 	if (filename != NULL)
 		infile = fopen(filename, "rb");
 	else
-		filename = devname;
+		filename = sdevname;
 
 	if (infile != NULL) {
 		/* EMPTY */;
@@ -254,6 +298,17 @@ main(argc, argv)
 	if (p == NULL) {
 		printf("No ISO-9660 image debug info.\n");
 	} else if (strncmp(p, "MKI ", 4) == 0) {
+		int	sum;
+
+		sum  = p[2045] & 0xFF;
+		sum *= 256;
+		sum += p[2046] & 0xFF;
+		sum *= 256;
+		sum += p[2047] & 0xFF;
+		p[2045] = '\0';
+		if (sum == vol_desc_sum)
+			printf("ISO-9660 image includes checksum signature for correct inode numbers.\n");
+
 		eol = strchr(p, '\n');
 		if (eol)
 			*eol = '\0';

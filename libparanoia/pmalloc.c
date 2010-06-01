@@ -1,33 +1,32 @@
-/* @(#)pmalloc.c	1.3 04/05/15 Copyright 2004 J. Schilling */
+/* @(#)pmalloc.c	1.7 09/07/11 Copyright 2004-2009 J. Schilling */
+#include <schily/mconfig.h>
 #ifndef lint
-static	char sccsid[] =
-	"@(#)pmalloc.c	1.3 04/05/15 Copyright 2004 J. Schilling";
+static	UConst char sccsid[] =
+	"@(#)pmalloc.c	1.7 09/07/11 Copyright 2004-2009 J. Schilling";
 #endif
 /*
  *	Paranoia malloc() functions
  *
- *	Copyright (c) 2004 J. Schilling
+ *	Copyright (c) 2004-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 2.1
+ * as published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <mconfig.h>
-#include <stdxlib.h>
-#include <standard.h>
-#include <schily.h>
+#include <schily/stdlib.h>
+#include <schily/standard.h>
+#include <schily/schily.h>
 #include "pmalloc.h"
 
 #ifdef	PM_ADD_DEBUG
@@ -44,7 +43,8 @@ EXPORT void
 _pfree(ptr)
 	void	*ptr;
 {
-	free(ptr);
+	if (ptr)
+		free(ptr);
 }
 
 EXPORT void *
@@ -84,6 +84,9 @@ _prealloc(ptr, size)
 	size_t	size;
 {
 	void	*p;
+
+	if (ptr == 0)
+		return (_pmalloc(size));
 
 	p = realloc(ptr, size + radd);
 	if (p == NULL)

@@ -1,10 +1,12 @@
-/* @(#)scsi-linux-ata.c	1.7 04/06/12 Copyright 2002 J. Schilling */
+/* @(#)scsi-linux-ata.c	1.15 09/09/07 Copyright 2002-2009 J. Schilling */
 #ifndef lint
 static	char ata_sccsid[] =
-	"@(#)scsi-linux-ata.c	1.7 04/06/12 Copyright 2002 J. Schilling";
+	"@(#)scsi-linux-ata.c	1.15 09/09/07 Copyright 2002-2009 J. Schilling";
 #endif
 /*
  *	Interface for Linux generic SCSI implementation (sg).
+ *
+ *	This inteface is ised with dev=ATAPI:b,t,l
  *
  *	This is the interface for the broken Linux SCSI generic driver.
  *	This is a hack, that tries to emulate the functionality
@@ -29,30 +31,35 @@ static	char ata_sccsid[] =
  *	driver.
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * The following exceptions apply:
+ * CDDL §3.6 needs to be replaced by: "You may create a Larger Work by
+ * combining Covered Software with other code if all other code is governed by
+ * the terms of a license that is OSI approved (see www.opensource.org) and
+ * you may distribute the Larger Work as a single product. In such a case,
+ * You must make sure the requirements of this License are fulfilled for
+ * the Covered Software."
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 
-#ifdef	USE_ATA
+#ifdef	USE_ATAPI
 
-LOCAL	char	_scg_atrans_version[] = "scsi-linux-ata.c-1.7";	/* The version for ATAPI transport*/
+LOCAL	char	_scg_atrans_version[] = "scsi-linux-ata.c-1.15";	/* The version for ATAPI transport*/
 
 LOCAL	char *	scgo_aversion	__PR((SCSI *scgp, int what));
 LOCAL	int	scgo_ahelp	__PR((SCSI *scgp, FILE *f));
 LOCAL	int	scgo_aopen	__PR((SCSI *scgp, char *device));
 LOCAL	int	scgo_aclose	__PR((SCSI *scgp));
 LOCAL	long	scgo_amaxdma	__PR((SCSI *scgp, long amt));
+LOCAL	int	scgo_anumbus	__PR((SCSI *scgp));
 LOCAL	BOOL	scgo_ahavebus	__PR((SCSI *scgp, int));
 LOCAL	int	scgo_afileno	__PR((SCSI *scgp, int, int, int));
 LOCAL	int	scgo_ainitiator_id __PR((SCSI *scgp));
@@ -60,7 +67,7 @@ LOCAL	int	scgo_aisatapi	__PR((SCSI *scgp));
 LOCAL	int	scgo_areset	__PR((SCSI *scgp, int what));
 LOCAL	int	scgo_asend	__PR((SCSI *scgp));
 
-LOCAL scg_ops_t ata_ops = {
+LOCAL scg_ops_t atapi_ops = {
 	scgo_asend,
 	scgo_aversion,
 	scgo_ahelp,
@@ -69,6 +76,7 @@ LOCAL scg_ops_t ata_ops = {
 	scgo_amaxdma,
 	scgo_getbuf,		/* Shared with SG driver */
 	scgo_freebuf,		/* Shared with SG driver */
+	scgo_anumbus,
 	scgo_ahavebus,
 	scgo_afileno,
 	scgo_ainitiator_id,
@@ -85,9 +93,9 @@ LOCAL scg_ops_t ata_ops = {
 #define	HOST_OTHER	0xE
 
 
-#define	typlocal(p, schillybus)		scglocal(p)->bc[schillybus].typ
-#define	buslocal(p, schillybus)		scglocal(p)->bc[schillybus].bus
-#define	hostlocal(p, schillybus)	scglocal(p)->bc[schillybus].host
+#define	typlocal(p, atapibus)		scglocal(p)->bc[atapibus].typ
+#define	buslocal(p, atapibus)		scglocal(p)->bc[atapibus].bus
+#define	hostlocal(p, atapibus)		scglocal(p)->bc[atapibus].host
 
 #define	MAX_DMA_ATA (131072-1)	/* EINVAL (hart) ENOMEM (weich) bei mehr ... */
 				/* Bei fehlerhaftem Sense Pointer kommt EFAULT */
@@ -97,7 +105,7 @@ LOCAL BOOL sg_amapdev		__PR((SCSI * scgp, int f, char *device, int *bus,
 					int *target, int *lun));
 LOCAL BOOL sg_amapdev_scsi	__PR((SCSI * scgp, int f, int *busp, int *tgtp,
 					int *lunp, int *chanp, int *inop));
-LOCAL int scgo_aget_first_free_shillybus __PR((SCSI * scgp, int subsystem,
+LOCAL int scgo_aget_first_free_atapibus __PR((SCSI * scgp, int subsystem,
 					int host, int bus));
 LOCAL int scgo_amerge		__PR((char *path, char *readedlink,
 					char *buffer, int buflen));
@@ -111,7 +119,7 @@ LOCAL int scgo_amerge		__PR((char *path, char *readedlink,
 
 LOCAL	void	sglog		__PR((const char *fmt, ...));
 
-#include <vadefs.h>
+#include <schily/varargs.h>
 
 /* VARARGS1 */
 #ifdef	PROTOTYPES
@@ -198,15 +206,17 @@ scgo_aopen(scgp, device)
 	register int	l;
 		int	nopen = 0;
 
-	if (scgp->overbose)
+	if (scgp->overbose) {
+		error("Warning: dev=ATA: is preferred over dev=ATAPI:.\n");
 		error("Warning: Using ATA Packet interface.\n");
+	}
 	if (scgp->overbose) {
 		error("Warning: The related Linux kernel interface code seems to be unmaintained.\n");
 		error("Warning: There is absolutely NO DMA, operations thus are slow.\n");
 	}
 
 	log(("\n<<<<<<<<<<<<<<<<  LOGGING ON >>>>>>>>>>>>>>>>>\n"));
-	if (bus >= MAX_SCHILLY_HOSTS || target >= MAX_TGT || lun >= MAX_LUN) {
+	if (bus >= MAX_ATAPI_HOSTS || target >= MAX_TGT || lun >= MAX_LUN) {
 		errno = EINVAL;
 		if (scgp->errstr)
 			js_snprintf(scgp->errstr, SCSI_ERRSTR_SIZE,
@@ -232,7 +242,7 @@ scgo_aopen(scgp, device)
 		scglocal(scgp)->xbuf = NULL;
 
 
-		for (b = 0; b < MAX_SCHILLY_HOSTS; b++) {
+		for (b = 0; b < MAX_ATAPI_HOSTS; b++) {
 			typlocal(scgp, b) = HOST_EMPTY;
 			for (t = 0; t < MAX_TGT; t++) {
 				for (l = 0; l < MAX_LUN; l++)
@@ -263,7 +273,7 @@ openbydev:
 		js_fprintf((FILE *) scgp->errfile, "INFO: do scgo_open openbydev");
 	}
 	if (device != NULL && *device != '\0') {
-		int	schilly_bus,
+		int	atapi_bus,
 			starget,
 			slun;
 
@@ -275,8 +285,8 @@ openbydev:
 					"Cannot open '%s'", device);
 			return (0);
 		}
-		if (sg_amapdev(scgp, f, device, &schilly_bus, &starget, &slun)) {
-			scg_settarget(scgp, schilly_bus, starget, slun);
+		if (sg_amapdev(scgp, f, device, &atapi_bus, &starget, &slun)) {
+			scg_settarget(scgp, atapi_bus, starget, slun);
 			return (++nopen);
 		}
 	}
@@ -290,7 +300,7 @@ scan_internal(scgp, nopen)
 {
 	int	i,
 		f;
-	int	schilly_bus,
+	int	atapi_bus,
 		target,
 		lun;
 	char	device[128];
@@ -342,7 +352,7 @@ scan_internal(scgp, nopen)
 					"try open(%s) return %i errno %i calling sg_mapdev(...)\n",
 					device, f, errno);
 				}
-				if (sg_amapdev(scgp, f, device, &schilly_bus, &target, &lun)) {
+				if (sg_amapdev(scgp, f, device, &atapi_bus, &target, &lun)) {
 					(++(*nopen));
 				} else {
 					close(f);
@@ -366,7 +376,7 @@ scan_internal(scgp, nopen)
 					break;
 				}
 			} else {
-				if (sg_amapdev(scgp, f, device, &schilly_bus, &target, &lun)) {
+				if (sg_amapdev(scgp, f, device, &atapi_bus, &target, &lun)) {
 					(++(*nopen));
 				} else {
 					close(f);
@@ -397,7 +407,7 @@ scan_internal(scgp, nopen)
 						device);
 					}
 					close(f);
-				} else if (sg_amapdev(scgp, f, device, &schilly_bus, &target, &lun)) {
+				} else if (sg_amapdev(scgp, f, device, &atapi_bus, &target, &lun)) {
 					(++(*nopen));
 				} else {
 					close(f);
@@ -420,7 +430,7 @@ scgo_aclose(scgp)
 	if (scgp->local == NULL)
 		return (-1);
 
-	for (h = 0; h < MAX_SCHILLY_HOSTS; h++) {
+	for (h = 0; h < MAX_ATAPI_HOSTS; h++) {
 		typlocal(scgp, h) = (HOST_EMPTY);
 		for (t = 0; t < MAX_TGT; t++) {
 			for (l = 0; l < MAX_LUN; l++) {
@@ -442,32 +452,32 @@ scgo_aclose(scgp)
 }
 
 LOCAL int
-scgo_aget_first_free_shillybus(scgp, subsystem, host, bus)
+scgo_aget_first_free_atapibus(scgp, subsystem, host, bus)
 	SCSI	*scgp;
 	int	subsystem;
 	int	host;
 	int	bus;
 {
-	int	first_free_schilly_bus;
+	int	first_free_atapi_bus;
 
-	for (first_free_schilly_bus = 0;
-			first_free_schilly_bus < MAX_SCHILLY_HOSTS;
-						first_free_schilly_bus++) {
+	for (first_free_atapi_bus = 0;
+			first_free_atapi_bus < MAX_ATAPI_HOSTS;
+						first_free_atapi_bus++) {
 
-		if (typlocal(scgp, first_free_schilly_bus) == HOST_EMPTY ||
-		    (typlocal(scgp, first_free_schilly_bus) == subsystem &&
-		    hostlocal(scgp, first_free_schilly_bus) == host &&
-		    buslocal(scgp, first_free_schilly_bus) == bus))
+		if (typlocal(scgp, first_free_atapi_bus) == HOST_EMPTY ||
+		    (typlocal(scgp, first_free_atapi_bus) == subsystem &&
+		    hostlocal(scgp, first_free_atapi_bus) == host &&
+		    buslocal(scgp, first_free_atapi_bus) == bus))
 			break;
 	}
 
-	if (first_free_schilly_bus >= MAX_SCHILLY_HOSTS) {
-		errmsgno(EX_BAD, "ERROR: in scgo_get_first_free_shillybus(...). Too many CDROMs, more than %i",
-			MAX_SCHILLY_HOSTS);
-		errmsgno(EX_BAD, "Increase MAX_SCHILLY_HOSTS in scsi-linux-ata.c and recompile!");
+	if (first_free_atapi_bus >= MAX_ATAPI_HOSTS) {
+		errmsgno(EX_BAD, "ERROR: in scgo_get_first_free_atapibus(...). Too many CDROMs, more than %i",
+			MAX_ATAPI_HOSTS);
+		errmsgno(EX_BAD, "Increase MAX_ATAPI_HOSTS in scsi-linux-ata.c and recompile!");
 		return (-1);
 	}
-	return (first_free_schilly_bus);
+	return (first_free_atapi_bus);
 }
 
 LOCAL int
@@ -613,11 +623,11 @@ scgo_amerge(path, readedlink, buffer, buflen)
  *
  */
 LOCAL BOOL
-sg_amapdev(scgp, f, device, schillybus, target, lun)
+sg_amapdev(scgp, f, device, atapibus, target, lun)
 	SCSI	*scgp;
 	int	f;
 	char	*device;
-	int	*schillybus;
+	int	*atapibus;
 	int	*target;
 	int	*lun;
 {
@@ -675,7 +685,7 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 #define	LOCAL_MAX_PATH MAX_PATH
 	char		tmp[LOCAL_MAX_PATH],
 			tmp1[LOCAL_MAX_PATH];
-	int		first_free_schilly_bus;
+	int		first_free_atapi_bus;
 	int		subsystem = HOST_EMPTY;
 
 	/* old DEV */
@@ -799,11 +809,11 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 			l = 0;
 #endif	/* nonono */
 			/* other solution, with ioctl */
-			int	Chan,
-				Ino,
-				Bus,
-				Target,
-				Lun;
+			int	Chan	= -1,
+				Ino	= -1,
+				Bus	= -1,
+				Target	= -1,
+				Lun	= -1;
 
 			subsystem = HOST_SCSI;
 			sg_amapdev_scsi(scgp, f, &Bus, &Target, &Lun, &Chan, &Ino);
@@ -842,28 +852,28 @@ sg_amapdev(scgp, f, device, schillybus, target, lun)
 		js_printf(scgp->errstr, "INFO: subsystem %s: h %i, b %i, t %i, l %i",
 			token[ID_TOKEN_SUBSYSTEM], h, b, t, l);
 
-	first_free_schilly_bus = scgo_aget_first_free_shillybus(scgp, subsystem, h, b);
-	if (-1 == first_free_schilly_bus) {
+	first_free_atapi_bus = scgo_aget_first_free_atapibus(scgp, subsystem, h, b);
+	if (-1 == first_free_atapi_bus) {
 		return (FALSE);
 	}
-	if (scglocal(scgp)->scgfiles[first_free_schilly_bus][t][l] != (-1)) {
+	if (scglocal(scgp)->scgfiles[first_free_atapi_bus][t][l] != (-1)) {
 		errmsgno(EX_BAD, "ERROR: this cdrom is already mapped %s(%d,%d,%d)\n",
-			device, first_free_schilly_bus, t, l);
+			device, first_free_atapi_bus, t, l);
 		return (FALSE);
 	} else {
-		scglocal(scgp)->scgfiles[first_free_schilly_bus][t][l] = f;
-		typlocal(scgp, first_free_schilly_bus) = subsystem;
-		hostlocal(scgp, first_free_schilly_bus) = h;
-		buslocal(scgp, first_free_schilly_bus) = b;
-		*schillybus = first_free_schilly_bus;
+		scglocal(scgp)->scgfiles[first_free_atapi_bus][t][l] = f;
+		typlocal(scgp, first_free_atapi_bus) = subsystem;
+		hostlocal(scgp, first_free_atapi_bus) = h;
+		buslocal(scgp, first_free_atapi_bus) = b;
+		*atapibus = first_free_atapi_bus;
 		*target = t;
 		*lun = l;
 
 		if (scgp->debug > 1) {
 			js_fprintf((FILE *) scgp->errfile,
-				"INFO: /dev/%s, (host%d/bus%d/target%d/lun%d) will be mapped on the schilly bus No %d (%d,%d,%d)\n",
+				"INFO: /dev/%s, (host%d/bus%d/target%d/lun%d) will be mapped on the atapi bus No %d (%d,%d,%d)\n",
 				token[ID_TOKEN_SUBSYSTEM], h, b, t, l,
-				first_free_schilly_bus, first_free_schilly_bus, t, l);
+				first_free_atapi_bus, first_free_atapi_bus, t, l);
 		}
 	}
 	return (TRUE);
@@ -930,6 +940,13 @@ scgo_amaxdma(scgp, amt)
 	return (MAX_DMA_ATA);
 }
 
+LOCAL int
+scgo_anumbus(scgp)
+	SCSI	*scgp;
+{
+	return (MAX_ATAPI_HOSTS);
+}
+
 LOCAL BOOL
 scgo_ahavebus(scgp, busno)
 	SCSI	*scgp;
@@ -938,7 +955,7 @@ scgo_ahavebus(scgp, busno)
 	register int	t;
 	register int	l;
 
-	if (busno < 0 || busno >= MAX_SCHILLY_HOSTS)
+	if (busno < 0 || busno >= MAX_ATAPI_HOSTS)
 		return (FALSE);
 
 	if (scgp->local == NULL)
@@ -959,7 +976,7 @@ scgo_afileno(scgp, busno, tgt, tlun)
 	int	tgt;
 	int	tlun;
 {
-	if (busno < 0 || busno >= MAX_SCHILLY_HOSTS ||
+	if (busno < 0 || busno >= MAX_ATAPI_HOSTS ||
 		tgt < 0 || tgt >= MAX_TGT ||
 		tlun < 0 || tlun >= MAX_LUN)
 		return (-1);
@@ -982,8 +999,8 @@ LOCAL int
 scgo_aisatapi(scgp)
 	SCSI	*scgp;
 {
-	int schillybus = scgp->addr.scsibus;
-	int typ = typlocal(scgp, schillybus);
+	int atapibus = scgp->addr.scsibus;
+	int typ = typlocal(scgp, atapibus);
 	if (typ == HOST_EMPTY)
 		return (-1);
 	if (typ != HOST_SCSI)
@@ -1015,6 +1032,7 @@ scgo_asend(scgp)
 			i;
 	struct cdrom_generic_command sg_cgc;
 	struct request_sense sense_cgc;
+static	uid_t		cureuid = 0;	/* XXX Hack until we have uid management */
 
 #ifdef DEBUG
 	char		tmp_send[340],
@@ -1056,7 +1074,7 @@ scgo_asend(scgp)
 	}
 
 	sg_cgc.buflen = sp->size;
-	sg_cgc.buffer = sp->addr;
+	sg_cgc.buffer = (void *)sp->addr; /* Workaround silly type in sg_cgc */
 
 	if (sp->sense_len > sizeof (sense_cgc))
 		sense_cgc.add_sense_len = sizeof (sense_cgc) - 8;
@@ -1095,8 +1113,20 @@ scgo_asend(scgp)
 		}
 	}
 #endif	/* DEBUG */
+
+	if (cureuid != 0)
+		seteuid(0);
+again:
+	errno = 0;
 	if ((ret = ioctl(scgp->fd, CDROM_SEND_PACKET, &sg_cgc)) < 0)
 		sp->ux_errno = geterrno();
+	if (ret < 0 && geterrno() == EPERM) {	/* XXX Hack until we have uid management */
+		cureuid = geteuid();
+		if (seteuid(0) >= 0)
+			goto again;
+	}
+	if (cureuid != 0)
+		seteuid(cureuid);
 
 	if (ret < 0 && scgp->debug > 4) {
 		js_fprintf((FILE *) scgp->errfile,
@@ -1233,4 +1263,4 @@ scgo_asend(scgp)
 	sp->resid = 0;
 	return (0);
 }
-#endif	/* USE_ATA */
+#endif	/* USE_ATAPI */

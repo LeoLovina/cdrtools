@@ -1,25 +1,21 @@
-/* @(#)match.c	1.20 03/10/22 Copyright 1985, 1995-2003 J. Schilling */
-#include <standard.h>
-#include <patmatch.h>
+/* @(#)match.c	1.23 09/05/30 Copyright 1985, 1995-2009 J. Schilling */
+#include <schily/standard.h>
+#include <schily/patmatch.h>
 /*
  *	Pattern matching functions
  *
- *	Copyright (c) 1985, 1995-2003 J. Schilling
+ *	Copyright (c) 1985, 1995-2009 J. Schilling
  */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * See the file CDDL.Schily.txt in this distribution for details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
  */
 /*
  *	The pattern matching functions below are based on the algorithm
@@ -40,13 +36,31 @@
  *	Start of line '^' and end of line '$' have been added.
  */
 
+#undef	CHAR
+
 #ifdef	__LINE_MATCH
+#ifdef	__WIDE_CHAR
+#define	patmatch	patwlmatch
+#else
 #define	opatmatch	opatlmatch
 #define	patmatch	patlmatch
 #endif
+#endif
+
+#ifdef	__WIDE_CHAR
+#ifndef	__LINE_MATCH
+#define	patcompile	patwcompile
+#define	patmatch	patwmatch
+#endif
+#define	CHAR		wchar_t
+#endif
+
+#ifndef	CHAR
+typedef	unsigned char	Uchar;
+#define	CHAR		Uchar
+#endif
 
 #define	ENDSTATE	(-1)
-typedef	unsigned char	Uchar;
 
 /*---------------------------------------------------------------------------
 |
@@ -81,7 +95,7 @@ typedef	unsigned char	Uchar;
  *	match a character in class
  */
 #define	in_class(found, pat, c)	{			\
-	register const Uchar	*lpat	= pat;		\
+	register const CHAR	*lpat	= pat;		\
 	register int		lc	= c;		\
 	int	lo_bound;				\
 	int	hi_bound;				\
@@ -117,11 +131,12 @@ typedef	unsigned char	Uchar;
  *	Trys to match a string beginning at offset
  *	against the compiled pattern.
  */
-EXPORT Uchar
+#ifndef	__WIDE_CHAR
+EXPORT CHAR
 *opatmatch(pat, aux, str, soff, slen, alt)
-	const Uchar	*pat;
+	const CHAR	*pat;
 	const int	*aux;
-	const Uchar	*str;
+	const CHAR	*str;
 	int		soff;
 	int		slen;
 	int		alt;
@@ -130,6 +145,7 @@ EXPORT Uchar
 
 	return (patmatch(pat, aux, str, soff, slen, alt, state));
 }
+#endif
 
 /*
  *	patmatch - the external interpreter interface.
@@ -137,11 +153,11 @@ EXPORT Uchar
  *	Trys to match a string beginning at offset
  *	against the compiled pattern.
  */
-EXPORT Uchar *
+EXPORT CHAR *
 patmatch(pat, aux, str, soff, slen, alt, state)
-	const Uchar	*pat;
+	const CHAR	*pat;
 	const int	*aux;
-	const Uchar	*str;
+	const CHAR	*str;
 	int		soff;
 	int		slen;
 	int		alt;
@@ -153,7 +169,7 @@ patmatch(pat, aux, str, soff, slen, alt, state)
 	register int	p;
 	register int	q, s, k;
 	int		c;
-	const Uchar	*lastp = (Uchar *)NULL;
+	const CHAR	*lastp = (CHAR *)NULL;
 
 #ifdef	__LINE_MATCH
 for (; soff <= slen; soff++) {
@@ -185,6 +201,7 @@ for (; soff <= slen; soff++) {
 
 			case REP:
 				put(sp, state, sp, p+1);
+				/* FALLTHRU */
 			case NIL:		/* NIL matches always */
 			case STAR:
 				put(sp, state, sp, q);
@@ -213,7 +230,7 @@ for (; soff <= slen; soff++) {
 			}
 		}
 		if (c == 0)
-			return ((Uchar *)lastp);
+			return ((CHAR *)lastp);
 
 		/*
 		 * now try to match next character
@@ -247,6 +264,7 @@ for (; soff <= slen; soff++) {
 			default:
 				if (k != c)
 					continue;
+				/* FALLTHRU */
 			case ANY:
 				break;
 			}
@@ -256,17 +274,17 @@ for (; soff <= slen; soff++) {
 #ifdef	__LINE_MATCH
 
 			if (lastp || (soff == slen - 1))
-				return ((Uchar *)lastp);
+				return ((CHAR *)lastp);
 			else
 				break;
 #else
-			return ((Uchar *)lastp);
+			return ((CHAR *)lastp);
 #endif
 		}
 	}
 #ifdef	__LINE_MATCH
 }
-return ((Uchar *)lastp);
+return ((CHAR *)lastp);
 #endif
 }
 
@@ -279,11 +297,11 @@ return ((Uchar *)lastp);
 +---------------------------------------------------------------------------*/
 
 typedef	struct args {
-	const Uchar	*pattern;
+	const CHAR	*pattern;
 	int		*aux;
 	int		patp;
 	int		length;
-	Uchar		Ch;
+	CHAR		Ch;
 } arg_t;
 
 LOCAL	void	nextitem __PR((arg_t *));
@@ -367,7 +385,7 @@ expr(ap, altp)
 	int	exits = ENDSTATE;
 	int	a;
 	int	*aux = ap->aux;
-	Uchar	Ch;
+	CHAR	Ch;
 
 	for (;;) {
 		a = prim(ap);
@@ -431,7 +449,7 @@ join(aux, a, b)
  */
 EXPORT int
 patcompile(pat, len, aux)
-	const Uchar	*pat;
+	const CHAR	*pat;
 	int		len;
 	int		*aux;
 {

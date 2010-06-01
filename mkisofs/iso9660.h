@@ -1,4 +1,4 @@
-/* @(#)iso9660.h	1.19 04/03/02 joerg */
+/* @(#)iso9660.h	1.21 07/07/26 joerg */
 /*
  * Header file iso9660.h - assorted structure definitions and typecasts.
  * specific to iso9660 filesystem.
@@ -6,7 +6,7 @@
  * Written by Eric Youngdale (1993).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999,2000-2004 J. Schilling
+ * Copyright (c) 1999,2000-2007 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -219,7 +219,7 @@ struct iso_directory_record {
 	char extent			[ISODCL(3,  10)]; /* 733 */
 	char size			[ISODCL(11, 18)]; /* 733 */
 	char date			[ISODCL(19, 25)]; /* 7 by 711 */
-	char flags			[ISODCL(26, 26)];
+	unsigned char flags		[ISODCL(26, 26)];
 	char file_unit_size		[ISODCL(27, 27)]; /* 711 */
 	char interleave			[ISODCL(28, 28)]; /* 711 */
 	char volume_sequence_number	[ISODCL(29, 32)]; /* 723 */
