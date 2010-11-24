@@ -1,6 +1,8 @@
-/* @(#)nlsdefs.h	1.3 09/05/23 Copyright 2004-2009 J. Schilling */
+/* @(#)nlsdefs.h	1.4 10/11/16 Copyright 2004-2010 J. Schilling */
 /*
- *	Copyright (c) 2004-2009 J. Schilling
+ *	Native language support
+ *
+ *	Copyright (c) 2004-2010 J. Schilling
  */
 /*
  * The contents of this file are subject to the terms of the
@@ -19,6 +21,12 @@
 
 #ifndef _SCHILY_MCONFIG_H
 #include <schily/mconfig.h>
+#endif
+
+#ifndef	NO_NLS
+#ifndef	USE_NLS
+#define	USE_NLS			/* Make nls the default */
+#endif
 #endif
 
 #ifdef	HAVE_LIBINTL_H

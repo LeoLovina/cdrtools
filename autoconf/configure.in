@@ -1,6 +1,6 @@
-dnl @(#)configure.in	1.211 10/05/07 Copyright 1998-2009 J. Schilling
+dnl @(#)configure.in	1.223 10/11/17 Copyright 1998-2010 J. Schilling
 dnl Process this file with autoconf to produce a configure script.
-AC_REVISION(1.211)dnl
+AC_REVISION(1.223)dnl
 
 dnl AC_INIT(xconfig.h.in)
 AC_INIT(config.guess)
@@ -19,6 +19,7 @@ dnl AC_PROG_CC
 AC_OBJEXT
 AC_EXEEXT
 AC_PROG_CPP
+AC_PROG_CPPX
 AC_SUN_CC64_OPT
 AC_HP_CC_ANSI_OPT
 AC_HP_CC_OPT_OPT
@@ -26,6 +27,8 @@ AC_HP_CC_GPROF_OPT
 dnl AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_PROG_MAKE_SET
+AC_CHECK_PROGS(YACC, yacc 'bison -y' byacc, noyacc)
+AC_CHECK_PROGS(BISON, bison, nobison)
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -58,7 +61,7 @@ AC_CHECK_HEADERS(sys/time.h sys/times.h utime.h sys/utime.h sys/ioctl.h sys/fili
 AC_CHECK_HEADERS(sys/syscall.h)
 AC_CHECK_HEADERS(mach/machine.h)
 AC_CHECK_HEADERS(mntent.h sys/mntent.h sys/mnttab.h sys/mount.h)
-AC_CHECK_HEADERS(sys/fork.h vfork.h wait.h sys/wait.h sys/resource.h procfs.h sys/procfs.h)
+AC_CHECK_HEADERS(sys/fork.h vfork.h wait.h sys/wait.h sys/resource.h procfs.h sys/procfs.h libproc.h)
 AC_CHECK_HEADERS(sys/utsname.h sys/priocntl.h sys/rtpriocntl.h sys/procset.h)
 AC_CHECK_HEADERS(sys/mtio.h sys/tape.h sys/mman.h linux/pg.h camlib.h)
 AC_CHECK_HEADERS(sys/shm.h sys/sem.h sys/ipc.h)
@@ -312,6 +315,7 @@ AC_CHECK_FUNCS(sync fsync fork forkx vforkx forkall forkallx wait wait4 waitid w
 AC_CHECK_FUNCS(execl execle execlp execv execve execvp)
 AC_CHECK_FUNCS(getexecname)
 AC_CHECK_FUNCS(getprogname setprogname)
+AC_CHECK_FUNCS(proc_pidpath)
 AC_CHECK_FUNCS(gethostid gethostname getdomainname getpagesize getdtablesize)
 AC_CHECK_FUNCS(gettimeofday settimeofday time stime gethrtime)
 AC_CHECK_FUNCS(ftime tzset mktime gmtime localtime timegm timelocal)
@@ -320,8 +324,14 @@ AC_CHECK_FUNCS(poll select isastream)
 AC_CHECK_FUNCS(chown fchown lchown chmod fchmod lchmod times utime utimes futimes lutimes)
 AC_CHECK_FUNCS(futimens utimensat)
 dnl AC_CHECK_FUNCS(ecvt fcvt gcvt)
+AC_CHECK_FUNCS(qecvt qfcvt qgcvt)
+AC_CHECK_FUNCS(_qecvt _qfcvt _qgcvt)
+AC_CHECK_FUNCS(_qecvt_r _qfcvt_r _qgcvt_r)
+AC_CHECK_FUNCS(_ldecvt _ldfcvt _ldgcvt)
 AC_CHECK_FUNCS(ecvt_r fcvt_r gcvt_r)
+AC_CHECK_FUNCS(_ldecvt_r _ldfcvt_r _ldgcvt_r)
 AC_CHECK_FUNCS(econvert fconvert gconvert)
+AC_CHECK_FUNCS(qeconvert qfconvert qgconvert)
 AC_CHECK_FUNCS(isinf isnan)
 AC_CHECK_FUNCS(rand drand48)
 AC_CHECK_FUNCS(strtol strtoll strtoul strtoull strtod)
@@ -350,6 +360,7 @@ AC_CHECK_FUNCS(strcat strncat strcmp strncmp strcpy strlcat strlcpy strncpy strd
 AC_CHECK_FUNCS(wcscat wcsncat wcscmp wcsncmp wcscpy wcslcat wcslcpy wcsncpy wcsdup wcsndup wcslen wcsnlen wcschr wcsrchr)
 AC_CHECK_FUNCS(wcwidth wcswidth wctype iswctype)
 AC_CHECK_FUNCS(basename dirname)
+AC_CHECK_FUNCS(pathconf fpathconf)
 AC_CHECK_FUNCS(malloc calloc valloc realloc memalign posix_memalign)
 AC_CHECK_FUNCS(madvise)
 AC_CHECK_FUNCS(mktemp mkstemp)
@@ -432,6 +443,8 @@ AC_USER_MALLOC
 dnl AC_USER_XCVT test macro does not yet work
 AC_VAR_TIMEZONE
 AC_VAR_TIMEZONE_DEF
+AC_VAR___PROGNAME
+AC_VAR___PROGNAME_FULL
 
 dnl Checks for OS characteristics.
 AC_HARD_SYMLINKS
@@ -451,10 +464,13 @@ AC_CHECK_LIB(c, dlopen, lib_dl="",
   [AC_CHECK_LIB(dl, dlopen, lib_dl="-ldl")])
 ac_save_LIBS="$LIBS"
 LIBS="$LIBS $lib_dl"
-AC_CHECK_FUNCS(dlopen dlclose dlsym dlerror)
+AC_CHECK_FUNCS(dlopen dlclose dlsym dlerror dlinfo)
 AC_CHECK_FUNCS(shl_load shl_unload shl_gethandle)
 AC_CHECK_FUNCS(LoadLibrary FreeLibrary GetProcAddress)
 LIBS="$ac_save_LIBS"
+if test ."$lib_dl" = .""; then
+	AC_DEFINE(HAVE_DLOPEN_IN_LIBC)
+fi
 
 dnl ??? AC_CHECK_LIB(socket, socket, lib_socket="-lsocket")
 dnl
@@ -627,6 +643,48 @@ AC_MSG_CHECKING(for /dev/zero)
 if test -r /dev/zero; then
 	echo yes
 	AC_DEFINE(HAVE_DEV_ZERO)
+else
+	echo no
+fi
+AC_MSG_CHECKING(for /dev/stdin)
+if test -r /dev/stdin; then
+	echo yes
+	AC_DEFINE(HAVE_DEV_STDIN)
+else
+	echo no
+fi
+AC_MSG_CHECKING(for /dev/stdout)
+if test -r /dev/stdout; then
+	echo yes
+	AC_DEFINE(HAVE_DEV_STDOUT)
+else
+	echo no
+fi
+AC_MSG_CHECKING(for /dev/stderr)
+if test -r /dev/stderr; then
+	echo yes
+	AC_DEFINE(HAVE_DEV_STDERR)
+else
+	echo no
+fi
+AC_MSG_CHECKING(for /dev/fd/0)
+if test -r /dev/fd/0; then
+	echo yes
+	AC_DEFINE(HAVE_DEV_FD_0)
+else
+	echo no
+fi
+AC_MSG_CHECKING(for /dev/fd/1)
+if test -r /dev/fd/1; then
+	echo yes
+	AC_DEFINE(HAVE_DEV_FD_1)
+else
+	echo no
+fi
+AC_MSG_CHECKING(for /dev/fd/2)
+if test -r /dev/fd/2; then
+	echo yes
+	AC_DEFINE(HAVE_DEV_FD_2)
 else
 	echo no
 fi

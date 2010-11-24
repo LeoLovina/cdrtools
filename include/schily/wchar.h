@@ -1,4 +1,4 @@
-/* @(#)wchar.h	1.17 10/05/07 Copyright 2007-2010 J. Schilling */
+/* @(#)wchar.h	1.20 10/11/07 Copyright 2007-2010 J. Schilling */
 /*
  *	Abstraction from wchar.h
  *
@@ -97,8 +97,10 @@
  * We cannot define wctype_t here because of a bug in Linux (missing xctype_t
  * definition in wchar.h
  */
-/*#undef	wctype_t*/
-/*#define	wctype_t	int*/
+#ifdef	__never__
+#undef	wctype_t
+#define	wctype_t	int
+#endif
 
 #undef	WEOF
 #define	WEOF	((wint_t)-1)
@@ -144,8 +146,8 @@
 #define	mbtowc(wp, cp, len)	((void)((wp) ? \
 				*(wchar_t *)(wp) = *(char *)(cp) : 1), 1)
 #undef	mbrtowc
-#define	mbrtowc(wp, cp, len, sp)	((void)((wp) ? \
-					*(wchar_t *)(wp) = *(char *)(cp) : 1), 1)
+#define	mbrtowc(wp, cp, len, sp) ((void)((wp) ? \
+				*(wchar_t *)(wp) = *(char *)(cp) : 1), 1)
 #undef	wctomb
 #define	wctomb(cp, wc)		(*(cp) = wc, 1)
 #undef	wcrtomb
@@ -154,6 +156,16 @@
 #undef	mbsinit
 #define	mbsinit(sp)		((int)((sp) == 0))
 
-#endif	/* !USE_WCHAR */
+#undef	wcwidth
+#define	wcwidth(wc)		(1)
+
+#else	/* !USE_WCHAR */
+
+#ifndef	HAVE_WCWIDTH
+#undef	wcwidth
+#define	wcwidth(wc)		(1)
+#endif
+
+#endif	/* USE_WCHAR */
 
 #endif	/* _SCHILY_WCHAR_H */

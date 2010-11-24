@@ -1,4 +1,4 @@
-#ident @(#)isoinfo.mk	1.14 09/11/19 
+#ident @(#)isoinfo.mk	1.15 10/11/24 
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2
@@ -27,6 +27,7 @@ CPPOPTS +=	-I..
 CPPOPTS +=	-I../../libscg
 CPPOPTS +=	-I../../libscgcmd
 CPPOPTS +=	-I../../libcdrdeflt
+CPPOPTS +=	-DUSE_FIND
 CPPOPTS +=	-DSCHILY_PRINT
 CPPOPTS +=	-DUSE_NLS
 CPPOPTS +=	-DUSE_ICONV
@@ -35,8 +36,9 @@ CPPOPTS +=	-DINS_BASE=\"${INS_BASE}\"
 CFILES=		isoinfo.c \
 		scsi.c
 
-LIBS=		-lsiconv -lscgcmd -lrscg -lscg $(LIB_VOLMGT) -lcdrdeflt -ldeflt -lschily \
-			$(SCSILIB) $(LIB_SOCKET) $(LIB_ICONV) $(LIB_INTL)
+LIBS=		-lsiconv -lscgcmd -lrscg -lscg $(LIB_VOLMGT) \
+			-lcdrdeflt -ldeflt -lfind -lschily \
+			$(LIB_ACL_TEST) $(SCSILIB) $(LIB_SOCKET) $(LIB_ICONV) $(LIB_INTL)
 
 XMK_FILE=	isoinfo_man.mk
 

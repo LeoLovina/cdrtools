@@ -1,7 +1,7 @@
-/* @(#)scsi-wnt.c	1.46 06/11/26 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key */
+/* @(#)scsi-wnt.c	1.47 10/09/21 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key */
 #ifndef lint
 static	char __sccsid[] =
-	"@(#)scsi-wnt.c	1.46 06/11/26 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key";
+	"@(#)scsi-wnt.c	1.47 10/09/21 Copyright 1998-2004 J. Schilling, A.L. Faber, J.A. Key";
 #endif
 /*
  *	Interface for the Win32 ASPI library.
@@ -69,15 +69,15 @@ static	char __sccsid[] =
  *	Choose your name instead of "schily" and make clear that the version
  *	string is related to a modified source.
  */
-LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.46";	/* The version for this transport*/
-LOCAL	char	_scg_itrans_version[] = "SPTI-scsi-wnt.c-1.46";	/* The version for SPTI */
+LOCAL	char	_scg_trans_version[] = "scsi-wnt.c-1.47";	/* The version for this transport*/
+LOCAL	char	_scg_itrans_version[] = "SPTI-scsi-wnt.c-1.47";	/* The version for SPTI */
 
 /*
  * Local defines and constants
  */
 /*#define DEBUG_WNTASPI*/
 
-#define	MAX_SCG		16	/* Max # of SCSI controllers	*/
+#define	MAX_SCG		64	/* Max # of SCSI controllers	*/
 #define	MAX_TGT		16	/* Max # of SCSI Targets	*/
 #define	MAX_LUN		8	/* Max # of SCSI LUNs		*/
 

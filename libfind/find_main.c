@@ -1,9 +1,9 @@
 /*#define	PLUS_DEBUG*/
-/* @(#)find_main.c	1.66 10/04/22 Copyright 2004-2010 J. Schilling */
+/* @(#)find_main.c	1.68 10/08/23 Copyright 2004-2010 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)find_main.c	1.66 10/04/22 Copyright 2004-2010 J. Schilling";
+	"@(#)find_main.c	1.68 10/08/23 Copyright 2004-2010 J. Schilling";
 #endif
 /*
  *	Another find implementation...
@@ -98,7 +98,9 @@ getflg(optstr, argp)
 	char	*optstr;
 	long	*argp;
 {
-/*	error("optstr: '%s'\n", optstr);*/
+#ifdef	GETFLG_DEBUG
+	error("optstr: '%s'\n", optstr);
+#endif
 
 	if (optstr[1] != '\0')
 		return (-1);
@@ -129,9 +131,9 @@ find_main(ac, av, ev, std, quit)
 	squit_t	*quit;
 {
 	int	cac  = ac;
-	char *	*cav = av;
-	char *	*firstpath;
-	char *	*firstprim;
+	char	**cav = av;
+	char	**firstpath;
+	char	**firstprim;
 	BOOL	help = FALSE;
 	BOOL	prversion = FALSE;
 	finda_t	fa;

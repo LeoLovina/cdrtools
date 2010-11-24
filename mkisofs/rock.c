@@ -1,8 +1,8 @@
-/* @(#)rock.c	1.62 09/11/25 joerg */
+/* @(#)rock.c	1.63 10/11/24 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)rock.c	1.62 09/11/25 joerg";
+	"@(#)rock.c	1.63 10/11/24 joerg";
 #endif
 /*
  * File rock.c - generate RRIP  records for iso9660 filesystems.
@@ -56,8 +56,10 @@ static	UConst char sccsid[] =
 #endif	/* APPLE_HYB */
 #if defined(__QNX__) && !defined(__QNXNTO__)	/* Not on Neutrino! never OK? */
 #define	TF_SIZE (5 + 4 * 7)	/* RR	Time field			*/
+#define	TF_SIZE_LONG (5 + 4 * 17) /* RR	Time field			*/
 #else
 #define	TF_SIZE (5 + 3 * 7)
+#define	TF_SIZE_LONG (5 + 3 * 17)
 #endif
 
 LOCAL	void	rstrncpy			__PR((char *t, char *f, size_t tlen,
@@ -717,29 +719,46 @@ generate_xa_rr_attributes(whole_name, name,
 #endif	/* S_IFLNK */
 
 	/* Add in the Rock Ridge TF time field */
-	if (MAYBE_ADD_CE_ENTRY(TF_SIZE))
+	if (MAYBE_ADD_CE_ENTRY(long_rr_time ? TF_SIZE_LONG:TF_SIZE))
 		add_CE_entry("TF", __LINE__);
 	Rock[ipnt++] = 'T';
 	Rock[ipnt++] = 'F';
-	Rock[ipnt++] = TF_SIZE;
+	Rock[ipnt++] = long_rr_time ? TF_SIZE_LONG:TF_SIZE;
 	Rock[ipnt++] = SU_VERSION;
 #if defined(__QNX__) && !defined(__QNXNTO__)	/* Not on Neutrino! never OK? */
-	Rock[ipnt++] = 0x0f;
+	Rock[ipnt++] = long_rr_time ? 0x8f:0x0f;
 #else
-	Rock[ipnt++] = 0x0e;
+	Rock[ipnt++] = long_rr_time ? 0x8e:0x0e;
 #endif
 	flagval |= (1 << 7);
 
 #if defined(__QNX__) && !defined(__QNXNTO__)	/* Not on Neutrino! never OK? */
-	iso9660_date((char *)&Rock[ipnt], lstatbuf->st_ftime);
-	ipnt += 7;
+	if (long_rr_time) {
+		iso9660_date((char *)&Rock[ipnt], lstatbuf->st_ftime);
+		ipnt += 7;
+	} else {
+		iso9660_ldate((char *)&Rock[ipnt], lstatbuf->st_ftime);
+		ipnt += 17;
+	}
 #endif
-	iso9660_date((char *)&Rock[ipnt], lstatbuf->st_mtime);
-	ipnt += 7;
-	iso9660_date((char *)&Rock[ipnt], lstatbuf->st_atime);
-	ipnt += 7;
-	iso9660_date((char *)&Rock[ipnt], lstatbuf->st_ctime);
-	ipnt += 7;
+	if (long_rr_time) {
+		iso9660_ldate((char *)&Rock[ipnt],
+				lstatbuf->st_mtime, stat_mnsecs(lstatbuf));
+		ipnt += 17;
+		iso9660_ldate((char *)&Rock[ipnt],
+				lstatbuf->st_atime, stat_ansecs(lstatbuf));
+		ipnt += 17;
+		iso9660_ldate((char *)&Rock[ipnt],
+				lstatbuf->st_ctime, stat_cnsecs(lstatbuf));
+		ipnt += 17;
+	} else {
+		iso9660_date((char *)&Rock[ipnt], lstatbuf->st_mtime);
+		ipnt += 7;
+		iso9660_date((char *)&Rock[ipnt], lstatbuf->st_atime);
+		ipnt += 7;
+		iso9660_date((char *)&Rock[ipnt], lstatbuf->st_ctime);
+		ipnt += 7;
+	}
 
 	/* Add in the Rock Ridge RE (relocated dir) field */
 	if (deep_opt & NEED_RE) {

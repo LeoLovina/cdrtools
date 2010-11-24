@@ -1,8 +1,8 @@
-/* @(#)mkisofs.c	1.258 10/04/25 joerg */
+/* @(#)mkisofs.c	1.259 10/11/24 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)mkisofs.c	1.258 10/04/25 joerg";
+	"@(#)mkisofs.c	1.259 10/11/24 joerg";
 #endif
 /*
  * Program mkisofs.c - generate iso9660 filesystem  based upon directory
@@ -309,6 +309,7 @@ int	do_sort = 0;		/* sort file data */
 UInt32_t null_inodes = NULL_INO_MAX;
 BOOL	correct_inodes = TRUE;	/* TRUE: add a "correct inodes" fingerprint */
 BOOL	rrip112 = TRUE;		/* TRUE: create Rock Ridge V 1.12	    */
+BOOL	long_rr_time = FALSE;	/* TRUE: use long (17 Byte) time format	    */
 
 siconvt_t	*in_nls = NULL;  /* input UNICODE conversion table */
 siconvt_t	*out_nls = NULL; /* output UNICODE conversion table */
@@ -848,6 +849,8 @@ LOCAL const struct mki_option mki_options[] =
 
 	{{"log-file*", &log_file },
 	"\1LOG_FILE\1Re-direct messages to LOG_FILE"},
+	{{"long-rr-time%1", &long_rr_time },
+	"Use long Rock Ridge time format"},
 	{{"m& ,exclude& ", NULL, (getpargfun)add_match },
 	"\1GLOBFILE\1Exclude file name"},
 	{{"exclude-list&", NULL, (getpargfun)add_list},
@@ -862,6 +865,8 @@ LOCAL const struct mki_option mki_options[] =
 	"Do not pad output to a multiple of 32k"},
 	{{"no-limit-pathtables", &nolimitpathtables },
 	"Allow more than 65535 parent directories (violates ISO9660)"},
+	{{"no-long-rr-time%0", &long_rr_time },
+	"Use short Rock Ridge time format"},
 	{{"M*,prev-session*", &merge_image },
 	"\1FILE\1Set path to previous session to merge"},
 	{{"dev*", &merge_image },
@@ -896,6 +901,8 @@ LOCAL const struct mki_option mki_options[] =
 	"Generate Rock Ridge directory information"},
 	{{"s* ,sectype*", &sectype },
 	"\1TYPE\1Set output sector type to e.g. data/xa1/raw"},
+	{{"short-rr-time%0", &long_rr_time },
+	"Use short Rock Ridge time format"},
 
 #ifdef SORTING
 	{ {"sort&", NULL, (getpargfun)add_sort_list },
@@ -1451,6 +1458,7 @@ usage(excode)
 
 /*
  * Fill in date in the iso9660 format
+ * This takes 7 bytes and supports year 1900 .. 2155 with 1 second granularity
  *
  * The standards  state that the timezone offset is in multiples of 15
  * minutes, and is what you add to GMT to get the localtime.  The U.S.
@@ -1463,35 +1471,67 @@ iso9660_date(result, crtime)
 	char	*result;
 	time_t	crtime;
 {
-	struct tm	*local;
+	struct tm	local;
+	struct tm	gmt;
 
-	local = localtime(&crtime);
-	result[0] = local->tm_year;
-	result[1] = local->tm_mon + 1;
-	result[2] = local->tm_mday;
-	result[3] = local->tm_hour;
-	result[4] = local->tm_min;
-	result[5] = local->tm_sec;
+	local = *localtime(&crtime);
+	gmt   = *gmtime(&crtime);
+
+	result[0] = local.tm_year;
+	result[1] = local.tm_mon + 1;
+	result[2] = local.tm_mday;
+	result[3] = local.tm_hour;
+	result[4] = local.tm_min;
+	result[5] = local.tm_sec;
+
+	local.tm_min  -= gmt.tm_min;
+	local.tm_hour -= gmt.tm_hour;
+	local.tm_yday -= gmt.tm_yday;
+	local.tm_year -= gmt.tm_year;
+	if (local.tm_year)		/* Hit new-year limit	*/
+		local.tm_yday = local.tm_year;	/* yday = +-1	*/
+
+	result[6] = (local.tm_min + 60 *
+			(local.tm_hour + 24 * local.tm_yday)) / 15;
+
+	return (0);
+}
+
+/*
+ * Fill in date in the iso9660 long format
+ * This takes 17 bytes and supports year 0 .. 9999 with 10ms granularity
+ */
+EXPORT int
+iso9660_ldate(result, crtime, nsec)
+	char	*result;
+	time_t	crtime;
+	int	nsec;
+{
+	struct tm	local;
+	struct tm	gmt;
+
+	local = *localtime(&crtime);
+	gmt   = *gmtime(&crtime);
 
 	/*
-	 * Must recalculate proper timezone offset each time, as some files use
-	 * daylight savings time and some don't...
+	 * There was a comment here about breaking in the year 2000.
+	 * That's not true, in 2000 tm_year == 100, so 1900+tm_year == 2000.
 	 */
-	result[6] = local->tm_yday;	/* save yday 'cause gmtime zaps it */
-	local = gmtime(&crtime);
-	local->tm_year -= result[0];
-	local->tm_yday -= result[6];
-	local->tm_hour -= result[3];
-	local->tm_min -= result[4];
-	if (local->tm_year < 0) {
-		local->tm_yday = -1;
-	} else {
-		if (local->tm_year > 0)
-			local->tm_yday = 1;
-	}
+	sprintf(result, "%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d%2.2d",
+		1900 + local.tm_year,
+		local.tm_mon + 1, local.tm_mday,
+		local.tm_hour, local.tm_min, local.tm_sec,
+		nsec / 10000000);
 
-	result[6] = -(local->tm_min + 60 *
-			(local->tm_hour + 24 * local->tm_yday)) / 15;
+	local.tm_min  -= gmt.tm_min;
+	local.tm_hour -= gmt.tm_hour;
+	local.tm_yday -= gmt.tm_yday;
+	local.tm_year -= gmt.tm_year;
+	if (local.tm_year)		/* Hit new-year limit	*/
+		local.tm_yday = local.tm_year;	/* yday = +-1	*/
+
+	result[16] = (local.tm_min + 60 *
+			(local.tm_hour + 24 * local.tm_yday)) / 15;
 
 	return (0);
 }

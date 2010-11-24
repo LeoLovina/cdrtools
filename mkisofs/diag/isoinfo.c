@@ -1,8 +1,8 @@
-/* @(#)isoinfo.c	1.80 10/05/24 joerg */
+/* @(#)isoinfo.c	1.82 10/11/24 joerg */
 #include <schily/mconfig.h>
 #ifndef	lint
 static	UConst char sccsid[] =
-	"@(#)isoinfo.c	1.80 10/05/24 joerg";
+	"@(#)isoinfo.c	1.82 10/11/24 joerg";
 #endif
 /*
  * File isodump.c - dump iso9660 directory information.
@@ -48,9 +48,9 @@ static	UConst char sccsid[] =
 #include <schily/standard.h>
 #include <schily/signal.h>
 #include <schily/stat.h>
-#include <schily/stat.h>
 #include <schily/fcntl.h>
 #include <schily/schily.h>
+#include <schily/getargs.h>
 #include <schily/nlsdefs.h>
 #include <schily/ctype.h>
 #include <schily/errno.h>
@@ -63,6 +63,10 @@ static	UConst char sccsid[] =
 
 #include <schily/siconv.h>
 #include <schily/io.h>				/* for setmode() prototype */
+#ifdef	USE_FIND
+#include <schily/walk.h>
+#include <schily/find.h>
+#endif
 
 /*
  * Make sure we have a definition for this.  If not, take a very conservative
@@ -104,17 +108,6 @@ static	UConst char sccsid[] =
 #define	offsetof(TYPE, MEMBER)	((size_t) &((TYPE *)0)->MEMBER)
 #endif
 
-#ifndef	S_ISLNK
-#define	S_ISLNK(m)	(((m) & S_IFMT) == S_IFLNK)
-#endif
-#ifndef	S_ISSOCK
-#ifdef	S_IFSOCK
-#	define	S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
-#else
-#	define	S_ISSOCK(m)	(0)
-#endif
-#endif
-
 /*
  * Note: always use these macros to avoid problems.
  *
@@ -128,38 +121,55 @@ static	UConst char sccsid[] =
 #define	ISO_BLOCKS(X)	(((X) / SECTOR_SIZE) + (((X)%SECTOR_SIZE)?1:0))
 
 #define	infile	in_image
-FILE	*infile = NULL;
-int	use_rock = 0;
-int	use_joliet = 0;
-int	do_listing = 0;
-int	do_find = 0;
-int	do_sectors = 0;
-int	do_pathtab = 0;
-int	do_pvd = 0;
-BOOL	debug = FALSE;
-char	*xtract = 0;
-char	er_id[256];
-int	su_version = 0;
-int	rr_version = 0;
-int	aa_version = 0;
-int	ucs_level = 0;
+EXPORT FILE	*infile = NULL;
+LOCAL int	use_rock = 0;
+LOCAL int	use_joliet = 0;
+LOCAL int	do_listing = 0;
+LOCAL int	do_f = 0;
+LOCAL int	do_find = 0;
+LOCAL int	find_ac	  = 0;		/* ac past -find option		*/
+LOCAL char	*const *find_av = NULL;	/* av past -find option		*/
+LOCAL int	find_pac  = 0;		/* ac for first find primary	*/
+LOCAL char	*const *find_pav = NULL; /* av for first find primary	*/
+LOCAL int	do_sectors = 0;
+LOCAL int	do_pathtab = 0;
+LOCAL int	do_pvd = 0;
+LOCAL BOOL	debug = FALSE;
+LOCAL char	*xtract = 0;
+LOCAL char	er_id[256];
+LOCAL int	su_version = 0;
+LOCAL int	rr_version = 0;
+LOCAL int	aa_version = 0;
+LOCAL int	ucs_level = 0;
 
-struct stat	fstat_buf;
-int		found_rr;
-char		name_buf[256*3];
-char		xname[8192];
-unsigned char	date_buf[9];
+#ifdef	USE_FIND
+LOCAL findn_t	*find_node;		/* syntaxtree from find_parse()	*/
+LOCAL void	*plusp;			/* residual for -exec ...{} +	*/
+LOCAL int	find_patlen;		/* len for -find pattern state	*/
+LOCAL BOOL	find_print = FALSE;	/* -print or -ls primary found	*/
+
+LOCAL 	int		walkflags = WALK_CHDIR | WALK_PHYS | WALK_NOEXIT;
+LOCAL	int		maxdepth = -1;
+LOCAL	int		mindepth = -1;
+LOCAL	struct WALK	walkstate;
+#endif
+
+LOCAL struct stat	fstat_buf;
+LOCAL int		found_rr;
+LOCAL char		name_buf[256*3];
+LOCAL char		xname[8192];
+LOCAL unsigned char	date_buf[9];
 /*
  * Use sector_offset != 0 (-N #) if we have an image file
  * of a single session and we need to list the directory contents.
  * This is the session block (sector) number of the start
  * of the session when it would be on disk.
  */
-unsigned int	sector_offset = 0;
+LOCAL unsigned int	sector_offset = 0;
 
-unsigned char	buffer[2048];
+LOCAL unsigned char	buffer[2048];
 
-siconvt_t	*unls;
+LOCAL siconvt_t	*unls;
 
 #define	PAGE sizeof (buffer)
 
@@ -174,10 +184,14 @@ LOCAL	int	isonum_733	__PR((unsigned char * p));
 LOCAL	void	printchars	__PR((char *s, int n, BOOL ucs));
 LOCAL	char	*sdate		__PR((char *dp));
 LOCAL	void	dump_pathtab	__PR((int block, int size));
-LOCAL	int	parse_rr	__PR((unsigned char * pnt, int len, int cont_flag));
-LOCAL	void	find_rr		__PR((struct iso_directory_record * idr, Uchar **pntp, int *lenp));
+LOCAL	int	parse_rr	__PR((unsigned char * pnt, int len,
+					int cont_flag));
+LOCAL	void	find_rr		__PR((struct iso_directory_record * idr,
+					Uchar **pntp, int *lenp));
 LOCAL	int	dump_rr		__PR((struct iso_directory_record * idr));
-LOCAL	void	dump_stat	__PR((struct iso_directory_record * idr, int extent));
+LOCAL	void	dump_stat	__PR((char *rootname,
+					struct iso_directory_record * idr,
+					int extent));
 LOCAL	void	extract_file	__PR((struct iso_directory_record * idr));
 LOCAL	void	parse_dir	__PR((char * rootname, int extent, int len));
 LOCAL	void	usage		__PR((int excode));
@@ -188,6 +202,16 @@ LOCAL	void	printf_bootinfo	__PR((FILE *f, int bootcat_offset));
 LOCAL	char	*arch_name	__PR((int val));
 LOCAL	char	*boot_name	__PR((int val));
 LOCAL	char	*bootmedia_name	__PR((int val));
+LOCAL	int	time_cvt	__PR((unsigned char *dp, int len));
+LOCAL	time_t	iso9660_time	__PR((unsigned char *date, BOOL longfmt));
+#ifdef	USE_FIND
+LOCAL	int	getfind		__PR((char *arg, long *valp,
+					int *pac, char *const **pav));
+LOCAL	BOOL	find_stat	__PR((char *rootname,
+					struct iso_directory_record * idr,
+					int extent));
+#endif
+
 
 
 LOCAL int
@@ -447,7 +471,34 @@ parse_rr(pnt, len, cont_flag)
 		if (strncmp((char *)pnt, "CL", 2) == 0) flag2 |= RR_FLAG_CL;	/* Child link */
 		if (strncmp((char *)pnt, "PL", 2) == 0) flag2 |= RR_FLAG_PL;	/* Parent link */
 		if (strncmp((char *)pnt, "RE", 2) == 0) flag2 |= RR_FLAG_RE;	/* Relocated Direcotry */
-		if (strncmp((char *)pnt, "TF", 2) == 0) flag2 |= RR_FLAG_TF;	/* Time stamp */
+		if (strncmp((char *)pnt, "TF", 2) == 0) {
+			BOOL	longfmt;
+			int	size = 7;
+			unsigned char *p = &pnt[5];
+
+			flag2 |= RR_FLAG_TF;					/* Time stamp */
+			fstat_buf.st_atime =
+			fstat_buf.st_mtime =
+			fstat_buf.st_ctime = iso9660_time(date_buf, FALSE);
+			longfmt = (pnt[4] & 0x80) != 0;
+			if (longfmt)
+				size = 17;
+			if (pnt[4] & 0x01) {
+				p += size;
+			}
+			if (pnt[4] & 0x02) {
+				fstat_buf.st_mtime = iso9660_time(p, longfmt);
+				p += size;
+			}
+			if (pnt[4] & 0x04) {
+				fstat_buf.st_atime = iso9660_time(p, longfmt);
+				p += size;
+			}
+			if (pnt[4] & 0x08) {
+				fstat_buf.st_ctime = iso9660_time(p, longfmt);
+				p += size;
+			}
+		}
 		if (strncmp((char *)pnt, "SP", 2) == 0) {
 			flag2 |= RR_FLAG_SP;					/* SUSP record */
 			su_version = pnt[3] & 0xff;
@@ -626,13 +677,15 @@ struct todo
 	int		length;
 };
 
-struct todo	*todo_idr = NULL;
+LOCAL struct todo	*todo_idr = NULL;
 
-char		*months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
+LOCAL char		*months[12] = {"Jan", "Feb", "Mar", "Apr",
+				"May", "Jun", "Jul",
 				"Aug", "Sep", "Oct", "Nov", "Dec"};
 
 LOCAL void
-dump_stat(idr, extent)
+dump_stat(rootname, idr, extent)
+	char	*rootname;
 	struct iso_directory_record *idr;
 	int	extent;
 {
@@ -640,6 +693,12 @@ dump_stat(idr, extent)
 	int	off = 0;
 	char	outline[100];
 
+	if (do_find) {
+		if (!find_stat(rootname, idr, extent))
+			return;
+		if (!do_listing || find_print)
+			return;
+	}
 	memset(outline, ' ', sizeof (outline));
 
 	if (fstat_buf.st_ino != 0)
@@ -762,7 +821,7 @@ parse_dir(rootname, extent, len)
 	int		sextent = 0;
 
 
-	if (do_listing)
+	if (do_listing && (!do_find || !find_print))
 		printf("\nDirectory listing of %s\n", rootname);
 
 	while (len > 0) {
@@ -847,7 +906,6 @@ parse_dir(rootname, extent, len)
 						name_buf[j] = uc ? uc : '_';
 					}
 					name_buf[j] = '\0';
-/*					name_buf[idr->name_len[0]/2] = '\0';*/
 					}
 					break;
 				case 0:
@@ -898,19 +956,19 @@ parse_dir(rootname, extent, len)
 					extract_file(idr);
 				}
 			}
-			if (do_find &&
+			if (do_f &&
 			    (idr->name_len[0] != 1 ||
 			    (idr->name[0] != 0 && idr->name[0] != 1))) {
 				strcpy(testname, rootname);
 				strcat(testname, name_buf);
 				printf("%s\n", testname);
 			}
-			if (do_listing) {
+			if (do_listing || do_find) {
 				if ((idr->flags[0] & ISO_MULTIEXTENT) && size == 0)
 					sextent = isonum_733((unsigned char *)idr->extent);
 				if (debug ||
 				    ((idr->flags[0] & ISO_MULTIEXTENT) == 0 && size == 0)) {
-					dump_stat(idr, isonum_733((unsigned char *)idr->extent));
+					dump_stat(rootname, idr, isonum_733((unsigned char *)idr->extent));
 				}
 				size += fstat_buf.st_size;
 				if ((flags & ISO_MULTIEXTENT) &&
@@ -918,7 +976,7 @@ parse_dir(rootname, extent, len)
 					fstat_buf.st_size = size;
 					if (!debug)
 						idr->flags[0] |= ISO_MULTIEXTENT;
-					dump_stat(idr, sextent);
+					dump_stat(rootname, idr, sextent);
 					if (!debug)
 						idr->flags[0] &= ~ISO_MULTIEXTENT;
 				}
@@ -936,7 +994,11 @@ LOCAL void
 usage(excode)
 	int	excode;
 {
+#ifdef	USE_FIND
+	errmsgno(EX_BAD, "Usage: %s [options] -i filename [-find [[find expr.]]\n", get_progname());
+#else
 	errmsgno(EX_BAD, "Usage: %s [options] -i filename\n", get_progname());
+#endif
 
 	error("Options:\n");
 	error("\t-help,-h	Print this help\n");
@@ -944,6 +1006,9 @@ usage(excode)
 	error("\t-debug		Print additional debug info\n");
 	error("\t-d		Print information from the primary volume descriptor\n");
 	error("\t-f		Generate output similar to 'find .  -print'\n");
+#ifdef	USE_FIND
+	error("\t-find [find expr.] Option separator: Use find command line to the right\n");
+#endif
 	error("\t-J		Print information from Joliet extensions\n");
 	error("\t-j charset	Use charset to display Joliet file names\n");
 	error("\t-l		Generate output similar to 'ls -lR'\n");
@@ -966,6 +1031,7 @@ main(argc, argv)
 	int	cac;
 	char	* const *cav;
 	int	c;
+	int	ret = 0;
 	char	* filename = NULL;
 	char	* sdevname = NULL;
 	/*
@@ -982,7 +1048,7 @@ main(argc, argv)
 	struct eltorito_boot_descriptor bpd;
 	struct iso_directory_record * idr;
 	char	*charset = NULL;
-	char	*opts = "help,h,version,debug,d,p,i*,dev*,J,R,l,x*,f,s,N#l,T#l,j*";
+	char	*opts = "help,h,version,debug,d,p,i*,dev*,J,R,l,x*,find~,f,s,N#l,T#l,j*";
 	BOOL	help = FALSE;
 	BOOL	prvers = FALSE;
 	BOOL	found_eltorito = FALSE;
@@ -1009,7 +1075,8 @@ main(argc, argv)
 				&use_joliet, &use_rock,
 				&do_listing,
 				&xtract,
-				&do_find, &do_sectors,
+				getfind, NULL,
+				&do_f, &do_sectors,
 				&sector_offset, &toc_offset,
 				&charset) < 0) {
 		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
@@ -1023,9 +1090,72 @@ main(argc, argv)
 					HOST_CPU, HOST_VENDOR, HOST_OS);
 		exit(0);
 	}
+#ifdef	USE_FIND
+	if (do_find) {
+		finda_t	fa;
+
+		cac = find_ac;
+		cav = find_av;
+		find_firstprim(&cac, &cav);
+		find_pac = cac;
+		find_pav = cav;
+
+		if (cac > 0) {
+			find_argsinit(&fa);
+			fa.walkflags = walkflags;
+			fa.Argc = cac;
+			fa.Argv = (char **)cav;
+			find_node = find_parse(&fa);
+			if (fa.primtype == FIND_ERRARG)
+				comexit(fa.error);
+			if (fa.primtype != FIND_ENDARGS)
+				comerrno(EX_BAD, "Incomplete expression.\n");
+			plusp = fa.plusp;
+			find_patlen = fa.patlen;
+			walkflags = fa.walkflags;
+			maxdepth = fa.maxdepth;
+			mindepth = fa.mindepth;
+
+			if (find_node && xtract) {
+				if (find_pname(find_node, "-exec") ||
+				    find_pname(find_node, "-exec+") ||
+				    find_pname(find_node, "-ok"))
+					comerrno(EX_BAD,
+					"Cannot -exec with '-o -'.\n");
+			}
+			if (find_node && find_hasprint(find_node))
+				find_print = TRUE;
+		}
+		if (find_ac > find_pac) {
+			errmsgno(EX_BAD, "Unsupported pathspec for -find.\n");
+			usage(EX_BAD);
+		}
+#ifdef	__not_yet__
+		if (find_ac <= 0 || find_ac == find_pac) {
+			errmsgno(EX_BAD, "Missing pathspec for -find.\n");
+			usage(EX_BAD);
+		}
+#endif
+
+		walkinitstate(&walkstate);
+		if (find_patlen > 0) {
+			walkstate.patstate = ___malloc(sizeof (int) * find_patlen,
+						"space for pattern state");
+		}
+
+		find_timeinit(time(0));
+		walkstate.walkflags	= walkflags;
+		walkstate.maxdepth	= maxdepth;
+		walkstate.mindepth	= mindepth;
+		walkstate.lname		= NULL;
+		walkstate.tree		= find_node;
+		walkstate.err		= 0;
+		walkstate.pflags	= 0;
+	}
+#endif
 	cac = argc - 1;
 	cav = argv + 1;
-	if (getfiles(&cac, &cav, opts) != 0) {
+	if (!do_find && getfiles(&cac, &cav, opts) != 0) {
 		errmsgno(EX_BAD, "Bad Argument: '%s'\n", cav[0]);
 		usage(EX_BAD);
 	}
@@ -1334,7 +1464,9 @@ setcharset:
 		}
 
 		if (c != 0) {
-/*			printf("RR %X %d\n", c, c);*/
+#ifdef	RR_DEBUG
+			printf("RR %X %d\n", c, c);
+#endif
 			if (c & RR_FLAG_SP) {
 				printf(
 				"\nSUSP signatures version %d found\n",
@@ -1391,12 +1523,26 @@ setcharset:
 	td = todo_idr;
 	while (td) {
 		parse_dir(td->name, td->extent, td->length);
+		free(td->name);
 		td = td->next;
+	}
+
+	/*
+	 * Execute all unflushed '-exec .... {} +' expressions.
+	 */
+	if (do_find) {
+		find_plusflush(plusp, &walkstate);
+#ifdef	__use_find_free__
+		find_free(Tree, &fa);
+#endif
+		if (walkstate.patstate != NULL)
+			free(walkstate.patstate);
+		ret = walkstate.err;
 	}
 
 	if (infile != NULL)
 		fclose(infile);
-	return (0);
+	return (ret);
 }
 
 LOCAL void
@@ -1596,3 +1742,144 @@ bootmedia_name(val)
 		return ("Illegal Bootmedia");
 	}
 }
+
+LOCAL int
+time_cvt(dp, len)
+	unsigned char	*dp;
+	int		len;
+{
+	int	ret;
+
+	for (ret = 0; --len >= 0; ) {
+		ret *= 10;
+		ret += *dp++ - '0';
+	}
+	return (ret);
+}
+
+LOCAL time_t
+iso9660_time(date, longfmt)
+	unsigned char	*date;
+	BOOL		longfmt;
+{
+	time_t	t;
+	int	y;
+	int	m;
+	int	d;
+	int	days;
+	int	hour;
+	int	min;
+	int	sec;
+	int	hsec;
+	int	gmtoff;
+
+	if (longfmt) {
+		y = time_cvt(&date[0], 4);	/* Year 0..9999 */
+		m = time_cvt(&date[4], 2);
+		d = time_cvt(&date[6], 2);
+		hour = time_cvt(&date[8], 2);
+		min = time_cvt(&date[10], 2);
+		sec = time_cvt(&date[12], 2);
+		hsec = time_cvt(&date[14], 2);
+		gmtoff = ((char *)date)[16];
+	} else {
+		y = date[0] + 1900;		/* Year 1900..2155 */
+		m = date[1];
+		d = date[2];
+		hour = date[3];
+		min = date[4];
+		sec = date[5];
+		hsec = 0;
+		gmtoff = ((char *)date)[6];
+	}
+	/*
+	 * The original algorithm did win a Fortan contest in early times.
+	 * It computes days relative to September 19th 1989.
+	 * days = 367*(y-1980)-7*(y+(m+9)/12)/4-3*((y+(m-9)/7)/100+1)/4+275*m/9+d-100;
+	 * The updated algorithm was modified to use Jan 1st 1970 as base
+	 * and was taken from FreeBSD.
+	 */
+	days = 367*(y-1960)-7*(y+(m+9)/12)/4-3*((y+(m+9)/12-1)/100+1)/4+275*m/9+d-239;
+	t = days;
+	t = ((((t * 24) + hour) * 60 + min) * 60) + sec;
+	if (-48 <= gmtoff && gmtoff <= 52)
+		t -= gmtoff * 15 * 60;
+	return (t);
+}
+
+#ifdef	USE_FIND
+/* ARGSUSED */
+LOCAL int
+getfind(arg, valp, pac, pav)
+	char	*arg;
+	long	*valp;	/* Not used until we introduce a ptr to opt struct */
+	int	*pac;
+	char	*const	**pav;
+{
+	do_find = TRUE;
+	find_ac = *pac;
+	find_av = *pav;
+	find_ac--, find_av++;
+	return (NOARGS);
+}
+
+/*
+ * Called from dump_stat()
+ */
+LOCAL BOOL
+find_stat(rootname, idr, extent)
+	char	*rootname;
+	struct iso_directory_record *idr;
+	int	extent;
+{
+	BOOL	ret;
+	int	rlen;
+	int	len;
+static	char	*n = 0;
+static	int	nlen = 0;
+extern	struct WALK walkstate;
+
+	if (name_buf[0] == '.' && name_buf[1] == '.' && name_buf[2] == '\0')
+		if (find_node)
+			return (FALSE);
+
+	if (find_node == NULL)
+		return (TRUE);
+
+	rlen = strlen(rootname);
+	len = strlen(name_buf);
+
+	len = rlen + len + 1;
+	if (nlen < len) {
+		n = ___realloc(n, len, "find_stat name");
+		nlen = len;
+	}
+	strcatl(n, rootname, name_buf, (char *)0);
+	if (name_buf[0] == '.' && name_buf[1] == '\0')
+		n[rlen] = '\0';
+
+	if (!use_rock) {
+		fstat_buf.st_mtime = iso9660_time(date_buf, FALSE);
+		fstat_buf.st_mode |= S_IRUSR|S_IXUSR | \
+				    S_IRGRP|S_IXGRP | \
+				    S_IROTH|S_IXOTH;
+	}
+	fstat_buf.st_blksize = 0;
+#ifdef	HAVE_ST_BLOCKS
+	fstat_buf.st_blocks = (fstat_buf.st_size+1023) / DEV_BSIZE;
+#endif
+	walkstate.lname = &xname[3];
+	walkstate.pflags = PF_ACL|PF_XATTR;
+#ifdef	XXX
+	if (info->f_xflags & (XF_ACL_ACCESS|XF_ACL_DEFAULT))
+		walkstate.pflags |= PF_HAS_ACL;
+	if (info->f_xflags & XF_XATTR)
+		walkstate.pflags |= PF_HAS_XATTR;
+#endif
+
+	ret = find_expr(n, &n[rlen], &fstat_buf, &walkstate, find_node);
+	if (!ret)
+		return (ret);
+	return (ret);
+}
+#endif	/* USE_FIND */

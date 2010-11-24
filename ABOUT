@@ -1,7 +1,8 @@
 This package contains the following software:
 
 -	cdda2wav (an digital CD audio extraction program)
-	By Heiko Eißfeldt <heiko@hexco.de>
+	By Heiko Eißfeldt <heiko@hexco.de> and
+	by Jörg Schilling joerg.schilling@fokus.fraunhofer.de
 
 -	cdrecord (a CD recording program)
 	By Jörg Schilling <joerg.schilling@fokus.fraunhofer.de>
@@ -24,14 +25,14 @@ This package contains the following software:
 	-	isovfy verify an ISO-9660 image
 
 -	readcd (a stripped down version of scgskeleton)
-	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de and
 	may be used to read data CD's, to write to DVD-RAM
 	and to copy Solaris boot CD's
+	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de
 
 -	scgcheck (a program to validate the correct behavior
-	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de and
 	of the low level libscg code and the SCSI transport
 	code of the underlying OS).
+	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de
 
 -	libscg (a highly portable SCSI transport library)
-	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de and
+	By Jörg Schilling joerg.schilling@fokus.fraunhofer.de

@@ -1,8 +1,8 @@
-/* @(#)write.c	1.129 10/06/01 joerg */
+/* @(#)write.c	1.133 10/11/24 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)write.c	1.129 10/06/01 joerg";
+	"@(#)write.c	1.133 10/11/24 joerg";
 #endif
 /*
  * Program write.c - dump memory  structures to  file for iso9660 filesystem.
@@ -299,6 +299,7 @@ LOCAL struct deferred_write	*dw_head = NULL,
 UInt32_t	last_extent_written = 0;
 LOCAL	Uint	path_table_index;
 EXPORT	time_t	begun;
+EXPORT	struct timeval tv_begun;
 
 /*
  * We recursively walk through all of the directories and assign extent
@@ -430,8 +431,12 @@ static	char		buffer[SECTOR_SIZE * NSECT];
 			 */
 			if (geterrno() == 0) {
 				if (!errhidden(amt > remain ? E_GROW:E_SHRINK, filename)) {
-					if (!errwarnonly(amt < remain ? E_SHRINK:E_GROW, filename))
-						errmsgno(EX_BAD, "Try to use the option -data-change-warn\n");
+					if (!errwarnonly(amt < remain ? E_SHRINK:E_GROW, filename)) {
+						errmsgno(EX_BAD,
+						"Try to use the option -data-change-warn\n");
+						errmsgno(EX_BAD,
+						"Files should not change while mkisofs is running.\n");
+					}
 					errmsgno(EX_BAD,
 					"File '%s' did %s.\n",
 						filename,
@@ -1005,9 +1010,25 @@ sort_file_addresses()
 	for (i = 0, dwpnt = dw_head; i < num; i++, dwpnt = dwpnt->next) {
 		s_entry = dwpnt->s_entry;
 		dwpnt->extent = s_entry->starting_block = start_extent;
-		set_733((char *)s_entry->isorec.extent, start_extent);
 
-		start_extent += ISO_BLOCKS(s_entry->size);
+		if (s_entry->de_flags & MULTI_EXTENT) {
+			struct directory_entry  *s_e;
+
+			s_entry->mxroot->starting_block = start_extent;
+			set_733((char *)s_entry->mxroot->isorec.extent,
+								start_extent);
+			for (s_e = s_entry;
+			    s_e && s_e->mxroot == s_entry->mxroot;
+			    s_e = s_e->next) {
+				set_733((char *)s_e->isorec.extent,
+								start_extent);
+				s_entry->starting_block = start_extent;
+				start_extent += ISO_BLOCKS(s_e->size);
+			}
+		} else {
+			set_733((char *)s_entry->isorec.extent, start_extent);
+			start_extent += ISO_BLOCKS(s_entry->size);
+		}
 #ifdef DVD_VIDEO
 		/*
 		 * Shouldn't this be done for every type of sort? Otherwise
@@ -1973,36 +1994,14 @@ pvd_write(outfile)
 {
 	char		iso_time[17];
 	int		should_write;
-	struct tm	local;
-	struct tm	gmt;
 	int		i;
 	int		s;
 	Uchar		*cp;
 
 
 	time(&begun);
-
-	local = *localtime(&begun);
-	gmt = *gmtime(&begun);
-
-	/*
-	 * There was a comment here about breaking in the year 2000.
-	 * That's not true, in 2000 tm_year == 100, so 1900+tm_year == 2000.
-	 */
-	sprintf(iso_time, "%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d00",
-		1900 + local.tm_year,
-		local.tm_mon + 1, local.tm_mday,
-		local.tm_hour, local.tm_min, local.tm_sec);
-
-	local.tm_min -= gmt.tm_min;
-	local.tm_hour -= gmt.tm_hour;
-	local.tm_yday -= gmt.tm_yday;
-	local.tm_year -= gmt.tm_year;
-	if (local.tm_year)		/* Hit new-year limit	*/
-		local.tm_yday = local.tm_year;	/* yday = +-1	*/
-
-	iso_time[16] = (local.tm_min + 60 *
-				(local.tm_hour + 24 * local.tm_yday)) / 15;
+	gettimeofday(&tv_begun, NULL);
+	iso9660_ldate(iso_time, tv_begun.tv_sec, tv_begun.tv_usec * 1000);
 
 	/* Next we write out the primary descriptor for the disc */
 	memset(&vol_desc, 0, sizeof (vol_desc));
