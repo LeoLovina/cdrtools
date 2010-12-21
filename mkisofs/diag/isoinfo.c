@@ -1,8 +1,8 @@
-/* @(#)isoinfo.c	1.82 10/11/24 joerg */
+/* @(#)isoinfo.c	1.84 10/12/19 joerg */
 #include <schily/mconfig.h>
 #ifndef	lint
 static	UConst char sccsid[] =
-	"@(#)isoinfo.c	1.82 10/11/24 joerg";
+	"@(#)isoinfo.c	1.84 10/12/19 joerg";
 #endif
 /*
  * File isodump.c - dump iso9660 directory information.
@@ -50,6 +50,7 @@ static	UConst char sccsid[] =
 #include <schily/stat.h>
 #include <schily/fcntl.h>
 #include <schily/schily.h>
+#include <schily/nlsdefs.h>
 #include <schily/getargs.h>
 #include <schily/nlsdefs.h>
 #include <schily/ctype.h>
@@ -346,7 +347,7 @@ dump_pathtab(block, size)
 	unsigned char	uc;
 
 
-	printf("Path table starts at block %d, size %d\n", block, size);
+	printf(_("Path table starts at block %d, size %d\n"), block, size);
 
 	buf = (unsigned char *) malloc(ISO_ROUND_UP(size));
 
@@ -458,7 +459,7 @@ parse_rr(pnt, len, cont_flag)
 	flag2 = 0;
 	while (len >= 4) {
 		if (pnt[3] != 1 && pnt[3] != 2) {
-			printf("**BAD RRVERSION (%d) in '%2.2s' field %2.2X %2.2X.\n", pnt[3], pnt, pnt[0], pnt[1]);
+			printf(_("**BAD RRVERSION (%d) in '%2.2s' field %2.2X %2.2X.\n"), pnt[3], pnt, pnt[0], pnt[1]);
 			return (0);		/* JS ??? Is this right ??? */
 		}
 
@@ -570,19 +571,19 @@ parse_rr(pnt, len, cont_flag)
 					break;
 				case 16:
 					strcat(symlinkname, "/mnt");
-					printf("Warning - mount point requested");
+					printf(_("Warning - mount point requested"));
 					break;
 				case 32:
 					strcat(symlinkname, "kafka");
-					printf("Warning - host_name requested");
+					printf(_("Warning - host_name requested"));
 					break;
 				default:
-					printf("Reserved bit setting in symlink");
+					printf(_("Reserved bit setting in symlink"));
 					goof++;
 					break;
 				}
 				if ((pnts[0] & 0xfe) && pnts[1] != 0) {
-					printf("Incorrect length in symlink component");
+					printf(_("Incorrect length in symlink component"));
 				}
 				if (pnts[0] == 8)
 					xname[0] = '\0';
@@ -822,7 +823,7 @@ parse_dir(rootname, extent, len)
 
 
 	if (do_listing && (!do_find || !find_print))
-		printf("\nDirectory listing of %s\n", rootname);
+		printf(_("\nDirectory listing of %s\n"), rootname);
 
 	while (len > 0) {
 #ifdef	USE_SCG
@@ -995,31 +996,31 @@ usage(excode)
 	int	excode;
 {
 #ifdef	USE_FIND
-	errmsgno(EX_BAD, "Usage: %s [options] -i filename [-find [[find expr.]]\n", get_progname());
+	errmsgno(EX_BAD, _("Usage: %s [options] -i filename [-find [[find expr.]]\n"), get_progname());
 #else
-	errmsgno(EX_BAD, "Usage: %s [options] -i filename\n", get_progname());
+	errmsgno(EX_BAD, _("Usage: %s [options] -i filename\n"), get_progname());
 #endif
 
-	error("Options:\n");
-	error("\t-help,-h	Print this help\n");
-	error("\t-version	Print version info and exit\n");
-	error("\t-debug		Print additional debug info\n");
-	error("\t-d		Print information from the primary volume descriptor\n");
-	error("\t-f		Generate output similar to 'find .  -print'\n");
+	error(_("Options:\n"));
+	error(_("\t-help,-h	Print this help\n"));
+	error(_("\t-version	Print version info and exit\n"));
+	error(_("\t-debug		Print additional debug info\n"));
+	error(_("\t-d		Print information from the primary volume descriptor\n"));
+	error(_("\t-f		Generate output similar to 'find .  -print'\n"));
 #ifdef	USE_FIND
-	error("\t-find [find expr.] Option separator: Use find command line to the right\n");
+	error(_("\t-find [find expr.] Option separator: Use find command line to the right\n"));
 #endif
-	error("\t-J		Print information from Joliet extensions\n");
-	error("\t-j charset	Use charset to display Joliet file names\n");
-	error("\t-l		Generate output similar to 'ls -lR'\n");
-	error("\t-p		Print Path Table\n");
-	error("\t-R		Print information from Rock Ridge extensions\n");
-	error("\t-s		Print file size infos in multiples of sector size (%ld bytes).\n", (long)PAGE);
-	error("\t-N sector	Sector number where ISO image should start on CD\n");
-	error("\t-T sector	Sector number where actual session starts on CD\n");
-	error("\t-i filename	Filename to read ISO-9660 image from\n");
-	error("\tdev=target	SCSI target to use as CD/DVD-Recorder\n");
-	error("\t-x pathname	Extract specified file to stdout\n");
+	error(_("\t-J		Print information from Joliet extensions\n"));
+	error(_("\t-j charset	Use charset to display Joliet file names\n"));
+	error(_("\t-l		Generate output similar to 'ls -lR'\n"));
+	error(_("\t-p		Print Path Table\n"));
+	error(_("\t-R		Print information from Rock Ridge extensions\n"));
+	error(_("\t-s		Print file size infos in multiples of sector size (%ld bytes).\n"), (long)PAGE);
+	error(_("\t-N sector	Sector number where ISO image should start on CD\n"));
+	error(_("\t-T sector	Sector number where actual session starts on CD\n"));
+	error(_("\t-i filename	Filename to read ISO-9660 image from\n"));
+	error(_("\tdev=target	SCSI target to use as CD/DVD-Recorder\n"));
+	error(_("\t-x pathname	Extract specified file to stdout\n"));
 	exit(excode);
 }
 
@@ -1032,8 +1033,11 @@ main(argc, argv)
 	char	* const *cav;
 	int	c;
 	int	ret = 0;
-	char	* filename = NULL;
-	char	* sdevname = NULL;
+	char	*filename = NULL;
+	char	*sdevname = NULL;
+#if	defined(USE_NLS)
+	char	*dir;
+#endif
 	/*
 	 * Use toc_offset != 0 (-T #) if we have a complete multi-session
 	 * disc that we want/need to play with.
@@ -1058,12 +1062,21 @@ main(argc, argv)
 	save_args(argc, argv);
 
 #if	defined(USE_NLS)
-	/*
-	 * As long as we do not support gettext(), we only set up LC_CTYPE
-	 * for the automated set up of -input-charset. When upgrading to
-	 * gettext() we need to replace this by setlocale(LC_ALL, "").
-	 */
-	setlocale(LC_CTYPE, "");
+	setlocale(LC_ALL, "");
+#if !defined(TEXT_DOMAIN)	/* Should be defined by cc -D */
+#define	TEXT_DOMAIN "isoinfo"	/* Use this only if it weren't */
+#endif
+	dir = searchfileinpath("share/locale", F_OK,
+					SIP_ANY_FILE|SIP_NO_PATH, NULL);
+	if (dir)
+		(void) bindtextdomain(TEXT_DOMAIN, dir);
+	else
+#if defined(PROTOTYPES) && defined(INS_BASE)
+	(void) bindtextdomain(TEXT_DOMAIN, INS_BASE "/share/locale");
+#else
+	(void) bindtextdomain(TEXT_DOMAIN, "/usr/share/locale");
+#endif
+	(void) textdomain(TEXT_DOMAIN);
 #endif
 
 	cac = argc - 1;
@@ -1079,15 +1092,17 @@ main(argc, argv)
 				&do_f, &do_sectors,
 				&sector_offset, &toc_offset,
 				&charset) < 0) {
-		errmsgno(EX_BAD, "Bad Option: '%s'\n", cav[0]);
+		errmsgno(EX_BAD, _("Bad Option: '%s'\n"), cav[0]);
 		usage(EX_BAD);
 	}
 	if (help)
 		usage(0);
 	if (prvers) {
-		printf("isoinfo %s (%s-%s-%s) Copyright (C) 1993-1999 Eric Youngdale (C) 1999-2010 Jörg Schilling\n",
+		printf(_("isoinfo %s (%s-%s-%s) Copyright (C) 1993-1999 %s (C) 1999-2010 %s\n"),
 					VERSION,
-					HOST_CPU, HOST_VENDOR, HOST_OS);
+					HOST_CPU, HOST_VENDOR, HOST_OS,
+					_("Eric Youngdale"),
+					_("Joerg Schilling"));
 		exit(0);
 	}
 #ifdef	USE_FIND
@@ -1109,7 +1124,7 @@ main(argc, argv)
 			if (fa.primtype == FIND_ERRARG)
 				comexit(fa.error);
 			if (fa.primtype != FIND_ENDARGS)
-				comerrno(EX_BAD, "Incomplete expression.\n");
+				comerrno(EX_BAD, _("Incomplete expression.\n"));
 			plusp = fa.plusp;
 			find_patlen = fa.patlen;
 			walkflags = fa.walkflags;
@@ -1127,12 +1142,12 @@ main(argc, argv)
 				find_print = TRUE;
 		}
 		if (find_ac > find_pac) {
-			errmsgno(EX_BAD, "Unsupported pathspec for -find.\n");
+			errmsgno(EX_BAD, _("Unsupported pathspec for -find.\n"));
 			usage(EX_BAD);
 		}
 #ifdef	__not_yet__
 		if (find_ac <= 0 || find_ac == find_pac) {
-			errmsgno(EX_BAD, "Missing pathspec for -find.\n");
+			errmsgno(EX_BAD, _("Missing pathspec for -find.\n"));
 			usage(EX_BAD);
 		}
 #endif
@@ -1140,7 +1155,7 @@ main(argc, argv)
 		walkinitstate(&walkstate);
 		if (find_patlen > 0) {
 			walkstate.patstate = ___malloc(sizeof (int) * find_patlen,
-						"space for pattern state");
+						_("space for pattern state"));
 		}
 
 		find_timeinit(time(0));
@@ -1156,7 +1171,7 @@ main(argc, argv)
 	cac = argc - 1;
 	cav = argv + 1;
 	if (!do_find && getfiles(&cac, &cav, opts) != 0) {
-		errmsgno(EX_BAD, "Bad Argument: '%s'\n", cav[0]);
+		errmsgno(EX_BAD, _("Bad Argument: '%s'\n"), cav[0]);
 		usage(EX_BAD);
 	}
 
@@ -1206,7 +1221,7 @@ main(argc, argv)
 
 #define	verbose	1
 		if (verbose > 0 && charset != NULL) {
-			error("Setting input-charset to '%s' from locale.\n",
+			error(_("Setting input-charset to '%s' from locale.\n"),
 				charset);
 		}
 	}
@@ -1228,7 +1243,7 @@ setcharset:
 		unls = sic_open(charset);
 	}
 	if (unls == NULL) {	/* Unknown charset specified */
-		fprintf(stderr, "Unknown charset: %s\nKnown charsets are:\n",
+		fprintf(stderr, _("Unknown charset: %s\nKnown charsets are:\n"),
 							charset);
 		sic_list(stdout); /* List all known charset names */
 
@@ -1238,7 +1253,7 @@ setcharset:
 	}
 
 	if (filename != NULL && sdevname != NULL) {
-		errmsgno(EX_BAD, "Only one of -i or dev= allowed\n");
+		errmsgno(EX_BAD, _("Only one of -i or dev= allowed\n"));
 		usage(EX_BAD);
 	}
 #ifdef	USE_SCG
@@ -1246,7 +1261,7 @@ setcharset:
 		cdr_defaults(&sdevname, NULL, NULL, NULL, NULL);
 #endif
 	if (filename == NULL && sdevname == NULL) {
-		fprintf(stderr, "ISO-9660 image not specified\n");
+		fprintf(stderr, _("ISO-9660 image not specified\n"));
 		usage(EX_BAD);
 	}
 
@@ -1262,7 +1277,7 @@ setcharset:
 #else
 	} else {
 #endif
-		fprintf(stderr, "Unable to open %s\n", filename);
+		fprintf(stderr, _("Unable to open %s\n"), filename);
 		exit(1);
 	}
 
@@ -1301,7 +1316,7 @@ setcharset:
 		if ((((char *)&ipd)[8] == 1) &&
 		    (strncmp(&((char *)&ipd)[9], "CDROM", 5) == 0) &&
 		    (((char *)&ipd)[14] == 1)) {
-			printf("CD-ROM is in High Sierra format\n");
+			printf(_("CD-ROM is in High Sierra format\n"));
 			exit(0);
 		}
 		/*
@@ -1314,11 +1329,11 @@ setcharset:
 		if ((ipd.type[0] != ISO_VD_PRIMARY) ||
 		    (strncmp(ipd.id, ISO_STANDARD_ID, sizeof (ipd.id)) != 0) ||
 		    (ipd.version[0] != 1)) {
-			printf("CD-ROM is NOT in ISO 9660 format\n");
+			printf(_("CD-ROM is NOT in ISO 9660 format\n"));
 			exit(1);
 		}
 
-		printf("CD-ROM is in ISO 9660 format\n");
+		printf(_("CD-ROM is in ISO 9660 format\n"));
 		if (!use_joliet)
 			list_vd(&ipd, FALSE);
 		{
@@ -1327,7 +1342,7 @@ setcharset:
 			while ((Uchar)jpd.type[0] != ISO_VD_END) {
 
 				if (debug && (Uchar) jpd.type[0] == ISO_VD_SUPPLEMENTARY)
-					error("Joliet escape sequence 0: '%c' 1: '%c' 2: '%c' 3: '%c'\n",
+					error(_("Joliet escape sequence 0: '%c' 1: '%c' 2: '%c' 3: '%c'\n"),
 						jpd.escape_sequences[0],
 						jpd.escape_sequences[1],
 						jpd.escape_sequences[2],
@@ -1354,13 +1369,13 @@ setcharset:
 								(Uchar)bpd.bootcat_ptr[2] * 65536 +
 								(Uchar)bpd.bootcat_ptr[3] * 16777216;
 						found_eltorito = TRUE;
-						printf("El Torito VD version %d found, boot catalog is in sector %d\n",
+						printf(_("El Torito VD version %d found, boot catalog is in sector %d\n"),
 							bpd.version[0],
 							bootcat_offset);
 					}
 				}
 				if (jpd.version[0] == 2) {
-					printf("CD-ROM uses ISO 9660:1999 relaxed format\n");
+					printf(_("CD-ROM uses ISO 9660:1999 relaxed format\n"));
 					break;
 				}
 
@@ -1385,7 +1400,7 @@ setcharset:
 	if ((ipd.type[0] != ISO_VD_PRIMARY) ||
 	    (strncmp(ipd.id, ISO_STANDARD_ID, sizeof (ipd.id)) != 0) ||
 	    (ipd.version[0] != 1)) {
-		printf("CD-ROM is NOT in ISO 9660 format\n");
+		printf(_("CD-ROM is NOT in ISO 9660 format\n"));
 		exit(1);
 	}
 
@@ -1394,7 +1409,7 @@ setcharset:
 		movebytes(&ipd, &jpd, sizeof (ipd));
 		while ((unsigned char) jpd.type[0] != ISO_VD_END) {
 			if (debug && (unsigned char) jpd.type[0] == ISO_VD_SUPPLEMENTARY)
-				error("Joliet escape sequence 0: '%c' 1: '%c' 2: '%c' 3: '%c'\n",
+				error(_("Joliet escape sequence 0: '%c' 1: '%c' 2: '%c' 3: '%c'\n"),
 					jpd.escape_sequences[0],
 					jpd.escape_sequences[1],
 					jpd.escape_sequences[2],
@@ -1423,7 +1438,7 @@ setcharset:
 		}
 
 		if (use_joliet && ((unsigned char) jpd.type[0] == ISO_VD_END)) {
-			fprintf(stderr, "Unable to find Joliet SVD\n");
+			fprintf(stderr, _("Unable to find Joliet SVD\n"));
 			exit(1);
 		}
 
@@ -1441,26 +1456,26 @@ setcharset:
 
 		if (ucs_level > 3) {
 			fprintf(stderr,
-				"Don't know what ucs_level == %d means\n",
+				_("Don't know what ucs_level == %d means\n"),
 				ucs_level);
 			exit(1);
 		}
 		if (jpd.escape_sequences[3] == ' ')
 			errmsgno(EX_BAD,
-			"Warning: Joliet escape sequence uses illegal space at offset 3\n");
+			_("Warning: Joliet escape sequence uses illegal space at offset 3\n"));
 	}
 
 	if (do_pvd) {
 		if (ucs_level > 0) {
 			if (use_joliet) {
-				printf("\nJoliet with UCS level %d found,", ucs_level);
-				printf(" Joliet volume descriptor:\n");
+				printf(_("\nJoliet with UCS level %d found,"), ucs_level);
+				printf(_(" Joliet volume descriptor:\n"));
 				list_vd(&jpd, TRUE);
 			} else {
-				printf("\nJoliet with UCS level %d found.", ucs_level);
+				printf(_("\nJoliet with UCS level %d found."), ucs_level);
 			}
 		} else {
-			printf("NO Joliet present\n");
+			printf(_("NO Joliet present\n"));
 		}
 
 		if (c != 0) {
@@ -1469,24 +1484,24 @@ setcharset:
 #endif
 			if (c & RR_FLAG_SP) {
 				printf(
-				"\nSUSP signatures version %d found\n",
+				_("\nSUSP signatures version %d found\n"),
 				su_version);
 				if (c & RR_FLAG_ER) {
 					if (rr_version < 1) {
 						printf(
-						"No valid Rock Ridge signature found\n");
+						_("No valid Rock Ridge signature found\n"));
 					} else {
 						printf(
-						"Rock Ridge signatures version %d found\n",
+						_("Rock Ridge signatures version %d found\n"),
 						rr_version);
 						printf(
-						"Rock Ridge id '%s'\n",
+						_("Rock Ridge id '%s'\n"),
 						er_id);
 					}
 				}
 			} else {
 				printf(
-				"\nBad Rock Ridge signatures found (SU record missing)\n");
+				_("\nBad Rock Ridge signatures found (SU record missing)\n"));
 			}
 			/*
 			 * This is currently a no op!
@@ -1494,11 +1509,11 @@ setcharset:
 			 * the '.' entry in the root directory.
 			 */
 			if (c & RR_FLAG_AA) {
-				printf("\nApple signatures version %d found\n",
+				printf(_("\nApple signatures version %d found\n"),
 								aa_version);
 			}
 		} else {
-			printf("\nNo SUSP/Rock Ridge present\n");
+			printf(_("\nNo SUSP/Rock Ridge present\n"));
 		}
 		if (found_eltorito)
 			printf_bootinfo(infile, bootcat_offset);
@@ -1553,67 +1568,67 @@ list_vd(vp, ucs)
 	struct iso_directory_record	*idr = (struct iso_directory_record *)
 						vp->root_directory_record;
 
-	printf("System id: ");
+	printf(_("System id: "));
 	printchars(vp->system_id, 32, ucs);
 	putchar('\n');
-	printf("Volume id: ");
+	printf(_("Volume id: "));
 	printchars(vp->volume_id, 32, ucs);
 	putchar('\n');
 
-	printf("Volume set id: ");
+	printf(_("Volume set id: "));
 	printchars(vp->volume_set_id, 128, ucs);
 	putchar('\n');
-	printf("Publisher id: ");
+	printf(_("Publisher id: "));
 	printchars(vp->publisher_id, 128, ucs);
 	putchar('\n');
-	printf("Data preparer id: ");
+	printf(_("Data preparer id: "));
 	printchars(vp->preparer_id, 128, ucs);
 	putchar('\n');
-	printf("Application id: ");
+	printf(_("Application id: "));
 	printchars(vp->application_id, 128, ucs);
 	putchar('\n');
 
-	printf("Copyright File id: ");
+	printf(_("Copyright File id: "));
 	printchars(vp->copyright_file_id, 37, ucs);
 	putchar('\n');
-	printf("Abstract File id: ");
+	printf(_("Abstract File id: "));
 	printchars(vp->abstract_file_id, 37, ucs);
 	putchar('\n');
-	printf("Bibliographic File id: ");
+	printf(_("Bibliographic File id: "));
 	printchars(vp->bibliographic_file_id, 37, ucs);
 	putchar('\n');
 
-	printf("Volume set size is: %d\n", isonum_723(vp->volume_set_size));
-	printf("Volume set sequence number is: %d\n", isonum_723(vp->volume_sequence_number));
-	printf("Logical block size is: %d\n", isonum_723(vp->logical_block_size));
-	printf("Volume size is: %d\n", isonum_733((unsigned char *)vp->volume_space_size));
+	printf(_("Volume set size is: %d\n"), isonum_723(vp->volume_set_size));
+	printf(_("Volume set sequence number is: %d\n"), isonum_723(vp->volume_sequence_number));
+	printf(_("Logical block size is: %d\n"), isonum_723(vp->logical_block_size));
+	printf(_("Volume size is: %d\n"), isonum_733((unsigned char *)vp->volume_space_size));
 	if (debug) {
 		int	dextent;
 		int	dlen;
 
 		dextent = isonum_733((unsigned char *)idr->extent);
 		dlen = isonum_733((unsigned char *)idr->size);
-		printf("Root directory extent:  %d size: %d\n",
+		printf(_("Root directory extent:  %d size: %d\n"),
 			dextent, dlen);
-		printf("Path table size is:     %d\n",
+		printf(_("Path table size is:     %d\n"),
 			isonum_733((unsigned char *)vp->path_table_size));
-		printf("L Path table start:     %d\n",
+		printf(_("L Path table start:     %d\n"),
 			isonum_731(vp->type_l_path_table));
-		printf("L Path opt table start: %d\n",
+		printf(_("L Path opt table start: %d\n"),
 			isonum_731(vp->opt_type_l_path_table));
-		printf("M Path table start:     %d\n",
+		printf(_("M Path table start:     %d\n"),
 			isonum_732(vp->type_m_path_table));
-		printf("M Path opt table start: %d\n",
+		printf(_("M Path opt table start: %d\n"),
 			isonum_732(vp->opt_type_m_path_table));
-		printf("Creation Date:     %s\n",
+		printf(_("Creation Date:     %s\n"),
 			sdate(vp->creation_date));
-		printf("Modification Date: %s\n",
+		printf(_("Modification Date: %s\n"),
 			sdate(vp->modification_date));
-		printf("Expiration Date:   %s\n",
+		printf(_("Expiration Date:   %s\n"),
 			sdate(vp->expiration_date));
-		printf("Effective Date:    %s\n",
+		printf(_("Effective Date:    %s\n"),
 			sdate(vp->effective_date));
-		printf("File structure version: %d\n",
+		printf(_("File structure version: %d\n"),
 			vp->file_structure_version[0]);
 	}
 }
@@ -1626,17 +1641,17 @@ list_locales()
 	n = sic_list(stdout);
 	if (n <= 0) {
 		errmsgno(EX_BAD, "'%s/lib/siconv/' %s.\n",
-			INS_BASE, n < 0 ? "missing":"incomplete");
+			INS_BASE, n < 0 ? _("missing"):_("incomplete"));
 		if (n == 0) {
 			errmsgno(EX_BAD,
-			"Check '%s/lib/siconv/' for missing translation tables.\n",
+			_("Check '%s/lib/siconv/' for missing translation tables.\n"),
 			INS_BASE);
 		}
 	}
 #ifdef	USE_ICONV
 	if (n > 0) {
 		errmsgno(EX_BAD,
-		"'iconv -l' lists more available names.\n");
+		_("'iconv -l' lists more available names.\n"));
 	}
 #endif
 }
@@ -1672,21 +1687,21 @@ printf_bootinfo(f, bootcat_offset)
 	}
 	s = s % 65536;
 
-	printf("Eltorito validation header:\n");
-	printf("    Hid %d\n", (Uchar)evp->headerid[0]);
-	printf("    Arch %d (%s)\n", (Uchar)evp->arch[0], arch_name((Uchar)evp->arch[0]));
-	printf("    ID '%.23s'\n", evp->id);
-	printf("    Cksum %2.2X %2.2X %s\n", (Uchar)evp->cksum[0], (Uchar)evp->cksum[1],
-					s == 0 ? "OK":"BAD");
-	printf("    Key %X %X\n", (Uchar)evp->key1[0], (Uchar)evp->key2[0]);
+	printf(_("Eltorito validation header:\n"));
+	printf(_("    Hid %d\n"), (Uchar)evp->headerid[0]);
+	printf(_("    Arch %d (%s)\n"), (Uchar)evp->arch[0], arch_name((Uchar)evp->arch[0]));
+	printf(_("    ID '%.23s'\n"), evp->id);
+	printf(_("    Cksum %2.2X %2.2X %s\n"), (Uchar)evp->cksum[0], (Uchar)evp->cksum[1],
+					s == 0 ? _("OK"):_("BAD"));
+	printf(_("    Key %X %X\n"), (Uchar)evp->key1[0], (Uchar)evp->key2[0]);
 
-	printf("    Eltorito defaultboot header:\n");
-	printf("        Bootid %X (%s)\n", (Uchar)ebe->boot_id[0], boot_name((Uchar)ebe->boot_id[0]));
-	printf("        Boot media %X (%s)\n", (Uchar)ebe->boot_media[0], bootmedia_name((Uchar)ebe->boot_media[0]));
-	printf("        Load segment %X\n", la_to_2_byte(ebe->loadseg));
-	printf("        Sys type %X\n", (Uchar)ebe->sys_type[0]);
-	printf("        Nsect %X\n", la_to_2_byte(ebe->nsect));
-	printf("        Bootoff %lX %ld\n", la_to_4_byte(ebe->bootoff), la_to_4_byte(ebe->bootoff));
+	printf(_("    Eltorito defaultboot header:\n"));
+	printf(_("        Bootid %X (%s)\n"), (Uchar)ebe->boot_id[0], boot_name((Uchar)ebe->boot_id[0]));
+	printf(_("        Boot media %X (%s)\n"), (Uchar)ebe->boot_media[0], bootmedia_name((Uchar)ebe->boot_media[0]));
+	printf(_("        Load segment %X\n"), la_to_2_byte(ebe->loadseg));
+	printf(_("        Sys type %X\n"), (Uchar)ebe->sys_type[0]);
+	printf(_("        Nsect %X\n"), la_to_2_byte(ebe->nsect));
+	printf(_("        Bootoff %lX %ld\n"), la_to_4_byte(ebe->bootoff), la_to_4_byte(ebe->bootoff));
 
 }
 
@@ -1851,7 +1866,7 @@ extern	struct WALK walkstate;
 
 	len = rlen + len + 1;
 	if (nlen < len) {
-		n = ___realloc(n, len, "find_stat name");
+		n = ___realloc(n, len, _("find_stat name"));
 		nlen = len;
 	}
 	strcatl(n, rootname, name_buf, (char *)0);
@@ -1860,8 +1875,8 @@ extern	struct WALK walkstate;
 
 	if (!use_rock) {
 		fstat_buf.st_mtime = iso9660_time(date_buf, FALSE);
-		fstat_buf.st_mode |= S_IRUSR|S_IXUSR | \
-				    S_IRGRP|S_IXGRP | \
+		fstat_buf.st_mode |= S_IRUSR|S_IXUSR |
+				    S_IRGRP|S_IXGRP |
 				    S_IROTH|S_IXOTH;
 	}
 	fstat_buf.st_blksize = 0;

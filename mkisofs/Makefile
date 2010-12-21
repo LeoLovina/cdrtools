@@ -1,17 +1,6 @@
-#ident @(#)Makefile	1.41 09/07/13 
+#ident @(#)Makefile	1.42 10/12/19 
 ###########################################################################
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2
-# as published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; see the file COPYING.  If not, write to the Free Software
-# Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#@@C@@
 ###########################################################################
 SRCROOT=	..
 RULESDIR=	RULES
@@ -43,6 +32,7 @@ CPPOPTS +=	-DSCHILY_PRINT
 CPPOPTS +=	-DUSE_NLS
 CPPOPTS +=	-DUSE_ICONV
 CPPOPTS +=	-DINS_BASE=\"${INS_BASE}\"
+CPPOPTS +=	-DTEXT_DOMAIN=\"SCHILY_cdrtools\"
 
 CFILES=		mkisofs.c tree.c write.c hash.c rock.c inode.c udf.c multi.c \
 		joliet.c match.c name.c eltorito.c boot.c isonum.c \
@@ -67,3 +57,6 @@ include		$(SRCROOT)/$(RULESDIR)/rules.cmd
 ###########################################################################
 count:	$(CFILES) $(HFILES)
 	count $r1
+
+xtxt:	$(CFILES) apple_driver.c
+	gxgettext -k_ -k__ -kperr $(CFILES) apple_driver.c

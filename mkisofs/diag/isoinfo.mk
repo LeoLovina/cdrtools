@@ -1,17 +1,6 @@
-#ident @(#)isoinfo.mk	1.15 10/11/24 
+#ident @(#)isoinfo.mk	1.16 10/12/19 
 ###########################################################################
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2
-# as published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; see the file COPYING.  If not, write to the Free Software
-# Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#@@C@@
 ###########################################################################
 SRCROOT=	../..
 RULESDIR=	RULES
@@ -32,13 +21,14 @@ CPPOPTS +=	-DSCHILY_PRINT
 CPPOPTS +=	-DUSE_NLS
 CPPOPTS +=	-DUSE_ICONV
 CPPOPTS +=	-DINS_BASE=\"${INS_BASE}\"
+CPPOPTS +=	-DTEXT_DOMAIN=\"SCHILY_cdrtools\"
 
 CFILES=		isoinfo.c \
 		scsi.c
 
 LIBS=		-lsiconv -lscgcmd -lrscg -lscg $(LIB_VOLMGT) \
 			-lcdrdeflt -ldeflt -lfind -lschily \
-			$(LIB_ACL_TEST) $(SCSILIB) $(LIB_SOCKET) $(LIB_ICONV) $(LIB_INTL)
+			$(LIB_ACL_TEST) $(SCSILIB) $(LIB_SOCKET) $(LIB_ICONV) $(LIB_INTL) $(LIB_INTL)
 
 XMK_FILE=	isoinfo_man.mk
 

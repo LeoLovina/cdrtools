@@ -1,8 +1,8 @@
-/* @(#)rock.c	1.63 10/11/24 joerg */
+/* @(#)rock.c	1.64 10/12/19 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)rock.c	1.63 10/11/24 joerg";
+	"@(#)rock.c	1.64 10/12/19 joerg";
 #endif
 /*
  * File rock.c - generate RRIP  records for iso9660 filesystems.
@@ -10,7 +10,7 @@ static	UConst char sccsid[] =
  * Written by Eric Youngdale (1993).
  *
  * Copyright 1993 Yggdrasil Computing, Incorporated
- * Copyright (c) 1999,2000-2009 J. Schilling
+ * Copyright (c) 1999,2000-2010 J. Schilling
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,13 +130,13 @@ add_CE_entry(field, line)
 {
 	if (MAYBE_ADD_CE_ENTRY(0)) {
 		errmsgno(EX_BAD,
-		"Panic: no space, cannot add RR CE entry (%d bytes mising) for %s line %d.\n",
+		_("Panic: no space, cannot add RR CE entry (%d bytes mising) for %s line %d.\n"),
 		(CE_SIZE + currlen + (ipnt - recstart) - reclimit),
 		field, line);
-		errmsgno(EX_BAD, "currlen: %d ipnt: %d, recstart: %d\n",
+		errmsgno(EX_BAD, _("currlen: %d ipnt: %d, recstart: %d\n"),
 				currlen, ipnt, recstart);
-		errmsgno(EX_BAD, "Send  bug report to the maintainer.\n");
-		comerrno(EX_BAD, "Aborting.\n");
+		errmsgno(EX_BAD, _("Send  bug report to the maintainer.\n"));
+		comerrno(EX_BAD, _("Aborting.\n"));
 	}
 
 	if (recstart)
@@ -382,7 +382,7 @@ generate_xa_rr_attributes(whole_name, name,
 			}
 			if (use < 0) {
 				comerrno(EX_BAD,
-				"Negative RR name length residual: %d\n",
+				_("Negative RR name length residual: %d\n"),
 					use);
 			}
 
@@ -516,7 +516,7 @@ generate_xa_rr_attributes(whole_name, name,
 						(char *)symlink_buff,
 						sizeof (symlink_buff)-1);
 		if (nchar < 0)
-			errmsg("Cannot read link '%s'.\n", whole_name);
+			errmsg(_("Cannot read link '%s'.\n"), whole_name);
 #else
 		nchar = -1;
 #endif	/* HAVE_READLINK */
@@ -543,7 +543,7 @@ generate_xa_rr_attributes(whole_name, name,
 				 * and continue with splited one
 				 */
 				fprintf(stderr,
-				"symbolic link ``%s'' to long for one SL System Use Field, splitting",
+				_("symbolic link ``%s'' to long for one SL System Use Field, splitting"),
 								cpnt);
 			}
 			if (MAYBE_ADD_CE_ENTRY(SL_SIZE + sl_bytes))
@@ -931,7 +931,7 @@ generate_rr_extension_record(id, descriptor, source, size)
 	lipnt += len_src;
 
 	if (lipnt > SECTOR_SIZE) {
-		comerrno(EX_BAD, "Extension record too long\n");
+		comerrno(EX_BAD, _("Extension record too long\n"));
 	}
 	pnt = (char *)e_malloc(SECTOR_SIZE);
 	memset(pnt, 0, SECTOR_SIZE);

@@ -1,4 +1,4 @@
-/* @(#)mkisofs.h	1.141 10/11/23 joerg */
+/* @(#)mkisofs.h	1.142 10/12/19 joerg */
 /*
  * Header file mkisofs.h - assorted structure definitions and typecasts.
  *
@@ -34,6 +34,7 @@
 #include <schily/utypes.h>
 #include <schily/standard.h>
 #include <schily/libport.h>
+#include <schily/nlsdefs.h>
 #include "scsi.h"
 
 #ifdef	DVD_VIDEO

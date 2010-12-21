@@ -1,29 +1,16 @@
-/* @(#)boot.c	1.24 09/11/25 Copyright 1999-2009 J. Schilling */
+/* @(#)boot.c	1.25 10/12/19 Copyright 1999-2010 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)boot.c	1.24 09/11/25 Copyright 1999-2009 J. Schilling";
+	"@(#)boot.c	1.25 10/12/19 Copyright 1999-2010 J. Schilling";
 #endif
 /*
  *	Support for generic boot (sector 0..16)
  *	and to boot Sun sparc and Sun x86 systems.
  *
- *	Copyright (c) 1999-2009 J. Schilling
+ *	Copyright (c) 1999-2010 J. Schilling
  */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- */
+/*@@C@@*/
 
 #include "mkisofs.h"
 #include <schily/fcntl.h>
@@ -142,14 +129,14 @@ extern	int		use_sunx86boot;
 
 	if (use_sunx86boot)
 		comerrno(EX_BAD,
-		"-sparc-boot and -sunx86-boot are mutual exclusive.\n");
+		_("-sparc-boot and -sunx86-boot are mutual exclusive.\n"));
 	use_sparcboot++;
 
 	init_sparc_label();
 
 	do {
 		if (i >= NDKMAP)
-			comerrno(EX_BAD, "Too many boot partitions.\n");
+			comerrno(EX_BAD, _("Too many boot partitions.\n"));
 		boot_files[i++] = files;
 		if ((p = strchr(files, ',')) != NULL)
 			*p++ = '\0';
@@ -167,7 +154,7 @@ extern	int		use_sunx86boot;
 
 		status = stat_filter(p, &statbuf);
 		if (status < 0 || access(p, R_OK) < 0)
-			comerr("Cannot access '%s'.\n", p);
+			comerr(_("Cannot access '%s'.\n"), p);
 
 		i_to_4_byte(cd_label.dkl_map[i].dkl_nblk,
 			roundup(statbuf.st_size, CD_CYLSIZE)/512);
@@ -191,7 +178,7 @@ extern	int		use_sunx86boot;
 
 	if (use_sparcboot)
 		comerrno(EX_BAD,
-		"-sparc-boot and -sunx86-boot are mutual exclusive.\n");
+		_("-sparc-boot and -sunx86-boot are mutual exclusive.\n"));
 	use_sunx86boot++;
 
 
@@ -199,7 +186,7 @@ extern	int		use_sunx86boot;
 
 	do {
 		if (i >= NDKMAP)
-			comerrno(EX_BAD, "Too many boot partitions.\n");
+			comerrno(EX_BAD, _("Too many boot partitions.\n"));
 		boot_files[i++] = files;
 		if ((p = strchr(files, ',')) != NULL)
 			*p++ = '\0';
@@ -218,12 +205,12 @@ extern	int		use_sunx86boot;
 			continue;
 		if (i == 1 || i == 2) {
 			comerrno(EX_BAD,
-			"Partition %d may not have a filename.\n", i);
+			_("Partition %d may not have a filename.\n"), i);
 		}
 
 		status = stat_filter(p, &statbuf);
 		if (status < 0 || access(p, R_OK) < 0)
-			comerr("Cannot access '%s'.\n", p);
+			comerr(_("Cannot access '%s'.\n"), p);
 
 		li_to_4_byte(sx86_label.dkl_vtoc.v_part[i].p_size,
 			roundup(statbuf.st_size, CD_CYLSIZE)/512);
@@ -414,19 +401,19 @@ sunboot_write(outfile)
 				continue;
 		}
 		if ((f = open(boot_files[i], O_RDONLY| O_BINARY)) < 0)
-			comerr("Cannot open '%s'.\n", boot_files[i]);
+			comerr(_("Cannot open '%s'.\n"), boot_files[i]);
 
 		amt = nblk / 4;
 		for (n = 0; n < amt; n++) {
 			memset(buffer, 0, sizeof (buffer));
 			if (read(f, buffer, SECTOR_SIZE) < 0)
-				comerr("Read error on '%s'.\n", boot_files[i]);
+				comerr(_("Read error on '%s'.\n"), boot_files[i]);
 			xfwrite(buffer, SECTOR_SIZE, 1, outfile, 0, FALSE);
 			last_extent_written++;
 		}
 		close(f);
 	}
-	fprintf(stderr, "Total extents including %s boot = %u\n",
+	fprintf(stderr, _("Total extents including %s boot = %u\n"),
 				use_sunx86boot ? "Solaris x86":"sparc",
 				last_extent_written - session_start);
 	return (0);
@@ -441,7 +428,7 @@ sunlabel_size(starting_extent)
 	UInt32_t	starting_extent;
 {
 	if (last_extent != session_start)
-		comerrno(EX_BAD, "Cannot create sparc boot on offset != 0.\n");
+		comerrno(EX_BAD, _("Cannot create sparc boot on offset != 0.\n"));
 	last_extent++;
 	return (0);
 }
@@ -464,10 +451,10 @@ sunlabel_write(outfile)
 	memset(buffer, 0, sizeof (buffer));
 	if (genboot_image) {
 		if ((f = open(genboot_image, O_RDONLY| O_BINARY)) < 0)
-			comerr("Cannot open '%s'.\n", genboot_image);
+			comerr(_("Cannot open '%s'.\n"), genboot_image);
 
 		if (read(f, buffer, SECTOR_SIZE) < 0)
-			comerr("Read error on '%s'.\n", genboot_image);
+			comerr(_("Read error on '%s'.\n"), genboot_image);
 		close(f);
 	}
 
@@ -515,7 +502,7 @@ genboot_size(starting_extent)
 	UInt32_t	starting_extent;
 {
 	if (last_extent > (session_start + 1))
-		comerrno(EX_BAD, "Cannot create generic boot on offset != 0.\n");
+		comerrno(EX_BAD, _("Cannot create generic boot on offset != 0.\n"));
 	last_extent = session_start + 16;
 	return (0);
 }
@@ -533,12 +520,12 @@ genboot_write(outfile)
 	int	f;
 
 	if ((f = open(genboot_image, O_RDONLY| O_BINARY)) < 0)
-		comerr("Cannot open '%s'.\n", genboot_image);
+		comerr(_("Cannot open '%s'.\n"), genboot_image);
 
 	for (i = 0; i < 16; i++) {
 		memset(buffer, 0, sizeof (buffer));
 		if (read(f, buffer, SECTOR_SIZE) < 0)
-			comerr("Read error on '%s'.\n", genboot_image);
+			comerr(_("Read error on '%s'.\n"), genboot_image);
 
 		if (i != 0 || last_extent_written == session_start) {
 			xfwrite(buffer, SECTOR_SIZE, 1, outfile, 0, FALSE);

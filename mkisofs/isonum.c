@@ -1,26 +1,13 @@
-/* @(#)isonum.c	1.8 09/07/09 Copyright 2006-2009 J. Schilling */
+/* @(#)isonum.c	1.9 10/12/19 Copyright 2006-2010 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)isonum.c	1.8 09/07/09 Copyright 2006-2009 J. Schilling";
+	"@(#)isonum.c	1.9 10/12/19 Copyright 2006-2010 J. Schilling";
 #endif
 /*
- *	Copyright (c) 2006-2009 J. Schilling
+ *	Copyright (c) 2006-2010 J. Schilling
  */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- */
+/*@@C@@*/
 
 #include "mkisofs.h"
 
@@ -172,7 +159,7 @@ get_723(vp)
 	Uchar	*p = vp;
 #if 0
 	if (p[0] != p[3] || p[1] != p[2]) {
-		comerrno(EX_BAD, "invalid format 7.2.3 number\n");
+		comerrno(EX_BAD, _("Invalid format 7.2.3 number\n"));
 	}
 #endif
 	return (get_721(p));

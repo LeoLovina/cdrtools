@@ -129,7 +129,7 @@ Libsiconv:
 
 Libscg:
 
--	libscg/scg/aspi-dos.h now uses viod instead of VOID ti allow a compilation
+-	libscg/scg/aspi-dos.h now uses void instead of VOID to allow a compilation
 	with gcc.
 
 -	libscg/scsi-wnt.c (MS-WIN) now supports 64 SCSI busses

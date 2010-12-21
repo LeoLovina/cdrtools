@@ -1,29 +1,16 @@
-/* @(#)stream.c	1.15 09/11/25 Copyright 2002-2009 J. Schilling */
+/* @(#)stream.c	1.16 10/12/19 Copyright 2002-2010 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)stream.c	1.15 09/11/25 Copyright 2002-2009 J. Schilling";
+	"@(#)stream.c	1.16 10/12/19 Copyright 2002-2010 J. Schilling";
 #endif
 /*
  *	ISO-9660 stream (pipe) file module for mkisofs
  *
- *	Copyright (c) 2002-2009 J. Schilling
+ *	Copyright (c) 2002-2010 J. Schilling
  *	Implemented after an idea from M.H. Voase
  */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- */
+/*@@C@@*/
 
 #include "mkisofs.h"
 #include "iso9660.h"
@@ -77,7 +64,7 @@ extern	int	dopad;
 
 	if (n >= avail_extent) {
 		comerrno(EX_BAD,
-			"-stream-media-size %d but must be at least %d\n",
+			_("-stream-media-size %d but must be at least %d\n"),
 			avail_extent, n+2);
 	}
 	avail_extent -= n;
