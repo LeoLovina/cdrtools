@@ -1,8 +1,8 @@
-/* @(#)cdtext.c	1.19 11/03/07 Copyright 1999-2011 J. Schilling */
+/* @(#)cdtext.c	1.20 11/04/03 Copyright 1999-2011 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)cdtext.c	1.19 11/03/07 Copyright 1999-2011 J. Schilling";
+	"@(#)cdtext.c	1.20 11/04/03 Copyright 1999-2011 J. Schilling";
 #endif
 /*
  *	Generic CD-Text support functions
@@ -326,6 +326,7 @@ packtext(tracks, trackp)
 	struct textsizes tsize;
 	txtarg_t targ;
 	char	sbuf[256*18];	/* Sufficient for a single language block */
+				/* Max 8 languages in total... */
 
 	fillbytes(sbuf, sizeof (sbuf), 0);
 	fillbytes(&tsize, sizeof (tsize), 0);
@@ -347,7 +348,7 @@ packtext(tracks, trackp)
 	targ.tp = tp;
 	targ.p = NULL;
 	targ.tsize = &tsize;
-	targ.endp = (struct textpack *)&sbuf[sizeof (tsize)];
+	targ.endp = (struct textpack *)&sbuf[256 * sizeof (struct textpack)];
 	targ.seqno = 0;
 
 	for (type = 0; type <= 0x0E; type++) {

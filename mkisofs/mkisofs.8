@@ -1,7 +1,7 @@
 '\" t
 .\" To print, first run through tbl
 .\" -*- nroff -*-
-.\" @(#)mkisofs.8	1.140 11/02/11 joerg
+.\" @(#)mkisofs.8	1.143 11/03/10 joerg
 .\"
 .if t .ds a \v'-0.55m'\h'0.00n'\z.\h'0.40n'\z.\v'0.55m'\h'-0.40n'a
 .if t .ds o \v'-0.55m'\h'0.00n'\z.\h'0.45n'\z.\v'0.55m'\h'-0.45n'o
@@ -15,7 +15,7 @@
 .if n .ds o oe
 .if n .ds u ue
 .if n .ds s sz
-.TH MKISOFS 8 "2011/02/11" "Version 3.0"
+.TH MKISOFS 8 "%e%" "Version 3.0"
 .SH NAME
 mkisofs \- create an hybrid ISO-9660/JOLIET/HFS/UDF filesystem-image with optional Rock Ridge attributes.
 .SH SYNOPSIS
@@ -63,7 +63,7 @@ specified
 by the 
 .B "Rock Ridge Interchange Protocol.
 This is used to further describe the
-files in the ISO-9660 filesystem to a unix host, and provides information such
+files in the ISO-9660 filesystem to a UNIX host, and provides information such
 as longer filenames, uid/gid, posix permissions, symbolic links, hard links,
 block and character devices.
 .PP
@@ -109,7 +109,7 @@ attributes are in use.  This filename is used on systems that are not able to ma
 the Rock Ridge extensions (such as MS-DOS), and each filename in each directory
 must be different from the other filenames in the same directory.
 .B mkisofs
-generally tries to form correct names by forcing the unix filename to upper
+generally tries to form correct names by forcing the UNIX filename to upper
 case and truncating as required, but often times this yields unsatisfactory
 results when there are cases where the
 truncated names are not all unique.
@@ -150,7 +150,7 @@ is available from
 or
 .B ftp://ftp.berlios.de/pub/cdrecord/alpha
 .PP
-Also you should know that most cd writers are very particular about timing.
+Also you should know that most CD writers are very particular about timing.
 Once you start to burn a disc, you cannot let their buffer empty before you
 are done, or you will end up with a corrupt disc.  Thus it is critical
 that you be able to maintain an uninterrupted data stream to the writer
@@ -1022,14 +1022,17 @@ Rename the directory
 to
 .B .rr_moved
 in the Rock Ridge tree.
-It seems to be impossible to completely hide the
+This option has been introduced when 
+.B mkisofs 
+was not able to hide the directory in the Rock Ridge tree.
+This version of 
+.B mkisofs
+always automatically hides the
 .B RR_MOVED
-directory from the Rock Ridge tree.
-This option only makes the visible tree better to understand for
-people who don't know what this directory is for.
+directory in the Rock Ridge tree.
 If you need to have no
 .B RR_MOVED
-directory at all, you should use the
+directory at all (even in the ISO-9660 tree), you should use the
 .B \-D
 option. Note that in case that the
 .B \-D
@@ -1280,7 +1283,7 @@ If the
 .B \-no\-bak
 option is specified, files that contain the characters '~' or '#'
 or end in '.bak' will not be included (these are typically backup files
-for editors under unix).
+for editors under UNIX).
 .TP
 .B \-no\-limit\-pathtables
 A ISO-9660 filesystem contains path tables that contain a list of directories.
@@ -1765,7 +1768,7 @@ it is not possible to create UDF only images.
 Note that 
 .B UDF
 wastes the space from sector ~20 to sector 256 at the beginning of the disk
-in addition to the spcae needed for real 
+in addition to the space needed for real 
 .B UDF 
 data structures.
 .TP
@@ -2832,7 +2835,7 @@ file name defaults to
 The character set used can be specified using the
 .I \-input\-hfs\-charset
 option. Other built in HFS character sets are: cp10006 (MacGreek),
-cp10007 (MacCyrillic), cp10029 (MacLatin2), cp10079 (MacIcelandandic) and
+cp10007 (MacCyrillic), cp10029 (MacLatin2), cp10079 (MacIcelandic) and
 cp10081 (MacTurkish).
 .PP
 Note: the character codes used by HFS file names taken from the various
@@ -3441,7 +3444,7 @@ If you have support questions, send them to:
 .B
 cdrecord-support@berlios.de
 .PP
-If you definitly found a bug, send a mail to:
+If you definitely found a bug, send a mail to:
 .PP
 .B
 cdrecord-developers@berlios.de
