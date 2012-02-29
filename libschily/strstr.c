@@ -1,4 +1,4 @@
-/* @(#)strstr.c	1.1 11/09/13 Copyright 1985-2011 J. Schilling */
+/* @(#)strstr.c	1.2 11/10/21 Copyright 1985-2011 J. Schilling */
 /*
  *	find string s2 in string s1
  *	return NULL if s2 is not found
@@ -14,7 +14,7 @@
 EXPORT char *
 strstr(s1, s2)
 	register const char	*s1;
-		 const char	*s2;
+		const char	*s2;
 {
 	register const char	*a;
 	register const char	*b;
@@ -22,8 +22,8 @@ strstr(s1, s2)
 	if (*s2 == '\0')
 		return ((char *)s1);
 
-	for(; *s1 != '\0'; s1++) {
-		for(a = s2, b = s1; *a == *b++;) {
+	for (; *s1 != '\0'; s1++) {
+		for (a = s2, b = s1; *a == *b++; ) {
 			if (*a++ == '\0')
 				return ((char *)s1);
 		}

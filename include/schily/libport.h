@@ -1,4 +1,4 @@
-/* @(#)libport.h	1.30 11/08/03 Copyright 1995-2011 J. Schilling */
+/* @(#)libport.h	1.33 11/11/24 Copyright 1995-2011 J. Schilling */
 /*
  *	Copyright (c) 1995-2011 J. Schilling
  */
@@ -64,6 +64,15 @@ extern	int		getpagesize	__PR((void));
 extern	int		usleep		__PR((int usec));
 #endif
 
+#ifndef	HAVE_STRCASECMP
+extern	int		strcasecmp	__PR((const char *, const char *));
+#endif
+#ifdef	FOUND_SIZE_T
+#ifndef	HAVE_STRCASECMP
+extern 	int		strncasecmp	__PR((const char *, const char *, size_t));
+#endif
+#endif
+
 #ifndef	HAVE_STRCAT
 extern	char		*strcat		__PR((char *s1, const char *s2));
 #endif
@@ -112,6 +121,10 @@ extern	char		*strncpy	__PR((char *s1, const char *s2,
 #endif	/* FOUND_SIZE_T */
 #ifndef	HAVE_STRRCHR
 extern	char		*strrchr	__PR((const char *s1, int c));
+#endif
+
+#ifndef	HAVE_STRSTR
+extern	char		*strstr		__PR((const char *s1, const char *s2));
 #endif
 
 #ifdef	_SCHILY_WCHAR_H
@@ -165,6 +178,10 @@ extern	wchar_t		*wcsncpy	__PR((wchar_t *s1, const wchar_t *s2,
 #endif	/* FOUND_SIZE_T */
 #ifndef	HAVE_WCSRCHR
 extern	wchar_t		*wcsrchr	__PR((const wchar_t *s1, wchar_t c));
+#endif
+
+#ifndef	HAVE_WCSSTR
+extern	wchar_t		*wcsstr		__PR((const wchar_t *s1, const wchar_t *s2));
 #endif
 #endif	/* _SCHILY_WCHAR_H */
 
@@ -255,6 +272,12 @@ extern	void		setgrent __PR((void));
 extern	void		endgrent __PR((void));
 #endif
 
+#ifndef	HAVE_FCHDIR
+extern	int		fchdir __PR((int fd));
+#endif
+#ifndef	HAVE_OPENAT
+extern	int		openat __PR((int fd, const char *name, int oflag, ...));
+#endif
 
 #ifdef	__cplusplus
 }

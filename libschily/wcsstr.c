@@ -1,4 +1,4 @@
-/* @(#)wcsstr.c	1.1 11/09/13 Copyright 1985-2011 J. Schilling */
+/* @(#)wcsstr.c	1.2 11/10/21 Copyright 1985-2011 J. Schilling */
 /*
  *	find string s2 in string s1
  *	return NULL if s2 is not found
@@ -15,7 +15,7 @@
 EXPORT wchar_t *
 wcsstr(s1, s2)
 	register const wchar_t	*s1;
-		 const wchar_t	*s2;
+		const wchar_t	*s2;
 {
 	register const wchar_t	*a;
 	register const wchar_t	*b;
@@ -23,8 +23,8 @@ wcsstr(s1, s2)
 	if (*s2 == '\0')
 		return ((wchar_t *)s1);
 
-	for(; *s1 != '\0'; s1++) {
-		for(a = s2, b = s1; *a == *b++;) {
+	for (; *s1 != '\0'; s1++) {
+		for (a = s2, b = s1; *a == *b++; ) {
 			if (*a++ == '\0')
 				return ((wchar_t *)s1);
 		}
