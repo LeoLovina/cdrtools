@@ -1,8 +1,8 @@
-/* @(#)write.c	1.135 11/06/05 joerg */
+/* @(#)write.c	1.136 12/07/28 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)write.c	1.135 11/06/05 joerg";
+	"@(#)write.c	1.136 12/07/28 joerg";
 #endif
 /*
  * Program write.c - dump memory  structures to  file for iso9660 filesystem.
@@ -2082,6 +2082,7 @@ extern	ldate		modification_date;
 		modification_date.l_usec * 1000,
 		modification_date.l_gmtoff);
 
+	memcpy(vol_desc.creation_date, iso_time, 17);
 	memcpy(vol_desc.expiration_date, "0000000000000000", 17);
 	memcpy(vol_desc.effective_date, iso_time, 17);
 

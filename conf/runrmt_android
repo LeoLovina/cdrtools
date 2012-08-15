@@ -1,5 +1,5 @@
 #!/bin/sh
-# @(#)runrmt_android	1.3 11/07/16 Copyright 2011 J. Schilling
+# @(#)runrmt_android	1.4 12/03/11 Copyright 2011 J. Schilling
 ###########################################################################
 # Written 2011 by J. Schilling
 ###########################################################################
@@ -51,7 +51,10 @@ fi
 # Edit this line if your Android Emulator is on a different location:
 rmt=$HOME/android-sdk-linux_x86/platform-tools/adb
 
-if test ."$CONFIG_RMTDEBUG" != . ; then
+#
+# Only do debugging when we are called from the schily makefilesystem
+#
+if test ."$CONFIG_RMTDEBUG" != . -a ."$CONFIG_NOFAIL" != . ; then
 	echo "REMOTE \c" 1>&6	# configure checking messages are on fd 6
 fi
 
@@ -78,8 +81,12 @@ else
 	$rmt shell "rm /data/local/tmp/conftestval"			2> /dev/null > /dev/null
 fi
 excode=`cat ./o.exit`
-cat o.out
-cat o.err 1>&2
+if [ -f o.out ]; then
+	cat o.out
+fi
+if [ -f o.err ]; then
+	cat o.err 1>&2
+fi
 rm -f ./o.exit ./o.out ./o.err
 #echo excode: $excode
 exit $excode

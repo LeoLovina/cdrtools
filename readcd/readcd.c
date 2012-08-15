@@ -1,8 +1,8 @@
-/* @(#)readcd.c	1.115 12/02/29 Copyright 1987, 1995-2012 J. Schilling */
+/* @(#)readcd.c	1.116 12/03/16 Copyright 1987, 1995-2012 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)readcd.c	1.115 12/02/29 Copyright 1987, 1995-2012 J. Schilling";
+	"@(#)readcd.c	1.116 12/03/16 Copyright 1987, 1995-2012 J. Schilling";
 #endif
 /*
  *	Skeleton for the use of the scg genearal SCSI - driver
@@ -2537,7 +2537,7 @@ mmc_isplextor(scgp)
 	SCSI	*scgp;
 {
 	if (scgp->inq != NULL &&
-			strncmp(scgp->inq->vendor_info, "PLEXTOR", 7) == 0) {
+			strncmp(scgp->inq->inq_vendor_info, "PLEXTOR", 7) == 0) {
 		return (TRUE);
 	}
 	return (FALSE);
