@@ -1,13 +1,13 @@
-/* @(#)dvd_file.c	1.12 10/12/19 joerg */
+/* @(#)dvd_file.c	1.13 12/11/29 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)dvd_file.c	1.12 10/12/19 joerg";
+	"@(#)dvd_file.c	1.13 12/11/29 joerg";
 #endif
 /*
  * DVD_VIDEO code
  *  Copyright (c) 2002 Olaf Beck - olaf_sc@yahoo.com
- *  Copyright (c) 2002-2010 Jörg Schilling <schilling@fokus.gmd.de>
+ *  Copyright (c) 2002-2012 Jörg Schilling <schilling@fokus.gmd.de>
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -81,7 +81,7 @@ uniq(sector, title, title_sets_array, sector_sets_array, titles)
 	int	j;
 
 
-	for (i = 0, j = 0; j < titles; ) {
+	for (i = 0, j = 0; j < (titles-1); ) {
 		if (sector[j] != sector[j+1]) {
 			title_sets_array[i]  = title[j];
 			sector_sets_array[i] = sector[j];
