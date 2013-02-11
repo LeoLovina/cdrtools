@@ -1,33 +1,31 @@
-/* @(#)udf.c	1.35 10/12/19 Copyright 2001-2010 J. Schilling */
+/* @(#)udf.c	1.36 13/02/09 Copyright 2001-2013 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)udf.c	1.35 10/12/19 Copyright 2001-2010 J. Schilling";
+	"@(#)udf.c	1.36 13/02/09 Copyright 2001-2013 J. Schilling";
 #endif
 /*
  * udf.c - UDF support for mkisofs
  *
  * Written by Ben Rudiak-Gould (2001).
  *
- * Copyright 2001-2010 J. Schilling.
+ * Copyright 2001-2013 J. Schilling.
  */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; see the file COPYING.  If not, write to the Free Software
- * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- */
+/*@@C@@*/
 
 /*
  * Some remaining issues:
+ *
+ * - The following functions create directory entries with 2 or 
+ *   more AllocationDescriptors:
+ *
+ *	set_file_entry()
+ *	set_macvolume_filed_entry()
+ *	set_attr_file_entry()
+ *	set_filed_entry()
+ *
+ *   To support files > 236 GB, we need to be able to deal with a list
+ *   of direcoty entries that span more than one sector.
  *
  * - Do not forget to edit joliet.c and remove the VIDEO_TS lines after
  *   we did implement a decent own file name handling for UDF.
@@ -294,6 +292,8 @@ assign_udf_file_entry_addresses(dpnt)
 	if (!(dpnt->dir_flags & INHIBIT_UDF_ENTRY)) {
 		struct directory_entry *de;
 		for (de = dpnt->jcontents; de; de = de->jnext) {
+			if (de->de_flags & INHIBIT_UDF_ENTRY)
+				continue;
 			if (!(de->de_flags & RELOCATED_DIRECTORY) &&
 			    !(de->isorec.flags[0] & ISO_DIRECTORY)) {
 				de->udf_file_entry_sector = last_extent++;
@@ -1786,6 +1786,8 @@ write_udf_file_entries(dpnt, outfile)
 	if (!(dpnt->dir_flags & INHIBIT_UDF_ENTRY)) {
 		struct directory_entry *de;
 		for (de = dpnt->jcontents; de; de = de->jnext) {
+			if (de->de_flags & INHIBIT_UDF_ENTRY)
+				continue;
 			if (!(de->de_flags & RELOCATED_DIRECTORY) &&
 			    !(de->isorec.flags[0] & ISO_DIRECTORY)) {
 #ifdef INSERTMACRESFORK
@@ -1799,7 +1801,7 @@ write_udf_file_entries(dpnt, outfile)
 				set_file_entry(
 					buf,
 					(last_extent_written++) - lba_udf_partition_start,
-					get_733(de->isorec.extent) - lba_udf_partition_start,
+					de->starting_block - lba_udf_partition_start,
 					de->size,
 					de->isorec.date,
 					0,	/* is_directory */
@@ -1822,7 +1824,6 @@ write_udf_file_entries(dpnt, outfile)
 
 #ifdef INSERTMACRESFORK
 				if (de->assoc) {
-
 					if (ISO_ROUND_UP(de->assoc->size) <
 					    ISO_ROUND_UP(de->assoc->size + sizeof (udf_ext_attribute_common))) {
 						attr_size = sizeof (udf_ext_attribute_common);
@@ -1832,7 +1833,7 @@ write_udf_file_entries(dpnt, outfile)
 					set_attr_file_entry(
 						buf,
 						(last_extent_written++) - lba_udf_partition_start,
-						get_733(de->assoc->isorec.extent) - lba_udf_partition_start,
+						de->assoc->starting_block - lba_udf_partition_start,
 						de->assoc->size + SECTOR_SIZE + attr_size,
 						de->isorec.date,
 						0,
