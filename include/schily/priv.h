@@ -1,8 +1,8 @@
-/* @(#)priv.h	1.2 09/08/24 Copyright 2009 J. Schilling */
+/* @(#)priv.h	1.3 13/04/17 Copyright 2009-2013 J. Schilling */
 /*
  *	Abstraction code for fine grained process privileges
  *
- *	Copyright (c) 2009 J. Schilling
+ *	Copyright (c) 2009-2013 J. Schilling
  */
 /*
  * The contents of this file are subject to the terms of the
@@ -51,6 +51,24 @@
 #ifndef	_INCL_SYS_PRIV_H
 #define	_INCL_SYS_PRIV_H
 #include <sys/priv.h>
+#endif
+#endif
+
+/*
+ * The POSIX.1e draft has been withdrawn in 1997.
+ * Linux started to implement this outdated concept in 1997.
+ * On Linux, we have sys/capability.h, cap_get_proc(), cap_set_proc(),
+ * cap_set_flag() cap_clear_flag()
+ */
+#if	defined(HAVE_SYS_CAPABILITY_H) && \
+	defined(HAVE_CAP_GET_PROC) && defined(HAVE_CAP_SET_PROC) && \
+	defined(HAVE_CAP_SET_FLAG) && defined(HAVE_CAP_CLEAR_FLAG)
+
+#define	HAVE_LINUX_CAPS
+
+#ifndef	_INCL_SYS_CAPABILITY_H
+#define	_INCL_SYS_CAPABILITY_H
+#include <sys/capability.h>
 #endif
 #endif
 

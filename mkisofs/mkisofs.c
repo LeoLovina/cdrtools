@@ -1,8 +1,8 @@
-/* @(#)mkisofs.c	1.267 13/02/01 joerg */
+/* @(#)mkisofs.c	1.268 13/03/28 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)mkisofs.c	1.267 13/02/01 joerg";
+	"@(#)mkisofs.c	1.268 13/03/28 joerg";
 #endif
 /*
  * Program mkisofs.c - generate iso9660 filesystem  based upon directory
@@ -147,7 +147,7 @@ uid_t	uid_to_use = 0;		/* when rationalizing uid */
 gid_t	gid_to_use = 0;		/* when rationalizing gid */
 int	filemode_to_use = 0;	/* if non-zero, when rationalizing file mode */
 int	dirmode_to_use = 0;	/* if non-zero, when rationalizing dir mode */
-int	new_dir_mode = 0555;
+int	new_dir_mode = 0555;	/* neither -new-dir-mode nor -dir-mode used */
 int	generate_tables = 0;
 int	dopad = 1;	/* Now default to do padding */
 int	print_size = 0;
@@ -184,7 +184,7 @@ int	joliet_long;		/* CLI Parameter for -joliet-long option    */
 char	*jcharset;		/* CLI Parameter for -jcharset option	    */
 int	max_filenames;		/* CLI Parameter for -max-iso9660-filenames option */
 char	*log_file;		/* CLI Parameter for -log-file option	    */
-char	*dir_mode_str;		/* CLI Parameter for -new-dir-mode option   */
+char	*new_dirmode_str;	/* CLI Parameter for -new-dir-mode option   */
 char	*pathnames;		/* CLI Parameter for -help option	    */
 int	rationalize_rr;		/* CLI Parameter for -path-list option	    */
 char	*sectype;		/* CLI Parameter for -s option		    */
@@ -1133,7 +1133,7 @@ LOCAL const struct mki_option mki_options[] =
 	__("\1SCSIdev\1Set path to previous session to merge")},
 	{{"N,omit-version-number", &omit_version_number },
 	__("Omit version number from ISO9660 filename (violates ISO9660)")},
-	{{"new-dir-mode*", &dir_mode_str },
+	{{"new-dir-mode*", &new_dirmode_str },
 	__("\1mode\1Mode used when creating new directories.")},
 	{{"force-rr", &force_rr },
 	__("Inhibit automatic Rock Ridge detection for previous session")},
@@ -2111,7 +2111,11 @@ args_ok:
 		use_RockRidge++;
 		rationalize_dirmode++;
 
-		dirmode_to_use = strtol(dirmode_str, &end, 8);
+		/*
+		 * If -new-dir-mode was specified, new_dir_mode is set
+		 * up later with a value that matches the -new-dir-mode arg.
+		 */
+		new_dir_mode = dirmode_to_use = strtol(dirmode_str, &end, 8);
 		if (!end || *end != 0 ||
 		    dirmode_to_use < 0 || dirmode_to_use > 07777) {
 			comerrno(EX_BAD, _("Bad mode for -dir-mode\n"));
@@ -2213,12 +2217,12 @@ args_ok:
 		warn_violate++;
 	if (omit_version_number && iso9660_level < 4)
 		warn_violate++;
-	if (dir_mode_str) {
+	if (new_dirmode_str) {
 		char	*end = 0;
 
 		rationalize++;
 
-		new_dir_mode = strtol(dir_mode_str, &end, 8);
+		new_dir_mode = strtol(new_dirmode_str, &end, 8);
 		if (!end || *end != 0 ||
 		    new_dir_mode < 0 || new_dir_mode > 07777) {
 			comerrno(EX_BAD, _("Bad mode for -new-dir-mode\n"));
