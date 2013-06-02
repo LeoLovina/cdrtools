@@ -1,8 +1,8 @@
-/* @(#)mkisofs.c	1.268 13/03/28 joerg */
+/* @(#)mkisofs.c	1.269 13/04/24 joerg */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)mkisofs.c	1.268 13/03/28 joerg";
+	"@(#)mkisofs.c	1.269 13/04/24 joerg";
 #endif
 /*
  * Program mkisofs.c - generate iso9660 filesystem  based upon directory
@@ -2428,6 +2428,7 @@ args_ok:
 				afe_size || icon_pos || hfs_ct ||
 				hfs_icharset || hfs_ocharset) {
 			apple_hyb = 1;
+#ifdef UDF
 			if ((DO_XHFS & hfs_select) && use_udf) {
 				donotwrite_macpart = 1;
 				if (!no_apple_hyb) {
@@ -2435,6 +2436,7 @@ args_ok:
 					_("Warning: no HFS hybrid will be created with -udf and --osx-hfs\n"));
 				}
 			}
+#endif
 		}
 	}
 #ifdef UDF
@@ -2455,9 +2457,11 @@ args_ok:
 		maxnonlarge = (off_t)0x7FFFFFFF;
 		error(_("Warning: cannot support large files with -hfs\n"));
 	}
+#ifdef UDF
 	if (apple_hyb && use_udf && !donotwrite_macpart) {
 		comerrno(EX_BAD, _("Can't have -hfs with -udf\n"));
 	}
+#endif
 	if (apple_ext && hfs_boot_file) {
 		comerrno(EX_BAD, _("Can't have -hfs-boot-file with -apple\n"));
 	}
@@ -2536,12 +2540,16 @@ args_ok:
 	 * XXX This is a hack until we have a decent separate name handling
 	 * XXX for UDF filenames.
 	 */
+#ifdef DVD_VIDEO
 	if (dvd_video && use_Joliet) {
 		use_Joliet = 0;
 		error(_("Warning: Disabling Joliet support for DVD-Video.\n"));
 	}
+#endif
+#ifdef	UDF
 	if (use_udf && !use_Joliet)
 		jlen = 255;
+#endif
 
 	if (use_RockRidge && (iso9660_namelen > MAX_ISONAME_V2_RR))
 		iso9660_namelen = MAX_ISONAME_V2_RR;
@@ -2791,7 +2799,11 @@ setcharset:
 		save_pname = 1;
 	}
 	if (stream_media_size) {
+#ifdef	UDF
 		if (use_XA || use_RockRidge || use_udf || use_Joliet)
+#else
+		if (use_XA || use_RockRidge || use_Joliet)
+#endif
 			comerrno(EX_BAD,
 			_("Cannot use XA, Rock Ridge, UDF or Joliet with -stream-media-size\n"));
 		if (merge_image)

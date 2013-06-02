@@ -1,8 +1,8 @@
-/* @(#)interface.c	1.76 13/04/21 Copyright 1998-2002 Heiko Eissfeldt, Copyright 2006-2013 J. Schilling */
+/* @(#)interface.c	1.77 13/04/29 Copyright 1998-2002 Heiko Eissfeldt, Copyright 2006-2013 J. Schilling */
 #include "config.h"
 #ifndef lint
 static	UConst char sccsid[] =
-"@(#)interface.c	1.76 13/04/21 Copyright 1998-2002 Heiko Eissfeldt, Copyright 2006-2013 J. Schilling";
+"@(#)interface.c	1.77 13/04/29 Copyright 1998-2002 Heiko Eissfeldt, Copyright 2006-2013 J. Schilling";
 
 #endif
 /*
@@ -54,11 +54,13 @@ static	UConst char sccsid[] =
 #include <schily/signal.h>
 #include <schily/fcntl.h>
 #include <schily/assert.h>
-#include <schily/schily.h>
 #include <schily/nlsdefs.h>
 #include <schily/device.h>
 #include <schily/ioctl.h>
 #include <schily/stat.h>
+#include <schily/time.h>
+#include <schily/poll.h>
+#include <schily/schily.h>
 
 
 #include "mycdrom.h"
@@ -1195,11 +1197,6 @@ SetupInterface()
 		_scgp->verbose = global.scsi_verbose;
 	}
 }
-
-#include <schily/time.h>
-#ifdef	HAVE_POLL
-#include <poll.h>
-#endif
 
 EXPORT int
 poll_in()

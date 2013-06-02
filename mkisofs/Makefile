@@ -1,4 +1,4 @@
-#ident @(#)Makefile	1.44 13/04/21 
+#ident @(#)Makefile	1.45 13/04/24 
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2
@@ -24,10 +24,6 @@ SYMLINKS=	mkhybrid
 CPPOPTS +=	-DUSE_FIND
 #CPPOPTS +=	-DADD_FILES
 CPPOPTS +=	-DUSE_LARGEFILES
-#
-# Comment out if you do not like to ignore deep directories
-# when Rock Ridge is not in use
-CPPOPTS +=	-DABORT_DEEP_ISO_ONLY
 CPPOPTS +=	-DAPPLE_HFS_HYB
 CPPOPTS +=	-DAPPLE_HYB
 CPPOPTS +=	-DUDF
