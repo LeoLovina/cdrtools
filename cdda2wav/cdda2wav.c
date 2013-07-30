@@ -1,8 +1,8 @@
-/* @(#)cdda2wav.c	1.145 13/05/30 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling */
+/* @(#)cdda2wav.c	1.146 13/07/30 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling */
 #include "config.h"
 #ifndef lint
 static	UConst char sccsid[] =
-"@(#)cdda2wav.c	1.145 13/05/30 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling";
+"@(#)cdda2wav.c	1.146 13/07/30 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling";
 
 #endif
 #undef	DEBUG_BUFFER_ADDRESSES
@@ -20,6 +20,8 @@ static	UConst char sccsid[] =
  * with the License.
  *
  * See the file CDDL.Schily.txt in this distribution for details.
+ * A copy of the CDDL is also available via the Internet at
+ * http://www.opensource.org/licenses/cddl1.txt
  *
  * When distributing Covered Code, include this CDDL HEADER in each
  * file and include the License file CDDL.Schily.txt from this distribution.
@@ -1500,7 +1502,7 @@ switch_to_realtime_priority()
 	}
 }
 #else
-#if defined(__CYGWIN32__) || defined(__MINGW32__) || defined(_MSC_VER)
+#if defined(__CYGWIN32__) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(_MSC_VER)
 
 /*
  * NOTE: Base.h from Cygwin-B20 has a second typedef for BOOL.

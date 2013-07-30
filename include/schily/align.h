@@ -1,4 +1,4 @@
-/* @(#)align.h	1.10 13/07/09 Copyright 1995-2013 J. Schilling */
+/* @(#)align.h	1.11 13/07/23 Copyright 1995-2013 J. Schilling */
 /*
  *	Platform dependent definitions for aligning data.
  *
@@ -116,16 +116,24 @@
 #define	__JS_ARCH_CONF_INCL
 #endif
 
+#ifdef	__LINUX_ARMV6L_GCC32
+#include <schily/armv6l-linux-gcc/align.h>
+#define	__JS_ARCH_CONF_INCL
+#endif
+#ifdef	__LINUX_ARMV5L_GCC32
+#include <schily/armv6l-linux-gcc/align.h>
+#define	__JS_ARCH_CONF_INCL
+#endif
 #ifdef	__LINUX_ARMV5TEJL_GCC32
-#include <schily/armv5tejl-linux-gcc/xconfig.h>
+#include <schily/armv5tejl-linux-gcc/align.h>
 #define	__JS_ARCH_CONF_INCL
 #endif
 #ifdef	__LINUX_I386_GCC32
-#include <schily/i686-linux-gcc/xconfig.h>
+#include <schily/i686-linux-gcc/align.h>
 #define	__JS_ARCH_CONF_INCL
 #endif
 #ifdef	__LINUX_amd64_GCC64
-#include <schily/x86_64-linux-gcc/xconfig.h>
+#include <schily/x86_64-linux-gcc/align.h>
 #define	__JS_ARCH_CONF_INCL
 #endif
 

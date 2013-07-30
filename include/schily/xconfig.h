@@ -1,4 +1,4 @@
-/* @(#)xconfig.h	1.12 13/07/09 Copyright 1995-2013 J. Schilling */
+/* @(#)xconfig.h	1.13 13/07/23 Copyright 1995-2013 J. Schilling */
 /*
  *	This file either includes the dynamic or manual autoconf stuff.
  *
@@ -121,6 +121,14 @@
 #define	__JS_ARCH_CONF_INCL
 #endif
 
+#ifdef	__LINUX_ARMV6L_GCC32
+#include <schily/armv6l-linux-gcc/xconfig.h>
+#define	__JS_ARCH_CONF_INCL
+#endif
+#ifdef	__LINUX_ARMV5L_GCC32
+#include <schily/armv6l-linux-gcc/xconfig.h>
+#define	__JS_ARCH_CONF_INCL
+#endif
 #ifdef	__LINUX_ARMV5TEJL_GCC32
 #include <schily/armv5tejl-linux-gcc/xconfig.h>
 #define	__JS_ARCH_CONF_INCL

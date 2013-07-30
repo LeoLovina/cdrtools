@@ -1,4 +1,4 @@
-/* @(#)archdefs.h	1.13 13/07/09 Copyright 2006-2013 J. Schilling */
+/* @(#)archdefs.h	1.14 13/07/23 Copyright 2006-2013 J. Schilling */
 /*
  *	Processor, instruction set and OS architecture specific defines.
  *	The information is fetched from compiler predefinitions only.
@@ -232,7 +232,19 @@
 #define	__LINUX_ARMV5TEJL_GCC32
 #define	__JS_ARCH_DEFINED
 #endif
+#ifndef	__JS_ARCH_DEFINED
+#ifdef	__ARM_ARCH_6__
+#define	__LINUX_ARMV6L_GCC32
+#define	__JS_ARCH_DEFINED
 #endif
+#endif
+#ifndef	__JS_ARCH_DEFINED
+#ifdef	__ARM_ARCH_5__
+#define	__LINUX_ARMV5L_GCC32
+#define	__JS_ARCH_DEFINED
+#endif
+#endif
+#endif	/* __GNUC__	*/
 #endif	/* __arm__	*/
 
 #if	defined(__i386__) || defined(i386)
