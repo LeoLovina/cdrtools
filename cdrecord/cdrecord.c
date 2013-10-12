@@ -1,8 +1,8 @@
-/* @(#)cdrecord.c	1.408 13/07/30 Copyright 1995-2013 J. Schilling */
+/* @(#)cdrecord.c	1.409 13/09/23 Copyright 1995-2013 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)cdrecord.c	1.408 13/07/30 Copyright 1995-2013 J. Schilling";
+	"@(#)cdrecord.c	1.409 13/09/23 Copyright 1995-2013 J. Schilling";
 #endif
 /*
  *	Record data on a CD/CVD-Recorder
@@ -533,7 +533,7 @@ main(ac, av)
 	/*
 	 * Due to a design bug in the Solaris USCSI ioctl, we don't need
 	 * PRIV_FILE_DAC_WRITE to send SCSI commands and most installations
-	 * pribably don't grant PRIV_FILE_DAC_WRITE. Once we need /dev/scg*,
+	 * probably don't grant PRIV_FILE_DAC_WRITE. Once we need /dev/scg*,
 	 * we would need to test for PRIV_FILE_DAC_WRITE also.
 	 */
 	if (!priv_eff_priv(SCHILY_PRIV_FILE_DAC_WRITE))
@@ -4538,7 +4538,7 @@ load_media(scgp, dp, doexit)
 	scgp->silent--;
 	err = geterrno();
 	if (code < 0 && (err == EPERM || err == EACCES)) {
-		linuxcheck();	/* For version 1.408 of cdrecord.c */
+		linuxcheck();	/* For version 1.409 of cdrecord.c */
 		scg_openerr("");
 	}
 
@@ -5433,7 +5433,7 @@ set_wrmode(dp, wmode, tflags)
 }
 
 /*
- * I am sorry that even for version 1.408 of cdrecord.c, I am forced to do
+ * I am sorry that even for version 1.409 of cdrecord.c, I am forced to do
  * things like this, but defective versions of cdrecord cause a lot of
  * work load to me.
  *
@@ -5450,7 +5450,7 @@ set_wrmode(dp, wmode, tflags)
 #endif
 
 LOCAL void
-linuxcheck()				/* For version 1.408 of cdrecord.c */
+linuxcheck()				/* For version 1.409 of cdrecord.c */
 {
 #if	defined(linux) || defined(__linux) || defined(__linux__)
 #ifdef	HAVE_UNAME

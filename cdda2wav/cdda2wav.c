@@ -1,8 +1,8 @@
-/* @(#)cdda2wav.c	1.146 13/07/30 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling */
+/* @(#)cdda2wav.c	1.148 13/09/23 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling */
 #include "config.h"
 #ifndef lint
 static	UConst char sccsid[] =
-"@(#)cdda2wav.c	1.146 13/07/30 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling";
+"@(#)cdda2wav.c	1.148 13/09/23 Copyright 1993-2004 Heiko Eissfeldt, Copyright 2004-2013 J. Schilling";
 
 #endif
 #undef	DEBUG_BUFFER_ADDRESSES
@@ -2285,7 +2285,7 @@ do_write(p)
 						fprintf(outfp, _("medium"));
 					else if (oper < 67)
 						fprintf(outfp,
-							_("noticable audible"));
+							_("noticeable audible"));
 					else if (oper < 100)
 						fprintf(outfp,
 							_("major audible"));
@@ -3410,7 +3410,7 @@ Rate   Divider      Rate   Divider      Rate   Divider      Rate   Divider\n\
 	/*
 	 * Due to a design bug in the Solaris USCSI ioctl, we don't need
 	 * PRIV_FILE_DAC_WRITE to send SCSI commands and most installations
-	 * pribably don't grant PRIV_FILE_DAC_WRITE. Once we need /dev/scg*,
+	 * probably don't grant PRIV_FILE_DAC_WRITE. Once we need /dev/scg*,
 	 * we would need to test for PRIV_FILE_DAC_WRITE also.
 	 */
 	if (!priv_eff_priv(SCHILY_PRIV_FILE_DAC_WRITE))
