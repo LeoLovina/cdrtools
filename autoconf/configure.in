@@ -1,6 +1,6 @@
-dnl @(#)configure.in	1.246 13/09/30 Copyright 1998-2013 J. Schilling
+dnl @(#)configure.in	1.251 13/11/13 Copyright 1998-2013 J. Schilling
 dnl Process this file with autoconf to produce a configure script.
-AC_REVISION(1.246)dnl
+AC_REVISION(1.251)dnl
 
 dnl AC_INIT(xconfig.h.in)
 AC_INIT(config.guess)
@@ -70,7 +70,7 @@ AC_CHECK_HEADERS(limits.h)
 AC_CHECK_HEADERS(a.out.h aouthdr.h elf.h)
 AC_CHECK_HEADERS(sysexits.h)
 AC_CHECK_HEADERS(malloc.h sgtty.h termios.h termio.h)
-AC_CHECK_HEADERS(pwd.h grp.h sys/acl.h acllib.h acl/libacl.h)
+AC_CHECK_HEADERS(pwd.h grp.h sys/acl.h aclutils.h acllib.h acl/libacl.h)
 AC_CHECK_HEADERS(signal.h siginfo.h sys/siginfo.h ucontext.h)
 AC_CHECK_HEADERS(shadow.h syslog.h)
 AC_CHECK_HEADERS(sys/time.h sys/times.h utime.h sys/utime.h sys/ioctl.h sys/filio.h sys/param.h sys/systeminfo.h sys/sysctl.h)
@@ -472,6 +472,7 @@ AC_CHECK_FUNCS(ftime tzset mktime gmtime localtime timegm timelocal)
 AC_CHECK_FUNCS(ctime cftime ascftime strftime)
 AC_CHECK_FUNCS(poll select isastream)
 AC_CHECK_FUNCS(chown fchown lchown chmod fchmod lchmod times utime utimes futimes lutimes)
+AC_CHECK_FUNCS(utimens lutimens)
 AC_CHECK_FUNCS(futimens utimensat)
 AC_CHECK_FUNCS(ioctl fcntl)
 dnl AC_CHECK_FUNCS(ecvt fcvt gcvt)
@@ -534,7 +535,7 @@ AC_CHECK_DFUNCS([
 
 AC_CHECK_FUNCS(wcwidth wcswidth wctype iswctype)
 AC_CHECK_FUNCS(basename dirname)
-AC_CHECK_FUNCS(pathconf fpathconf)
+AC_CHECK_FUNCS(pathconf fpathconf lpathconf)
 AC_CHECK_FUNCS(malloc calloc valloc realloc memalign posix_memalign)
 AC_CHECK_FUNCS(madvise)
 AC_CHECK_FUNCS(mktemp mkstemp)
@@ -542,6 +543,7 @@ AC_CHECK_FUNCS(chflags fchflags fflagstostr strtofflags)
 AC_CHECK_FUNCS(fnmatch)
 AC_CHECK_FUNCS(truncate ftruncate)
 AC_CHECK_FUNCS(getppriv setppriv priv_set)
+AC_CHECK_FUNCS(issetugid)
 AC_CHECK_FUNCS(getroles privbit_set)
 AC_CHECK_FUNCS(setlocale localeconv nl_langinfo)
 AC_CHECK_FUNCS(setbuf setvbuf)
@@ -767,13 +769,19 @@ if test "$ac_cv_header_sys_acl_h" = yes; then
   AC_CHECK_FUNCS(acl_get_file acl_set_file acl_from_text acl_to_text acl_free acl_delete_def_file)
   AC_CHECK_FUNCS(acl_extended_file)
   AC_CHECK_FUNCS(acl_get_entry)
+  AC_CHECK_FUNCS(acl_to_text_np acl_get_brand_np acl_is_trivial_np acl_strip_np)
   LIBS="$ac_save_LIBS"
 
-  AC_CHECKING(for Solaris Access Control List support)
+  AC_CHECKING(for Solaris UFS Access Control List support)
   AC_CHECK_LIB(sec, acltotext, lib_acl="-lsec")
   ac_save_LIBS="$LIBS"
   LIBS="$LIBS $lib_acl"
   AC_CHECK_FUNCS(acl facl aclfromtext acltotext)
+
+  AC_CHECKING(for NFSv4 Access Control List support)
+  dnl These functions support NFSv4 ACLs
+  dnl Do not check for acl_free because of a name clash with the withdrawn POSIX draft
+  AC_CHECK_FUNCS(acl_get acl_set facl_get facl_set acl_fromtext acl_totext)
   LIBS="$ac_save_LIBS"
 
   dnl On Solaris, there is no need for lib_acl_test as acl(2) is in -libc

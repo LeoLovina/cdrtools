@@ -1,4 +1,4 @@
-/* @(#)xconfig.h.in	1.231 13/09/30 Copyright 1998-2013 J. Schilling */
+/* @(#)xconfig.h.in	1.236 13/11/13 Copyright 1998-2013 J. Schilling */
 /*
  *	Dynamic autoconf C-include code.
  *	Do not edit, this file has been created automatically.
@@ -54,6 +54,7 @@
 #undef HAVE_SYS_SIGINFO_H /* if sys/siginfo.h exists */
 #undef HAVE_UCONTEXT_H	/* if ucontext.h exists */
 #undef HAVE_SYS_ACL_H	/* to use <sys/acl.h> for ACL definitions */
+#undef HAVE_ACLUTILS_H	/* to use <aclutils.h> for NFSv4 ACL extensions */
 #undef HAVE_ACLLIB_H	/* if HP-UX <acllib.h> is present */
 #undef HAVE_ACL_LIBACL_H /* if Linux <acl/libacl.h> is present */
 #undef HAVE_SHADOW_H	/* if shadow.h exists */
@@ -66,6 +67,9 @@
 #undef HAVE_UTIMES		/* to use BSD utimes() and sys/time.h */
 #undef HAVE_FUTIMES		/* to use BSD futimes() and sys/time.h */
 #undef HAVE_LUTIMES		/* to use BSD lutimes() and sys/time.h */
+#undef HAVE_UTIMENS		/* to use BSD utimens() and sys/time.h */
+#undef HAVE_FUTIMENS		/* to use BSD futimens() and sys/time.h */
+#undef HAVE_LUTIMENS		/* to use BSD lutimens() and sys/time.h */
 #undef HAVE_UTIME_H		/* to use utime.h for the utimbuf structure declaration, else declare struct utimbuf yourself */
 #undef HAVE_SYS_UTIME_H		/* to use sys/utime.h if utime.h does not exist */
 #undef HAVE_SYS_IOCTL_H		/* if sys/ioctl.h is present */
@@ -255,10 +259,9 @@
 #undef HAVE_FCHMODAT		/* fchmodat() is present in libc */
 #undef HAVE_LINKAT		/* inkat() is present in libc */
 #undef HAVE_MKFIFOAT		/* mkfifoat() is present in libc */
-#undef HAVE_MKNODKAT		/* mknodat() is present in libc */
+#undef HAVE_MKNODAT		/* mknodat() is present in libc */
 #undef HAVE_READLINKAT		/* readlinkat() is present in libc */
 #undef HAVE_SYMLINKAT		/* symlinkat() is present in libc */
-#undef HAVE_FUTIMENS		/* futimens() is present in libc */
 #undef HAVE_UTIMENSAT		/* utimensat() is present in libc */
 #undef HAVE_IOCTL		/* ioctl() is present in libc */
 #undef HAVE_FCNTL		/* fcntl() is present in libc */
@@ -452,6 +455,7 @@
 #undef HAVE_DIRNAME		/* dirname() is present in libc */
 #undef HAVE_PATHCONF		/* pathconf() is present in libc */
 #undef HAVE_FPATHCONF		/* fpathconf() is present in libc */
+#undef HAVE_LPATHCONF		/* lpathconf() is present in libc */
 #undef HAVE_STRTOL		/* strtol() is present in libc */
 #undef HAVE_STRTOLL		/* strtoll() is present in libc */
 #undef HAVE_STRTOUL		/* strtoul() is present in libc */
@@ -557,6 +561,7 @@
 #undef HAVE_GETPPRIV		/* getppriv() is present in libc */
 #undef HAVE_SETPPRIV		/* setppriv() is present in libc */
 #undef HAVE_PRIV_SET		/* priv_set() is present in libc */
+#undef HAVE_ISSETUGID		/* issetugid() is present in libc */
 #undef HAVE_GETROLES		/* getroles() is present in libc (AIX) */
 #undef HAVE_PRIVBIT_SET		/* privbit_set() is present in libc (AIX) */
 
@@ -966,13 +971,17 @@
 
 #ifdef USE_ACL			/* Enable/disable ACL support */
 /*
- * POSIX ACL support
+ * The withdrawn POSIX.1e ACL draft support
  */
 #undef HAVE_ACL_GET_FILE	/* acl_get_file() function */
 #undef HAVE_ACL_SET_FILE	/* acl_set_file() function */
 #undef HAVE_ACL_GET_ENTRY	/* acl_get_entry() function */
 #undef HAVE_ACL_FROM_TEXT	/* acl_from_text() function */
 #undef HAVE_ACL_TO_TEXT		/* acl_to_text() function */
+#undef HAVE_ACL_TO_TEXT_NP	/* acl_to_text_np() function */
+#undef HAVE_ACL_GET_BRAND_NP	/* acl_get_brand_np() function */
+#undef HAVE_ACL_IS_TRIVIAL_NP	/* acl_is_trivial_np() function */
+#undef HAVE_ACL_STRIP_NP	/* acl_strip_np() function */
 #undef HAVE_ACL_FREE		/* acl_free() function */
 #undef HAVE_ACL_DELETE_DEF_FILE	/* acl_delete_def_file() function */
 #undef HAVE_ACL_EXTENDED_FILE	/* acl_extended_file() function (Linux only)*/
@@ -980,11 +989,11 @@
 #if defined(HAVE_ACL_GET_FILE) && defined(HAVE_ACL_SET_FILE) && \
     defined(HAVE_ACL_FROM_TEXT) && defined(HAVE_ACL_TO_TEXT) && \
     defined(HAVE_ACL_FREE)
-#	define	HAVE_POSIX_ACL	1 /* POSIX ACL's present */
+#	define	HAVE_POSIX_ACL	1 /* Withdrawn POSIX draft ACL's present */
 #endif
 
 /*
- * Sun ACL support.
+ * Sun UFS ACL support.
  * Note: unfortunately, HP-UX has an (undocumented) acl() function in libc.
  */
 #undef HAVE_ACL			/* acl() function */
@@ -992,9 +1001,28 @@
 #undef HAVE_ACLFROMTEXT		/* aclfromtext() function */
 #undef HAVE_ACLTOTEXT		/* acltotext() function */
 
+/*
+ * NFSv4 ACL support.
+ * Note: There is an unfortunate name clash for acl_free() with the
+ *	 withdrawn POSIX.1e draft. We correct this below.
+ */
+#undef HAVE_ACL_GET		/* acl_get() function */
+#undef HAVE_ACL_SET		/* acl_set() function */
+#undef HAVE_FACL_GET		/* facl_get() function */
+#undef HAVE_FACL_SET		/* facl_set() function */
+#undef HAVE_ACL_FROMTEXT	/* acl_fromtext() function */
+#undef HAVE_ACL_TOTEXT		/* acl_totext() function */
+
 #if defined(HAVE_ACL) && defined(HAVE_FACL) && \
     defined(HAVE_ACLFROMTEXT) && defined(HAVE_ACLTOTEXT)
-#	define	HAVE_SUN_ACL	1 /* Sun ACL's present */
+#	define	HAVE_SUN_ACL	1 /* Sun UFS ACL's present */
+#endif
+
+#if defined(HAVE_ACL_GET) && defined(HAVE_ACL_SET) && \
+    defined(HAVE_FACL_GET) && defined(HAVE_FACL_SET) && \
+    defined(HAVE_ACL_FROMTEXT) && defined(HAVE_ACL_TOTEXT)
+#	define	HAVE_ACL_FREE	1 /* acl_fre() function */
+#	define	HAVE_NFSV4_ACL	1 /* NFSv4 ACL's present */
 #endif
 
 /*
@@ -1024,7 +1052,7 @@
  * As HP-UX differs too much from other implementations, HAVE_HP_ACL is not
  * included in HAVE_ANY_ACL.
  */
-#if defined(HAVE_POSIX_ACL) || defined(HAVE_SUN_ACL)
+#if defined(HAVE_POSIX_ACL) || defined(HAVE_SUN_ACL) || defined(HAVE_NFSV4_ACL)
 #	define	HAVE_ANY_ACL	1 /* Any ACL implementation present */
 #endif
 
