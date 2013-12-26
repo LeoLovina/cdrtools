@@ -1,8 +1,8 @@
-/* @(#)readcd.c	1.123 13/11/19 Copyright 1987, 1995-2013 J. Schilling */
+/* @(#)readcd.c	1.124 13/12/21 Copyright 1987, 1995-2013 J. Schilling */
 #include <schily/mconfig.h>
 #ifndef lint
 static	UConst char sccsid[] =
-	"@(#)readcd.c	1.123 13/11/19 Copyright 1987, 1995-2013 J. Schilling";
+	"@(#)readcd.c	1.124 13/12/21 Copyright 1987, 1995-2013 J. Schilling";
 #endif
 /*
  *	Skeleton for the use of the scg genearal SCSI - driver
@@ -1366,7 +1366,9 @@ readc2_disk(scgp, parmp)
 
 	printf(_("Total of %d hard read errors.\n"), rp.errors);
 	printf(_("C2 errors total: %d bytes in %d sectors on disk\n"), rp.c2_errors, rp.c2_errsecs);
-	printf(_("C2 errors rate: %f%% \n"), (100.0*rp.c2_errors)/scgp->cap->c_baddr/2352);
+	printf(_("C2 errors rate: %f%% per byte, %f%% per sector\n"),
+			(100.0*rp.c2_errors)/scgp->cap->c_baddr/2352,
+			(100.0*rp.c2_errsecs)/scgp->cap->c_baddr);
 	printf(_("C2 errors on worst sector: %d, sectors with 100+ C2 errors: %d\n"), rp.c2_maxerrs, rp.c2_badsecs);
 }
 

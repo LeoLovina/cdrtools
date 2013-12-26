@@ -1,4 +1,4 @@
-/* @(#)mkfifoat.c	1.2 13/10/30 Copyright 2013 J. Schilling */
+/* @(#)mkfifoat.c	1.3 13/12/26 Copyright 2013 J. Schilling */
 /*
  *	Emulate the behavior of mkfifoat(int fd, const char *name, mode_t mode)
  *
@@ -13,7 +13,19 @@
  *
  *	Copyright (c) 2013 J. Schilling
  */
-/*@@C@@*/
+/*
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * See the file CDDL.Schily.txt in this distribution for details.
+ * A copy of the CDDL is also available via the Internet at
+ * http://www.opensource.org/licenses/cddl1.txt
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file CDDL.Schily.txt from this distribution.
+ */
 
 #include <schily/unistd.h>
 #include <schily/types.h>
@@ -31,7 +43,7 @@
 #define	KR_DECL		mode_t mode;
 /* CSTYLED */
 #define	KR_ARGS		, mode
-#define	FUNC_CALL(n)	mkdir(n, mode)
+#define	FUNC_CALL(n)	mkfifo(n, mode)
 #define	FLAG_CHECK()
 #define	FUNC_NAME	mkfifoat
 #define	FUNC_RESULT	int
