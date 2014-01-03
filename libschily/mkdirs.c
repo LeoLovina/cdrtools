@@ -1,4 +1,4 @@
-/* @(#)mkdirs.c	1.3 13/12/26 Copyright 2011-2013 J. Schilling */
+/* @(#)mkdirs.c	1.4 14/01/02 Copyright 2011-2014 J. Schilling */
 /*
  *	mkdirs() is the equivalent to "mkdir -p path"
  *	makedirs() allows to create missing direcories before a final
@@ -6,7 +6,7 @@
  *
  *	"name" must be a modifyable string.
  *
- *	Copyright (c) 2011-2013 J. Schilling
+ *	Copyright (c) 2011-2014 J. Schilling
  */
 /*
  * The contents of this file are subject to the terms of the
@@ -41,7 +41,7 @@
 #endif
 
 #ifdef	__MINGW32__
-#define	mkdir(a,b)	mkdir(a)
+#define	mkdir(a, b)	mkdir(a)
 #endif
 
 EXPORT	BOOL	makedirs	__PR((char *name, mode_t mode, int striplast));
