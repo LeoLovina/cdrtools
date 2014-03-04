@@ -1,21 +1,8 @@
 '\" t
 .\" To print, first run through tbl
 .\" -*- nroff -*-
-.\" @(#)mkisofs.8	1.150 14/01/19 Copyright 1997-2014 J. Schilling
-.\"
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License version 2
-.\" as published by the Free Software Foundation.
-.\"
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
-.\"
-.\" You should have received a copy of the GNU General Public License along with
-.\" this program; see the file COPYING.  If not, write to the Free Software
-.\" Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-.\"
+.\" @(#)mkisofs.8	1.152 14/02/17 Copyright 1997-2014 J. Schilling
+.\"@@C@@
 .\"
 .if t .ds a \v'-0.55m'\h'0.00n'\z.\h'0.40n'\z.\v'0.55m'\h'-0.40n'a
 .if t .ds o \v'-0.55m'\h'0.00n'\z.\h'0.45n'\z.\v'0.55m'\h'-0.45n'o
@@ -29,7 +16,7 @@
 .if n .ds o oe
 .if n .ds u ue
 .if n .ds s sz
-.TH MKISOFS 8 "2014/01/19" "Version 3.0"
+.TH MKISOFS 8 "2014/02/17" "Version 3.0"
 .SH NAME
 mkisofs \- create an hybrid ISO-9660/JOLIET/HFS/UDF filesystem-image with optional Rock Ridge attributes.
 .SH SYNOPSIS
@@ -62,7 +49,7 @@ filesystem.
 ISO-9660/JOLIET/UDF filesystems are limited to a maximum size of 8\ TB.
 The maximum size of a single file is 8\ TB (single files in UDF are currently 
 limited to aprox. 200\ GB).
-If yo like to have files
+If you like to have files
 larger than 2 \GB, you need to specify 
 .B \-iso\-level 3
 or above.
@@ -3562,6 +3549,7 @@ been fully tested.
 .SH "SEE ALSO
 .BR cdrecord (1),
 .BR mkzftree (1),
+.BR sfind (1),
 .BR magic (5),
 .BR apple_driver (8).
 
